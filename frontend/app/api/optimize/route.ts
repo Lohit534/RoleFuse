@@ -338,74 +338,82 @@ export async function POST(request: NextRequest) {
     await send(2, 'done');
     await send(3, 'running');
 
-    // ── TASK 2: First AI call — detection only ──
+    // ── TASK 2: Fast, instant detection for missing metrics, values & placeholders (0ms vs 15s) ──
     const hasAnswers = userAnswers && typeof userAnswers === "object" && Object.keys(userAnswers).length > 0;
     if (!skipDetection && !hasAnswers) {
-      let missingList: Array<{ field: string; section: string; question: string }> = [];
-      try {
-        const detectionPrompt = `Scan this resume. List ONLY fields that are missing or placeholder (X.XX, XXXXXXXXXX, Company Name, example.com, etc). Return JSON:
-{ "missing": [{ "field": "Company Name", "section": "EXPERIENCE", "question": "What company did you work at as Software Engineer from Sep 2024?" }] }
-If there are no missing or placeholder fields, return:
-{ "missing": [] }
-Return ONLY valid JSON.
+      const missingList: Array<{ field: string; section: string; question: string }> = [];
 
-Resume text:
-${resumeText}`;
-
-        const detectionRaw = await callAIText(detectionPrompt);
-        const jsonMatch = detectionRaw.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (Array.isArray(parsed.missing)) {
-            missingList = parsed.missing.filter((item: any) => item && item.field && item.question);
-          }
-        }
-      } catch (err: any) {
-        logger.warn("[optimize] AI detection call error:", err?.message);
+      // 1. Company Name / Employer placeholder
+      if (/\b(?:Company\s*Name|Employer\s*Name|\[Company(?:\s*Name)?\]|\[Employer\]|XYZ\s*Corp|ABC\s*Corp)\b/i.test(resumeText)) {
+        missingList.push({
+          field: "Company Name",
+          section: "EXPERIENCE",
+          question: "What company or employer did you work at?",
+        });
       }
 
-      // Deterministic fallback detection for clear placeholder patterns
-      if (missingList.length === 0) {
-        const fallbacks: Array<{ field: string; section: string; question: string }> = [];
-        if (/\bCompany\s*Name\b/i.test(resumeText)) {
-          fallbacks.push({
-            field: "Company Name",
-            section: "EXPERIENCE",
-            question: "What company did you work at as Software Engineer?",
+      // 2. CGPA / GPA / Marks placeholder
+      if (/\bX\.XX\b|GPA:\s*X|CGPA:\s*X|\bX\/10\b|\bX%\b|\[CGPA\]|\[GPA\]|\b0\.00\b/i.test(resumeText)) {
+        missingList.push({
+          field: "CGPA / GPA",
+          section: "EDUCATION",
+          question: "What is your CGPA or GPA score? (e.g. 8.5/10 or 3.8/4.0)",
+        });
+      }
+
+      // 3. College / School / University placeholder
+      if (/\b(?:College\s*Name|School\s*Name|University\s*Name|XYZ\s*Institute|XYZ\s*University|\[College\]|\[University\])\b/i.test(resumeText)) {
+        missingList.push({
+          field: "College / School Name",
+          section: "EDUCATION",
+          question: "What is the name of your college or university?",
+        });
+      }
+
+      // 4. Missing dates / years (XXXX, YYYY, [YEAR], [DATE], etc.)
+      if (/\bXXXX\b|\bYYYY\b|\[YEAR\]|\[DATE\]|\b20XX\b|\[Month\s*YYYY\]/i.test(resumeText)) {
+        missingList.push({
+          field: "Year / Date",
+          section: "GENERAL",
+          question: "What graduation year or employment dates should replace the placeholder?",
+        });
+      }
+
+      // 5. Missing metrics in bullets ([ADD: metric], [X%], [ADD: ...], etc.)
+      const explicitMetricMatches = resumeText.match(/\[ADD:[^\]]+\]/gi) || [];
+      for (const m of explicitMetricMatches.slice(0, 3)) {
+        const desc = m.replace(/^\[ADD:\s*/i, "").replace(/\]$/, "").trim();
+        missingList.push({
+          field: `Missing Metric: ${desc}`,
+          section: "BULLETS",
+          question: `What value should replace "${desc}"? (e.g., 35%, 10,000+ users, $50K)`,
+        });
+      }
+
+      const bracketPlaceholders = resumeText.match(/\[(?:X%|X\s*users?|X\s*million|metric|value)\]/gi) || [];
+      for (const bp of bracketPlaceholders.slice(0, 2)) {
+        if (!missingList.some(item => item.field.includes(bp))) {
+          missingList.push({
+            field: `Missing Value: ${bp}`,
+            section: "BULLETS",
+            question: `What value or metric should replace ${bp}? (e.g., 25%, 500+ requests/sec)`,
           });
-        }
-        if (/X\.XX|GPA:\s*X|CGPA:\s*X/i.test(resumeText)) {
-          fallbacks.push({
-            field: "CGPA / GPA",
-            section: "EDUCATION",
-            question: "What is your CGPA or GPA score?",
-          });
-        }
-        if (/\b(?:College\s*Name|School\s*Name|XYZ\s*Institute)\b/i.test(resumeText)) {
-          fallbacks.push({
-            field: "College / School Name",
-            section: "EDUCATION",
-            question: "What is the name of your college or university?",
-          });
-        }
-        if (fallbacks.length > 0) {
-          missingList = fallbacks;
         }
       }
 
       // Filter out LinkedIn / GitHub / portfolio / URL questions — these are resolved
-      // automatically by the regex profile URL extractor above, so we never ask the
+      // automatically by the regex profile URL extractor, so we never ask the
       // user to type in profile links that are already present in the resume.
       const PROFILE_LINK_RE = /linkedin|github|gitlab|portfolio|website|profile.?link|personal.?site|social|twitter|behance|dribbble|\burl\b/i;
-      missingList = missingList.filter(
+      const filteredList = missingList.filter(
         (item) =>
           !PROFILE_LINK_RE.test(item.field) &&
           !PROFILE_LINK_RE.test(item.question)
       );
 
-      if (missingList.length > 0) {
-        logger.info(`[optimize] AI detected ${missingList.length} missing/placeholder fields. Returning needsInput to frontend.`);
-        await writer.write(encoder.encode(`data: ${JSON.stringify({ needsInput: true, questions: missingList })}\n\n`));
+      if (filteredList.length > 0) {
+        logger.info(`[optimize] Fast detection identified ${filteredList.length} missing/placeholder fields. Returning needsInput immediately.`);
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ needsInput: true, questions: filteredList })}\n\n`));
         await writer.close();
         return;
       }
@@ -437,6 +445,20 @@ ${resumeText}`;
               .replace(/\bXYZ\s*Institute[^\n]*/gi, cleanVal);
           } else if (kLow.includes("phone") || kLow.includes("contact")) {
             preparedResumeText = preparedResumeText.replace(/X{7,}/g, cleanVal);
+          } else if (kLow.includes("year") || kLow.includes("date")) {
+            preparedResumeText = preparedResumeText
+              .replace(/\bXXXX\b/g, cleanVal)
+              .replace(/\bYYYY\b/g, cleanVal)
+              .replace(/\[YEAR\]/gi, cleanVal)
+              .replace(/\[DATE\]/gi, cleanVal);
+          } else if (kLow.includes("metric") || kLow.includes("value")) {
+            const desc = key.replace(/^(?:missing\s*(?:metric|value):\s*)/i, "").trim();
+            if (desc) {
+              const escaped = desc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+              preparedResumeText = preparedResumeText
+                .replace(new RegExp(`\\[ADD:\\s*${escaped}\\]`, "gi"), cleanVal)
+                .replace(new RegExp(escaped, "gi"), cleanVal);
+            }
           }
         }
       }
