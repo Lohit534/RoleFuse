@@ -96,6 +96,47 @@ function extractPlaceholders(
 const MIN_RESUME_CHARS = 100;
 const MIN_JD_CHARS = 50;
 
+/**
+ * Fast regex-based extractor for LinkedIn, GitHub, and portfolio URLs.
+ * Called before the AI optimization so profile links are always preserved
+ * in the output without requiring an extra AI detection pass.
+ */
+function extractProfileUrls(text: string): { linkedin?: string; github?: string; portfolio: string[] } {
+  const result: { linkedin?: string; github?: string; portfolio: string[] } = { portfolio: [] };
+
+  // LinkedIn profile URL
+  const liMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w\-\.%]+\/?/i);
+  if (liMatch) {
+    const url = liMatch[0];
+    result.linkedin = url.startsWith('http') ? url : 'https://' + url;
+  }
+
+  // GitHub profile URL (avoid matching deep repo paths — only user root)
+  const ghMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/? */i);
+  if (ghMatch) {
+    const url = ghMatch[0].trim().replace(/[,;.\)]+$/, '');
+    result.github = url.startsWith('http') ? url : 'https://' + url;
+  }
+
+  // Any other http(s) URLs that are not LinkedIn or GitHub (portfolio / personal site)
+  const allHttps = text.match(/https?:\/\/[^\s\|\)\]\,>\"\'\'<]{8,}/g) || [];
+  const seen = new Set<string>();
+  for (const raw of allHttps) {
+    const url = raw.replace(/[,;.\)>\]]+$/, '');
+    if (
+      !url.includes('linkedin.com') &&
+      !url.includes('github.com') &&
+      !url.includes('mailto:') &&
+      !seen.has(url)
+    ) {
+      seen.add(url);
+      result.portfolio.push(url);
+    }
+  }
+
+  return result;
+}
+
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new TransformStream();
@@ -140,6 +181,17 @@ export async function POST(request: NextRequest) {
     // 2. Parse and validate body
     const bodyText = await request.text();
     const { resumeText, jobDescription, instructions, lengthOption, jobTitle, company, dataTrainingConsent, userAnswers, skipDetection } = JSON.parse(bodyText || '{}');
+
+    // ── FAST PROFILE URL EXTRACTION ───────────────────────────────────────────
+    // Extract LinkedIn / GitHub / portfolio URLs directly from the resume text
+    // using regex — no AI call needed. These are injected into the optimization
+    // prompt so the AI always preserves them in the output header.
+    const profileUrls = extractProfileUrls(resumeText || '');
+    const urlPreservationLines: string[] = [];
+    if (profileUrls.linkedin) urlPreservationLines.push(`LinkedIn: ${profileUrls.linkedin}`);
+    if (profileUrls.github)   urlPreservationLines.push(`GitHub: ${profileUrls.github}`);
+    for (const u of profileUrls.portfolio) urlPreservationLines.push(`Portfolio/Site: ${u}`);
+    // ─────────────────────────────────────────────────────────────────────────
 
     if (!resumeText || resumeText.length < MIN_RESUME_CHARS) {
       throw new Error(`Resume text is too short. Please provide at least ${MIN_RESUME_CHARS} characters.`);
@@ -336,17 +388,20 @@ ${resumeText}`;
             question: "What is the name of your college or university?",
           });
         }
-        if (/X{6,}/.test(resumeText)) {
-          fallbacks.push({
-            field: "Contact Phone / Handle",
-            section: "CONTACT",
-            question: "What is your contact phone number or LinkedIn handle?",
-          });
-        }
         if (fallbacks.length > 0) {
           missingList = fallbacks;
         }
       }
+
+      // Filter out LinkedIn / GitHub / portfolio / URL questions — these are resolved
+      // automatically by the regex profile URL extractor above, so we never ask the
+      // user to type in profile links that are already present in the resume.
+      const PROFILE_LINK_RE = /linkedin|github|gitlab|portfolio|website|profile.?link|personal.?site|social|twitter|behance|dribbble|\burl\b/i;
+      missingList = missingList.filter(
+        (item) =>
+          !PROFILE_LINK_RE.test(item.field) &&
+          !PROFILE_LINK_RE.test(item.question)
+      );
 
       if (missingList.length > 0) {
         logger.info(`[optimize] AI detected ${missingList.length} missing/placeholder fields. Returning needsInput to frontend.`);
@@ -393,6 +448,13 @@ ${resumeText}`;
 
     let combinedInstructions = instructions || "";
     let enrichedResumeText = preparedResumeText;
+
+    // Inject profile URL preservation note so the AI never strips them
+    if (urlPreservationLines.length > 0) {
+      combinedInstructions +=
+        `\n\nIMPORTANT — PROFILE URLS (copy these EXACTLY into the resume header, do not modify or omit):` +
+        `\n${urlPreservationLines.map(l => `• ${l}`).join('\n')}`;
+    }
 
     if (userAnswers && typeof userAnswers === "object") {
       const answerEntries = Object.entries(userAnswers).filter(

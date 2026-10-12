@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { Sparkles, ArrowRight, Check, AlertCircle, HelpCircle } from "lucide-react";
+import { Check, AlertCircle } from "lucide-react";
 
 const STEPS = [
   { id: 1, label: "Reading your resume" },
@@ -50,7 +50,8 @@ export default function OptimizingProgress({
   const [elapsedSec, setElapsedSec] = useState(0);
   const startRef = useRef<number>(Date.now());
 
-  // Interactive Question State (one question at a time before rewriting)
+  // Interactive Q&A state — for missing metrics, CGPA, Company Name, etc.
+  // LinkedIn / GitHub / portfolio URLs are NOT asked here (resolved by regex extractor).
   const [awaitingInput, setAwaitingInput] = useState(false);
   const [missingQuestions, setMissingQuestions] = useState<MissingQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -60,7 +61,7 @@ export default function OptimizingProgress({
   const stepStartTimes = useRef<Record<number, number>>({});
   const isMountedRef = useRef(true);
 
-  // Timer & Fun facts
+  // Timer & Fun facts rotation
   useEffect(() => {
     isMountedRef.current = true;
     startRef.current = Date.now();
@@ -81,6 +82,7 @@ export default function OptimizingProgress({
     };
   }, []);
 
+  // Process SSE stream events (steps 4 onward driven by API)
   const processStreamChunk = (data: any) => {
     if (data.step >= 4) {
       if (data.status === "running") {
@@ -118,12 +120,14 @@ export default function OptimizingProgress({
     }
   };
 
-  // Main optimization workflow
+  // ── PHASE 1: Detection pass (no skipDetection) ──────────────────────────────
+  // The backend will ask about missing metrics, CGPA, Company Name, etc.
+  // LinkedIn / GitHub / portfolio are filtered OUT by the backend (regex-extracted).
   useEffect(() => {
     let cancelled = false;
 
     const startPipeline = async () => {
-      // Step 1: Reading your resume
+      // Step 1: local simulation
       stepStartTimes.current[1] = Date.now();
       setSteps((prev) =>
         prev.map((s) => (s.id === 1 ? { ...s, status: "running" } : s))
@@ -137,7 +141,7 @@ export default function OptimizingProgress({
         prev.map((s) => (s.id === 1 ? { ...s, status: "done", duration: dur1 } : s))
       );
 
-      // Step 2: Parsing the job description
+      // Step 2: local simulation
       stepStartTimes.current[2] = Date.now();
       setSteps((prev) =>
         prev.map((s) => (s.id === 2 ? { ...s, status: "running" } : s))
@@ -151,7 +155,7 @@ export default function OptimizingProgress({
         prev.map((s) => (s.id === 2 ? { ...s, status: "done", duration: dur2 } : s))
       );
 
-      // Step 3: Detecting missing fields & placeholders
+      // Step 3: detection API call
       stepStartTimes.current[3] = Date.now();
       setSteps((prev) =>
         prev.map((s) => (s.id === 3 ? { ...s, status: "running" } : s))
@@ -166,6 +170,8 @@ export default function OptimizingProgress({
             resumeText,
             jobDescription,
             instructions,
+            // No skipDetection — let backend detect missing metrics/values.
+            // LinkedIn / GitHub / portfolio are filtered on the backend.
           }),
         });
 
@@ -196,7 +202,7 @@ export default function OptimizingProgress({
                 return;
               }
 
-              // Missing fields detected before rewrite!
+              // Missing metrics / values detected — show Q&A (NOT for LinkedIn/GitHub)
               if (data.needsInput && Array.isArray(data.questions) && data.questions.length > 0) {
                 setMissingQuestions(data.questions);
                 setCurrentQuestionIndex(0);
@@ -222,18 +228,18 @@ export default function OptimizingProgress({
     };
   }, [resumeText, jobDescription]);
 
-  // Proceed to Step 4, 5, 6 with user's applied answers
+  // ── PHASE 2: Optimization with collected answers ─────────────────────────────
   const proceedToOptimization = async (collectedAnswers: Record<string, string>) => {
     setIsApplying(true);
     setAwaitingInput(false);
 
-    // Mark Step 3 done
+    // Mark step 3 done
     const dur3 = ((Date.now() - (stepStartTimes.current[3] || Date.now())) / 1000).toFixed(1) + "s";
     setSteps((prev) =>
       prev.map((s) => (s.id === 3 ? { ...s, status: "done", duration: dur3 } : s))
     );
 
-    // Mark Step 4 running
+    // Mark step 4 running
     stepStartTimes.current[4] = Date.now();
     setSteps((prev) =>
       prev.map((s) => (s.id === 4 ? { ...s, status: "running" } : s))
@@ -300,23 +306,13 @@ export default function OptimizingProgress({
 
   const currentQ = missingQuestions[currentQuestionIndex] || missingQuestions[0];
   const isLast = currentQuestionIndex === missingQuestions.length - 1;
-  const filledCount = Object.values(userAnswers).filter(
-    (v) => typeof v === "string" && v.trim().length > 0
-  ).length;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[500px] px-4 animate-in fade-in zoom-in-95 duration-500 w-full max-w-2xl mx-auto">
       {/* Circular progress ring */}
       <div className="relative w-32 h-32 mb-6">
         <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
-          <circle
-            cx="60"
-            cy="60"
-            r="54"
-            fill="none"
-            stroke="#d1fae5"
-            strokeWidth="8"
-          />
+          <circle cx="60" cy="60" r="54" fill="none" stroke="#d1fae5" strokeWidth="8" />
           <circle
             cx="60"
             cy="60"
@@ -336,22 +332,23 @@ export default function OptimizingProgress({
         </div>
       </div>
 
-      {/* Title block */}
+      {/* Title */}
       <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1 text-center">
         {awaitingInput
           ? "Missing Details Detected"
-          : STEPS.find((s) => steps.find((st) => st.id === s.id && st.status === "running"))?.label ?? "Polishing final output"}
+          : STEPS.find((s) => steps.find((st) => st.id === s.id && st.status === "running"))?.label ??
+            "Polishing final output"}
       </h2>
       <p className="text-slate-500 text-xs sm:text-sm mb-6 text-center max-w-md">
         {awaitingInput
-          ? "Answer each targeted question below to eliminate placeholders and maximize your ATS score."
+          ? "Answer each question below to fill in missing values and maximize your ATS score."
           : "Stay on this tab — our AI is engineering your ATS-optimized resume."}
       </p>
 
-      {/* ── INTERACTIVE MISSING VALUES PANEL (ONE QUESTION AT A TIME) ── */}
+      {/* ── INTERACTIVE Q&A PANEL (missing metrics / values only) ── */}
       {awaitingInput && missingQuestions.length > 0 && currentQ ? (
         <div className="w-full bg-white border border-teal-200/90 shadow-xl rounded-2xl p-5 sm:p-7 space-y-5 mb-6 animate-in fade-in slide-in-from-bottom-3 duration-300">
-          {/* Header Bar with Step Counter & Progress bar */}
+          {/* Header Bar */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#0d6e5a] text-[10px] font-bold uppercase tracking-wider">
@@ -412,7 +409,11 @@ export default function OptimizingProgress({
               />
             </div>
             <p className="text-[11px] text-slate-500">
-              Press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">Enter ↵</kbd> to save and move to the next question.
+              Press{" "}
+              <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">
+                Enter ↵
+              </kbd>{" "}
+              to save and move to the next question.
             </p>
           </div>
 
@@ -523,7 +524,7 @@ export default function OptimizingProgress({
         })}
       </div>
 
-      {/* Fun fact at bottom */}
+      {/* Rotating ATS tip */}
       <p className="mt-6 text-xs text-slate-400 text-center max-w-sm transition-opacity duration-500">
         Tip: {funFact}
       </p>
