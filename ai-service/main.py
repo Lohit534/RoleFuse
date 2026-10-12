@@ -324,10 +324,16 @@ def call_gemini(prompt: str, raw_text: str) -> Dict[str, Any]:
         }
         
     try:
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt,
-        )
+        try:
+            response = client.models.generate_content(
+                model="gemini-3.8-flash",
+                contents=prompt,
+            )
+        except Exception:
+            response = client.models.generate_content(
+                model="gemini-flash-latest",
+                contents=prompt,
+            )
         text = response.text
         if not text:
             raise ValueError("Empty generation block.")
