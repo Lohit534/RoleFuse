@@ -10,7 +10,6 @@ import {
   EyeOff, 
   Mail, 
   KeyRound, 
-  Sparkles, 
   Users, 
   MessageSquare, 
   Lock, 

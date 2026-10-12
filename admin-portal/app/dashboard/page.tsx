@@ -5,13 +5,13 @@ import { supabase } from "@/lib/supabase";
 import { isAdminEmail } from "@/lib/auth";
 import {
   Loader2, LogOut, LayoutDashboard, Users, MessageSquare, Inbox,
-  Search, TrendingUp, TrendingDown, Wallet, Sparkles,
+  Search, TrendingUp, TrendingDown, Wallet, FileText,
   CheckCircle, User as UserIcon, Clock, AlertCircle,
   Trash2, CheckCircle2, RefreshCw, Menu, X,
   UserPlus, Copy, ExternalLink, Mail, Check, ShieldCheck,
   Bell, ChevronRight, Activity, BarChart3,
   ArrowUpRight, ArrowDownRight, Filter, Eye, Send,
-  Star, Zap, Crown, Shield
+  Shield, CreditCard
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -42,7 +42,7 @@ interface Ticket {
 type TabKey = "overview" | "users" | "tickets" | "feedback";
 
 const PLAN_CONFIG = {
-  owner:   { label: "👑 Owner",      bg: "bg-amber-50",   border: "border-amber-200",  text: "text-amber-700" },
+  owner:   { label: "Owner",         bg: "bg-amber-50",   border: "border-amber-200",  text: "text-amber-700" },
   promax:  { label: "Pro Max",       bg: "bg-emerald-50", border: "border-emerald-200",text: "text-emerald-700" },
   premium: { label: "Premium Pro",   bg: "bg-teal-50",    border: "border-teal-200",   text: "text-teal-700" },
   free:    { label: "Free Tier",     bg: "bg-slate-100",  border: "border-slate-300",  text: "text-slate-600" },
@@ -154,11 +154,14 @@ export default function AdminDashboard() {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   });
 
-  /* ── Data loaders ── */
+  /* ── Data loaders (always no-store for quick, real-time results) ── */
   const loadUsers = async (token = accessToken) => {
     setUsersLoading(true);
     try {
-      const res = await fetch("/api/users", { headers: authHeaders(token) });
+      const res = await fetch(`/api/users?t=${Date.now()}`, {
+        headers: authHeaders(token),
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);
@@ -177,7 +180,10 @@ export default function AdminDashboard() {
   const loadTickets = async (token = accessToken) => {
     setTicketsLoading(true);
     try {
-      const res = await fetch("/api/tickets", { headers: authHeaders(token) });
+      const res = await fetch(`/api/tickets?t=${Date.now()}`, {
+        headers: authHeaders(token),
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         const ticketsList = Array.isArray(data) ? data : [];
@@ -197,7 +203,10 @@ export default function AdminDashboard() {
   const loadFeedback = async (token = accessToken) => {
     setFeedbackLoading(true);
     try {
-      const res = await fetch("/api/feedback", { headers: authHeaders(token) });
+      const res = await fetch(`/api/feedback?t=${Date.now()}`, {
+        headers: authHeaders(token),
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         setFeedbackMessages(Array.isArray(data) ? data : []);
@@ -614,10 +623,10 @@ export default function AdminDashboard() {
                   ))
                 ) : (
                   [
-                    { label: "Total Users",  value: totalUsers,   icon: Users,    iconBg: "bg-slate-100",  iconColor: "text-slate-600",   valColor: "text-slate-900" },
-                    { label: "Pro Max",      value: promaxUsers,  icon: Zap,      iconBg: "bg-emerald-50", iconColor: "text-emerald-700", valColor: "text-emerald-700" },
-                    { label: "Premium Pro",  value: premiumUsers, icon: Star,     iconBg: "bg-teal-50",    iconColor: "text-teal-700",    valColor: "text-teal-700" },
-                    { label: "Free Tier",    value: freeUsers,    icon: UserIcon, iconBg: "bg-slate-100",  iconColor: "text-slate-500",   valColor: "text-slate-600" },
+                    { label: "Total Users",  value: totalUsers,   icon: Users,        iconBg: "bg-slate-100",  iconColor: "text-slate-600",   valColor: "text-slate-900" },
+                    { label: "Pro Max",      value: promaxUsers,  icon: ShieldCheck,  iconBg: "bg-emerald-50", iconColor: "text-emerald-700", valColor: "text-emerald-700" },
+                    { label: "Premium Pro",  value: premiumUsers, icon: CheckCircle2, iconBg: "bg-teal-50",    iconColor: "text-teal-700",    valColor: "text-teal-700" },
+                    { label: "Free Tier",    value: freeUsers,    icon: UserIcon,     iconBg: "bg-slate-100",  iconColor: "text-slate-500",   valColor: "text-slate-600" },
                   ].map((kpi, i) => (
                     <div key={i} className="admin-card p-5 flex items-center justify-between">
                       <div>
@@ -645,8 +654,8 @@ export default function AdminDashboard() {
                   </div>
                   <div className="space-y-4">
                     {[
-                      { label: "Pro Max",     count: promaxUsers,  gradFrom: "#0d6e5a", gradTo: "#0f766e", textColor: "text-[#0d6e5a]",  icon: Zap },
-                      { label: "Premium Pro", count: premiumUsers, gradFrom: "#0f766e", gradTo: "#14b8a6", textColor: "text-teal-700",    icon: Star },
+                      { label: "Pro Max",     count: promaxUsers,  gradFrom: "#0d6e5a", gradTo: "#0f766e", textColor: "text-[#0d6e5a]",  icon: ShieldCheck },
+                      { label: "Premium Pro", count: premiumUsers, gradFrom: "#0f766e", gradTo: "#14b8a6", textColor: "text-teal-700",    icon: CheckCircle2 },
                       { label: "Free Tier",   count: freeUsers,    gradFrom: "#94a3b8", gradTo: "#cbd5e1", textColor: "text-slate-500",   icon: UserIcon },
                     ].map((tier, i) => {
                       const pct = totalUsers > 0 ? Math.round((tier.count / totalUsers) * 100) : 0;
@@ -684,9 +693,9 @@ export default function AdminDashboard() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: "Total Optimizations", value: `${analytics.totalOptimizations}`, icon: Zap,          iconColor: "text-[#0d6e5a]", bg: "bg-[#0d6e5a]/5 border-[#0d6e5a]/10" },
+                      { label: "Total Optimizations", value: `${analytics.totalOptimizations}`, icon: FileText,     iconColor: "text-[#0d6e5a]", bg: "bg-[#0d6e5a]/5 border-[#0d6e5a]/10" },
                       { label: "Support Tickets",      value: `${analytics.totalTickets}`,       icon: MessageSquare, iconColor: "text-amber-600",  bg: "bg-amber-50 border-amber-100" },
-                      { label: "Active Paid Credits",  value: `${users.reduce((a, u) => a + (u.paidCredits > 9999 ? 0 : u.paidCredits), 0)}`, icon: Star, iconColor: "text-teal-700", bg: "bg-teal-50 border-teal-100" },
+                      { label: "Active Paid Credits",  value: `${users.reduce((a, u) => a + (u.paidCredits > 9999 ? 0 : u.paidCredits), 0)}`, icon: Wallet, iconColor: "text-teal-700", bg: "bg-teal-50 border-teal-100" },
                       { label: "Avg Free Used",        value: `${totalUsers > 0 ? (users.reduce((a, u) => a + u.freeUsed, 0) / totalUsers).toFixed(1) : "0.0"}`, icon: BarChart3, iconColor: "text-blue-600", bg: "bg-blue-50 border-blue-100" },
                     ].map((stat, i) => (
                       <div key={i} className={`border p-4 rounded-xl flex items-start gap-3 ${stat.bg}`}>

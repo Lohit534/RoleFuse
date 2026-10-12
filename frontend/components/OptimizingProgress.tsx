@@ -140,6 +140,8 @@ export default function OptimizingProgress({
       setSteps((prev) =>
         prev.map((s) => (s.id === 1 ? { ...s, status: "done", duration: dur1 } : s))
       );
+      await new Promise((r) => setTimeout(r, 400));
+      if (cancelled) return;
 
       // Step 2: local simulation
       stepStartTimes.current[2] = Date.now();
@@ -154,6 +156,8 @@ export default function OptimizingProgress({
       setSteps((prev) =>
         prev.map((s) => (s.id === 2 ? { ...s, status: "done", duration: dur2 } : s))
       );
+      await new Promise((r) => setTimeout(r, 400));
+      if (cancelled) return;
 
       // Step 3: detection API call
       stepStartTimes.current[3] = Date.now();
@@ -238,6 +242,7 @@ export default function OptimizingProgress({
     setSteps((prev) =>
       prev.map((s) => (s.id === 3 ? { ...s, status: "done", duration: dur3 } : s))
     );
+    await new Promise((r) => setTimeout(r, 400));
 
     // Mark step 4 running
     stepStartTimes.current[4] = Date.now();

@@ -13,7 +13,7 @@ import {
   ArrowLeft,
   MessageSquare,
   User as UserIcon,
-  Sparkles,
+  ShieldCheck,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -823,7 +823,7 @@ export default function UnifiedAdminDashboard() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 select-none">
                 {[
                   { label: "Total Registrations", value: totalUsers, icon: Users, color: "text-slate-900", badge: "All Accounts" },
-                  { label: "Pro Max Tier", value: promaxUsers, icon: Sparkles, color: "text-[#0d6e5a]", badge: "₹199 / mo" },
+                  { label: "Pro Max Tier", value: promaxUsers, icon: ShieldCheck, color: "text-[#0d6e5a]", badge: "₹199 / mo" },
                   { label: "Premium Pro", value: premiumUsers, icon: CheckCircle, color: "text-teal-700", badge: "₹99 / mo" },
                   { label: "Free Tier", value: freeUsers, icon: UserIcon, color: "text-slate-600", badge: "2 Free / mo" },
                 ].map((kpi, idx) => {
@@ -892,7 +892,7 @@ export default function UnifiedAdminDashboard() {
                               <td className="py-2.5 pr-4">
                                 {p.planId === "promax" ? (
                                   <span className="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-[9px] uppercase tracking-wide px-2 py-0.5 rounded-full">
-                                    <Sparkles className="h-2.5 w-2.5" /> Pro Max
+                                    <ShieldCheck className="h-2.5 w-2.5" /> Pro Max
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 bg-teal-50 border border-teal-200 text-teal-700 font-bold text-[9px] uppercase tracking-wide px-2 py-0.5 rounded-full">
@@ -930,7 +930,7 @@ export default function UnifiedAdminDashboard() {
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-xs font-bold">
                           <span className="text-[#0d6e5a] flex items-center gap-1.5">
-                            <Sparkles className="h-3.5 w-3.5" />
+                            <ShieldCheck className="h-3.5 w-3.5" />
                             Pro Max Tier
                           </span>
                           <span className="text-slate-700">{promaxUsers} users ({totalUsers > 0 ? Math.round((promaxUsers / totalUsers) * 100) : 0}%)</span>

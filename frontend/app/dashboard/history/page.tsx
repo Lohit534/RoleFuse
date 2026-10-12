@@ -21,6 +21,28 @@ function getReadableLinkLabel(url: string, fallback?: string): string {
   if (lower.includes("github.com")) return "GitHub";
   return fallback || url;
 }
+
+function ensureProfileLinks(optText?: string, origText?: string): string {
+  let text = optText || "";
+  if (!origText) return text;
+  const origLi = origText.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w\-\.%]+\/?/i);
+  const origGh = origText.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/?/i);
+  const hasLi = /linkedin\.com/i.test(text);
+  const hasGh = /github\.com/i.test(text);
+  
+  if ((origLi && !hasLi) || (origGh && !hasGh)) {
+    const lines = text.split("\n");
+    let contactLineIdx = lines.findIndex((l, i) => i > 0 && i < 5 && (l.includes("@") || /\+?\d{7,}/.test(l)));
+    if (contactLineIdx !== -1) {
+      const extraLinks: string[] = [];
+      if (origLi && !hasLi) extraLinks.push(origLi[0].startsWith("http") ? origLi[0] : "https://" + origLi[0]);
+      if (origGh && !hasGh) extraLinks.push(origGh[0].startsWith("http") ? origGh[0] : "https://" + origGh[0]);
+      lines[contactLineIdx] = `${lines[contactLineIdx]} | ${extraLinks.join(" | ")}`;
+      return lines.join("\n");
+    }
+  }
+  return text;
+}
 import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 import { HistorySkeleton, HistoryListSkeleton } from "@/components/SkeletonShimmer";
 import {
@@ -458,7 +480,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
 
               {/* Resume Body: Standard Harvard / Tech ATS LaTeX Format (zero teal color, pure black and dark slate text) */}
               <div className="w-full text-black font-serif select-text leading-snug break-words" style={{ fontFamily: "'Times New Roman', Times, 'Liberation Serif', serif" }}>
-                {parseResumeIntoBlocks(resume.optimizedText || "").map((block, idx) => {
+                {parseResumeIntoBlocks(ensureProfileLinks(resume.optimizedText || "", resume.originalText || "")).map((block, idx) => {
                   switch (block.type) {
                     case "name":
                       return (
@@ -476,13 +498,30 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                       return (
                         <div key={idx} className="flex justify-center flex-wrap gap-x-3 sm:gap-x-4 gap-y-0.5 text-[9.5px] sm:text-[10px] text-center text-black mt-0.5 mb-2 leading-normal select-text">
                           {block.segments.map((seg, sIdx) => {
-                            const label = (seg.text || "").replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
-                            return seg.isLink && seg.url ? (
-                              <a key={sIdx} href={seg.url} target="_blank" rel="noopener noreferrer" className="text-black hover:underline">
-                                {label || getReadableLinkLabel(seg.url, seg.text)}
+                            const isLinkedIn = (seg.text || "").toLowerCase().includes("linkedin") || (seg.url || "").toLowerCase().includes("linkedin");
+                            const isGitHub = (seg.text || "").toLowerCase().includes("github") || (seg.url || "").toLowerCase().includes("github");
+                            let display = (seg.text || "").replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
+                            
+                            const linkHref = seg.url || (
+                              isLinkedIn 
+                                ? (seg.text.startsWith("http") ? seg.text : `https://${seg.text.replace(/^linkedin:?\s*/i, "")}`)
+                                : isGitHub
+                                ? (seg.text.startsWith("http") ? seg.text : `https://${seg.text.replace(/^github:?\s*/i, "")}`)
+                                : null
+                            );
+
+                            return (seg.isLink || isLinkedIn || isGitHub) && linkHref ? (
+                              <a
+                                key={sIdx}
+                                href={linkHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-black hover:underline font-medium"
+                              >
+                                {display || getReadableLinkLabel(linkHref, seg.text)}
                               </a>
                             ) : (
-                              <span key={sIdx}>{label}</span>
+                              <span key={sIdx}>{display}</span>
                             );
                           })}
                         </div>
@@ -1124,6 +1163,18 @@ function HistoryRow({
             </span>
             <span>&bull;</span>
             <span className="text-slate-400">Tech</span>
+            {/linkedin\.com/i.test(resume.optimizedText || resume.originalText || "") && (
+              <>
+                <span>&bull;</span>
+                <span className="text-blue-600 font-semibold">LinkedIn</span>
+              </>
+            )}
+            {/github\.com/i.test(resume.optimizedText || resume.originalText || "") && (
+              <>
+                <span>&bull;</span>
+                <span className="text-slate-700 font-semibold">GitHub</span>
+              </>
+            )}
           </div>
         </div>
       </div>

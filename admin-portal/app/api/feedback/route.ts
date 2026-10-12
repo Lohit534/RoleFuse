@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase";
+import { getAdminClient, getBackendUrl } from "@/lib/supabase";
 import { verifyAdmin } from "@/lib/auth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // GET /api/feedback — fetch feedback from Feedback table + fallback Resume table
 export async function GET(request: NextRequest) {
@@ -11,8 +13,6 @@ export async function GET(request: NextRequest) {
 
   try {
     const adminClient = getAdminClient(auth.token) as any;
-    const now = Date.now();
-    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
     const feedbackMap = new Map();
 
     // 1. Check "Feedback" table
@@ -24,18 +24,15 @@ export async function GET(request: NextRequest) {
 
       if (fbRows && Array.isArray(fbRows)) {
         fbRows.forEach((row: any) => {
-          const createdAtTime = new Date(row.createdAt).getTime();
-          if (now - createdAtTime <= TWENTY_FOUR_HOURS) {
-            feedbackMap.set(row.id, {
-              id: row.id,
-              name: row.name || "Anonymous",
-              email: row.email || "",
-              type: row.type || "general",
-              message: row.message,
-              userId: row.userId,
-              createdAt: row.createdAt,
-            });
-          }
+          feedbackMap.set(row.id, {
+            id: row.id,
+            name: row.name || "Anonymous",
+            email: row.email || "",
+            type: row.type || "general",
+            message: row.message,
+            userId: row.userId,
+            createdAt: row.createdAt,
+          });
         });
       }
     } catch (e) {}
@@ -51,41 +48,66 @@ export async function GET(request: NextRequest) {
       if (dbRows && Array.isArray(dbRows)) {
         dbRows.forEach((row: any) => {
           if (!feedbackMap.has(row.id)) {
-            const createdAtTime = new Date(row.createdAt).getTime();
-            if (now - createdAtTime <= TWENTY_FOUR_HOURS) {
-              try {
-                const meta = JSON.parse(row.jobDescription || "{}");
-                feedbackMap.set(row.id, {
-                  id: row.id,
-                  name: meta.name || row.company || "Anonymous",
-                  email: meta.email || "",
-                  type: meta.type || "general",
-                  message: row.originalText || "",
-                  userId: row.userId,
-                  createdAt: row.createdAt,
-                });
-              } catch {
-                feedbackMap.set(row.id, {
-                  id: row.id,
-                  name: row.company || "Anonymous",
-                  email: "",
-                  type: "general",
-                  message: row.originalText || "",
-                  userId: row.userId,
-                  createdAt: row.createdAt,
-                });
-              }
+            try {
+              const meta = JSON.parse(row.jobDescription || "{}");
+              feedbackMap.set(row.id, {
+                id: row.id,
+                name: meta.name || row.company || "Anonymous",
+                email: meta.email || "",
+                type: meta.type || "general",
+                message: row.originalText || "",
+                userId: row.userId,
+                createdAt: row.createdAt,
+              });
+            } catch {
+              feedbackMap.set(row.id, {
+                id: row.id,
+                name: row.company || "Anonymous",
+                email: "",
+                type: "general",
+                message: row.originalText || "",
+                userId: row.userId,
+                createdAt: row.createdAt,
+              });
             }
           }
         });
       }
     } catch (e) {}
 
-    const result = Array.from(feedbackMap.values()).sort(
+    let result = Array.from(feedbackMap.values()).sort(
       (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    return NextResponse.json(result);
+    // If local query yielded no items, check backend API as fallback
+    if (result.length === 0) {
+      const backendUrl = getBackendUrl();
+      if (backendUrl) {
+        try {
+          const remoteRes = await fetch(`${backendUrl}/api/feedback`, {
+            headers: {
+              Authorization: `Bearer ${auth.token}`,
+              "Content-Type": "application/json",
+            },
+            cache: "no-store",
+          });
+          if (remoteRes.ok) {
+            const remoteData = await remoteRes.json();
+            if (Array.isArray(remoteData) && remoteData.length > 0) {
+              result = remoteData;
+            }
+          }
+        } catch (err: any) {
+          console.warn("[feedback/GET] Backend live fallback notice:", err.message);
+        }
+      }
+    }
+
+    return NextResponse.json(result, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      },
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase";
+import { getAdminClient, getBackendUrl } from "@/lib/supabase";
 import { verifyAdmin, isAdminEmail } from "@/lib/auth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // GET /api/users — list all users with synchronized plan status and accurate pricing credits
 export async function GET(request: NextRequest) {
@@ -15,7 +17,7 @@ export async function GET(request: NextRequest) {
     const adminClient = getAdminClient(auth.token) as any;
     const now = new Date();
 
-    // 1. Fetch all registered users
+    // 1. Fetch all registered users from User table
     let users: any[] = [];
     const { data: dbUsers, error: usersErr } = await adminClient
       .from("User")
@@ -26,7 +28,34 @@ export async function GET(request: NextRequest) {
       users = [...dbUsers];
     }
 
-    // 2. Fetch all credit records from "Credit" table
+    // 2. Real-time sync from Supabase Auth admin to capture any newly signed-up user immediately
+    try {
+      if (adminClient?.auth?.admin?.listUsers) {
+        const { data: authData } = await adminClient.auth.admin.listUsers();
+        if (authData?.users) {
+          for (const au of authData.users) {
+            const auEmail = (au.email || "").toLowerCase().trim();
+            const existing = users.find((u: any) => 
+              u.id === au.id || (u.email && u.email.toLowerCase().trim() === auEmail)
+            );
+            if (!existing) {
+              const newUser = {
+                id: au.id,
+                email: au.email,
+                name: au.user_metadata?.full_name || au.email?.split("@")[0] || null,
+                createdAt: au.created_at,
+              };
+              users.push(newUser);
+              await adminClient.from("User").upsert(newUser, { onConflict: "id" }).catch(() => {});
+            }
+          }
+        }
+      }
+    } catch (authErr: any) {
+      console.warn("[users/GET] auth.admin.listUsers notice:", authErr.message);
+    }
+
+    // 3. Fetch all credit records from "Credit" table
     let credits: any[] = [];
     const { data: dbCredits, error: creditsErr } = await adminClient
       .from("Credit")
@@ -131,7 +160,46 @@ export async function GET(request: NextRequest) {
       totalTickets,
     };
 
-    return NextResponse.json({ users: enriched, analytics });
+    // If local query yielded empty or only hardcoded users, query the live backend as fallback
+    const backendUrl = getBackendUrl();
+    if (backendUrl && (!users.length || users.length <= 2)) {
+      try {
+        const remoteRes = await fetch(`${backendUrl}/api/admin/users`, {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        });
+        if (remoteRes.ok) {
+          const remoteData = await remoteRes.json();
+          if (Array.isArray(remoteData.users) && remoteData.users.length > 0) {
+            return NextResponse.json(
+              {
+                users: remoteData.users,
+                analytics: remoteData.analytics || analytics,
+              },
+              {
+                headers: {
+                  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+                },
+              }
+            );
+          }
+        }
+      } catch (backendErr: any) {
+        console.warn("[users/GET] Backend live query notice:", backendErr.message);
+      }
+    }
+
+    return NextResponse.json(
+      { users: enriched, analytics },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
+    );
   } catch (e: any) {
     console.error("[users/GET] Error:", e.message);
     return NextResponse.json({ error: e.message }, { status: 500 });

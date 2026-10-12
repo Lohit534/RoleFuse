@@ -423,47 +423,81 @@ export const ResumePDFFromJSON: React.FC<ResumePDFFromJSONProps> = ({ data }) =>
         )}
 
         {/* ── EDUCATION ── */}
-        {data.education && data.education.length > 0 && (
+        {(() => {
+          if (!data.education || data.education.length === 0) return null;
+          const degreeLevel = (deg: string): number => {
+            const d = (deg || "").toLowerCase();
+            if (/ph\.?d|doctor/.test(d)) return 5;
+            if (/m\.?tech|m\.?e\.?|master|mba|m\.?s\.?\b|mca/.test(d)) return 4;
+            if (/b\.?tech|b\.?e\.?|bachelor|b\.?s\.?\b|b\.?sc\.?\b|degree|bca/.test(d)) return 3;
+            if (/diploma|polytechnic/.test(d)) return 2;
+            if (/intermediate|hsc|class xii|class 12|12th|senior secondary|higher secondary|\binter\b/.test(d)) return 1.5;
+            if (/ssc|class x|class 10|10th|matriculation|secondary school|high school/.test(d)) return 1;
+            return 0;
+          };
+          const maxLevel = Math.max(...data.education.map((e) => degreeLevel(e.degree)));
+          const filtered = maxLevel >= 3
+            ? data.education.filter((e) => degreeLevel(e.degree) >= 3)
+            : data.education;
+          if (filtered.length === 0) return null;
+
+          return (
+            <>
+              <SectionHeader title="Education" />
+              {filtered.map((edu, i) => (
+                <View key={i} style={S.eduBlock}>
+                  {/* Degree — Year */}
+                  <View style={S.eduTopRow}>
+                    <Text style={S.eduDegree}>{edu.degree}</Text>
+                    <Text style={S.eduYear}>{edu.year}</Text>
+                  </View>
+                  {/* Institution — CGPA */}
+                  <View style={S.eduInstRow}>
+                    <Text style={S.eduInstitution}>{edu.institution}</Text>
+                    {edu.cgpa && <Text style={S.eduCGPA}>{edu.cgpa}</Text>}
+                  </View>
+                  {/* Affiliated University (if different from institution) */}
+                  {edu.university && edu.university !== edu.institution && (
+                    <Text style={S.eduUniversity}>{edu.university}</Text>
+                  )}
+                </View>
+              ))}
+            </>
+          );
+        })()}
+
+        {/* ── CERTIFICATIONS & ACHIEVEMENTS ── */}
+        {data.combinedCertAchiev && ((data.certifications?.length ?? 0) > 0 || (data.achievements?.length ?? 0) > 0) ? (
           <>
-            <SectionHeader title="Education" />
-            {data.education.map((edu, i) => (
-              <View key={i} style={S.eduBlock}>
-                {/* Degree — Year */}
-                <View style={S.eduTopRow}>
-                  <Text style={S.eduDegree}>{edu.degree}</Text>
-                  <Text style={S.eduYear}>{edu.year}</Text>
-                </View>
-                {/* Institution — CGPA */}
-                <View style={S.eduInstRow}>
-                  <Text style={S.eduInstitution}>{edu.institution}</Text>
-                  {edu.cgpa && <Text style={S.eduCGPA}>{edu.cgpa}</Text>}
-                </View>
-                {/* Affiliated University (if different from institution) */}
-                {edu.university && edu.university !== edu.institution && (
-                  <Text style={S.eduUniversity}>{edu.university}</Text>
-                )}
-              </View>
+            <SectionHeader title="Certifications & Achievements" />
+            {data.certifications?.map((c, i) => (
+              <Bullet key={`c-${i}`} text={c} />
+            ))}
+            {data.achievements?.map((a, i) => (
+              <Bullet key={`a-${i}`} text={a} />
             ))}
           </>
-        )}
-
-        {/* ── CERTIFICATIONS ── */}
-        {data.certifications && data.certifications.length > 0 && (
+        ) : (
           <>
-            <SectionHeader title="Certifications" />
-            {data.certifications.map((c, i) => (
-              <Bullet key={i} text={c} />
-            ))}
-          </>
-        )}
+            {/* ── CERTIFICATIONS ── */}
+            {data.certifications && data.certifications.length > 0 && (
+              <>
+                <SectionHeader title="Certifications" />
+                {data.certifications.map((c, i) => (
+                  <Bullet key={i} text={c} />
+                ))}
+              </>
+            )}
 
-        {/* ── ACHIEVEMENTS ── */}
-        {data.achievements && data.achievements.length > 0 && (
-          <>
-            <SectionHeader title="Achievements" />
-            {data.achievements.map((a, i) => (
-              <Bullet key={i} text={a} />
-            ))}
+            {/* ── ACHIEVEMENTS ── */}
+            {data.achievements && data.achievements.length > 0 && (
+              <>
+                <SectionHeader title="Achievements" />
+                {data.achievements.map((a, i) => (
+                  <Bullet key={i} text={a} />
+                ))}
+              </>
+            )}
           </>
         )}
 

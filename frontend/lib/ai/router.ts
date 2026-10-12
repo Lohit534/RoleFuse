@@ -80,10 +80,27 @@ export function serializeResumeJSONToText(json: ResumeJSON): string {
     }
   }
 
-  // Education — each entry on separate lines, dates clearly separated
+  // Education — filter lower-level degrees when a higher one is present
   if (json.education?.length) {
+    // Degree tiers: higher number = higher qualification
+    const degreeLevel = (deg: string): number => {
+      const d = (deg || "").toLowerCase();
+      if (/ph\.?d|doctor/.test(d)) return 5;
+      if (/m\.?tech|m\.?e\.?|master|mba|m\.?s\.?\b/.test(d)) return 4;
+      if (/b\.?tech|b\.?e\.?|bachelor|b\.?s\.?\b|b\.?sc\.?\b|degree/.test(d)) return 3;
+      if (/diploma|polytechnic/.test(d)) return 2;
+      if (/intermediate|hsc|class xii|class 12|12th|senior secondary|higher secondary/.test(d)) return 1.5;
+      if (/ssc|class x|class 10|10th|matriculation|secondary school/.test(d)) return 1;
+      return 0;
+    };
+    const maxLevel = Math.max(...json.education.map(e => degreeLevel(e.degree)));
+    // Only filter out lower levels if a bachelor's or higher is present (level >= 3)
+    const filtered = maxLevel >= 3
+      ? json.education.filter(e => degreeLevel(e.degree) >= 3)
+      : json.education;
+
     lines.push("EDUCATION");
-    for (const edu of json.education) {
+    for (const edu of filtered) {
       // Degree on its own line (with year at end)
       lines.push(`${edu.degree}${edu.year ? " | " + edu.year : ""}`);
       // Institution and university on next line
@@ -98,18 +115,35 @@ export function serializeResumeJSONToText(json: ResumeJSON): string {
     }
   }
 
-  // Certifications
-  if (json.certifications?.length) {
-    lines.push("CERTIFICATIONS");
-    for (const c of json.certifications) lines.push(`• ${c}`);
+  // Certifications & Achievements — preserve combined section if user originally had them merged
+  const hasCerts = (json.certifications?.length ?? 0) > 0;
+  const hasAchievs = (json.achievements?.length ?? 0) > 0;
+  if (json.combinedCertAchiev && hasCerts && hasAchievs) {
+    // Combined section: "CERTIFICATIONS & ACHIEVEMENTS"
+    lines.push("CERTIFICATIONS & ACHIEVEMENTS");
+    for (const c of json.certifications!) lines.push(`• ${c}`);
+    for (const a of json.achievements!) lines.push(`• ${a}`);
     lines.push("");
-  }
-
-  // Achievements
-  if (json.achievements?.length) {
-    lines.push("ACHIEVEMENTS");
-    for (const a of json.achievements) lines.push(`• ${a}`);
+  } else if (json.combinedCertAchiev && hasCerts) {
+    lines.push("CERTIFICATIONS & ACHIEVEMENTS");
+    for (const c of json.certifications!) lines.push(`• ${c}`);
     lines.push("");
+  } else if (json.combinedCertAchiev && hasAchievs) {
+    lines.push("CERTIFICATIONS & ACHIEVEMENTS");
+    for (const a of json.achievements!) lines.push(`• ${a}`);
+    lines.push("");
+  } else {
+    // Separate sections
+    if (hasCerts) {
+      lines.push("CERTIFICATIONS");
+      for (const c of json.certifications!) lines.push(`• ${c}`);
+      lines.push("");
+    }
+    if (hasAchievs) {
+      lines.push("ACHIEVEMENTS");
+      for (const a of json.achievements!) lines.push(`• ${a}`);
+      lines.push("");
+    }
   }
 
   // Languages — each formatted as a bullet point item
@@ -209,6 +243,8 @@ export function validateAndRepairResumeFormat(text: string): string {
     "PERSONAL PROJECTS",
     "EDUCATION",
     "ACADEMIC BACKGROUND",
+    "CERTIFICATIONS & ACHIEVEMENTS",
+    "CERTIFICATIONS AND ACHIEVEMENTS",
     "CERTIFICATIONS?",
     "ACHIEVEMENTS?",
     "AWARDS?",
@@ -577,6 +613,22 @@ function parseAIResponse(raw: string, fallbackText: string): AIResult {
   // Schema B: Structured ResumeJSON schema
   if (parsed?.header?.name) {
     const json = parsed as ResumeJSON;
+
+    // Detect if original user input had combined "Certifications & Achievements"
+    if (/certifications?\s*(&|and)\s*achievements?/i.test(fallbackText)) {
+      json.combinedCertAchiev = true;
+    }
+
+    // Preserve LinkedIn / GitHub from original text if missing from AI output
+    if (!json.header.linkedin) {
+      const li = fallbackText.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w\-\.%]+\/?/i);
+      if (li) json.header.linkedin = li[0].startsWith('http') ? li[0] : 'https://' + li[0];
+    }
+    if (!json.header.github) {
+      const gh = fallbackText.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/?/i);
+      if (gh) json.header.github = gh[0].startsWith('http') ? gh[0] : 'https://' + gh[0];
+    }
+
     const plainText = serializeResumeJSONToText(json);
     const sanitized = sanitizeResumeText(plainText);
     const validated = validateAndRepairResumeFormat(sanitized);

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase";
+import { getAdminClient, getBackendUrl } from "@/lib/supabase";
 import { verifyAdmin } from "@/lib/auth";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // GET /api/tickets — fetch support tickets from Resume table (jobTitle: "SUPPORT_TICKET")
 export async function GET(request: NextRequest) {
@@ -19,10 +21,9 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.warn("[tickets/GET] Supabase notice:", error.message);
-      return NextResponse.json([]);
     }
 
-    const formattedMessages = (data || []).map((row: any) => {
+    let formattedMessages = (data || []).map((row: any) => {
       try {
         const meta = JSON.parse(row.jobDescription || "{}");
         return {
@@ -53,7 +54,35 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(formattedMessages);
+    // If local query returned no tickets, fetch from live backend support messages endpoint
+    if (formattedMessages.length === 0) {
+      const backendUrl = getBackendUrl();
+      if (backendUrl) {
+        try {
+          const remoteRes = await fetch(`${backendUrl}/api/support/messages`, {
+            headers: {
+              Authorization: `Bearer ${auth.token}`,
+              "Content-Type": "application/json",
+            },
+            cache: "no-store",
+          });
+          if (remoteRes.ok) {
+            const remoteData = await remoteRes.json();
+            if (Array.isArray(remoteData) && remoteData.length > 0) {
+              formattedMessages = remoteData;
+            }
+          }
+        } catch (err: any) {
+          console.warn("[tickets/GET] Backend live fallback notice:", err.message);
+        }
+      }
+    }
+
+    return NextResponse.json(formattedMessages, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      },
+    });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

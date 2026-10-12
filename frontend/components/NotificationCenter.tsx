@@ -7,7 +7,6 @@ import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 import {
   Bell,
   X,
-  Sparkles,
   AlertTriangle,
   Clock,
   ArrowRight,
@@ -37,9 +36,10 @@ interface NotificationBellProps {
  * Derives notifications based on user's current plan and expiry status.
  *
  * Rules:
- *  - Free users: "Upgrade for more features" notification.
- *  - Paid users close to expiry (<= 7 days): "Plan expiring soon, please renew/upgrade" notification.
- *  - Paid users with plenty of time (> 7 days): NO upgrade notifications.
+ *  - Paid users expiring within 24 hours (<= 24 hrs): "Plan expiring soon, please renew/upgrade" notification.
+ *  - Free users: Monthly once "Upgrade to best features" notification.
+ *  - Premiere Pro (Premium Pro) users: Monthly once "Upgrade to best features (Pro Max)" notification.
+ *  - Pro Max users with healthy plan: NO upgrade notifications.
  *  - Owner: NO upgrade/expiry notifications.
  */
 export function getActiveNotifications(
@@ -59,48 +59,63 @@ export function getActiveNotifications(
 
   const notifications: AppNotification[] = [];
 
-  if (isPaid) {
-    // Check expiration date
-    if (credits.expiresAt) {
-      const expiry = new Date(credits.expiresAt);
-      const diffMs = expiry.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  // Check 24-hour expiration for paid plans
+  if (isPaid && credits.expiresAt) {
+    const expiry = new Date(credits.expiresAt);
+    const diffMs = expiry.getTime() - now.getTime();
 
-      // Paid users getting close to plan expiration (within 7 days)
-      if (diffDays <= 7 && diffDays >= 0) {
-        const notifId = `expiring_${planId}_${expiry.toISOString().slice(0, 10)}`;
-        if (!dismissedIds.includes(notifId)) {
-          const planTitle = planId === "promax" ? "Pro Max" : "Premium Pro";
-          const formattedDate = expiry.toLocaleDateString(undefined, {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-          notifications.push({
-            id: notifId,
-            type: "expiring",
-            title: `${planTitle} Plan Expiring Soon`,
-            message: `Your ${planTitle} subscription will expire on ${formattedDate} (${diffDays === 0 ? "today" : `in ${diffDays} day${diffDays > 1 ? "s" : ""}`}). Renew or upgrade now to keep your ATS optimizations and exports active.`,
-            actionText: "Renew Plan",
-            actionHref: "/dashboard/pricing",
-            dateStr: formattedDate,
-          });
-        }
+    // Trigger notification before 24 hours (diffMs > 0 && diffMs <= 24 * 60 * 60 * 1000)
+    if (diffMs > 0 && diffMs <= 24 * 60 * 60 * 1000) {
+      const diffHours = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
+      const notifId = `expiring_24h_${planId}_${expiry.toISOString().slice(0, 10)}`;
+      if (!dismissedIds.includes(notifId)) {
+        const planTitle = planId === "promax" ? "Pro Max" : "Premium Pro";
+        const formattedDate = expiry.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        notifications.push({
+          id: notifId,
+          type: "expiring",
+          title: `${planTitle} Plan Expiring in ${diffHours <= 1 ? "1 Hour" : `${diffHours} Hours`}`,
+          message: `Your ${planTitle} subscription expires within 24 hours (${diffHours <= 1 ? "in less than an hour" : `in ${diffHours} hours`} on ${formattedDate}). Renew or upgrade now to keep your ATS optimizations and downloads active.`,
+          actionText: "Renew Plan",
+          actionHref: "/dashboard/pricing",
+          dateStr: "Expiring Today",
+        });
       }
     }
-    // Paid users who are NOT close to expiring get ZERO upgrade notifications.
-  } else {
-    // Free plan users
+  }
+
+  // Monthly upgrade notification for Premiere Pro users
+  if (planId === "premium") {
+    const notifId = `premium_upgrade_promax_${currentMonthKey}`;
+    if (!dismissedIds.includes(notifId)) {
+      notifications.push({
+        id: notifId,
+        type: "upgrade",
+        title: "Upgrade to Best Features (Pro Max)",
+        message: "Unlock FastHire's best features! Upgrade to Pro Max for unlimited AI resume optimizations, highest ATS score accuracy, and priority exports.",
+        actionText: "Upgrade to Best Features",
+        actionHref: "/dashboard/pricing",
+        dateStr: "Monthly Highlight",
+      });
+    }
+  }
+
+  // Monthly upgrade notification for Free plan users
+  if (!isPaid) {
     const notifId = `free_upgrade_${currentMonthKey}`;
     if (!dismissedIds.includes(notifId)) {
       notifications.push({
         id: notifId,
         type: "upgrade",
-        title: "Upgrade for More Features",
+        title: "Upgrade to Best Features",
         message: "Unlock 20 monthly AI optimizations, full PDF & DOCX downloads, AI cover letters, and career roadmaps.",
-        actionText: "Upgrade to Pro",
+        actionText: "Upgrade to Best Features",
         actionHref: "/dashboard/pricing",
-        dateStr: "New",
+        dateStr: "Monthly Highlight",
       });
     }
   }
@@ -263,7 +278,7 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
                       {notif.type === "expiring" ? (
                         <AlertTriangle className="h-3.5 w-3.5" />
                       ) : (
-                        <Sparkles className="h-3.5 w-3.5" />
+                        <ShieldCheck className="h-3.5 w-3.5" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1 space-y-1">
@@ -303,11 +318,12 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
  * Monthly One-Time Popup Notification.
  *
  * Rules:
- *  - Free Users: One popup per month highlighting Pro features and upgrade option.
- *  - Paid Users: Only pops up if their plan is expiring within 7 days ("Your plan is expiring soon").
- *  - Paid Users with active, healthy plan: NEVER show upgrade popups.
+ *  - Paid Users expiring within 24 hours: Shows 24-hr urgent expiry popup ("Your plan expires in less than 24 hours").
+ *  - Free Users: One popup per month highlighting Pro features and "Upgrade to Best Features" option.
+ *  - Premiere Pro Users: One popup per month highlighting Pro Max features and "Upgrade to Best Features" option.
+ *  - Pro Max Users with healthy plan: NEVER show upgrade popups.
  *  - Owners: NEVER show popups.
- *  - Users can dismiss (X), storing the month key in localStorage so it appears at most once per month.
+ *  - Dismissal is saved to localStorage per month / per expiry cycle so users are never spammed.
  */
 export function MonthlyNotificationModal({
   credits,
@@ -317,6 +333,7 @@ export function MonthlyNotificationModal({
   userEmail?: string | null;
 }) {
   const [showModal, setShowModal] = useState(false);
+  const [modalDismissKey, setModalDismissKey] = useState<string>("");
   const [modalData, setModalData] = useState<{
     title: string;
     description: string;
@@ -324,6 +341,7 @@ export function MonthlyNotificationModal({
     actionText: string;
     actionHref: string;
     isExpiring?: boolean;
+    features?: string[];
   } | null>(null);
 
   useEffect(() => {
@@ -334,67 +352,107 @@ export function MonthlyNotificationModal({
 
     const now = new Date();
     const currentMonthKey = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const storageKey = `fastHire_monthly_popup_${currentMonthKey}`;
+    const monthlyStorageKey = `fastHire_monthly_popup_${currentMonthKey}`;
 
-    // If already seen / dismissed this month, don't show
+    const planId = (credits.planId || "free").toLowerCase();
+    const isPaid = planId === "premium" || planId === "promax" || (credits.paidCredits && credits.paidCredits > 0);
+
+    // 1. Check if paid plan is expiring within 24 hours (before 24 hrs)
+    if (isPaid && credits.expiresAt) {
+      const expiry = new Date(credits.expiresAt);
+      const diffMs = expiry.getTime() - now.getTime();
+
+      // Trigger if expiring in 24 hours or less (diffMs > 0 && diffMs <= 24 * 60 * 60 * 1000)
+      if (diffMs > 0 && diffMs <= 24 * 60 * 60 * 1000) {
+        const expiryKey = `fastHire_expiring_24h_${expiry.toISOString().slice(0, 10)}`;
+        try {
+          if (!localStorage.getItem(expiryKey)) {
+            const diffHours = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
+            const planTitle = planId === "promax" ? "Pro Max" : "Premium Pro";
+            const formattedDate = expiry.toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
+            setModalDismissKey(expiryKey);
+            setModalData({
+              badge: "EXPIRES IN 24 HOURS",
+              title: `Your ${planTitle} Plan Expires in ${diffHours <= 1 ? "1 hour" : `${diffHours} hours`}`,
+              description: `You have ${diffHours <= 1 ? "less than an hour" : `${diffHours} hours`} left on your current billing cycle (${formattedDate}). Renew or upgrade now to keep your ATS optimizations, high-scoring bullet improvers, and exports active without disruption.`,
+              actionText: "Renew / Upgrade Plan",
+              actionHref: "/dashboard/pricing",
+              isExpiring: true,
+            });
+            setShowModal(true);
+            return;
+          }
+        } catch {
+          // ignore storage errors
+        }
+      }
+    }
+
+    // 2. Check if already dismissed monthly upgrade popup for this month
     try {
-      const seen = localStorage.getItem(storageKey);
+      const seen = localStorage.getItem(monthlyStorageKey);
       if (seen) return;
     } catch {
       return;
     }
 
-    const planId = (credits.planId || "free").toLowerCase();
-    const isPaid = planId === "premium" || planId === "promax" || (credits.paidCredits && credits.paidCredits > 0);
-
-    if (isPaid) {
-      // Check if paid plan is getting close to expiring (within 7 days)
-      if (credits.expiresAt) {
-        const expiry = new Date(credits.expiresAt);
-        const diffMs = expiry.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-
-        if (diffDays <= 7 && diffDays >= 0) {
-          const planTitle = planId === "promax" ? "Pro Max" : "Premium Pro";
-          const formattedDate = expiry.toLocaleDateString(undefined, {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-          setModalData({
-            badge: "PLAN EXPIRING SOON",
-            title: `Your ${planTitle} plan expires on ${formattedDate}`,
-            description: `You have ${diffDays === 0 ? "less than 24 hours" : `${diffDays} days`} left on your current billing cycle. Renew or upgrade now to keep your ATS optimizations, high-scoring bullet improvers, and exports active without disruption.`,
-            actionText: "Renew / Upgrade Plan",
-            actionHref: "/dashboard/pricing",
-            isExpiring: true,
-          });
-          setShowModal(true);
-        }
-      }
-      // Note: Paid users NOT close to expiring will NOT get any popup.
-    } else {
-      // Free plan users: show monthly one-time upgrade reminder
+    // 3. For Premiere Pro (Premium) users: Monthly once upgrade to Pro Max (best features)
+    if (planId === "premium") {
+      setModalDismissKey(monthlyStorageKey);
       setModalData({
-        badge: "MONTHLY PRO HIGHLIGHT",
-        title: "Upgrade to Pro for Unlimited Resume Optimizations",
-        description: "Supercharge your job applications this month! FastHire Pro includes 20 monthly AI resume optimizations, full PDF and Word DOCX downloads, tailored cover letters, and custom career skill roadmaps.",
-        actionText: "View Pricing Plans",
+        badge: "MONTHLY PRO MAX UPGRADE",
+        title: "Upgrade to Best Features - Pro Max Tier",
+        description: "Unlock FastHire's best features this month! Upgrade from Premium Pro to Pro Max for unlimited ATS resume optimizations, priority export speed, and executive Harvard templates.",
+        actionText: "Upgrade to Best Features",
         actionHref: "/dashboard/pricing",
         isExpiring: false,
+        features: [
+          "Unlimited AI resume optimizations each month",
+          "Highest ATS keyword & recruiter ranking power",
+          "Priority DOCX & PDF generation with executive templates",
+          "Dedicated cover letter & career roadmap generator",
+        ],
       });
       setShowModal(true);
+      return;
     }
+
+    // 4. For Free plan users: Monthly once upgrade to Pro (best features)
+    if (!isPaid) {
+      setModalDismissKey(monthlyStorageKey);
+      setModalData({
+        badge: "MONTHLY PRO HIGHLIGHT",
+        title: "Upgrade to Best Features - FastHire Pro",
+        description: "Supercharge your job applications this month! Upgrade to access FastHire's best features: 20 monthly AI resume optimizations, full PDF and Word DOCX downloads, tailored cover letters, and custom career skill roadmaps.",
+        actionText: "Upgrade to Best Features",
+        actionHref: "/dashboard/pricing",
+        isExpiring: false,
+        features: [
+          "20 AI optimizations every month",
+          "Download Harvard & Modern ATS PDF & DOCX formats",
+          "AI Cover Letters & tailored 90-day Skill Roadmaps",
+          "Instant bullet improvement & scoring analysis",
+        ],
+      });
+      setShowModal(true);
+      return;
+    }
+
+    // Pro Max users with healthy plan: no upgrade popup
   }, [credits, userEmail]);
 
   const handleClose = () => {
     setShowModal(false);
-    try {
-      const now = new Date();
-      const currentMonthKey = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}`;
-      localStorage.setItem(`fastHire_monthly_popup_${currentMonthKey}`, "dismissed");
-    } catch {
-      // Ignore
+    if (modalDismissKey) {
+      try {
+        localStorage.setItem(modalDismissKey, "dismissed");
+      } catch {
+        // Ignore
+      }
     }
   };
 
@@ -425,7 +483,7 @@ export function MonthlyNotificationModal({
             {modalData.isExpiring ? (
               <AlertTriangle className="h-5 w-5" />
             ) : (
-              <Sparkles className="h-5 w-5" />
+              <ShieldCheck className="h-5 w-5" />
             )}
           </div>
           <div>
@@ -449,21 +507,15 @@ export function MonthlyNotificationModal({
           {modalData.description}
         </p>
 
-        {/* Feature Highlights for Free Users */}
-        {!modalData.isExpiring && (
+        {/* Feature Highlights for Free & Premiere Pro Users */}
+        {!modalData.isExpiring && modalData.features && (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5 text-xs text-slate-700">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-              <span className="font-medium text-[11px]">20 AI optimizations every month</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-              <span className="font-medium text-[11px]">Download Harvard/Tech styled PDF &amp; DOCX</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-              <span className="font-medium text-[11px]">AI Cover Letter &amp; 90-day Skill Roadmaps</span>
-            </div>
+            {modalData.features.map((feature, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
+                <span className="font-medium text-[11px]">{feature}</span>
+              </div>
+            ))}
           </div>
         )}
 

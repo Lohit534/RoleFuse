@@ -50,6 +50,8 @@ export interface ResumeJSON {
   certifications?: string[];
   achievements?: string[];
   languages?: string[];
+  /** True when the user's original resume had a single combined "Certifications & Achievements" section. */
+  combinedCertAchiev?: boolean;
   // Metadata fields returned by AI
   keywordsAdded?: string[];
   changesCount?: number;

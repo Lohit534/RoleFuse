@@ -613,7 +613,7 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
   const SECTION_NAMES_LIST = [
     'PROFESSIONAL SUMMARY', 'TECHNICAL SKILLS', 'PROFESSIONAL EXPERIENCE', 'WORK EXPERIENCE', 'EMPLOYMENT HISTORY',
     'PERSONAL PROJECTS', 'ACADEMIC PROJECTS', 'ACADEMIC BACKGROUND', 'CORE SKILLS', 'KEY SKILLS', 'SUMMARY', 'OBJECTIVE', 'SKILLS',
-    'EXPERIENCE', 'INTERNSHIP', 'INTERNSHIPS', 'PROJECTS', 'EDUCATION', 'CERTIFICATIONS', 'ACHIEVEMENTS', 'KEY ACHIEVEMENTS', 'EXTRA-CURRICULAR', 'AWARDS', 'LANGUAGES'
+    'EXPERIENCE', 'INTERNSHIP', 'INTERNSHIPS', 'PROJECTS', 'EDUCATION', 'CERTIFICATIONS & ACHIEVEMENTS', 'CERTIFICATIONS AND ACHIEVEMENTS', 'CERTIFICATIONS', 'ACHIEVEMENTS', 'KEY ACHIEVEMENTS', 'EXTRA-CURRICULAR', 'AWARDS', 'LANGUAGES'
   ];
 
   let cleanInput = (text || "");
@@ -716,7 +716,9 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
         } else if (urlMatch) {
           segments.push({ text: txt, url: cleanUrl(urlMatch[0]), isLink: true });
         } else if (txt.toLowerCase().includes('linkedin.com') || txt.toLowerCase().includes('github.com')) {
-          const clean = txt.startsWith('http') ? txt : 'https://' + txt;
+          const matchedProfile = txt.match(/(?:https?:\/\/)?(?:www\.)?(?:linkedin\.com\/in\/[\w\-\.%]+\/?|github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/?)/i);
+          const rawUrl = matchedProfile ? matchedProfile[0] : txt.replace(/^(?:linkedin|github)\s*[:\-]?\s*/i, '');
+          const clean = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
           segments.push({ text: txt, url: cleanUrl(clean), isLink: true });
         } else if (txt.toLowerCase().includes('linkedin') || txt.toLowerCase().includes('github')) {
           const implicitUrl = txt.toLowerCase().includes('linkedin') 
@@ -1103,6 +1105,33 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       b.degree = cleanEducationText(b.degree);
       b.school = cleanEducationText(b.school);
       if (b.school && b.degree && b.school.toLowerCase() === b.degree.toLowerCase()) b.school = '';
+    }
+  }
+
+  // Dynamically filter lower-tier degrees when a bachelor's or higher is present
+  const degreeLevel = (deg: string): number => {
+    const d = (deg || "").toLowerCase();
+    if (/ph\.?d|doctor/.test(d)) return 5;
+    if (/m\.?tech|m\.?e\.?|master|mba|m\.?s\.?\b|mca/.test(d)) return 4;
+    if (/b\.?tech|b\.?e\.?|bachelor|b\.?s\.?\b|b\.?sc\.?\b|degree|bca/.test(d)) return 3;
+    if (/diploma|polytechnic/.test(d)) return 2;
+    if (/intermediate|hsc|class xii|class 12|12th|senior secondary|higher secondary|\binter\b/.test(d)) return 1.5;
+    if (/ssc|class x|class 10|10th|matriculation|secondary school|high school/.test(d)) return 1;
+    return 0;
+  };
+  const eduBlocks = blocks.filter(b => b.type === 'education');
+  if (eduBlocks.length > 0) {
+    const maxLevel = Math.max(...eduBlocks.map(b => degreeLevel(b.degree)));
+    if (maxLevel >= 3) {
+      const filteredBlocks: ParsedResumeBlock[] = [];
+      for (const b of blocks) {
+        if (b.type === 'education' && degreeLevel(b.degree) < 3) {
+          continue; // omit secondary/higher secondary/diploma when degree exists
+        }
+        filteredBlocks.push(b);
+      }
+      blocks.length = 0;
+      blocks.push(...filteredBlocks);
     }
   }
 
