@@ -231,7 +231,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
   return (
     <>
-      <nav className="border-b border-slate-200 bg-white text-slate-800 sticky top-0 z-50 backdrop-blur-sm shadow-sm">
+      <nav className="border-b border-[#BCE8DF] bg-white/90 text-slate-800 sticky top-0 z-50 backdrop-blur-md shadow-xs">
         <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           
@@ -689,7 +689,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
       {/* Mobile Drawer Menu for Logged-Out Landing Page */}
       {!user && isMobileMenuOpen && (
-        <div className="sm:hidden border-t border-[#E2E8F0] bg-white px-5 py-4 space-y-3 animate-in fade-in duration-150">
+        <div className="sm:hidden border-t border-[#BCE8DF] bg-white/95 px-5 py-4 space-y-3 animate-in fade-in duration-150">
           <Link
             href="/#features"
             onClick={() => setIsMobileMenuOpen(false)}
