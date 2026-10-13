@@ -205,20 +205,17 @@ export default function SupportChatbot() {
           const creds: UserCreditsInfo = await credRes.json();
           setRawCredits(creds);
 
-          const planId = localStorage.getItem(`fastHire_plan_${user.id}`) || "free";
+          const userPlan = (creds as any).planId || localStorage.getItem(`fastHire_plan_${user.id}`) || "free";
+          setActivePlan(userPlan);
           
           if (creds.isOwner) {
-            setActivePlan("promax");
             setRemainingCredits("Unlimited");
-          } else if (planId === "promax" || creds.paidCredits >= 90) {
-            setActivePlan("promax");
-            setRemainingCredits("Unlimited");
-          } else if (planId === "premium" || (creds.paidCredits > 0 && creds.paidCredits < 90)) {
-            setActivePlan("premium");
+          } else if (userPlan === "promax" || creds.paidCredits >= 90) {
+            setRemainingCredits(`${creds.paidCredits} Credits`);
+          } else if (userPlan === "premium" || creds.paidCredits > 0) {
             setRemainingCredits(`${creds.paidCredits} Credits`);
           } else {
-            setActivePlan("free");
-            setRemainingCredits(`${creds.freeRemaining} Credits`);
+            setRemainingCredits(`${creds.freeRemaining} Free left`);
           }
         }
       }
@@ -563,9 +560,11 @@ export default function SupportChatbot() {
 
                 {/* Option 2: AI Assistant Chat (Available for all, Free/Pro shows PRO MAX badge to upgrade) */}
                 {(() => {
+                  // Strictly check for Pro Max: must have 90+ credits OR be owner/admin_promax
                   const isProMax = activePlan === "promax" || 
                                    activePlan === "owner" || 
                                    (rawCredits?.isOwner ?? false) || 
+                                   (rawCredits as any)?.planId === "promax" ||
                                    (rawCredits?.paidCredits ?? 0) >= 90;
                   return (
                     <button

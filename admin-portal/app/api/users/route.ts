@@ -17,45 +17,85 @@ export async function GET(request: NextRequest) {
     const adminClient = getAdminClient(auth.token) as any;
     const now = new Date();
 
-    // 1. Fetch all registered users from User table
-    let users: any[] = [];
-    const { data: dbUsers, error: usersErr } = await adminClient
+    // 1. Fetch all auth users from Supabase Auth Admin API (most authoritative)
+    let authUsers: any[] = [];
+    try {
+      if (adminClient?.auth?.admin?.listUsers) {
+        const { data: authData, error: authErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+        if (!authErr && authData?.users) {
+          authUsers = authData.users;
+        } else if (authErr) {
+          console.warn("[users/GET] auth.admin.listUsers error:", authErr.message);
+        }
+      }
+    } catch (authErr: any) {
+      console.warn("[users/GET] auth.admin.listUsers exception:", authErr.message);
+    }
+
+    // 2. Fetch all User table records from database
+    let dbUsers: any[] = [];
+    const { data: dbUserRows, error: usersErr } = await adminClient
       .from("User")
       .select("id, email, name, createdAt")
       .order("createdAt", { ascending: false });
 
-    if (!usersErr && Array.isArray(dbUsers)) {
-      users = [...dbUsers];
+    if (!usersErr && Array.isArray(dbUserRows)) {
+      dbUsers = dbUserRows;
     }
 
-    // 2. Real-time sync from Supabase Auth admin to capture any newly signed-up user immediately
-    try {
-      if (adminClient?.auth?.admin?.listUsers) {
-        const { data: authData } = await adminClient.auth.admin.listUsers();
-        if (authData?.users) {
-          for (const au of authData.users) {
-            const auEmail = (au.email || "").toLowerCase().trim();
-            const existing = users.find((u: any) => 
-              u.id === au.id || (u.email && u.email.toLowerCase().trim() === auEmail)
-            );
-            if (!existing) {
-              const newUser = {
-                id: au.id,
-                email: au.email,
-                name: au.user_metadata?.full_name || au.email?.split("@")[0] || null,
-                createdAt: au.created_at,
-              };
-              users.push(newUser);
-              await adminClient.from("User").upsert(newUser, { onConflict: "id" }).catch(() => {});
-            }
-          }
-        }
+    // 3. Merge: start with auth users (most authoritative), add any DB-only users
+    const userMap = new Map<string, any>();
+
+    // Add DB users first
+    for (const u of dbUsers) {
+      if (u.id) userMap.set(u.id, { ...u });
+      if (u.email) userMap.set(u.email.toLowerCase().trim(), { ...u });
+    }
+
+    // Merge / add auth users (auth is authoritative for email/name)
+    const mergedUsers: any[] = [];
+    const seenIds = new Set<string>();
+    const seenEmails = new Set<string>();
+
+    for (const au of authUsers) {
+      const auEmail = (au.email || "").toLowerCase().trim();
+      const auId = au.id;
+
+      if (seenIds.has(auId) || (auEmail && seenEmails.has(auEmail))) continue;
+      seenIds.add(auId);
+      if (auEmail) seenEmails.add(auEmail);
+
+      // Check if this auth user exists in DB
+      const dbMatch = userMap.get(auId) || (auEmail ? userMap.get(auEmail) : null);
+      
+      const merged = {
+        id: auId,
+        email: au.email || dbMatch?.email || "",
+        name: au.user_metadata?.full_name || dbMatch?.name || au.email?.split("@")[0] || null,
+        createdAt: au.created_at || dbMatch?.createdAt || now.toISOString(),
+      };
+
+      mergedUsers.push(merged);
+
+      // Auto-sync: If auth user doesn't have a DB record, create one
+      if (!dbMatch) {
+        adminClient.from("User").upsert(merged, { onConflict: "id" }).catch(() => {});
       }
-    } catch (authErr: any) {
-      console.warn("[users/GET] auth.admin.listUsers notice:", authErr.message);
     }
 
-    // 3. Fetch all credit records from "Credit" table
+    // Add any DB users that weren't in the auth list (e.g. migrated users)
+    for (const u of dbUsers) {
+      if (!seenIds.has(u.id) && !(u.email && seenEmails.has(u.email.toLowerCase().trim()))) {
+        seenIds.add(u.id);
+        if (u.email) seenEmails.add(u.email.toLowerCase().trim());
+        mergedUsers.push(u);
+      }
+    }
+
+    // Sort by createdAt descending
+    mergedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // 4. Fetch all credit records from "Credit" table
     let credits: any[] = [];
     const { data: dbCredits, error: creditsErr } = await adminClient
       .from("Credit")
@@ -65,41 +105,64 @@ export async function GET(request: NextRequest) {
       credits = dbCredits;
     }
 
-    // 3. Map credit records by userId
+    // Map credit records by userId
     const creditMap: Record<string, any> = {};
     for (const c of credits) {
       creditMap[c.userId] = c;
     }
 
-    // 4. Ensure owner (lohithpeyyala@gmail.com) is in users list
-    const hasOwner = users.some(u => (u.email || "").toLowerCase().trim() === "lohithpeyyala@gmail.com");
-    if (!hasOwner) {
-      users.unshift({
-        id: auth.user.id || "owner-lohit",
-        email: "lohithpeyyala@gmail.com",
-        name: "Lohith (Owner)",
-        createdAt: "2026-08-01T00:00:00.000Z",
-      });
-    }
+    // 4b. Fetch PaymentLog to cross-reference payment expiration dates
+    const paymentMap: Record<string, any> = {};
+    try {
+      const { data: dbPayments } = await adminClient
+        .from("PaymentLog")
+        .select("*")
+        .order("createdAt", { ascending: false });
+
+      if (Array.isArray(dbPayments)) {
+        for (const p of dbPayments) {
+          if (p.userId && !paymentMap[p.userId]) paymentMap[p.userId] = p;
+          if (p.email && !paymentMap[p.email.toLowerCase().trim()]) paymentMap[p.email.toLowerCase().trim()] = p;
+        }
+      }
+    } catch (_pErr) {}
 
     // 5. Merge user profiles with exact database credits and official pricing plans
-    const enriched = users.map((u: any) => {
+    const enriched = mergedUsers.map((u: any) => {
       const emailLower = (u.email || "").toLowerCase().trim();
-      const cred = creditMap[u.id] || {};
+      const cred = creditMap[u.id] || creditMap[emailLower] || {};
       const rawPaidCredits = cred.paidCredits ?? 0;
       const freeUsed = cred.freeUsed ?? 0;
       const planId = (cred.planId || "").toLowerCase();
       const billingCycle = cred.billingCycle || "monthly";
 
+      const userPayment = paymentMap[u.id] || (u.email ? paymentMap[emailLower] : null);
+      let paymentValidUntil: Date | null = null;
+      if (userPayment) {
+        const payDate = new Date(userPayment.createdAt);
+        const isYearly = userPayment.billingCycle === "yearly" && userPayment.amount > 300;
+        const days = isYearly ? 365 : 30;
+        paymentValidUntil = new Date(payDate.getTime() + days * 24 * 60 * 60 * 1000);
+      }
+
       let isExpired = false;
       if (cred.expiresAt) {
         const exp = new Date(cred.expiresAt);
         if (now >= exp) isExpired = true;
+      } else if (paymentValidUntil) {
+        if (now >= paymentValidUntil) isExpired = true;
       }
 
       const isRollover = typeof billingCycle === "string" && billingCycle.startsWith("rollover:");
       const rolloverCredits = isRollover ? (parseInt(billingCycle.split(":")[1]) || 0) : 0;
       if (isRollover) isExpired = true;
+
+      // Auto-heal DB if user is expired but still has raw paid credits
+      if (isExpired && rawPaidCredits > 0 && !isRollover && !isAdminEmail(u.email)) {
+        const leftover = rawPaidCredits;
+        const rolloverStr = `rollover:${leftover}`;
+        adminClient.from("Credit").update({ paidCredits: 0, expiresAt: null, billingCycle: rolloverStr }).eq("userId", u.id).catch(() => {});
+      }
 
       let plan: "owner" | "promax" | "premium" | "free" = "free";
       let displayPaidCredits = 0;
@@ -110,10 +173,10 @@ export async function GET(request: NextRequest) {
       } else if (isExpired || billingCycle === "admin_free" || billingCycle === "free") {
         plan = "free";
         displayPaidCredits = 0;
-      } else if (billingCycle === "admin_promax" || (!isExpired && (rawPaidCredits >= 90 || planId === "promax"))) {
+      } else if (billingCycle === "admin_promax" || (!isExpired && (rawPaidCredits >= 90 || planId === "promax" || userPayment?.planId === "promax"))) {
         plan = "promax";
         displayPaidCredits = rawPaidCredits >= 90 ? rawPaidCredits : 90;
-      } else if (billingCycle === "admin_premium" || (!isExpired && (rawPaidCredits > 0 || planId === "premium" || billingCycle === "yearly"))) {
+      } else if (billingCycle === "admin_premium" || (!isExpired && (rawPaidCredits > 0 || planId === "premium" || billingCycle === "yearly" || userPayment?.planId === "premium"))) {
         plan = "premium";
         displayPaidCredits = rawPaidCredits > 0 ? rawPaidCredits : 20;
       } else {
@@ -132,7 +195,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // 7. Fetch platform analytics
+    // 6. Fetch platform analytics
     let totalOptimizations = 0;
     let totalTickets = 0;
 
@@ -156,38 +219,6 @@ export async function GET(request: NextRequest) {
       totalOptimizations,
       totalTickets,
     };
-
-    // If local query yielded empty or only hardcoded users, query the live backend as fallback
-    const backendUrl = getBackendUrl();
-    if (backendUrl && (!users.length || users.length <= 2)) {
-      try {
-        const remoteRes = await fetch(`${backendUrl}/api/admin/users`, {
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-            "Content-Type": "application/json",
-          },
-          cache: "no-store",
-        });
-        if (remoteRes.ok) {
-          const remoteData = await remoteRes.json();
-          if (Array.isArray(remoteData.users) && remoteData.users.length > 0) {
-            return NextResponse.json(
-              {
-                users: remoteData.users,
-                analytics: remoteData.analytics || analytics,
-              },
-              {
-                headers: {
-                  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-                },
-              }
-            );
-          }
-        }
-      } catch (backendErr: any) {
-        console.warn("[users/GET] Backend live query notice:", backendErr.message);
-      }
-    }
 
     return NextResponse.json(
       { users: enriched, analytics },
@@ -230,6 +261,16 @@ export async function POST(request: NextRequest) {
       targetEmail = dbUser?.email || "";
     } catch {}
 
+    if (!targetEmail) {
+      // Try auth admin
+      try {
+        if (adminClient?.auth?.admin?.getUserById) {
+          const { data: authUser } = await adminClient.auth.admin.getUserById(targetUserId);
+          targetEmail = authUser?.user?.email || "";
+        }
+      } catch {}
+    }
+
     if (isAdminEmail(targetEmail)) {
       return NextResponse.json({ error: "Owner account cannot be modified." }, { status: 403 });
     }
@@ -245,14 +286,14 @@ export async function POST(request: NextRequest) {
       expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
     } else if (planId === "free") {
       paidCredits = 0;
-      billingCycle = "admin_free"; // Prevents frontend auto-upgrade
+      billingCycle = "admin_free";
       expiresAt = null;
     } else if (planId === "premium") {
-      paidCredits = 20; // Official Premium Pro monthly credit limit
+      paidCredits = 20;
       billingCycle = "admin_premium";
       expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
     } else if (planId === "promax") {
-      paidCredits = 90; // Official Pro Max monthly credit limit
+      paidCredits = 90;
       billingCycle = "admin_promax";
       expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
     }

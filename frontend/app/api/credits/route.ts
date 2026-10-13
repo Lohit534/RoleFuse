@@ -173,65 +173,73 @@ export async function GET(request: NextRequest) {
     const userEmail = (user.email || "").toLowerCase().trim();
     const isProMaxPurchasedUser = userEmail === "payyalajyothika333@gmail.com";
 
-    // 3b. Verify active paid Pro Max subscription from Razorpay PaymentLog or known purchaser
+    // 3b. Verify active paid subscription from Razorpay PaymentLog (promax or premium)
     let isPaidProMax = false;
-    let proMaxValidUntil: Date | null = null;
+    let isPaidPremium = false;
+    let paymentValidUntil: Date | null = null;
+    let paidPlanFromPayment: string | null = null;
 
     try {
-      const { data: proMaxPayment } = await admin
+      const { data: latestPayment } = await admin
         .from("PaymentLog")
         .select("*")
         .or(`userId.eq.${activeUserId},userId.eq.${user.id},email.eq.${userEmail}`)
-        .eq("planId", "promax")
+        .in("planId", ["promax", "premium"])
         .order("createdAt", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (proMaxPayment) {
-        const payDate = new Date(proMaxPayment.createdAt);
-        const isYearly = proMaxPayment.billingCycle === "yearly" && (proMaxPayment.amount > 300);
+      if (latestPayment) {
+        paidPlanFromPayment = latestPayment.planId;
+        const payDate = new Date(latestPayment.createdAt);
+        const isYearly = latestPayment.billingCycle === "yearly" && (latestPayment.amount > 300);
         const days = isYearly ? 365 : 30;
-        const validUntil = new Date(payDate.getTime() + days * 24 * 60 * 60 * 1000);
-        
-        // ONLY valid if expiration date is in the future
-        if (validUntil > now) {
-          isPaidProMax = true;
-          proMaxValidUntil = validUntil;
+        paymentValidUntil = new Date(payDate.getTime() + days * 24 * 60 * 60 * 1000);
+
+        if (paymentValidUntil > now) {
+          if (latestPayment.planId === "promax") isPaidProMax = true;
+          if (latestPayment.planId === "premium") isPaidPremium = true;
         } else {
-          logger.info(`[credits] Pro Max payment for ${userEmail} expired on ${validUntil.toISOString()}`);
+          logger.info(`[credits] Subscription payment for ${userEmail} (${latestPayment.planId}) expired on ${paymentValidUntil.toISOString()}`);
         }
       }
     } catch (e: any) {
-      logger.warn("[credits] Failed checking promax payment logs:", e.message);
+      logger.warn("[credits] Failed checking payment logs:", e.message);
     }
 
-    const isAdminPromax = creditRow.billingCycle === "admin_promax" || creditRow.paidCredits >= 90;
+    // Admin override flags: ONLY explicit admin assignments, NEVER inferred from credit balance
+    const isAdminPromax = creditRow.billingCycle === "admin_promax";
     const isAdminFree = creditRow.billingCycle === "admin_free" || creditRow.billingCycle === "free";
     const isAdminPremium = creditRow.billingCycle === "admin_premium";
 
-    if (isPaidProMax || isAdminPromax) {
-      isFirst50 = false; // Paying or Admin Pro Max customer is NOT a free promotional user
+    if (isPaidProMax || isPaidPremium || isAdminPromax) {
+      isFirst50 = false; // Paying or Admin customer is NOT a free promotional user
     }
     if (isAdminFree) {
-      isFirst50 = false; // Explicitly set to Free by admin
+      isFirst50 = false;
     }
 
     // Check if user currently has stored rollover credits from a previously expired subscription
     const isRolloverCycle = typeof creditRow.billingCycle === "string" && creditRow.billingCycle.startsWith("rollover:");
     const rolloverCredits = isRolloverCycle ? (parseInt(creditRow.billingCycle.split(":")[1]) || 0) : 0;
 
-    // Check if plan has expired
-    let expiresAt = creditRow.expiresAt ? new Date(creditRow.expiresAt) : null;
-    let billingCycle = isPaidProMax ? "monthly" : (creditRow.billingCycle || "monthly");
+    // Determine definitive expiration date: check Credit.expiresAt OR PaymentLog validUntil
+    let expiresAt: Date | null = null;
+    if (creditRow.expiresAt) {
+      expiresAt = new Date(creditRow.expiresAt);
+    } else if (paymentValidUntil) {
+      expiresAt = paymentValidUntil;
+    }
+
+    let billingCycle = (isPaidProMax || isPaidPremium) ? "monthly" : (creditRow.billingCycle || "monthly");
     let paidCredits = creditRow.paidCredits;
     let freeUsed = creditRow.freeUsed;
 
-    if (isPaidProMax && proMaxValidUntil) {
-      expiresAt = proMaxValidUntil;
+    if (isPaidProMax && paymentValidUntil && paymentValidUntil > now) {
+      expiresAt = paymentValidUntil;
       billingCycle = "monthly";
 
       const targetExpiryStr = expiresAt.toISOString();
-      // Initialize to 90 if newly purchased or uninitialized, otherwise preserve current consumed credit count
       if (!creditRow.expiresAt || creditRow.paidCredits === 0) {
         await admin
           .from("Credit")
@@ -268,8 +276,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // EXPIRATION CHECK: If plan has expired (now >= expiresAt), automatically revert to FREE with Option 3 (Rollover on Renewal)!
-    const isExpired = ((expiresAt && now >= expiresAt) || isRolloverCycle) && !isAdminPromax && !isAdminPremium;
+    // EXPIRATION CHECK: If plan has expired (now >= expiresAt OR payment expired), automatically revert to FREE with Option 3!
+    const isExpired = Boolean(
+      !isAdminPromax &&
+      !isAdminPremium &&
+      (
+        isRolloverCycle ||
+        (expiresAt && now >= expiresAt) ||
+        (paymentValidUntil && now >= paymentValidUntil)
+      )
+    );
+
     if (isExpired && !isRolloverCycle) {
       const leftoverCredits = creditRow.paidCredits > 0 ? creditRow.paidCredits : 0;
       // Option 3: Save unused credits as banked rollover credits so they unlock when user renews!
@@ -278,6 +295,7 @@ export async function GET(request: NextRequest) {
       billingCycle = rolloverCycleStr;
       expiresAt = null;
       isPaidProMax = false;
+      isPaidPremium = false;
 
       await admin
         .from("Credit")
@@ -322,6 +340,7 @@ export async function GET(request: NextRequest) {
       } else {
         paidCredits = 0;
       }
+      // Sync new monthly values to DB
       await admin
         .from("Credit")
         .update({ 
@@ -330,6 +349,9 @@ export async function GET(request: NextRequest) {
           resetAt: now.toISOString() 
         })
         .eq("userId", activeUserId);
+      // Update local creditRow to reflect new state
+      creditRow.paidCredits = paidCredits;
+      creditRow.freeUsed = 0;
     }
 
     // Determine correct planId:
@@ -350,7 +372,8 @@ export async function GET(request: NextRequest) {
       paidCredits = 0;
       expiresAt = null;
     } else {
-      paidCredits = isOwner ? 999999 : (creditRow.paidCredits ?? paidCredits);
+      // Use the in-memory paidCredits variable which reflects all updates (monthly reset, rollover, etc)
+      paidCredits = isOwner ? 999999 : paidCredits;
     }
 
     const freeRemaining = isOwner

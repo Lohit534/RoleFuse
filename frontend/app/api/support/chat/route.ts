@@ -173,11 +173,10 @@ export const runtime = "nodejs";
 export const maxDuration = 15;
 
 const FAST_MODELS = [
-  "gemini-3.6-flash",
   "gemini-flash-latest",
+  "gemini-3.8-flash",
   "gemini-flash-lite-latest",
   "gemini-3.5-flash-lite",
-  "gemini-3.8-flash",
 ];
 
 export async function POST(request: NextRequest) {
@@ -197,22 +196,63 @@ export async function POST(request: NextRequest) {
     let isExpired = false;
 
     if (!isOwner) {
+      const userEmail = (user.email || "").toLowerCase().trim();
       if (user.email) {
         const { data: existingUser } = await admin
           .from("User")
           .select("id")
-          .eq("email", user.email.toLowerCase().trim())
+          .eq("email", userEmail)
           .maybeSingle();
         if (existingUser) activeUserId = existingUser.id;
       }
-      const { data: creditRow } = await admin
+
+      let creditRow = null;
+      const { data: c1 } = await admin
         .from("Credit")
         .select("paidCredits, expiresAt, billingCycle")
         .eq("userId", activeUserId)
         .maybeSingle();
+      creditRow = c1;
+
+      if (!creditRow && activeUserId !== user.id) {
+        const { data: c2 } = await admin
+          .from("Credit")
+          .select("paidCredits, expiresAt, billingCycle")
+          .eq("userId", user.id)
+          .maybeSingle();
+        if (c2) creditRow = c2;
+      }
 
       const now = new Date();
       currentPaidCredits = creditRow?.paidCredits ?? 0;
+
+      // Verify payment validity from PaymentLog
+      let isPaidProMax = false;
+      try {
+        const { data: latestPayment } = await admin
+          .from("PaymentLog")
+          .select("*")
+          .or(`userId.eq.${activeUserId},userId.eq.${user.id},email.eq.${userEmail}`)
+          .eq("planId", "promax")
+          .order("createdAt", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestPayment) {
+          const payDate = new Date(latestPayment.createdAt);
+          const isYearly = latestPayment.billingCycle === "yearly" && (latestPayment.amount > 300);
+          const days = isYearly ? 365 : 30;
+          const validUntil = new Date(payDate.getTime() + days * 24 * 60 * 60 * 1000);
+          if (validUntil > now) {
+            isPaidProMax = true;
+            if (currentPaidCredits === 0 && !creditRow?.expiresAt) {
+              currentPaidCredits = 90;
+            }
+          } else {
+            isExpired = true;
+          }
+        }
+      } catch (_pErr) {}
 
       // Expiration check: Option 3 (Rollover on Renewal)
       const isRolloverCycle = typeof creditRow?.billingCycle === "string" && creditRow.billingCycle.startsWith("rollover:");
@@ -223,6 +263,7 @@ export async function POST(request: NextRequest) {
       if (isRolloverCycle) isExpired = true;
 
       const isAdminPromax = creditRow?.billingCycle === "admin_promax";
+      const isAdminPremium = creditRow?.billingCycle === "admin_premium";
 
       // If plan has expired, enforce automatic downgrade to free with saved rollover credits
       if (isExpired && !isAdminPromax) {
@@ -236,15 +277,33 @@ export async function POST(request: NextRequest) {
             .catch(() => {});
         }
         return NextResponse.json(
-          { error: "Your subscription has expired and automatically reverted to the Free plan. Please renew your plan to continue using the 24/7 AI Assistant." },
+          { error: "Your subscription has expired and automatically reverted to the Free plan. Please renew your Pro Max plan to continue using the 24/7 AI Assistant." },
           { status: 403 }
         );
       }
 
-      // Pro Max / Paid credit requirement: Must have active credits
-      if (currentPaidCredits <= 0 && !isAdminPromax) {
+      // STRICT: AI Chat is exclusively a Pro Max feature (requires 90 credits or admin_promax)
+      // Premium (20 credits) users do NOT have access to AI Chat
+      const hasProMaxAccess = isAdminPromax || isPaidProMax || currentPaidCredits >= 90;
+
+      if (!hasProMaxAccess) {
+        const isPremiumUser = isAdminPremium || currentPaidCredits > 0;
+        if (isPremiumUser) {
+          return NextResponse.json(
+            { error: "24/7 AI Assistant is exclusive to the Pro Max plan (₹199/mo). Your Premium Pro plan does not include AI Chat. Please upgrade to Pro Max to unlock this feature." },
+            { status: 403 }
+          );
+        }
         return NextResponse.json(
-          { error: "You have 0 credits remaining. Please renew your plan or add credits to continue using the AI Assistant." },
+          { error: "AI Chat is exclusive to Pro Max plan. Please upgrade to Pro Max (₹199/mo) to access the 24/7 AI Assistant." },
+          { status: 403 }
+        );
+      }
+
+      // Pro Max user with 0 remaining credits
+      if (currentPaidCredits <= 0 && !isAdminPromax && !isPaidProMax) {
+        return NextResponse.json(
+          { error: "You have used all your Pro Max AI credits for this month. Credits reset at the start of next month, or you can renew your plan." },
           { status: 403 }
         );
       }
