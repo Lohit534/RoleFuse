@@ -576,11 +576,15 @@ export default function ResumesPage() {
     setEditingResume(record);
     setTempTitle(record.jobTitle || "Untitled Resume");
     
-    // Check if optimizedText is present and different from originalText (i.e. it is optimized/compiled)
-    const hasOptimized = record.optimizedText && record.optimizedText.trim() !== "" && record.optimizedText !== record.originalText;
+    // Check if text content is present
+    const rawText = (record.optimizedText && record.optimizedText.trim()) 
+      ? record.optimizedText 
+      : (record.originalText && record.originalText.trim()) 
+        ? record.originalText 
+        : "";
     
-    const parsed = hasOptimized 
-      ? parseResumeText(record.optimizedText!) 
+    const parsed = rawText 
+      ? parseResumeText(rawText) 
       : {
           name: "",
           email: "",
@@ -698,6 +702,7 @@ export default function ResumesPage() {
     const updatedRecord: ResumeRecord = {
       ...editingResume,
       optimizedText: compiledText,
+      originalText: compiledText,
       ...updateRecordFields
     };
 
@@ -711,6 +716,7 @@ export default function ResumesPage() {
         body: JSON.stringify({
           id: editingResume.id,
           optimizedText: compiledText,
+          originalText: compiledText,
           ...updateRecordFields
         })
       });

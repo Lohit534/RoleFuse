@@ -10,7 +10,7 @@ import {
   Trash2, CheckCircle2, RefreshCw, Menu, X,
   Bell, ChevronRight, Activity, BarChart3,
   ArrowUpRight, ArrowDownRight, Filter, Eye, Send,
-  Shield, CreditCard
+  Shield, CreditCard, ShieldCheck
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 

@@ -44,7 +44,7 @@ export function UseSavedResumeModal({
   const fetchSavedResumes = async () => {
     setLoading(true);
     try {
-      const resumesRes = await fetch("/api/resumes?all=true");
+      const resumesRes = await fetch("/api/resumes");
       if (resumesRes.ok) {
         const data = await resumesRes.json();
         if (Array.isArray(data)) {
@@ -59,8 +59,13 @@ export function UseSavedResumeModal({
   };
 
   const handleSelect = (resume: SavedResume) => {
-    const textToInsert = resume.originalText || resume.optimizedText || "";
-    if (!textToInsert.trim()) {
+    const textToInsert =
+      (resume.optimizedText && resume.optimizedText.trim())
+        ? resume.optimizedText.trim()
+        : (resume.originalText && resume.originalText.trim())
+          ? resume.originalText.trim()
+          : "";
+    if (!textToInsert) {
       toast.error("Selected resume has no text content.");
       return;
     }
@@ -81,7 +86,7 @@ export function UseSavedResumeModal({
             Use Saved Resume
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500 font-medium">
-            Select a saved resume from your library to auto-fill the editor.
+            Select a resume from your saved resumes to auto-fill the editor.
           </DialogDescription>
         </DialogHeader>
 
@@ -96,7 +101,7 @@ export function UseSavedResumeModal({
               <FileText className="h-8 w-8 text-slate-400 mx-auto" />
               <p className="text-xs font-bold text-slate-700">No saved resumes found</p>
               <p className="text-[10px] text-slate-500 max-w-xs mx-auto">
-                Create a resume from scratch or run an optimization to save it to your account.
+                Build and save a resume in My Resumes to use it here.
               </p>
             </div>
           ) : (
