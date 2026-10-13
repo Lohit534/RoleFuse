@@ -10,6 +10,7 @@ import { extractTechTerms } from "@/lib/ats/keywords";
 import { generateUUID } from "@/lib/utils";
 import { isOwnerEmail, FREE_CREDITS_PER_MONTH, PRO_CREDITS_PER_MONTH, PRO_MAX_CREDITS_PER_MONTH } from "@/types";
 import { buildTrainingSample } from "@/lib/anonymizer";
+import { gatherAllMissingQuestions } from "@/app/api/pre-check/route";
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60s timeout for AI optimization
@@ -355,72 +356,90 @@ export async function POST(request: NextRequest) {
     await send(2, 'done');
     await send(3, 'running');
 
-    // ── TASK 2: Fast, instant detection for missing metrics, values & placeholders (0ms vs 15s) ──
+    // ── TASK 2: Comprehensive & instant detection for missing metrics, values & placeholders (0ms local analysis) ──
     const hasAnswers = userAnswers && typeof userAnswers === "object" && Object.keys(userAnswers).length > 0;
     if (!skipDetection && !hasAnswers) {
-      const missingList: Array<{ field: string; section: string; question: string }> = [];
+      const missingList: Array<{ field: string; section: string; question: string; hint?: string; originalBullet?: string }> = [];
 
-      // 1. Company Name / Employer placeholder
-      if (/\b(?:Company\s*Name|Employer\s*Name|\[Company(?:\s*Name)?\]|\[Employer\]|XYZ\s*Corp|ABC\s*Corp)\b/i.test(resumeText)) {
-        missingList.push({
-          field: "Company Name",
-          section: "EXPERIENCE",
-          question: "What company or employer did you work at?",
-        });
-      }
-
-      // 2. CGPA / GPA / Marks placeholder
-      if (/\bX\.XX\b|GPA:\s*X|CGPA:\s*X|\bX\/10\b|\bX%\b|\[CGPA\]|\[GPA\]|\b0\.00\b/i.test(resumeText)) {
-        missingList.push({
-          field: "CGPA / GPA",
-          section: "EDUCATION",
-          question: "What is your CGPA or GPA score? (e.g. 8.5/10 or 3.8/4.0)",
-        });
-      }
-
-      // 3. College / School / University placeholder
-      if (/\b(?:College\s*Name|School\s*Name|University\s*Name|XYZ\s*Institute|XYZ\s*University|\[College\]|\[University\])\b/i.test(resumeText)) {
-        missingList.push({
-          field: "College / School Name",
-          section: "EDUCATION",
-          question: "What is the name of your college or university?",
-        });
-      }
-
-      // 4. Missing dates / years (XXXX, YYYY, [YEAR], [DATE], etc.)
-      if (/\bXXXX\b|\bYYYY\b|\[YEAR\]|\[DATE\]|\b20XX\b|\[Month\s*YYYY\]/i.test(resumeText)) {
-        missingList.push({
-          field: "Year / Date",
-          section: "GENERAL",
-          question: "What graduation year or employment dates should replace the placeholder?",
-        });
-      }
-
-      // 5. Missing metrics in bullets ([ADD: metric], [X%], [ADD: ...], etc.)
-      const explicitMetricMatches = resumeText.match(/\[ADD:[^\]]+\]/gi) || [];
-      for (const m of explicitMetricMatches.slice(0, 3)) {
-        const desc = m.replace(/^\[ADD:\s*/i, "").replace(/\]$/, "").trim();
-        missingList.push({
-          field: `Missing Metric: ${desc}`,
-          section: "BULLETS",
-          question: `What value should replace "${desc}"? (e.g., 35%, 10,000+ users, $50K)`,
-        });
-      }
-
-      const bracketPlaceholders = resumeText.match(/\[(?:X%|X\s*users?|X\s*million|metric|value)\]/gi) || [];
-      for (const bp of bracketPlaceholders.slice(0, 2)) {
-        if (!missingList.some(item => item.field.includes(bp))) {
+      // 1. Structural missing questions (experience dates, graduation year/GPA, weak bullets lacking metrics, target skills)
+      try {
+        const structuralQuestions = gatherAllMissingQuestions(resumeText, jobDescription);
+        let metricCount = 0;
+        for (const sq of structuralQuestions) {
+          const fieldKey = sq.category === "metrics" 
+            ? `Quantified Metric ${++metricCount}`
+            : sq.title;
           missingList.push({
-            field: `Missing Value: ${bp}`,
-            section: "BULLETS",
-            question: `What value or metric should replace ${bp}? (e.g., 25%, 500+ requests/sec)`,
+            field: fieldKey,
+            section: sq.category?.toUpperCase() || "DETAILS",
+            question: sq.question,
+            hint: sq.hint,
+            originalBullet: sq.originalBullet,
+          });
+        }
+      } catch (e: any) {
+        logger.warn("[optimize] Error running gatherAllMissingQuestions:", e?.message);
+      }
+
+      // 2. Explicit placeholders in resume text (Company Name, X.XX, [ADD: ...], etc.)
+      if (/\b(?:Company\s*Name|Employer\s*Name|\[Company(?:\s*Name)?\]|\[Employer\]|XYZ\s*Corp|ABC\s*Corp)\b/i.test(resumeText)) {
+        if (!missingList.some(item => item.field.toLowerCase().includes("company"))) {
+          missingList.push({
+            field: "Company Name",
+            section: "EXPERIENCE",
+            question: "What company or employer did you work at?",
+            hint: "e.g. Google, Infosys, Tech Corp",
           });
         }
       }
 
-      // Filter out LinkedIn / GitHub / portfolio / URL questions — these are resolved
-      // automatically by the regex profile URL extractor, so we never ask the
-      // user to type in profile links that are already present in the resume.
+      if (/\bX\.XX\b|GPA:\s*X|CGPA:\s*X|\bX\/10\b|\bX%\b|\[CGPA\]|\[GPA\]|\b0\.00\b/i.test(resumeText)) {
+        if (!missingList.some(item => item.field.toLowerCase().includes("gpa"))) {
+          missingList.push({
+            field: "CGPA / GPA",
+            section: "EDUCATION",
+            question: "What is your CGPA or GPA score?",
+            hint: "e.g. 8.5/10 or 3.8/4.0",
+          });
+        }
+      }
+
+      if (/\b(?:College\s*Name|School\s*Name|University\s*Name|XYZ\s*Institute|XYZ\s*University|\[College\]|\[University\])\b/i.test(resumeText)) {
+        if (!missingList.some(item => item.field.toLowerCase().includes("college"))) {
+          missingList.push({
+            field: "College / University Name",
+            section: "EDUCATION",
+            question: "What is the name of your college or university?",
+            hint: "e.g. Stanford University, IIT Delhi",
+          });
+        }
+      }
+
+      if (/\bXXXX\b|\bYYYY\b|\[YEAR\]|\[DATE\]|\b20XX\b|\[Month\s*YYYY\]/i.test(resumeText)) {
+        if (!missingList.some(item => item.field.toLowerCase().includes("year") || item.field.toLowerCase().includes("date"))) {
+          missingList.push({
+            field: "Year / Date Range",
+            section: "GENERAL",
+            question: "What graduation year or employment dates should replace the placeholder?",
+            hint: "e.g. 2020 – 2024 or Jan 2023 – Present",
+          });
+        }
+      }
+
+      const explicitMetricMatches = resumeText.match(/\[ADD:[^\]]+\]/gi) || [];
+      for (const m of explicitMetricMatches.slice(0, 3)) {
+        const desc = m.replace(/^\[ADD:\s*/i, "").replace(/\]$/, "").trim();
+        if (!missingList.some(item => item.field.includes(desc))) {
+          missingList.push({
+            field: `Missing Metric: ${desc}`,
+            section: "BULLETS",
+            question: `What value should replace "${desc}"?`,
+            hint: "e.g. 35%, 10,000+ users, $50K",
+          });
+        }
+      }
+
+      // Filter out LinkedIn / GitHub / portfolio / URL questions (resolved by regex URL extractor)
       const PROFILE_LINK_RE = /linkedin|github|gitlab|portfolio|website|profile.?link|personal.?site|social|twitter|behance|dribbble|\burl\b/i;
       const filteredList = missingList.filter(
         (item) =>
@@ -428,9 +447,12 @@ export async function POST(request: NextRequest) {
           !PROFILE_LINK_RE.test(item.question)
       );
 
-      if (filteredList.length > 0) {
-        logger.info(`[optimize] Fast detection identified ${filteredList.length} missing/placeholder fields. Returning needsInput immediately.`);
-        await writer.write(encoder.encode(`data: ${JSON.stringify({ needsInput: true, questions: filteredList })}\n\n`));
+      // Limit to top 4 high-priority questions so the user gets quick answers and fast results
+      const finalQuestions = filteredList.slice(0, 4);
+
+      if (finalQuestions.length > 0) {
+        logger.info(`[optimize] Fast detection identified ${finalQuestions.length} missing/placeholder fields. Returning needsInput immediately.`);
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ needsInput: true, questions: finalQuestions })}\n\n`));
         await writer.close();
         return;
       }

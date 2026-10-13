@@ -76,11 +76,14 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
   useEffect(() => {
     const handleOpenDemo = () => setIsDemoModalOpen(true);
     const handleOpenDataPref = () => setIsDataPreferencesOpen(true);
+    const handleOpenFeedback = () => setIsFeedbackOpen(true);
     window.addEventListener("open-demo-video", handleOpenDemo);
     window.addEventListener("open-data-preferences", handleOpenDataPref);
+    window.addEventListener("open-feedback-toast", handleOpenFeedback);
     return () => {
       window.removeEventListener("open-demo-video", handleOpenDemo);
       window.removeEventListener("open-data-preferences", handleOpenDataPref);
+      window.removeEventListener("open-feedback-toast", handleOpenFeedback);
     };
   }, []);
 

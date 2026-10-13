@@ -25,6 +25,7 @@ interface MissingQuestion {
   section?: string;
   question: string;
   hint?: string;
+  originalBullet?: string;
 }
 
 interface OptimizingProgressProps {
@@ -114,7 +115,7 @@ export default function OptimizingProgress({
           setProgress(100);
           setTimeout(() => {
             if (isMountedRef.current) onComplete(data.result);
-          }, 600);
+          }, 100);
         }
       }
     }
@@ -127,39 +128,35 @@ export default function OptimizingProgress({
     let cancelled = false;
 
     const startPipeline = async () => {
-      // Step 1: local simulation
+      // Step 1: rapid visual progression
       stepStartTimes.current[1] = Date.now();
       setSteps((prev) =>
         prev.map((s) => (s.id === 1 ? { ...s, status: "running" } : s))
       );
       setProgress(15);
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 60));
       if (cancelled) return;
 
-      const dur1 = ((Date.now() - stepStartTimes.current[1]) / 1000).toFixed(1) + "s";
+      const dur1 = "0.1s";
       setSteps((prev) =>
         prev.map((s) => (s.id === 1 ? { ...s, status: "done", duration: dur1 } : s))
       );
-      await new Promise((r) => setTimeout(r, 400));
-      if (cancelled) return;
 
-      // Step 2: local simulation
+      // Step 2: rapid visual progression
       stepStartTimes.current[2] = Date.now();
       setSteps((prev) =>
         prev.map((s) => (s.id === 2 ? { ...s, status: "running" } : s))
       );
       setProgress(30);
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 60));
       if (cancelled) return;
 
-      const dur2 = ((Date.now() - stepStartTimes.current[2]) / 1000).toFixed(1) + "s";
+      const dur2 = "0.1s";
       setSteps((prev) =>
         prev.map((s) => (s.id === 2 ? { ...s, status: "done", duration: dur2 } : s))
       );
-      await new Promise((r) => setTimeout(r, 400));
-      if (cancelled) return;
 
-      // Step 3: detection API call
+      // Step 3: detection API call - initiates fetch immediately!
       stepStartTimes.current[3] = Date.now();
       setSteps((prev) =>
         prev.map((s) => (s.id === 3 ? { ...s, status: "running" } : s))
@@ -242,9 +239,8 @@ export default function OptimizingProgress({
     setSteps((prev) =>
       prev.map((s) => (s.id === 3 ? { ...s, status: "done", duration: dur3 } : s))
     );
-    await new Promise((r) => setTimeout(r, 400));
 
-    // Mark step 4 running
+    // Mark step 4 running immediately
     stepStartTimes.current[4] = Date.now();
     setSteps((prev) =>
       prev.map((s) => (s.id === 4 ? { ...s, status: "running" } : s))
@@ -388,6 +384,14 @@ export default function OptimizingProgress({
             <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
               {currentQ.question}
             </h3>
+            {currentQ.originalBullet && (
+              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 text-xs text-slate-700">
+                <span className="font-bold text-slate-500 block mb-1 uppercase tracking-wider text-[10px]">
+                  Target Bullet From Your Resume:
+                </span>
+                <span className="italic text-slate-800 font-medium">"{currentQ.originalBullet}"</span>
+              </div>
+            )}
             <div className="relative">
               <input
                 autoFocus

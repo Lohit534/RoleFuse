@@ -61,6 +61,7 @@ import PlaceholderFiller, {
   ResumePlaceholder,
 } from "@/components/PlaceholderFiller";
 import OptimizingProgress from "@/components/OptimizingProgress";
+import FeedbackToast from "@/components/FeedbackToast";
 import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 
 export default function DashboardPage() {
@@ -127,6 +128,7 @@ export default function DashboardPage() {
   const [showBulletModal, setShowBulletModal] = useState(false);
   const [pendingResumeText, setPendingResumeText] = useState("");
   const [showOneTimeFeedback, setShowOneTimeFeedback] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const sampleLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -666,6 +668,7 @@ export default function DashboardPage() {
                       const lastLoginId = user.last_sign_in_at || user.id;
                       sessionStorage.setItem("fastHire_feedback_dismissed_login", lastLoginId);
                     }
+                    setIsFeedbackOpen(true);
                     window.dispatchEvent(new CustomEvent("open-feedback-toast"));
                     setShowOneTimeFeedback(false);
                   }}
@@ -1046,79 +1049,25 @@ export default function DashboardPage() {
         ) : (
           /* ── INPUT WORKSPACE ──────────────────────────────────── */
           <div className="space-y-5 max-w-5xl mx-auto select-none">
-            {/* Split-panel: Resume | Job Description */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
-              {/* Resume Column (Panel + Use Saved Resume Button below) */}
-              <div className="flex flex-col space-y-3">
-                <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-6 space-y-4 transition-colors duration-200 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-[#E5F8F5] border border-[#D4F3EF] flex items-center justify-center">
-                        <FileText className="h-4 w-4 text-[#087F6E]" />
-                      </div>
-                      <div>
-                        <h3 className="font-heading font-bold text-[#111827] text-base">
-                          Your Resume
-                        </h3>
-                        <p className="text-xs text-[#526176] font-normal">
-                          Paste text or upload PDF
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-semibold text-[#087F6E] bg-[#E5F8F5] border border-[#D4F3EF] px-2.5 py-0.5 rounded-full">
-                      Step 1
-                    </span>
-                  </div>
-                  <ResumeInput
-                    value={resumeText}
-                    onChange={setResumeText}
-                    disabled={optimizing}
-                  />
-                </div>
-
-                {/* Use Saved Resume button */}
-                <div className="flex justify-start">
-                  <button
-                    type="button"
-                    onClick={() => setIsSavedResumesOpen(true)}
-                    disabled={optimizing}
-                    className="bg-white border border-[#DCE7E9] hover:border-[#087F6E]/40 hover:bg-[#E5F8F5]/50 py-2 px-4 text-xs font-bold rounded-xl inline-flex items-center gap-2 text-[#526176] hover:text-[#087F6E] transition-all shadow-xs cursor-pointer"
-                  >
-                    <FolderOpen className="h-4 w-4 text-[#526176]" />
-                    Use Saved Resume
-                  </button>
-                </div>
+            {/* Split-panel: Resume | Job Description (Equal size and width, side-by-side) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch w-full">
+              {/* Resume Card */}
+              <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-5 sm:p-6 transition-colors duration-200 shadow-xs">
+                <ResumeInput
+                  value={resumeText}
+                  onChange={setResumeText}
+                  disabled={optimizing}
+                  onOpenSavedResumes={() => setIsSavedResumesOpen(true)}
+                />
               </div>
 
-              {/* Job Description Column */}
-              <div className="flex flex-col space-y-3">
-                <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-6 space-y-4 transition-colors duration-200 shadow-xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-[#E5F8F5] border border-[#D4F3EF] flex items-center justify-center">
-                        <Target className="h-4 w-4 text-[#087F6E]" />
-                      </div>
-                      <div>
-                        <h3 className="font-heading font-bold text-[#111827] text-base">
-                          Job Description
-                        </h3>
-                        <p className="text-xs text-[#526176] font-normal">
-                          Paste the job post description
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-xs font-semibold text-[#087F6E] bg-[#E5F8F5] border border-[#D4F3EF] px-2.5 py-0.5 rounded-full">
-                      Step 2
-                    </span>
-                  </div>
-                  <JobDescriptionInput
-                    value={jobDescription}
-                    onChange={setJobDescription}
-                    disabled={optimizing}
-                  />
-                </div>
-                {/* Spacer matching button height */}
-                <div className="h-[42px] hidden md:block" />
+              {/* Job Description Card */}
+              <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-5 sm:p-6 transition-colors duration-200 shadow-xs">
+                <JobDescriptionInput
+                  value={jobDescription}
+                  onChange={setJobDescription}
+                  disabled={optimizing}
+                />
               </div>
             </div>
 
@@ -1254,6 +1203,13 @@ export default function DashboardPage() {
         isOpen={isSavedResumesOpen}
         onClose={() => setIsSavedResumesOpen(false)}
         onSelectResume={(text) => setResumeText(text)}
+      />
+
+      {/* User Feedback Modal */}
+      <FeedbackToast
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+        userEmail={user?.email}
       />
     </div>
   );

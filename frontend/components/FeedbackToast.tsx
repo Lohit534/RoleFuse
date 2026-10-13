@@ -99,7 +99,7 @@ export default function FeedbackToast({ isOpen, onClose, userEmail }: FeedbackTo
       {/* Middle-centered modal wrapper */}
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
         <div
-          className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl animate-in zoom-in-95 fade-in duration-200 select-none pointer-events-auto"
+          className="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl animate-in zoom-in-95 fade-in duration-200 pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* ── Header ── */}
