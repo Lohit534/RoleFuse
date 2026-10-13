@@ -105,38 +105,38 @@ export default function ResumeInput({ value, onChange, disabled }: ResumeInputPr
           {...getRootProps()}
           className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200 ${
             isDragActive
-              ? "border-[#0d6e5a] bg-[#0d6e5a]/5 shadow-sm"
-              : "border-slate-400 bg-white hover:border-[#0d6e5a]/60 hover:bg-slate-50"
+              ? "border-[#087F6E] bg-[#E5F8F5] shadow-sm"
+              : "border-[#DCE7E9] bg-white hover:border-[#087F6E]/60 hover:bg-[#F5FAFA]"
           }`}
         >
           <input {...getInputProps()} />
-          <UploadCloud className="h-8 w-8 text-[#0d6e5a] mx-auto mb-2" />
-          <p className="text-xs font-semibold text-slate-700">
+          <UploadCloud className="h-8 w-8 text-[#087F6E] mx-auto mb-2" />
+          <p className="text-xs font-bold text-[#111827]">
             {isDragActive ? "Drop the resume here..." : "Drag & drop your resume file"}
           </p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Supports PDF, DOCX, or DOC (Max 5MB)</p>
+          <p className="text-[10px] text-[#526176] mt-0.5">Supports PDF, DOCX, or DOC (Max 5MB)</p>
         </div>
       )}
 
       {/* Upload Loading Spinner */}
       {loading && (
-        <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center bg-white animate-pulse">
-          <Loader2 className="h-7 w-7 text-[#0d6e5a] animate-spin mx-auto mb-2" />
-          <p className="text-xs font-semibold text-slate-700">Extracting resume text...</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">This will take a few seconds</p>
+        <div className="border-2 border-dashed border-[#DCE7E9] rounded-xl p-6 text-center bg-white animate-pulse">
+          <Loader2 className="h-7 w-7 text-[#087F6E] animate-spin mx-auto mb-2" />
+          <p className="text-xs font-bold text-[#111827]">Extracting resume text...</p>
+          <p className="text-[10px] text-[#526176] mt-0.5">This will take a few seconds</p>
         </div>
       )}
 
       {/* File Details Tag */}
       {fileName && !loading && (
-        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-300">
-          <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
-            <FileText className="h-4 w-4 text-[#0d6e5a] shrink-0" />
-            <span className="truncate font-medium">{fileName}</span>
+        <div className="flex items-center justify-between p-3 rounded-lg bg-[#F5FAFA] border border-[#DCE7E9]">
+          <div className="flex items-center gap-2 text-sm text-[#111827] min-w-0">
+            <FileText className="h-4 w-4 text-[#087F6E] shrink-0" />
+            <span className="truncate font-semibold">{fileName}</span>
           </div>
           <button
             onClick={handleClearFile}
-            className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors"
+            className="p-1 rounded-md hover:bg-[#E5F8F5] text-[#526176] hover:text-[#111827] transition-colors"
             title="Clear file and text"
             type="button"
           >
@@ -160,9 +160,9 @@ export default function ResumeInput({ value, onChange, disabled }: ResumeInputPr
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled || loading}
-          className="flex-1 min-h-[280px] h-full overflow-y-auto font-mono text-sm leading-relaxed border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:border-[#0d6e5a] focus:ring-1 focus:ring-[#0d6e5a]/30 rounded-lg resize-y p-3.5 pr-4"
+          className="flex-1 min-h-[280px] h-full overflow-y-auto font-mono text-sm leading-relaxed border border-[#DCE7E9] bg-white text-[#111827] placeholder:text-[#526176]/50 focus:border-[#087F6E] focus:ring-2 focus:ring-[#087F6E]/20 rounded-xl resize-y p-3.5 pr-4"
         />
-        <div className="absolute bottom-3 right-3 bg-white border border-slate-200 font-mono text-[10px] text-slate-400 px-2 py-0.5 rounded-full select-none">
+        <div className="absolute bottom-3 right-3 bg-white border border-[#DCE7E9] font-mono text-[10px] text-[#526176] px-2 py-0.5 rounded-full select-none shadow-xs">
           {wordCount} words
         </div>
       </div>

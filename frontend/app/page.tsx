@@ -73,7 +73,7 @@ function LandingFAQ() {
         return (
           <div
             key={idx}
-            className="border border-[#BCE8DF] bg-white/95 rounded-2xl overflow-hidden transition-all duration-200 shadow-xs"
+            className="border border-[#DCE7E9] bg-white rounded-2xl overflow-hidden transition-all duration-200 shadow-xs"
           >
             <button
               onClick={() => setOpenIdx(isOpen ? null : idx)}
@@ -83,11 +83,11 @@ function LandingFAQ() {
               {isOpen ? (
                 <ChevronUp className="h-4 w-4 text-[#087F6E] shrink-0 ml-3" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-[#4A6B64] shrink-0 ml-3" />
+                <ChevronDown className="h-4 w-4 text-[#526176] shrink-0 ml-3" />
               )}
             </button>
             {isOpen && (
-              <div className="px-5 pb-5 text-[15px] text-[#4A6B64] font-normal leading-[1.7] border-t border-[#BCE8DF] pt-4 bg-[#EAF8F5]/60">
+              <div className="px-5 pb-5 text-[15px] text-[#526176] font-normal leading-[1.7] border-t border-[#DCE7E9] pt-4 bg-[#F5FAFA]">
                 {faq.a}
               </div>
             )}
@@ -229,26 +229,18 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#E6F7F4] text-[#111827] antialiased font-sans selection:bg-[#087F6E]/20 selection:text-[#087F6E]">
+    <div className="flex flex-col min-h-screen bg-transparent text-[#111827] antialiased font-sans selection:bg-[#087F6E]/15 selection:text-[#087F6E]">
       <Navbar />
 
-      {/* ── 1. HERO SECTION (Follows Panel 1 of Reference Image with Teal Atmosphere) ── */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#EBF8F5] via-[#E6F7F4] to-[#E2F5F1] pt-14 pb-20 md:pt-20 md:pb-28 border-b border-[#BCE8DF]">
-        {/* Panel 1 Signature Fluid Teal Background Shape */}
-        <div
-          className="absolute right-0 top-1/2 -translate-y-1/2 w-[620px] h-[580px] rounded-[60px] pointer-events-none opacity-60 blur-3xl -z-10"
-          style={{
-            background: "radial-gradient(circle, rgba(13,148,128,0.35) 0%, rgba(8,127,110,0.2) 50%, transparent 75%)",
-          }}
-        />
-
+      {/* ── 1. HERO SECTION (Follows Panel 1 of Reference Image) ──────────────── */}
+      <section className="relative overflow-hidden pt-14 pb-20 md:pt-20 md:pb-28 border-b border-[#DCE7E9]">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
             {/* LEFT COLUMN: Messaging */}
             <div className="lg:col-span-6 space-y-7 animate-fade-in-up">
               {/* Announcement Pill */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-[#BCE8DF] shadow-xs text-[#075E53] text-xs font-semibold tracking-wide">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#DCE7E9] shadow-xs text-[#075E53] text-xs font-semibold tracking-wide">
                 <span className="h-2 w-2 rounded-full bg-[#087F6E] animate-pulse shrink-0" />
                 <span>2 Free Optimizations — No Credit Card Required</span>
               </div>
@@ -261,7 +253,7 @@ export default function LandingPage() {
               </h1>
 
               {/* Supporting Copy */}
-              <p className="text-base sm:text-lg text-[#3D5A54] max-w-xl leading-[1.68] font-normal">
+              <p className="text-base sm:text-lg text-[#526176] max-w-xl leading-[1.68] font-normal">
                 Paste your resume and job description. FasthireAI helps you identify missing keywords,
                 strengthen resume bullet points, and improve alignment with your target role.
               </p>
@@ -277,15 +269,15 @@ export default function LandingPage() {
 
                 <button
                   onClick={handleTrySample}
-                  className="border border-[#BCE8DF] bg-white hover:bg-slate-50 text-[#111827] px-7 py-3.5 text-[15px] font-semibold rounded-xl flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+                  className="border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-7 py-3.5 text-[15px] font-semibold rounded-xl flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
                 >
                   <span>Try Sample Resume</span>
-                  <ArrowRight className="h-4 w-4 text-[#4A6B64]" />
+                  <ArrowRight className="h-4 w-4 text-[#526176]" />
                 </button>
               </div>
 
               {/* Trust Indicators */}
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2.5 text-[13px] text-[#3D5A54] font-medium pt-1">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2.5 text-[13px] text-[#526176] font-medium pt-1">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-[#087F6E]" />
                   <span>Free to start</span>
@@ -313,7 +305,7 @@ export default function LandingPage() {
                     AM
                   </div>
                 </div>
-                <div className="text-xs text-[#3D5A54]">
+                <div className="text-xs text-[#526176]">
                   <span className="font-semibold text-[#111827]">Trusted by job seekers</span>
                   <span className="mx-1.5">•</span>
                   <span>4.9/5 satisfaction</span>
@@ -321,50 +313,51 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Score Box with Distinct Teal Background (Panel 1 Reference) */}
+            {/* RIGHT COLUMN: Realistic Product Preview (Directly from Reference Panel 1) */}
             <div className="lg:col-span-6 flex justify-center lg:justify-end animate-fade-in-up" style={{ animationDelay: "150ms" }}>
               <div className="relative w-full max-w-[480px]">
 
-                {/* Panel 1 Signature Curved Teal Backdrop Shape Behind Score Box */}
+                {/* Panel 1 Signature Fluid Mint Backdrop Shape Behind Preview Card */}
                 <div
-                  className="absolute -inset-4 sm:-inset-8 -z-10 rounded-[38px] pointer-events-none"
+                  className="absolute -inset-6 sm:-inset-10 -z-10 rounded-[44px] pointer-events-none"
                   style={{
-                    background: "linear-gradient(135deg, rgba(167, 243, 208, 0.6) 0%, rgba(45, 212, 191, 0.35) 50%, rgba(8, 127, 110, 0.22) 100%)",
-                    boxShadow: "0 20px 50px rgba(8, 127, 110, 0.15)",
+                    background:
+                      "radial-gradient(ellipse 90% 80% at 65% 45%, rgba(212, 243, 239, 0.8) 0%, rgba(229, 248, 245, 0.6) 45%, rgba(234, 249, 248, 0.4) 75%, transparent 100%)",
+                    filter: "blur(24px)",
                   }}
                 />
 
                 {/* Subtle Real-time status pill top right */}
-                <div className="absolute -top-3.5 right-4 z-20 flex items-center gap-2 bg-white/95 border border-[#BCE8DF] px-3.5 py-1.5 rounded-full shadow-sm">
+                <div className="absolute -top-3.5 right-4 z-20 flex items-center gap-2 bg-white border border-[#DCE7E9] px-3.5 py-1.5 rounded-full shadow-xs">
                   <span className="h-2 w-2 rounded-full bg-[#087F6E] animate-pulse" />
                   <span className="text-[11px] font-semibold text-[#111827]">Real-time rewrite active</span>
                 </div>
 
-                {/* Main Product Score Box Card with Teal Background */}
-                <div className="relative bg-gradient-to-b from-[#E0F5F1] via-[#D8F2EC] to-[#CFEFE7] border-2 border-[#087F6E]/35 rounded-2xl p-6 sm:p-7 shadow-[0_16px_40px_rgba(8,127,110,0.14)] overflow-hidden">
+                {/* Main Product Score Box Card with White Surface and Subtle Border (Panel 1) */}
+                <div className="relative bg-white border border-[#DCE7E9] rounded-2xl p-6 sm:p-7 shadow-[0_12px_36px_rgba(0,0,0,0.06)] overflow-hidden">
                   
                   {/* Card Header */}
-                  <div className="flex items-center justify-between pb-5 mb-5 border-b border-[#B2E4DA]">
+                  <div className="flex items-center justify-between pb-5 mb-5 border-b border-[#DCE7E9]">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-full bg-[#087F6E] text-white flex items-center justify-center shadow-xs">
+                      <div className="h-8 w-8 rounded-full bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
                         <CheckCircle2 className="h-4.5 w-4.5" />
                       </div>
                       <div>
                         <h3 className="font-heading font-bold text-sm sm:text-base text-[#111827]">
                           ATS Optimization
                         </h3>
-                        <p className="text-[11px] text-[#3D5A54]">Automated parser analysis</p>
+                        <p className="text-[11px] text-[#526176]">Automated parser analysis</p>
                       </div>
                     </div>
-                    <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-md bg-white/80 border border-[#B2E4DA] text-[#087F6E]">
+                    <span className="text-[11px] font-mono font-semibold px-2.5 py-1 rounded-md bg-[#F5FAFA] border border-[#DCE7E9] text-[#087F6E]">
                       Live Scan
                     </span>
                   </div>
 
-                  {/* Score Visualization Grid (with Teal-tinted Surfaces) */}
+                  {/* Score Visualization Grid */}
                   <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="bg-white/90 border border-[#B2E4DA] rounded-xl p-4 shadow-xs">
-                      <div className="text-[11px] font-mono font-semibold text-[#4A6B64] uppercase tracking-wider mb-1">
+                    <div className="bg-[#F5FAFA] border border-[#DCE7E9] rounded-xl p-4">
+                      <div className="text-[11px] font-mono font-semibold text-[#526176] uppercase tracking-wider mb-1">
                         Current Score
                       </div>
                       <div className="text-3xl sm:text-4xl font-extrabold text-[#EF4444] font-heading leading-tight">
@@ -375,8 +368,8 @@ export default function LandingPage() {
                       </div>
                     </div>
 
-                    <div className="bg-white/90 border border-[#B2E4DA] rounded-xl p-4 text-right shadow-xs">
-                      <div className="text-[11px] font-mono font-semibold text-[#4A6B64] uppercase tracking-wider mb-1">
+                    <div className="bg-[#F5FAFA] border border-[#DCE7E9] rounded-xl p-4 text-right">
+                      <div className="text-[11px] font-mono font-semibold text-[#526176] uppercase tracking-wider mb-1">
                         Target Score
                       </div>
                       <div className="text-3xl sm:text-4xl font-extrabold text-[#087F6E] font-heading leading-tight">
@@ -390,11 +383,11 @@ export default function LandingPage() {
 
                   {/* Horizontal Progress Bar (Red -> Amber -> Teal) */}
                   <div className="space-y-1.5 mb-5">
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[#3D5A54]">
+                    <div className="flex items-center justify-between text-[11px] font-mono text-[#526176]">
                       <span>Baseline: 34%</span>
                       <span className="font-semibold text-[#087F6E]">Optimized: 91%</span>
                     </div>
-                    <div className="h-2.5 w-full rounded-full overflow-hidden bg-white/70 border border-[#B2E4DA]">
+                    <div className="h-2.5 w-full rounded-full overflow-hidden bg-slate-100 border border-[#DCE7E9]">
                       <div
                         className="h-full rounded-full"
                         style={{
@@ -408,7 +401,7 @@ export default function LandingPage() {
 
                   {/* Optimization Checklist from Reference Panel 1 */}
                   <div className="space-y-2.5 pt-1">
-                    <div className="flex items-center justify-between text-xs sm:text-[13px] text-[#111827] bg-white/90 border border-[#B2E4DA] px-3.5 py-2.5 rounded-xl">
+                    <div className="flex items-center justify-between text-xs sm:text-[13px] text-[#111827] bg-[#F5FAFA] border border-[#DCE7E9] px-3.5 py-2.5 rounded-xl">
                       <div className="flex items-center gap-2.5">
                         <span className="h-5 w-5 rounded-full bg-rose-50 border border-rose-200/80 text-[#EF4444] font-bold text-[10px] flex items-center justify-center shrink-0">
                           ✕
@@ -418,7 +411,7 @@ export default function LandingPage() {
                       <span className="text-[11px] font-semibold text-[#EF4444]">Action required</span>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs sm:text-[13px] text-[#111827] bg-white/90 border border-[#B2E4DA] px-3.5 py-2.5 rounded-xl">
+                    <div className="flex items-center justify-between text-xs sm:text-[13px] text-[#111827] bg-[#F5FAFA] border border-[#DCE7E9] px-3.5 py-2.5 rounded-xl">
                       <div className="flex items-center gap-2.5">
                         <span className="h-5 w-5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-600 font-bold text-[10px] flex items-center justify-center shrink-0">
                           !
@@ -428,7 +421,7 @@ export default function LandingPage() {
                       <span className="text-[11px] font-semibold text-amber-600">Metric rewrites</span>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs sm:text-[13px] text-[#111827] bg-white/90 border border-[#B2E4DA] px-3.5 py-2.5 rounded-xl">
+                    <div className="flex items-center justify-between text-xs sm:text-[13px] text-[#111827] bg-teal-50/50 border border-teal-200/60 px-3.5 py-2.5 rounded-xl">
                       <div className="flex items-center gap-2.5">
                         <span className="h-5 w-5 rounded-full bg-teal-100 text-[#087F6E] font-bold text-[10px] flex items-center justify-center shrink-0">
                           ✓
@@ -438,7 +431,7 @@ export default function LandingPage() {
                       <span className="text-[11px] font-semibold text-[#087F6E]">Clean standard</span>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs sm:text-[13px] text-[#111827] bg-white/90 border border-[#B2E4DA] px-3.5 py-2.5 rounded-xl">
+                    <div className="flex items-center justify-between text-xs sm:text-[13px] text-[#111827] bg-teal-50/50 border border-teal-200/60 px-3.5 py-2.5 rounded-xl">
                       <div className="flex items-center gap-2.5">
                         <span className="h-5 w-5 rounded-full bg-teal-100 text-[#087F6E] font-bold text-[10px] flex items-center justify-center shrink-0">
                           ✓
@@ -450,14 +443,14 @@ export default function LandingPage() {
                   </div>
 
                   {/* Footnote / Disclaimer */}
-                  <p className="text-[11px] text-[#3D5A54] text-center mt-4">
+                  <p className="text-[11px] text-[#526176] text-center mt-4">
                     Illustrative demonstration data • Real-time ATS match analysis
                   </p>
                 </div>
 
                 {/* Overlapping Bottom Highlight Pill (Reference Panel 1) */}
                 <div className="mt-3.5 flex items-center justify-center">
-                  <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-white/95 border border-[#B2E4DA] rounded-full shadow-sm text-xs font-semibold text-[#111827]">
+                  <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-white border border-[#DCE7E9] rounded-full shadow-xs text-xs font-semibold text-[#111827]">
                     <Sparkles className="h-3.5 w-3.5 text-[#087F6E]" />
                     <span>Your resume could be 2x stronger with AI-powered suggestions</span>
                   </div>
@@ -471,7 +464,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── 2. SCORE LIFT SECTION (Visual ATS Score Verification) ─────────────── */}
-      <ScrollFadeIn className="py-16 md:py-24 border-b border-[#BCE8DF] bg-[#DCF3ED]">
+      <ScrollFadeIn className="py-16 md:py-24 border-b border-[#DCE7E9] bg-transparent">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="text-center space-y-3">
             <span className="text-xs font-mono font-semibold uppercase tracking-widest text-[#087F6E]">
@@ -480,36 +473,36 @@ export default function LandingPage() {
             <h2 className="font-heading text-3xl sm:text-[36px] font-bold text-[#111827] tracking-tight">
               Watch Your ATS Score Climb
             </h2>
-            <p className="text-[#3D5A54] text-base max-w-lg mx-auto font-normal leading-relaxed">
+            <p className="text-[#526176] text-base max-w-lg mx-auto font-normal leading-relaxed">
               Every optimization is scored before and after so you can see exactly how much better your resume performs.
             </p>
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-16">
             {/* Before gauge */}
-            <div className="flex flex-col items-center gap-2 bg-white/80 border border-[#B2E4DA] p-5 rounded-2xl shadow-xs">
+            <div className="flex flex-col items-center gap-2 bg-white border border-[#DCE7E9] p-5 rounded-2xl shadow-xs">
               <div className="block md:hidden">
                 <CircleGauge value={34} label="Before" size={90} />
               </div>
               <div className="hidden md:block">
                 <CircleGauge value={34} label="Before" size={110} />
               </div>
-              <p className="text-xs text-[#3D5A54] font-mono font-medium">14 keywords missing</p>
+              <p className="text-xs text-[#526176] font-mono font-medium">14 keywords missing</p>
             </div>
 
             {/* AI Engine connector */}
             <div className="flex flex-col items-center gap-2 shrink-0">
-              <div className="h-px w-10 md:w-20 bg-[#BCE8DF] md:block hidden" />
-              <div className="h-6 w-px bg-[#BCE8DF] md:hidden block" />
-              <span className="text-xs font-mono font-semibold text-[#087F6E] bg-white border border-[#BCE8DF] px-3.5 py-1.5 rounded-full whitespace-nowrap shadow-xs">
+              <div className="h-px w-10 md:w-20 bg-[#DCE7E9] md:block hidden" />
+              <div className="h-6 w-px bg-[#DCE7E9] md:hidden block" />
+              <span className="text-xs font-mono font-semibold text-[#087F6E] bg-white border border-[#DCE7E9] px-3.5 py-1.5 rounded-full whitespace-nowrap shadow-xs">
                 ⚡ AI Engine
               </span>
-              <div className="h-px w-10 md:w-20 bg-[#BCE8DF] md:block hidden" />
-              <div className="h-6 w-px bg-[#BCE8DF] md:hidden block" />
+              <div className="h-px w-10 md:w-20 bg-[#DCE7E9] md:block hidden" />
+              <div className="h-6 w-px bg-[#DCE7E9] md:hidden block" />
             </div>
 
             {/* After gauge */}
-            <div className="flex flex-col items-center gap-2 bg-white/80 border border-[#B2E4DA] p-5 rounded-2xl shadow-xs">
+            <div className="flex flex-col items-center gap-2 bg-white border border-[#DCE7E9] p-5 rounded-2xl shadow-xs">
               <div className="block md:hidden">
                 <CircleGauge value={91} label="After" size={90} />
               </div>
@@ -523,7 +516,7 @@ export default function LandingPage() {
       </ScrollFadeIn>
 
       {/* ── 3. FEATURE SECTION (Clean 4 Core Modules + Platform Strengths) ───── */}
-      <section id="features" className="py-20 md:py-28 bg-[#E6F7F4] border-b border-[#BCE8DF]">
+      <section id="features" className="py-20 md:py-28 bg-transparent border-b border-[#DCE7E9]">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8 space-y-16">
 
           {/* Section Header */}
@@ -534,7 +527,7 @@ export default function LandingPage() {
             <h2 className="font-heading text-3xl sm:text-[38px] font-bold text-[#111827] tracking-tight">
               A Complete Career-Tech Workspace
             </h2>
-            <p className="text-[#3D5A54] text-base max-w-xl mx-auto leading-relaxed">
+            <p className="text-[#526176] text-base max-w-xl mx-auto leading-relaxed">
               Everything you need to optimize, target, and organize your job search with precision.
             </p>
           </div>
@@ -542,7 +535,7 @@ export default function LandingPage() {
           {/* 4 Core Features Grid (Resume Optimizer, Job Matcher, Application Tracker, Career Insights) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             {/* Feature 1: Resume Optimizer */}
-            <div className="bg-white/95 border border-[#BCE8DF] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/50 hover:shadow-md transition-all duration-200">
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
                 <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
                   <FileText className="h-5.5 w-5.5" />
@@ -555,19 +548,19 @@ export default function LandingPage() {
                 <h3 className="font-heading font-bold text-[#111827] text-xl">
                   Resume Optimizer
                 </h3>
-                <p className="text-[15px] text-[#3D5A54] leading-[1.68]">
+                <p className="text-[15px] text-[#526176] leading-[1.68]">
                   ATS-friendly suggestions and resume improvements. Paste your resume against any job description to detect missing keywords, score compatibility, and rewrite bullet points for measurable impact.
                 </p>
               </div>
-              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#4A6B64]">
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Keyword Density</span>
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Bullet Rewrites</span>
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">ATS Scorer</span>
+              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#526176]">
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Keyword Density</span>
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Bullet Rewrites</span>
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">ATS Scorer</span>
               </div>
             </div>
 
             {/* Feature 2: Job Matcher */}
-            <div className="bg-white/95 border border-[#BCE8DF] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/50 hover:shadow-md transition-all duration-200">
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
                 <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
                   <Target className="h-5.5 w-5.5" />
@@ -580,19 +573,19 @@ export default function LandingPage() {
                 <h3 className="font-heading font-bold text-[#111827] text-xl">
                   Job Matcher
                 </h3>
-                <p className="text-[15px] text-[#3D5A54] leading-[1.68]">
+                <p className="text-[15px] text-[#526176] leading-[1.68]">
                   Relevant job opportunities matched to your profile. Inspect alignment percentages, uncover role-specific requirements, and tailor applications specifically for each company before applying.
                 </p>
               </div>
-              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#4A6B64]">
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Match Percentage</span>
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Role Requirements</span>
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Direct Alignment</span>
+              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#526176]">
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Match Percentage</span>
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Role Requirements</span>
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Direct Alignment</span>
               </div>
             </div>
 
             {/* Feature 3: Application Tracker */}
-            <div className="bg-white/95 border border-[#BCE8DF] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/50 hover:shadow-md transition-all duration-200">
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
                 <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
                   <Briefcase className="h-5.5 w-5.5" />
@@ -605,19 +598,19 @@ export default function LandingPage() {
                 <h3 className="font-heading font-bold text-[#111827] text-xl">
                   Application Tracker
                 </h3>
-                <p className="text-[15px] text-[#3D5A54] leading-[1.68]">
+                <p className="text-[15px] text-[#526176] leading-[1.68]">
                   Organized job applications in a single pipeline. Track your submissions across Wishlist, Applied, Interviewing, and Offered stages without juggling messy spreadsheets.
                 </p>
               </div>
-              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#4A6B64]">
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Stage Pipeline</span>
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Interview Dates</span>
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Notes &amp; Salary</span>
+              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#526176]">
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Stage Pipeline</span>
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Interview Dates</span>
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Notes &amp; Salary</span>
               </div>
             </div>
 
             {/* Feature 4: Career Insights */}
-            <div className="bg-white/95 border border-[#BCE8DF] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/50 hover:shadow-md transition-all duration-200">
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
                 <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
                   <TrendingUp className="h-5.5 w-5.5" />
@@ -630,14 +623,14 @@ export default function LandingPage() {
                 <h3 className="font-heading font-bold text-[#111827] text-xl">
                   Career Insights
                 </h3>
-                <p className="text-[15px] text-[#3D5A54] leading-[1.68]">
+                <p className="text-[15px] text-[#526176] leading-[1.68]">
                   Personalized progress and skill development. Monitor your ATS score trajectory over time, review historical optimization logs, and pinpoint skill development areas for future career moves.
                 </p>
               </div>
-              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#4A6B64]">
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Score History</span>
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Skill Gap Roadmap</span>
-                <span className="bg-[#EAF8F5] border border-[#BCE8DF] px-2.5 py-1 rounded-md">Past Scans</span>
+              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#526176]">
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Score History</span>
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Skill Gap Roadmap</span>
+                <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Past Scans</span>
               </div>
             </div>
           </div>
@@ -668,14 +661,14 @@ export default function LandingPage() {
             ].map(({ icon: Icon, title, desc }) => (
               <div
                 key={title}
-                className="bg-white/90 border border-[#BCE8DF] p-6 rounded-2xl space-y-3 shadow-xs hover:border-[#087F6E]/40 hover:shadow-sm transition-all duration-200"
+                className="bg-white border border-[#DCE7E9] p-6 rounded-2xl space-y-3 shadow-xs hover:border-[#087F6E]/40 hover:shadow-sm transition-all duration-200"
               >
                 <div className="h-9 w-9 rounded-lg bg-teal-50 border border-teal-200/60 flex items-center justify-center text-[#087F6E]">
                   <Icon className="h-4.5 w-4.5" />
                 </div>
                 <div className="space-y-1.5">
                   <h4 className="font-heading font-bold text-[#111827] text-base">{title}</h4>
-                  <p className="text-xs sm:text-[13px] text-[#3D5A54] leading-relaxed font-normal">{desc}</p>
+                  <p className="text-xs sm:text-[13px] text-[#526176] leading-relaxed font-normal">{desc}</p>
                 </div>
               </div>
             ))}
@@ -685,7 +678,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── 4. STATS SECTION ─────────────────────────────────────────────────── */}
-      <ScrollFadeIn className="py-16 md:py-24 border-b border-[#BCE8DF] bg-[#DCF3ED]">
+      <ScrollFadeIn className="py-16 md:py-24 border-b border-[#DCE7E9] bg-transparent">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 space-y-3">
             <span className="text-xs font-mono font-semibold uppercase tracking-widest text-[#087F6E]">
@@ -694,7 +687,7 @@ export default function LandingPage() {
             <h2 className="font-heading text-3xl sm:text-[36px] font-bold text-[#111827] tracking-tight">
               Trusted by Job Seekers Worldwide
             </h2>
-            <p className="text-[#3D5A54] text-base max-w-md mx-auto leading-relaxed">
+            <p className="text-[#526176] text-base max-w-md mx-auto leading-relaxed">
               Job seekers have landed interview callbacks using FastHire AI’s precision optimizations.
             </p>
           </div>
@@ -708,14 +701,14 @@ export default function LandingPage() {
             ].map(({ value, suffix, label, color, sub }) => (
               <div
                 key={label}
-                className="bg-white/90 border border-[#BCE8DF] rounded-2xl p-6 text-center shadow-xs hover:border-[#087F6E]/40 transition-all duration-200"
+                className="bg-white border border-[#DCE7E9] rounded-2xl p-6 text-center shadow-xs hover:border-[#087F6E]/40 transition-all duration-200"
               >
                 <div className="space-y-1">
                   <div className="text-3xl sm:text-4xl font-extrabold tracking-tight font-heading" style={{ color }}>
                     <AnimatedCounter from={0} to={value} duration={1800} suffix={suffix} />
                   </div>
                   <div className="text-sm font-bold text-[#111827] mt-2">{label}</div>
-                  <div className="text-xs text-[#4A6B64] font-medium">{sub}</div>
+                  <div className="text-xs text-[#526176] font-medium">{sub}</div>
                 </div>
               </div>
             ))}
@@ -724,7 +717,7 @@ export default function LandingPage() {
       </ScrollFadeIn>
 
       {/* ── 5. TOP COMPANIES MARQUEE ─────────────────────────────────────────── */}
-      <ScrollFadeIn className="py-16 border-b border-[#BCE8DF] bg-[#E6F7F4]">
+      <ScrollFadeIn className="py-16 border-b border-[#DCE7E9] bg-transparent">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10 space-y-2">
             <span className="text-xs font-mono font-semibold uppercase tracking-widest text-[#087F6E]">
@@ -733,7 +726,7 @@ export default function LandingPage() {
             <h2 className="font-heading text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
               Resumes Shortlisted At
             </h2>
-            <p className="text-[#3D5A54] text-sm sm:text-base max-w-md mx-auto leading-relaxed">
+            <p className="text-[#526176] text-sm sm:text-base max-w-md mx-auto leading-relaxed">
               Our users have been shortlisted and hired across top global technology teams.
             </p>
           </div>
@@ -742,11 +735,11 @@ export default function LandingPage() {
           <div className="relative overflow-hidden">
             <div
               className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
-              style={{ background: "linear-gradient(to right, #E6F7F4, transparent)" }}
+              style={{ background: "linear-gradient(to right, #F5FAFA, transparent)" }}
             />
             <div
               className="absolute right-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
-              style={{ background: "linear-gradient(to left, #E6F7F4, transparent)" }}
+              style={{ background: "linear-gradient(to left, #F5FAFA, transparent)" }}
             />
 
             <div className="flex animate-marquee gap-6 whitespace-nowrap">
@@ -764,7 +757,7 @@ export default function LandingPage() {
                 .map((company, i) => (
                   <div
                     key={i}
-                    className="inline-flex items-center px-6 py-3 rounded-xl bg-white/95 border border-[#BCE8DF] text-[#111827] font-semibold text-sm hover:border-[#087F6E]/40 transition-all shrink-0 shadow-xs"
+                    className="inline-flex items-center px-6 py-3 rounded-xl bg-white border border-[#DCE7E9] text-[#111827] font-semibold text-sm hover:border-[#087F6E]/40 transition-all shrink-0 shadow-xs"
                   >
                     <span className="h-2 w-2 rounded-full bg-[#087F6E] mr-2 shrink-0" />
                     {company}
@@ -776,7 +769,7 @@ export default function LandingPage() {
       </ScrollFadeIn>
 
       {/* ── 6. USER TESTIMONIALS ─────────────────────────────────────────────── */}
-      <ScrollFadeIn className="py-20 md:py-28 border-b border-[#BCE8DF] bg-[#DCF3ED]">
+      <ScrollFadeIn className="py-20 md:py-28 border-b border-[#DCE7E9] bg-transparent">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14 space-y-3">
             <span className="text-xs font-mono font-semibold uppercase tracking-widest text-[#087F6E]">
@@ -785,7 +778,7 @@ export default function LandingPage() {
             <h2 className="font-heading text-3xl sm:text-[36px] font-bold text-[#111827] tracking-tight">
               What Job Seekers Are Saying
             </h2>
-            <p className="text-[#3D5A54] text-base max-w-md mx-auto leading-relaxed">
+            <p className="text-[#526176] text-base max-w-md mx-auto leading-relaxed">
               Transparent feedback from professionals optimizing their careers with FastHire AI.
             </p>
           </div>
@@ -831,18 +824,18 @@ export default function LandingPage() {
             ].map(({ name, role, country, text }, i) => (
               <div
                 key={i}
-                className="bg-white/95 border border-[#BCE8DF] rounded-2xl p-6 sm:p-7 space-y-4 hover:border-[#087F6E]/40 shadow-xs hover:shadow-sm transition-all duration-200"
+                className="bg-white border border-[#DCE7E9] rounded-2xl p-6 sm:p-7 space-y-4 hover:border-[#087F6E]/40 shadow-xs hover:shadow-sm transition-all duration-200"
               >
-                <p className="text-[14px] sm:text-[15px] text-[#3D5A54] leading-relaxed font-normal">
+                <p className="text-[14px] sm:text-[15px] text-[#526176] leading-relaxed font-normal">
                   "{text}"
                 </p>
-                <div className="flex items-center gap-3 pt-3 border-t border-[#BCE8DF]">
+                <div className="flex items-center gap-3 pt-3 border-t border-[#DCE7E9]">
                   <div className="h-9 w-9 rounded-full bg-[#087F6E] flex items-center justify-center text-white font-bold text-xs shrink-0">
                     {name[0]}
                   </div>
                   <div>
                     <div className="text-xs font-bold text-[#111827]">{name}</div>
-                    <div className="text-[11px] text-[#4A6B64]">
+                    <div className="text-[11px] text-[#526176]">
                       {role} • {country}
                     </div>
                   </div>
@@ -854,7 +847,7 @@ export default function LandingPage() {
       </ScrollFadeIn>
 
       {/* ── 7. COUNTRIES MARQUEE ─────────────────────────────────────────────── */}
-      <ScrollFadeIn className="py-16 border-b border-[#BCE8DF] bg-[#E6F7F4]">
+      <ScrollFadeIn className="py-16 border-b border-[#DCE7E9] bg-transparent">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10 space-y-2">
             <span className="text-xs font-mono font-semibold uppercase tracking-widest text-[#087F6E]">
@@ -863,7 +856,7 @@ export default function LandingPage() {
             <h2 className="font-heading text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
               Used Across the World
             </h2>
-            <p className="text-[#3D5A54] text-sm sm:text-base max-w-md mx-auto leading-relaxed">
+            <p className="text-[#526176] text-sm sm:text-base max-w-md mx-auto leading-relaxed">
               Job seekers from over 30 countries use FastHire AI to land interviews faster.
             </p>
           </div>
@@ -871,11 +864,11 @@ export default function LandingPage() {
           <div className="relative overflow-hidden">
             <div
               className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
-              style={{ background: "linear-gradient(to right, #E6F7F4, transparent)" }}
+              style={{ background: "linear-gradient(to right, #F5FAFA, transparent)" }}
             />
             <div
               className="absolute right-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
-              style={{ background: "linear-gradient(to left, #E6F7F4, transparent)" }}
+              style={{ background: "linear-gradient(to left, #F5FAFA, transparent)" }}
             />
 
             <div className="flex animate-marquee-reverse gap-5 whitespace-nowrap">
@@ -911,7 +904,7 @@ export default function LandingPage() {
                 .map(({ flag, name }, i) => (
                   <div
                     key={i}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/95 border border-[#BCE8DF] text-[#111827] font-medium text-xs sm:text-sm hover:border-[#087F6E]/40 transition-all shrink-0 shadow-xs"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-[#DCE7E9] text-[#111827] font-medium text-xs sm:text-sm hover:border-[#087F6E]/40 transition-all shrink-0 shadow-xs"
                   >
                     <span>{flag}</span>
                     <span>{name}</span>
@@ -923,7 +916,7 @@ export default function LandingPage() {
       </ScrollFadeIn>
 
       {/* ── 8. FAQ SECTION ───────────────────────────────────────────────────── */}
-      <ScrollFadeIn id="faq" className="py-20 md:py-28 border-b border-[#BCE8DF] bg-[#DCF3ED]">
+      <ScrollFadeIn id="faq" className="py-20 md:py-28 border-b border-[#DCE7E9] bg-transparent">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 space-y-3">
             <span className="text-xs font-mono font-semibold uppercase tracking-widest text-[#087F6E]">
@@ -932,7 +925,7 @@ export default function LandingPage() {
             <h2 className="font-heading text-3xl sm:text-[36px] font-bold text-[#111827] tracking-tight">
               Frequently Asked Questions
             </h2>
-            <p className="text-[#3D5A54] text-base max-w-md mx-auto leading-relaxed">
+            <p className="text-[#526176] text-base max-w-md mx-auto leading-relaxed">
               Everything you need to know about FastHire AI and our optimization process.
             </p>
           </div>
@@ -942,9 +935,9 @@ export default function LandingPage() {
       </ScrollFadeIn>
 
       {/* ── 9. FINAL CTA ─────────────────────────────────────────────────────── */}
-      <ScrollFadeIn className="py-20 md:py-28 bg-gradient-to-b from-[#DCF3ED] to-[#CEEFE7]">
+      <ScrollFadeIn className="py-20 md:py-28 bg-transparent">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/90 border border-[#BCE8DF] text-[#075E53] text-xs font-semibold shadow-xs">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#DCE7E9] text-[#075E53] text-xs font-semibold shadow-xs">
             <Sparkles className="h-3.5 w-3.5 text-[#087F6E]" />
             <span>Free Forever Tier • No Credit Card Required</span>
           </div>
@@ -954,7 +947,7 @@ export default function LandingPage() {
             <span className="text-[#087F6E]">Interviews?</span>
           </h2>
 
-          <p className="text-[#3D5A54] text-base sm:text-lg max-w-md mx-auto leading-relaxed font-normal">
+          <p className="text-[#526176] text-base sm:text-lg max-w-md mx-auto leading-relaxed font-normal">
             2 free resume optimizations every month. Start right now in your browser.
           </p>
 
@@ -968,7 +961,7 @@ export default function LandingPage() {
 
             <button
               onClick={() => setIsDemoModalOpen(true)}
-              className="border border-[#BCE8DF] bg-white hover:bg-slate-50 text-[#111827] px-8 py-3.5 text-[15px] font-semibold rounded-xl flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              className="border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-8 py-3.5 text-[15px] font-semibold rounded-xl flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
               <Play className="h-4 w-4 text-[#087F6E] fill-[#087F6E]" />
               <span>See a Demo</span>

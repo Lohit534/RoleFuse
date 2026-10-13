@@ -622,7 +622,7 @@ export default function DashboardPage() {
     afterScore && beforeScore ? afterScore.overall - beforeScore.overall : 0;
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-[#0f172a] font-sans">
+    <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans">
       {/* Bullet Enrichment Modal */}
       {showBulletModal && (
         <BulletEnrichmentModal
@@ -632,13 +632,6 @@ export default function DashboardPage() {
           onSubmit={handleBulletEnrichmentSubmit}
         />
       )}
-
-      {/* Ambient background - subtle light pattern */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/3 w-[700px] h-[500px] bg-[#0d6e5a]/3 rounded-full blur-[150px]" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-[#0f766e]/3 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[400px] bg-slate-200/50 rounded-full blur-[120px]" />
-      </div>
 
       <Navbar
         refreshKey={refreshKey}
@@ -701,18 +694,22 @@ export default function DashboardPage() {
         ) : (
           /* Header Title Block */
           <div className="text-center space-y-3 mb-10 select-none">
-            <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-none">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] text-xs font-bold mx-auto mb-1">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Resume Optimizer</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-black text-[#111827] tracking-tight leading-none">
               Improve Your Resume{" "}
-              <span className="bg-gradient-to-r from-[#0d6e5a] via-[#0f766e] to-[#134e4a] bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#087F6E] via-[#075E53] to-[#087F6E] bg-clip-text text-transparent">
                 for Any Job
               </span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto font-medium leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#526176] max-w-xl mx-auto font-medium leading-relaxed">
               Paste your resume and the job you want. We improve it to match
               &mdash; automatically. Get 2 free resumes per month.
             </p>
             <div>
-              <Badge className="bg-[#0d6e5a]/8 border border-[#0d6e5a]/20 text-[#0d6e5a] hover:bg-[#0d6e5a]/8 px-3 py-1 text-[10px] rounded-full font-bold select-none">
+              <Badge className="bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] hover:bg-[#E5F8F5] px-3 py-1 text-[10px] rounded-full font-bold select-none">
                 +1 extra resume for each referral
               </Badge>
             </div>
@@ -1005,22 +1002,22 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
               {/* Resume Column (Panel + Use Saved Resume Button below) */}
               <div className="flex flex-col space-y-3">
-                <div className="group flex-1 flex flex-col bg-white border border-slate-300 hover:border-[#0d6e5a]/50 rounded-xl p-6 space-y-4 transition-colors duration-200 shadow-sm">
+                <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-6 space-y-4 transition-colors duration-200 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 flex items-center justify-center">
-                        <FileText className="h-4 w-4 text-[#0d6e5a]" />
+                      <div className="h-9 w-9 rounded-xl bg-[#E5F8F5] border border-[#D4F3EF] flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-[#087F6E]" />
                       </div>
                       <div>
-                        <h3 className="font-heading font-bold text-slate-900 text-base">
+                        <h3 className="font-heading font-bold text-[#111827] text-base">
                           Your Resume
                         </h3>
-                        <p className="text-xs text-slate-400 font-normal">
+                        <p className="text-xs text-[#526176] font-normal">
                           Paste text or upload PDF
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-mono font-medium text-[#0d6e5a] bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 px-2.5 py-0.5 rounded-full">
+                    <span className="text-xs font-semibold text-[#087F6E] bg-[#E5F8F5] border border-[#D4F3EF] px-2.5 py-0.5 rounded-full">
                       Step 1
                     </span>
                   </div>
@@ -1037,9 +1034,9 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => setIsSavedResumesOpen(true)}
                     disabled={optimizing}
-                    className="bg-white border border-slate-200 hover:border-[#0d6e5a]/40 hover:bg-[#0d6e5a]/5 py-2 px-4 text-xs font-bold rounded-lg inline-flex items-center gap-2 text-slate-600 hover:text-[#0d6e5a] transition-all shadow-sm cursor-pointer"
+                    className="bg-white border border-[#DCE7E9] hover:border-[#087F6E]/40 hover:bg-[#E5F8F5]/50 py-2 px-4 text-xs font-bold rounded-xl inline-flex items-center gap-2 text-[#526176] hover:text-[#087F6E] transition-all shadow-xs cursor-pointer"
                   >
-                    <FolderOpen className="h-4 w-4 text-slate-400" />
+                    <FolderOpen className="h-4 w-4 text-[#526176]" />
                     Use Saved Resume
                   </button>
                 </div>
@@ -1047,22 +1044,22 @@ export default function DashboardPage() {
 
               {/* Job Description Column */}
               <div className="flex flex-col space-y-3">
-                <div className="group flex-1 flex flex-col bg-white border border-slate-300 hover:border-[#0d6e5a]/50 rounded-xl p-6 space-y-4 transition-colors duration-200 shadow-sm">
+                <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-6 space-y-4 transition-colors duration-200 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 flex items-center justify-center">
-                        <Target className="h-4 w-4 text-[#0d6e5a]" />
+                      <div className="h-9 w-9 rounded-xl bg-[#E5F8F5] border border-[#D4F3EF] flex items-center justify-center">
+                        <Target className="h-4 w-4 text-[#087F6E]" />
                       </div>
                       <div>
-                        <h3 className="font-heading font-bold text-slate-900 text-base">
+                        <h3 className="font-heading font-bold text-[#111827] text-base">
                           Job Description
                         </h3>
-                        <p className="text-xs text-slate-400 font-normal">
+                        <p className="text-xs text-[#526176] font-normal">
                           Paste the job post description
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-mono font-medium text-[#0d6e5a] bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 px-2.5 py-0.5 rounded-full">
+                    <span className="text-xs font-semibold text-[#087F6E] bg-[#E5F8F5] border border-[#D4F3EF] px-2.5 py-0.5 rounded-full">
                       Step 2
                     </span>
                   </div>
@@ -1078,12 +1075,12 @@ export default function DashboardPage() {
             </div>
 
             {/* Custom optimization instructions card */}
-            <div className="bg-white border border-slate-300 rounded-xl p-6 space-y-4 shadow-sm">
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-6 space-y-4 shadow-xs">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#0d6e5a]" />
-                <h4 className="font-heading font-bold text-sm text-slate-900">
+                <Sparkles className="h-4 w-4 text-[#087F6E]" />
+                <h4 className="font-heading font-bold text-sm text-[#111827]">
                   Custom Guidance{" "}
-                  <span className="text-slate-400 font-normal">(Optional)</span>
+                  <span className="text-[#526176] font-normal">(Optional)</span>
                 </h4>
               </div>
               <input
@@ -1091,15 +1088,15 @@ export default function DashboardPage() {
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="e.g. 'Emphasize engineering scale' or 'Keep it concise' or 'Focus on leadership'"
-                className="w-full h-10 bg-slate-50 text-slate-900 border border-slate-200 focus:border-[#0d6e5a] focus:ring-1 focus:ring-[#0d6e5a]/30 rounded-lg px-3.5 text-xs font-normal focus:outline-none"
+                className="w-full h-10 bg-white text-[#111827] border border-[#DCE7E9] focus:border-[#087F6E] focus:ring-2 focus:ring-[#087F6E]/20 rounded-xl px-3.5 text-xs font-normal focus:outline-none"
               />
             </div>
 
             {/* Resume Length card */}
-            <div className="bg-white border border-slate-300 rounded-xl p-6 space-y-4 shadow-sm">
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-6 space-y-4 shadow-xs">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-[#0d6e5a]" />
-                <h4 className="font-heading font-bold text-sm text-slate-900">
+                <FileText className="h-4 w-4 text-[#087F6E]" />
+                <h4 className="font-heading font-bold text-sm text-[#111827]">
                   Resume Length
                 </h4>
               </div>
@@ -1130,23 +1127,23 @@ export default function DashboardPage() {
                     key={opt.value}
                     type="button"
                     onClick={() => setLengthOption(opt.value)}
-                    className={`flex flex-col items-start gap-1.5 rounded-lg p-3.5 border text-left transition-all duration-200 ${
+                    className={`flex flex-col items-start gap-1.5 rounded-xl p-3.5 border text-left transition-all duration-200 cursor-pointer ${
                       lengthOption === opt.value
-                        ? "bg-[#0d6e5a]/8 border-[#0d6e5a]/40 shadow-sm"
-                        : "bg-slate-50 border-slate-200 hover:border-slate-300 hover:bg-slate-100"
+                        ? "bg-[#E5F8F5] border-[#087F6E] shadow-xs"
+                        : "bg-white border-[#DCE7E9] hover:border-[#087F6E]/40 hover:bg-[#F5FAFA]"
                     }`}
                   >
                     <div>
                       <span
                         className={`text-xs font-bold block ${
                           lengthOption === opt.value
-                            ? "text-[#0d6e5a]"
-                            : "text-slate-700"
+                            ? "text-[#087F6E]"
+                            : "text-[#111827]"
                         }`}
                       >
                         {opt.label}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-normal leading-tight block mt-1">
+                      <span className="text-[10px] text-[#526176] font-normal leading-tight block mt-1">
                         {opt.sub}
                       </span>
                     </div>
@@ -1160,7 +1157,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleOptimize}
                 disabled={optimizing || isPrechecking}
-                className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white px-12 py-3.5 text-sm font-semibold flex items-center gap-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="bg-[#087F6E] hover:bg-[#075E53] text-white px-12 py-3.5 text-sm font-bold flex items-center gap-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 {optimizing ? (
                   <>
@@ -1175,6 +1172,7 @@ export default function DashboardPage() {
                 ) : (
                   <>
                     <Sparkles className="h-4.5 w-4.5" /> Optimize My Resume
+                    <ArrowRight className="h-4 w-4 ml-1" />
                   </>
                 )}
               </button>

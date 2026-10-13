@@ -88,18 +88,18 @@ export default function HistoryCard({ resume, userPlan = "free", onSelect }: His
   return (
     <Card
       onClick={() => onSelect && onSelect(resume)}
-      className="group relative border-slate-800 bg-slate-950/40 backdrop-blur-sm hover:border-indigo-500/50 cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/5"
+      className="group relative border border-[#DCE7E9] bg-white rounded-2xl shadow-xs hover:shadow-md hover:border-[#087F6E]/40 cursor-pointer overflow-hidden transition-all duration-200"
     >
       <CardContent className="p-5 flex flex-col justify-between h-full min-h-[160px]">
         {/* Top Info */}
         <div className="space-y-2">
           <div className="flex justify-between items-start gap-4">
-            <h3 className="font-bold text-base text-slate-100 truncate group-hover:text-indigo-400 transition-colors">
+            <h3 className="font-bold text-base text-[#111827] truncate group-hover:text-[#087F6E] transition-colors">
               {resume.jobTitle || "Optimized Resume"}
             </h3>
             {/* Score Delta Badge */}
             {delta > 0 && (
-              <Badge className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 select-none font-bold shrink-0">
+              <Badge className="bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] select-none font-bold shrink-0">
                 +{delta} pts
               </Badge>
             )}
@@ -107,14 +107,14 @@ export default function HistoryCard({ resume, userPlan = "free", onSelect }: His
 
           {/* Company Name */}
           {resume.company && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-              <Building className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+            <div className="flex items-center gap-1.5 text-xs text-[#526176]">
+              <Building className="h-3.5 w-3.5 text-[#526176] shrink-0" />
               <span className="truncate">{resume.company}</span>
             </div>
           )}
 
           {/* Date Created */}
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+          <div className="flex items-center gap-1.5 text-[11px] text-[#526176]">
             <Calendar className="h-3.5 w-3.5 shrink-0" />
             <span>{formattedDate}</span>
           </div>
@@ -127,7 +127,7 @@ export default function HistoryCard({ resume, userPlan = "free", onSelect }: His
                   href={linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 hover:underline transition-colors"
+                  className="inline-flex items-center gap-1 text-[11px] text-[#087F6E] hover:text-[#075E53] hover:underline transition-colors"
                   title="LinkedIn Profile"
                 >
                   <LinkedInIcon className="h-3 w-3 shrink-0" />
@@ -139,7 +139,7 @@ export default function HistoryCard({ resume, userPlan = "free", onSelect }: His
                   href={github}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] text-slate-300 hover:text-white hover:underline transition-colors"
+                  className="inline-flex items-center gap-1 text-[11px] text-[#526176] hover:text-[#111827] hover:underline transition-colors"
                   title="GitHub Profile"
                 >
                   <GitHubIcon className="h-3 w-3 shrink-0" />
@@ -151,15 +151,15 @@ export default function HistoryCard({ resume, userPlan = "free", onSelect }: His
         </div>
 
         {/* Bottom Details & Download Button */}
-        <div className="flex items-center justify-between border-t border-slate-900 pt-4 mt-4">
+        <div className="flex items-center justify-between border-t border-[#DCE7E9] pt-4 mt-4">
           <div className="flex gap-4 text-xs font-semibold">
             <div>
-              <span className="text-slate-500">Before:</span>{" "}
-              <span className="text-slate-300">{resume.scoreBefore}</span>
+              <span className="text-[#526176]">Before:</span>{" "}
+              <span className="text-[#111827]">{resume.scoreBefore}</span>
             </div>
             <div>
-              <span className="text-slate-500">After:</span>{" "}
-              <span className="text-indigo-400 font-black">{resume.scoreAfter}</span>
+              <span className="text-[#526176]">After:</span>{" "}
+              <span className="text-[#087F6E] font-black">{resume.scoreAfter}</span>
             </div>
           </div>
 
@@ -168,12 +168,12 @@ export default function HistoryCard({ resume, userPlan = "free", onSelect }: His
             disabled={downloading}
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 rounded-full hover:bg-slate-900 text-slate-400 hover:text-white"
+            className="h-8 w-8 p-0 rounded-lg hover:bg-[#E5F8F5] text-[#526176] hover:text-[#087F6E]"
             title="Download PDF"
             type="button"
           >
             {downloading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-indigo-400" />
+              <Loader2 className="h-4 w-4 animate-spin text-[#087F6E]" />
             ) : (
               <FileDown className="h-4.5 w-4.5" />
             )}
@@ -181,8 +181,8 @@ export default function HistoryCard({ resume, userPlan = "free", onSelect }: His
         </div>
 
         {/* Hover Details Overlay */}
-        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-          <div className="flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+        <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          <div className="flex items-center gap-1.5 bg-[#087F6E] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md transform translate-y-1 group-hover:translate-y-0 transition-transform duration-200">
             <span>View Details</span>
             <ArrowUpRight className="h-3.5 w-3.5" />
           </div>

@@ -1139,39 +1139,39 @@ function HistoryRow({
           onClick();
         }
       }}
-      className="group w-full cursor-pointer rounded-xl py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all duration-200 relative overflow-hidden bg-white border border-slate-200 hover:border-[#0d6e5a]/40 shadow-sm hover:shadow"
+      className="group w-full cursor-pointer rounded-2xl py-3.5 px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all duration-200 relative overflow-hidden bg-white border border-[#DCE7E9] hover:border-[#087F6E]/40 shadow-xs hover:shadow-md"
     >
       {/* Clickable left area */}
-      <div className="flex items-center gap-3 min-w-0 flex-1 text-left">
+      <div className="flex items-center gap-3.5 min-w-0 flex-1 text-left">
         {/* Score comparison pill */}
-        <div className="shrink-0 flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full select-none text-[10px] font-bold">
+        <div className="shrink-0 flex items-center gap-1.5 bg-[#F5FAFA] border border-[#DCE7E9] px-3 py-1 rounded-full select-none text-[11px] font-bold">
           <span style={{ color: beforeColor }}>{resume.scoreBefore}</span>
-          <ArrowRight className="h-3 w-3 text-slate-400" />
+          <ArrowRight className="h-3 w-3 text-[#526176]" />
           <span style={{ color: afterColor }}>{resume.scoreAfter}</span>
         </div>
 
         {/* Title and metadata info */}
         <div className="min-w-0">
-          <h3 className="text-xs font-bold text-slate-900 truncate group-hover:text-[#0d6e5a] transition-colors">
+          <h3 className="text-xs sm:text-sm font-bold text-[#111827] truncate group-hover:text-[#087F6E] transition-colors">
             {resume.jobTitle || "Resume Optimization"}
           </h3>
-          <div className="flex items-center gap-2 text-[9px] text-slate-500 mt-0.5 font-semibold">
+          <div className="flex items-center gap-2 text-[10px] text-[#526176] mt-0.5 font-medium">
             <span className="flex items-center gap-1">
-              <Calendar className="h-2.5 w-2.5" />
+              <Calendar className="h-3 w-3 text-[#526176]" />
               {formatDate(resume.createdAt)}
             </span>
             <span>&bull;</span>
-            <span className="text-slate-400">Tech</span>
+            <span className="text-[#526176]">Tech</span>
             {/linkedin\.com/i.test(resume.optimizedText || resume.originalText || "") && (
               <>
                 <span>&bull;</span>
-                <span className="text-blue-600 font-semibold">LinkedIn</span>
+                <span className="text-[#087F6E] font-semibold">LinkedIn</span>
               </>
             )}
             {/github\.com/i.test(resume.optimizedText || resume.originalText || "") && (
               <>
                 <span>&bull;</span>
-                <span className="text-slate-700 font-semibold">GitHub</span>
+                <span className="text-[#111827] font-semibold">GitHub</span>
               </>
             )}
           </div>
@@ -1180,10 +1180,10 @@ function HistoryRow({
 
       {/* Right: delta pill */}
       <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0">
-        <span className="text-[9px] font-black bg-emerald-50 border border-emerald-200 text-emerald-700 px-1.5 py-0.5 rounded-full">
+        <span className="text-[10px] font-black bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] px-2 py-0.5 rounded-full">
           +{delta}
         </span>
-        <ChevronRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-[#0d6e5a] group-hover:translate-x-0.5 transition-all shrink-0" />
+        <ChevronRight className="h-3.5 w-3.5 text-[#526176] group-hover:text-[#087F6E] group-hover:translate-x-0.5 transition-all shrink-0" />
       </div>
     </div>
   );
@@ -1368,7 +1368,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen text-slate-900 bg-[#f8fafc]">
+    <div className="flex flex-col min-h-screen text-[#111827] bg-transparent">
       {!selected && <Navbar />}
 
       <main className={`flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 pb-28 sm:pb-10 select-text ${selected ? "pt-6 sm:pt-8" : "pt-6 sm:pt-10"}`}>
@@ -1388,12 +1388,12 @@ export default function HistoryPage() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-xl bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 flex items-center justify-center text-[#0d6e5a]">
+                    <div className="h-8 w-8 rounded-xl bg-[#E5F8F5] border border-[#D4F3EF] flex items-center justify-center text-[#087F6E]">
                       <History className="h-4.5 w-4.5" />
                     </div>
-                    <h1 className="text-xl font-black text-slate-900 tracking-tight">Optimization History</h1>
+                    <h1 className="text-2xl font-black text-[#111827] tracking-tight">Optimization History</h1>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1 ml-10">
+                  <p className="text-xs text-[#526176] mt-1 ml-10 font-medium">
                     {resumes.length > 0
                       ? `${resumes.length} optimization${resumes.length !== 1 ? "s" : ""} — click any row to view details`
                       : "Your optimization history will appear here"}

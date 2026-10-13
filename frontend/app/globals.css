@@ -53,67 +53,67 @@
   --radius-full: 9999px;
 }
 
-/* ── Professional Light Theme ─────────────────────────────── */
+/* ── FasthireAI Premium Light Mint & Teal Theme ─────────────── */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #0d6e5a;
-  --primary-foreground: #ffffff;
-  --secondary: #134e4a;
-  --secondary-foreground: #ffffff;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #0f766e;
-  --accent-foreground: #ffffff;
-  --destructive: #dc2626;
-  --border: rgba(0, 0, 0, 0.1);
-  --input: rgba(0, 0, 0, 0.06);
-  --ring: #0d6e5a;
+  --background: #F5FAFA;
+  --foreground: #111827;
+  --card: #FFFFFF;
+  --card-foreground: #111827;
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
+  --primary: #087F6E;
+  --primary-foreground: #FFFFFF;
+  --secondary: #075E53;
+  --secondary-foreground: #FFFFFF;
+  --muted: #E5F8F5;
+  --muted-foreground: #526176;
+  --accent: #D4F3EF;
+  --accent-foreground: #087F6E;
+  --destructive: #DC2626;
+  --border: #DCE7E9;
+  --input: #DCE7E9;
+  --ring: #087F6E;
   --radius: 0.75rem;
 
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #0d6e5a;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: rgba(0, 0, 0, 0.1);
-  --sidebar-ring: #0d6e5a;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #087F6E;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E5F8F5;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #DCE7E9;
+  --sidebar-ring: #087F6E;
 }
 
 .dark {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #0d6e5a;
-  --primary-foreground: #ffffff;
-  --secondary: #134e4a;
-  --secondary-foreground: #ffffff;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #0f766e;
-  --accent-foreground: #ffffff;
-  --destructive: #dc2626;
-  --border: rgba(0, 0, 0, 0.1);
-  --input: rgba(0, 0, 0, 0.06);
-  --ring: #0d6e5a;
+  --background: #F5FAFA;
+  --foreground: #111827;
+  --card: #FFFFFF;
+  --card-foreground: #111827;
+  --popover: #FFFFFF;
+  --popover-foreground: #111827;
+  --primary: #087F6E;
+  --primary-foreground: #FFFFFF;
+  --secondary: #075E53;
+  --secondary-foreground: #FFFFFF;
+  --muted: #E5F8F5;
+  --muted-foreground: #526176;
+  --accent: #D4F3EF;
+  --accent-foreground: #087F6E;
+  --destructive: #DC2626;
+  --border: #DCE7E9;
+  --input: #DCE7E9;
+  --ring: #087F6E;
   --radius: 0.75rem;
 
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0f172a;
-  --sidebar-primary: #0d6e5a;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f5f9;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: rgba(0, 0, 0, 0.1);
-  --sidebar-ring: #0d6e5a;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: #087F6E;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E5F8F5;
+  --sidebar-accent-foreground: #111827;
+  --sidebar-border: #DCE7E9;
+  --sidebar-ring: #087F6E;
 }
 
 @layer base {
@@ -126,12 +126,12 @@
     font-size: 16px;
     line-height: 1.5;
     letter-spacing: -0.01em;
-    background-color: #f8fafc !important;
-    color: #0f172a !important;
+    background-color: #F5FAFA !important;
+    color: #111827 !important;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading), 'Plus Jakarta Sans', sans-serif;
-    color: #0f172a;
+    color: #111827;
   }
 }
 
@@ -164,52 +164,71 @@
   box-shadow: 0 4px 20px -4px rgba(13, 110, 90, 0.12);
 }
 
-/* Primary Button — Dark Green */
+/* Primary Button — Brand Teal */
 .btn-primary-gradient {
-  background: linear-gradient(135deg, #0d6e5a 0%, #0f766e 100%);
+  background: linear-gradient(135deg, #087F6E 0%, #075E53 100%);
   color: #ffffff;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   font-family: var(--font-sans), 'Inter', sans-serif;
-  font-weight: 600;
+  font-weight: 700;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn-primary-gradient:hover {
   transform: scale(1.02);
-  box-shadow: 0 8px 20px -4px rgba(13, 110, 90, 0.35);
+  box-shadow: 0 8px 20px -4px rgba(8, 127, 110, 0.35);
 }
 
 /* Secondary Button */
 .btn-secondary-glass {
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  color: #374151;
-  border-radius: 0.5rem;
+  background: #FFFFFF;
+  border: 1px solid #DCE7E9;
+  color: #111827;
+  border-radius: 0.75rem;
   font-family: var(--font-sans), 'Inter', sans-serif;
   font-weight: 600;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn-secondary-glass:hover {
-  background: rgba(0, 0, 0, 0.08);
-  border-color: rgba(13, 110, 90, 0.3);
-  color: #0d6e5a;
+  background: #E5F8F5;
+  border-color: #087F6E;
+  color: #087F6E;
+}
+
+/* Global brand teal mappings for post-login dashboard components */
+[class*="bg-[#0d6e5a]"] {
+  background-color: #087F6E !important;
+}
+[class*="hover:bg-[#094d3f]"]:hover,
+[class*="hover:bg-[#0a5a49]"]:hover,
+[class*="hover:bg-[#0b5c4b]"]:hover {
+  background-color: #075E53 !important;
+}
+[class*="text-[#0d6e5a]"] {
+  color: #087F6E !important;
+}
+[class*="border-[#0d6e5a]"] {
+  border-color: #087F6E !important;
+}
+[class*="focus:border-[#0d6e5a]"]:focus {
+  border-color: #087F6E !important;
 }
 
 /* Monospace Input Editor */
 .editor-mono {
   font-family: var(--font-mono), 'JetBrains Mono', monospace;
-  background-color: #f8fafc;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 0.5rem;
-  color: #0f172a;
+  background-color: #FFFFFF;
+  border-color: #DCE7E9;
+  color: #111827;
+  border-radius: 0.75rem;
 }
 .editor-mono:focus-within {
-  border-color: #0d6e5a;
-  box-shadow: 0 0 0 2px rgba(13, 110, 90, 0.15);
+  border-color: #087F6E;
+  box-shadow: 0 0 0 2px rgba(8, 127, 110, 0.15);
 }
 
 /* Text gradients */
 .text-gradient-primary {
-  background: linear-gradient(135deg, #0d6e5a 0%, #0f766e 50%, #134e4a 100%);
+  background: linear-gradient(135deg, #087F6E 0%, #075E53 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

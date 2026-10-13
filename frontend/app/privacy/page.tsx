@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-gray-50 text-slate-900 flex flex-col antialiased">
+    <div className="min-h-screen bg-transparent text-[#111827] flex flex-col antialiased">
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-12 md:py-16">
         <Link href="/" className="inline-flex items-center text-xs font-bold text-slate-500 hover:text-indigo-600 mb-8 transition-colors">
           <ArrowLeft className="h-4 w-4 mr-1.5" />

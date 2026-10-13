@@ -2,6 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
+import SiteBackground from "@/components/SiteBackground";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -73,9 +74,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`h-full ${inter.variable} ${plusJakarta.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-screen bg-[#f8fafc] text-[#0f172a] flex flex-col antialiased font-sans">
+      <body className="min-h-screen bg-[#F5FAFA] text-[#111827] flex flex-col antialiased font-sans relative selection:bg-[#087F6E]/15 selection:text-[#087F6E]">
+        <SiteBackground />
         <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
-        <div className="flex flex-col min-h-screen flex-1">
+        <div className="flex flex-col min-h-screen flex-1 relative z-0">
           <main className="flex-1 flex flex-col">
             {children}
           </main>

@@ -292,7 +292,7 @@ export default function JobTrackerPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
+    <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans">
       <Navbar />
 
       <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-8 flex flex-col gap-6">
@@ -300,28 +300,28 @@ export default function JobTrackerPage() {
         {/* Title and Controls Header Row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <Briefcase className="h-6 w-6 text-[#0d6e5a]" />
+            <h1 className="text-2xl font-black text-[#111827] tracking-tight flex items-center gap-2">
+              <Briefcase className="h-6 w-6 text-[#087F6E]" />
               Job Application Tracker
             </h1>
-            <p className="text-xs text-slate-500">
-              Manage your job pipeline and map customized resume versions to target applications.
+            <p className="text-xs text-[#526176] font-medium mt-0.5">
+              Track your applications and never miss an opportunity.
             </p>
           </div>
           
           <div className="flex items-center gap-2 self-end md:self-auto">
             <div className="relative w-60">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#526176]" />
               <Input
                 placeholder="Search jobs or companies..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 text-xs border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a] focus:ring-[#0d6e5a] rounded-full shadow-sm"
+                className="pl-9 h-9 text-xs border-[#DCE7E9] bg-white text-[#111827] placeholder:text-[#526176]/50 focus:border-[#087F6E] focus:ring-2 focus:ring-[#087F6E]/20 rounded-xl shadow-xs"
               />
             </div>
             <Button
               onClick={() => openForm(null)}
-              className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold h-9 text-xs rounded-full px-4 flex items-center gap-1.5 shadow-sm transition-colors"
+              className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold h-9 text-xs rounded-xl px-4 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               Add Job
@@ -331,40 +331,40 @@ export default function JobTrackerPage() {
 
         {/* Stats Metrics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-slate-200 bg-white shadow-sm">
+          <Card className="border border-[#DCE7E9] bg-white rounded-2xl shadow-xs">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Total Tracked</p>
-                <h3 className="text-xl font-black text-slate-900 mt-1">{stats.total}</h3>
+                <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Total Tracked</p>
+                <h3 className="text-xl font-black text-[#111827] mt-1">{stats.total}</h3>
               </div>
-              <Briefcase className="h-6 w-6 text-[#0d6e5a] opacity-80" />
+              <Briefcase className="h-6 w-6 text-[#087F6E] opacity-80" />
             </CardContent>
           </Card>
-          <Card className="border-slate-200 bg-white shadow-sm">
+          <Card className="border border-[#DCE7E9] bg-white rounded-2xl shadow-xs">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Applications</p>
-                <h3 className="text-xl font-black text-slate-900 mt-1">{stats.applied}</h3>
+                <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Applications</p>
+                <h3 className="text-xl font-black text-[#111827] mt-1">{stats.applied}</h3>
               </div>
-              <TrendingUp className="h-6 w-6 text-blue-500 opacity-80" />
+              <TrendingUp className="h-6 w-6 text-[#087F6E] opacity-80" />
             </CardContent>
           </Card>
-          <Card className="border-slate-200 bg-white shadow-sm">
+          <Card className="border border-[#DCE7E9] bg-white rounded-2xl shadow-xs">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Interviews</p>
-                <h3 className="text-xl font-black text-slate-900 mt-1">{stats.interviews}</h3>
+                <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Interviews</p>
+                <h3 className="text-xl font-black text-[#111827] mt-1">{stats.interviews}</h3>
               </div>
               <Clock className="h-6 w-6 text-amber-500 opacity-80" />
             </CardContent>
           </Card>
-          <Card className="border-slate-200 bg-white shadow-sm">
+          <Card className="border border-[#DCE7E9] bg-white rounded-2xl shadow-xs">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Offers Received</p>
-                <h3 className="text-xl font-black text-emerald-600 mt-1">{stats.offers}</h3>
+                <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Offers Received</p>
+                <h3 className="text-xl font-black text-[#087F6E] mt-1">{stats.offers}</h3>
               </div>
-              <CheckCircle className="h-6 w-6 text-emerald-500 opacity-80" />
+              <CheckCircle className="h-6 w-6 text-[#087F6E] opacity-80" />
             </CardContent>
           </Card>
         </div>
@@ -378,16 +378,16 @@ export default function JobTrackerPage() {
                 key={col.id}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, col.id)}
-                className={`flex flex-col bg-slate-100/70 border border-slate-200 rounded-2xl p-3 min-w-[210px] transition-colors ${
-                  draggedJobId ? "hover:bg-slate-200/50" : ""
+                className={`flex flex-col bg-[#F5FAFA] border border-[#DCE7E9] rounded-2xl p-3 min-w-[210px] transition-colors ${
+                  draggedJobId ? "hover:bg-[#E5F8F5]/50" : ""
                 }`}
               >
                 
                 {/* Column header title */}
                 <div className="flex items-center justify-between mb-3.5 px-1 select-none">
                   <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full ${col.id === 'wishlist' ? 'bg-indigo-500' : col.id === 'applied' ? 'bg-blue-500' : col.id === 'interviewing' ? 'bg-amber-500' : col.id === 'offered' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                    <span className="font-bold text-xs text-slate-800">{col.label}</span>
+                    <span className={`w-2 h-2 rounded-full ${col.id === 'wishlist' ? 'bg-[#087F6E]' : col.id === 'applied' ? 'bg-blue-500' : col.id === 'interviewing' ? 'bg-amber-500' : col.id === 'offered' ? 'bg-[#087F6E]' : 'bg-rose-500'}`} />
+                    <span className="font-bold text-xs text-[#111827]">{col.label}</span>
                   </div>
                   <Badge className={`text-[9px] font-black border ${col.color} ${col.border}`}>
                     {colJobs.length}
@@ -397,8 +397,8 @@ export default function JobTrackerPage() {
                 {/* Cards listing */}
                 <div className="flex-1 flex flex-col gap-3 min-h-[350px]">
                   {colJobs.length === 0 ? (
-                    <div className="flex-1 border border-dashed border-slate-300 rounded-xl flex items-center justify-center p-4 text-center select-none bg-white/50">
-                      <span className="text-[10px] text-slate-400 font-semibold italic">Drop cards here</span>
+                    <div className="flex-1 border border-dashed border-[#DCE7E9] rounded-xl flex items-center justify-center p-4 text-center select-none bg-white/50">
+                      <span className="text-[10px] text-[#526176] font-medium italic">Drop cards here</span>
                     </div>
                   ) : (
                     colJobs.map((job) => {
@@ -408,7 +408,7 @@ export default function JobTrackerPage() {
                           key={job.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, job.id)}
-                          className="group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0d6e5a]/40 rounded-xl p-3.5 transition-all shadow-sm cursor-grab active:cursor-grabbing space-y-2.5"
+                          className="group relative bg-white hover:bg-[#F5FAFA] border border-[#DCE7E9] hover:border-[#087F6E]/40 rounded-xl p-3.5 transition-all shadow-xs cursor-grab active:cursor-grabbing space-y-2.5"
                         >
                           {/* Card header */}
                           <div className="space-y-0.5">

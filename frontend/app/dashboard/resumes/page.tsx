@@ -1112,7 +1112,7 @@ export default function ResumesPage() {
   const maxLimit = activePlan === "free" ? 2 : activePlan === "premium" ? 20 : activePlan === "promax" ? 40 : 40;
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-900 font-sans select-text">
+    <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans select-text">
       
       {/* Dynamic View: LIST VIEW OR EDITOR VIEW */}
       {!editingResume ? (
@@ -1126,18 +1126,18 @@ export default function ResumesPage() {
               {/* Header Details */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2 select-none">
+                  <h1 className="text-2xl font-black text-[#111827] tracking-tight flex items-center gap-2 select-none">
                     My Resumes
                   </h1>
-                  <p className="text-xs text-slate-500 font-semibold">
-                    {resumes.length} / {maxLimit} resumes
+                  <p className="text-xs text-[#526176] font-medium mt-0.5">
+                    Manage your saved resumes. Edit, optimize, or create a new version anytime. ({resumes.length} / {maxLimit})
                   </p>
                 </div>
 
                 <Button
                   onClick={handleCreateNewResume}
                   disabled={actionLoading === "create" || resumes.length >= maxLimit}
-                  className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold h-9 text-xs rounded-full px-5 flex items-center gap-1.5 shadow-sm transition-colors"
+                  className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold h-9 text-xs rounded-xl px-5 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
                   {actionLoading === "create" ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1154,16 +1154,16 @@ export default function ResumesPage() {
               ) : resumes.length === 0 ? (
                 
                 /* Empty state listing card options */
-                <div className="flex flex-col items-center justify-center border border-dashed border-slate-300 rounded-2xl p-12 text-center bg-white min-h-[380px] shadow-sm">
-                  <FileText className="h-10 w-10 text-[#0d6e5a] mb-4 animate-pulse" />
-                  <h3 className="font-extrabold text-slate-900 text-lg">No Resumes Found</h3>
-                  <p className="text-xs text-slate-500 max-w-xs mt-1.5 leading-relaxed font-medium">
+                <div className="flex flex-col items-center justify-center border border-dashed border-[#DCE7E9] rounded-2xl p-12 text-center bg-white min-h-[380px] shadow-xs">
+                  <FileText className="h-10 w-10 text-[#087F6E] mb-4 animate-pulse" />
+                  <h3 className="font-extrabold text-[#111827] text-lg">No Resumes Found</h3>
+                  <p className="text-xs text-[#526176] max-w-xs mt-1.5 leading-relaxed font-medium">
                     Create your first resume structure to build customized applications.
                   </p>
                   <div className="mt-6">
                     <Button 
                       onClick={handleCreateNewResume}
-                      className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-semibold rounded-full"
+                      className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs rounded-xl px-5"
                     >
                       Get Started
                     </Button>
@@ -1183,32 +1183,32 @@ export default function ResumesPage() {
                     return (
                       <Card
                         key={resume.id}
-                        className="group relative border border-slate-200 bg-white hover:border-[#0d6e5a]/40 hover:shadow-md cursor-pointer overflow-hidden transition-all duration-200 rounded-2xl shadow-sm flex flex-col justify-between"
+                        className="group relative border border-[#DCE7E9] bg-white hover:border-[#087F6E]/40 hover:shadow-md cursor-pointer overflow-hidden transition-all duration-200 rounded-2xl shadow-xs flex flex-col justify-between"
                       >
                         <CardContent className="p-5 flex flex-col justify-between h-full min-h-[160px] space-y-4">
                           
                           <div className="flex justify-between items-start gap-4">
                             <div className="space-y-1">
-                              <h3 className="font-bold text-base text-slate-900 truncate max-w-[150px]">
+                              <h3 className="font-bold text-base text-[#111827] truncate max-w-[150px]">
                                 {resume.jobTitle || "Untitled Resume"}
                               </h3>
-                              <p className="text-[10px] text-slate-400 font-semibold select-none">
+                              <p className="text-[11px] text-[#526176] font-medium select-none">
                                 Edited {formatDate(resume.createdAt)}
                               </p>
                             </div>
                             
                             {/* Circular completeness badge */}
-                            <div className="relative h-9 w-9 rounded-full bg-slate-50 flex items-center justify-center border border-slate-200 text-[10px] font-black text-[#0d6e5a] select-none">
+                            <div className="relative h-9 w-9 rounded-full bg-[#E5F8F5] flex items-center justify-center border border-[#D4F3EF] text-[10px] font-black text-[#087F6E] select-none">
                               {completionScore}%
                             </div>
                           </div>
 
                           {/* Card controls footer (Image 1) */}
-                          <div className="flex gap-2 items-center pt-2 border-t border-slate-100">
+                          <div className="flex gap-2 items-center pt-2 border-t border-[#DCE7E9]">
                             <Button
                               onClick={() => handleOpenEditor(resume)}
                               variant="ghost"
-                              className="flex-1 bg-slate-50 hover:bg-[#0d6e5a] text-slate-700 hover:text-white border border-slate-200 rounded-full h-8 text-[11px] font-bold gap-1.5 transition-colors"
+                              className="flex-1 bg-[#F5FAFA] hover:bg-[#087F6E] text-[#111827] hover:text-white border border-[#DCE7E9] rounded-xl h-8 text-[11px] font-bold gap-1.5 transition-colors cursor-pointer"
                             >
                               <Edit3 className="h-3.5 w-3.5" />
                               Edit
@@ -1217,7 +1217,7 @@ export default function ResumesPage() {
                               onClick={(e) => handleDeleteResume(e, resume.id)}
                               disabled={isDeleting}
                               variant="ghost"
-                              className="h-8 w-8 p-0 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500 border border-slate-200"
+                              className="h-8 w-8 p-0 rounded-xl hover:bg-rose-50 text-[#526176] hover:text-rose-600 border border-[#DCE7E9] cursor-pointer"
                               title="Remove resume"
                             >
                               {isDeleting ? (

@@ -62,8 +62,8 @@ export default function JobDescriptionInput({ value, onChange, disabled }: JobDe
     <div className="flex-1 flex flex-col justify-between space-y-3 h-full">
       {/* URL Fetch Row */}
       <div className="space-y-1.5">
-        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-widest flex items-center gap-1.5">
-          <Link2 className="h-3 w-3 text-[#0d6e5a]" />
+        <label className="text-[10px] font-bold uppercase text-[#526176] tracking-widest flex items-center gap-1.5">
+          <Link2 className="h-3 w-3 text-[#087F6E]" />
           Fetch from Job URL
         </label>
         <div className="flex gap-2">
@@ -74,18 +74,18 @@ export default function JobDescriptionInput({ value, onChange, disabled }: JobDe
             onChange={(e) => setUrl(e.target.value)}
             disabled={disabled || fetching}
             onKeyDown={(e) => e.key === "Enter" && handleFetchUrl()}
-            className="h-9 text-xs border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-[#0d6e5a] focus:bg-white rounded-xl flex-1 font-sans shadow-sm"
+            className="h-9 text-xs border-[#DCE7E9] bg-white text-[#111827] placeholder:text-[#526176]/50 focus:border-[#087F6E] focus:ring-2 focus:ring-[#087F6E]/20 rounded-xl flex-1 font-sans shadow-xs"
           />
           <button
             type="button"
             onClick={handleFetchUrl}
             disabled={disabled || fetching || !url.trim()}
-            className="h-9 px-3.5 text-xs font-semibold rounded-xl shrink-0 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 shadow-sm transition-colors cursor-pointer"
+            className="h-9 px-3.5 text-xs font-semibold rounded-xl shrink-0 bg-white border border-[#DCE7E9] text-[#111827] hover:bg-[#E5F8F5] hover:text-[#087F6E] shadow-xs transition-colors cursor-pointer"
           >
             {fetching ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0d6e5a]" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#087F6E]" />
             ) : fetchSuccess ? (
-              <Check className="h-3.5 w-3.5 text-emerald-600" />
+              <Check className="h-3.5 w-3.5 text-[#087F6E]" />
             ) : (
               "Fetch"
             )}
@@ -98,7 +98,7 @@ export default function JobDescriptionInput({ value, onChange, disabled }: JobDe
           </p>
         )}
         {fetchSuccess && (
-          <p className="text-[10px] font-mono text-emerald-600 flex items-center gap-1">
+          <p className="text-[10px] font-mono text-[#087F6E] flex items-center gap-1">
             <Check className="h-3 w-3 shrink-0" />
             Job description fetched successfully!
           </p>
@@ -107,9 +107,9 @@ export default function JobDescriptionInput({ value, onChange, disabled }: JobDe
 
       {/* Divider */}
       <div className="relative flex items-center gap-2">
-        <div className="flex-1 border-t border-slate-200" />
-        <span className="text-[9px] font-mono font-semibold uppercase text-slate-400 tracking-widest">or paste below</span>
-        <div className="flex-1 border-t border-slate-200" />
+        <div className="flex-1 border-t border-[#DCE7E9]" />
+        <span className="text-[9px] font-mono font-semibold uppercase text-[#526176] tracking-widest">or paste below</span>
+        <div className="flex-1 border-t border-[#DCE7E9]" />
       </div>
 
       {/* Textarea */}
@@ -119,13 +119,13 @@ export default function JobDescriptionInput({ value, onChange, disabled }: JobDe
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          className={`flex-1 min-h-[280px] h-full overflow-y-auto font-sans text-sm leading-relaxed bg-slate-50 text-slate-900 placeholder:text-slate-400 rounded-xl resize-y p-3.5 pr-4 transition-colors ${
+          className={`flex-1 min-h-[280px] h-full overflow-y-auto font-sans text-sm leading-relaxed bg-white text-[#111827] placeholder:text-[#526176]/50 rounded-xl resize-y p-3.5 pr-4 transition-colors ${
             isOverLimit
               ? "border-rose-400 focus:border-rose-500"
-              : "border border-slate-300 focus:border-[#0d6e5a] focus:bg-white focus:ring-1 focus:ring-[#0d6e5a]"
+              : "border border-[#DCE7E9] focus:border-[#087F6E] focus:ring-2 focus:ring-[#087F6E]/20"
           }`}
         />
-        <div className="absolute bottom-3 right-3 bg-white border border-slate-200 font-mono text-[10px] text-slate-600 px-2 py-0.5 rounded-full select-none shadow-sm">
+        <div className="absolute bottom-3 right-3 bg-white border border-[#DCE7E9] font-mono text-[10px] text-[#526176] px-2 py-0.5 rounded-full select-none shadow-xs">
           {wordCount} words
         </div>
       </div>

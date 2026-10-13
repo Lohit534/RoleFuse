@@ -231,7 +231,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
   return (
     <>
-      <nav className="border-b border-[#BCE8DF] bg-white/90 text-slate-800 sticky top-0 z-50 backdrop-blur-md shadow-xs">
+      <nav className="border-b border-[#DCE7E9] bg-white/95 text-[#111827] sticky top-0 z-50 backdrop-blur-md shadow-xs">
         <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           
@@ -239,7 +239,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
           <div className="flex items-center gap-7">
             <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5 group select-none">
               <img src="/logo.png" alt="FastHire Logo" className="h-8 w-8 rounded-xl object-contain drop-shadow-xs group-hover:scale-105 transition-transform" />
-              <span className="font-heading font-extrabold text-lg tracking-tight text-slate-900">
+              <span className="font-heading font-extrabold text-lg tracking-tight text-[#111827]">
                 FastHire AI
               </span>
             </Link>
@@ -255,13 +255,13 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                       href={link.href}
                       className={`relative flex items-center h-full px-3 text-sm font-semibold transition-colors select-none ${
                         isActive 
-                          ? "text-slate-900 font-bold" 
-                          : "text-slate-500 hover:text-slate-900"
+                          ? "text-[#111827] font-bold" 
+                          : "text-[#526176] hover:text-[#111827]"
                       }`}
                     >
                       {link.label}
                       {isActive && (
-                        <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#0d6e5a] rounded-full" />
+                        <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#087F6E] rounded-full" />
                       )}
                     </Link>
                   );
@@ -689,7 +689,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
       {/* Mobile Drawer Menu for Logged-Out Landing Page */}
       {!user && isMobileMenuOpen && (
-        <div className="sm:hidden border-t border-[#BCE8DF] bg-white/95 px-5 py-4 space-y-3 animate-in fade-in duration-150">
+        <div className="sm:hidden border-t border-[#DCE7E9] bg-white px-5 py-4 space-y-3 animate-in fade-in duration-150">
           <Link
             href="/#features"
             onClick={() => setIsMobileMenuOpen(false)}

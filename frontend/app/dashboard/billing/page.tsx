@@ -201,31 +201,31 @@ export default function BillingPage() {
   const pdfDownloadLimit = activePlan === "free" ? "1 PDF (Sample)" : "Unlimited PDFs / month";
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
+    <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans">
       <Navbar />
 
       <main className="flex-1 mx-auto max-w-6xl w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-8 flex flex-col gap-8">
         
         {/* Header Navigation & Title */}
-        <ScrollFadeIn className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
+        <ScrollFadeIn className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DCE7E9] pb-6">
           <div className="flex items-center gap-3.5">
             <Link href="/dashboard">
-              <Button variant="outline" size="sm" className="border-slate-200 text-slate-700 hover:bg-slate-50 h-9 w-9 p-0 rounded-xl bg-white shadow-sm">
+              <Button variant="outline" size="sm" className="border-[#DCE7E9] text-[#111827] hover:bg-[#F5FAFA] h-9 w-9 p-0 rounded-xl bg-white shadow-xs">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black text-[#111827] tracking-tight flex items-center gap-2">
                 Billing &amp; Subscription
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[#526176] font-medium mt-0.5">
                 Understand your plan quotas, credit usage, and download GST tax invoices.
               </p>
             </div>
           </div>
 
           <Link href="/dashboard/pricing">
-            <Button className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 rounded-xl px-4 shadow-sm flex items-center gap-1.5 transition-colors">
+            <Button className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs h-9 rounded-xl px-4 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer">
               <Sparkles className="h-3.5 w-3.5" />
               {activePlan === "free" ? "Upgrade to Pro" : "View All Plans"}
               <ArrowUpRight className="h-3.5 w-3.5" />
@@ -237,68 +237,68 @@ export default function BillingPage() {
         <ScrollFadeIn className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* Tile 1: Active Tier */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4.5 space-y-2 relative overflow-hidden shadow-sm">
+          <div className="bg-white border border-[#DCE7E9] rounded-2xl p-4.5 space-y-2 relative overflow-hidden shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Tier</span>
+              <span className="text-[10px] font-bold text-[#526176] uppercase tracking-wider">Current Tier</span>
               <Badge className={`text-[9px] font-bold border ${
                 activePlan === "free" 
-                  ? "bg-slate-100 border-slate-200 text-slate-600" 
-                  : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  ? "bg-[#F5FAFA] border-[#DCE7E9] text-[#526176]" 
+                  : "bg-[#E5F8F5] border-[#D4F3EF] text-[#087F6E]"
               }`}>
                 {activePlan === "free" ? "Free Tier" : "Active & Paid"}
               </Badge>
             </div>
-            <p className="text-base font-extrabold text-slate-900 truncate">{planDisplayName}</p>
-            <p className="text-[11px] font-semibold text-[#0d6e5a]">{planPriceDisplay}</p>
+            <p className="text-base font-extrabold text-[#111827] truncate">{planDisplayName}</p>
+            <p className="text-[11px] font-semibold text-[#087F6E]">{planPriceDisplay}</p>
             {credits?.expiresAt && (
-              <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+              <p className="text-[10px] text-[#526176] font-medium mt-0.5">
                 Expires {new Date(credits.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               </p>
             )}
           </div>
 
           {/* Tile 2: Resumes Remaining */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4.5 space-y-2 relative overflow-hidden shadow-sm">
+          <div className="bg-white border border-[#DCE7E9] rounded-2xl p-4.5 space-y-2 relative overflow-hidden shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Optimizations Left</span>
-              <Zap className="h-3.5 w-3.5 text-[#0d6e5a]" />
+              <span className="text-[10px] font-bold text-[#526176] uppercase tracking-wider">Optimizations Left</span>
+              <Zap className="h-3.5 w-3.5 text-[#087F6E]" />
             </div>
-            <p className="text-base font-extrabold text-slate-900">
+            <p className="text-base font-extrabold text-[#111827]">
               {remaining} {typeof remaining === "number" ? "resumes" : ""}
             </p>
-            <p className="text-[11px] text-slate-500 font-medium">
+            <p className="text-[11px] text-[#526176] font-medium">
               Used {used} of {isUnlimited ? "∞" : totalLimit} this month
             </p>
           </div>
 
           {/* Tile 3: PDF / DOCX Downloads */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4.5 space-y-2 relative overflow-hidden shadow-sm">
+          <div className="bg-white border border-[#DCE7E9] rounded-2xl p-4.5 space-y-2 relative overflow-hidden shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Export Downloads</span>
-              <FileText className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="text-[10px] font-bold text-[#526176] uppercase tracking-wider">Export Downloads</span>
+              <FileText className="h-3.5 w-3.5 text-[#087F6E]" />
             </div>
-            <p className="text-base font-extrabold text-slate-900">{pdfDownloadLimit}</p>
-            <p className="text-[11px] text-slate-500 font-medium">
+            <p className="text-base font-extrabold text-[#111827]">{pdfDownloadLimit}</p>
+            <p className="text-[11px] text-[#526176] font-medium">
               Clean ATS-ready PDF &amp; Word
             </p>
           </div>
 
           {/* Tile 4: Plan Expiration Date */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4.5 space-y-2 relative overflow-hidden shadow-sm">
+          <div className="bg-white border border-[#DCE7E9] rounded-2xl p-4.5 space-y-2 relative overflow-hidden shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-[#526176] uppercase tracking-wider">
                 {credits?.expiresAt ? "Plan Expiration" : "Credits Reset"}
               </span>
               <Clock className="h-3.5 w-3.5 text-amber-500" />
             </div>
-            <p className="text-base font-extrabold text-slate-900">
+            <p className="text-base font-extrabold text-[#111827]">
               {credits?.expiresAt 
                 ? new Date(credits.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                 : credits?.resetAt 
                 ? new Date(credits.resetAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) 
                 : "Every 30 Days"}
             </p>
-            <p className="text-[11px] text-slate-500 font-medium">
+            <p className="text-[11px] text-[#526176] font-medium">
               {credits?.expiresAt ? "Valid through this date" : "Refreshes automatically"}
             </p>
           </div>
@@ -311,47 +311,47 @@ export default function BillingPage() {
           {/* Left 7 Columns: Active Plan & Quota Details */}
           <div className="lg:col-span-7 space-y-6">
             
-            <Card className="border-slate-200 bg-white shadow-sm rounded-2xl overflow-hidden">
+            <Card className="border border-[#DCE7E9] bg-white shadow-xs rounded-2xl overflow-hidden">
               <CardContent className="p-6 sm:p-7 space-y-6">
                 
                 {/* Plan Title & Price Banner */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 border border-slate-200 p-5 rounded-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#F5FAFA] border border-[#DCE7E9] p-5 rounded-xl">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-black text-slate-900">{planDisplayName}</h3>
+                      <h3 className="text-lg font-black text-[#111827]">{planDisplayName}</h3>
                     </div>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-[#526176]">
                       {activePlan === "free" 
                         ? "2 free resume optimizations per month." 
                         : `Subscribed on ${billingCycle} billing cycle.${credits?.expiresAt ? ` Valid until ${new Date(credits.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.` : ""}`}
                     </p>
                   </div>
                   <div className="sm:text-right">
-                    <span className="text-xl font-black text-slate-900">{planPriceDisplay.split(" ")[0]}</span>
-                    <span className="text-xs text-slate-500 font-medium block">/{billingCycle === "yearly" ? "year" : "month"}</span>
+                    <span className="text-xl font-black text-[#111827]">{planPriceDisplay.split(" ")[0]}</span>
+                    <span className="text-xs text-[#526176] font-medium block">/{billingCycle === "yearly" ? "year" : "month"}</span>
                   </div>
                 </div>
 
                 {/* Quota Progress Bar with Clear Numbers */}
-                <div className="space-y-3 bg-slate-50 border border-slate-200 p-5 rounded-xl">
+                <div className="space-y-3 bg-[#F5FAFA] border border-[#DCE7E9] p-5 rounded-xl">
                   <div className="flex justify-between items-center text-xs font-bold">
-                    <span className="text-slate-700 flex items-center gap-1.5">
-                      <Zap className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                    <span className="text-[#111827] flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5 text-[#087F6E]" />
                       Monthly Optimization Quota
                     </span>
-                    <span className="text-slate-900 font-mono">
+                    <span className="text-[#111827] font-mono">
                       {used} / {isUnlimited ? "∞ (Unlimited)" : `${totalLimit} Resumes`}
                     </span>
                   </div>
 
-                  <div className="h-2.5 bg-slate-200 rounded-full overflow-hidden p-0.5">
+                  <div className="h-2.5 bg-[#DCE7E9] rounded-full overflow-hidden p-0.5">
                     <div 
-                      className="h-full bg-[#0d6e5a] rounded-full transition-all duration-500" 
+                      className="h-full bg-[#087F6E] rounded-full transition-all duration-500" 
                       style={{ width: `${percentUsed}%` }}
                     />
                   </div>
 
-                  <div className="flex justify-between text-[10px] text-slate-500 pt-0.5">
+                  <div className="flex justify-between text-[10px] text-[#526176] pt-0.5">
                     <span>{remaining} remaining</span>
                     <span>Resets: {credits?.resetAt ? new Date(credits.resetAt).toLocaleDateString() : "Every 30 days"}</span>
                   </div>
