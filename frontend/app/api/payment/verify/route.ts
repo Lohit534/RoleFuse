@@ -113,19 +113,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── 3. Upsert credits directly ─────────────────────────────────────────────
-    const paidCredits = PLAN_CREDITS[verifiedPlanId] ?? 0;
+    // Fetch existing credit row to check for rollover credits (Option 3: Rollover on Renewal)
+    const { data: existingCredit } = await admin
+      .from("Credit")
+      .select("id, billingCycle, paidCredits")
+      .eq("userId", activeUserId)
+      .maybeSingle();
+
+    // Option 3: Check for banked rollover credits from previously expired plan
+    let rolloverCredits = 0;
+    if (existingCredit?.billingCycle && typeof existingCredit.billingCycle === "string" && existingCredit.billingCycle.startsWith("rollover:")) {
+      rolloverCredits = parseInt(existingCredit.billingCycle.split(":")[1]) || 0;
+    }
+
+    const baseCredits = PLAN_CREDITS[verifiedPlanId] ?? 0;
+    const paidCredits = baseCredits + rolloverCredits;
     const now = new Date();
     const cycle = verifiedCycle;
     const days = cycle === "yearly" ? 365 : 30;
     const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 
-    // Fetch existing credit row to avoid not-null primary key constraint failures
-    const { data: existingCredit } = await admin
-      .from("Credit")
-      .select("id")
-      .eq("userId", activeUserId)
-      .maybeSingle();
+    if (rolloverCredits > 0) {
+      logger.info(`[payment/verify] Option 3: Added ${rolloverCredits} rollover credits to user ${user.email}. New total: ${paidCredits}`);
+    }
 
     let query;
     if (existingCredit) {

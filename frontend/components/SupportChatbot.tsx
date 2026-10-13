@@ -314,6 +314,15 @@ export default function SupportChatbot() {
 
       if (response.ok) {
         const data = await response.json();
+        if (typeof data.creditsRemaining === "number") {
+          setRawCredits((prev) => prev ? { ...prev, paidCredits: data.creditsRemaining } : null);
+          if (activePlan !== "owner" && !rawCredits?.isOwner) {
+            setRemainingCredits(`${data.creditsRemaining} Credits`);
+          }
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("credits-updated", { detail: { paidCredits: data.creditsRemaining } }));
+          }
+        }
         setAiHistory([
           ...newHistory,
           {
@@ -820,10 +829,15 @@ export default function SupportChatbot() {
                   </button>
                   <div>
                     <h3 className="font-extrabold text-slate-900 text-xs tracking-tight">FastHire AI Assistant</h3>
-                    <span className="text-[9px] text-slate-500 font-semibold flex items-center gap-1 select-none">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#0d6e5a] animate-pulse" />
-                      24/7 Instant AI Coach
-                    </span>
+                    <div className="flex items-center gap-2 select-none">
+                      <span className="text-[9px] text-slate-500 font-semibold flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#0d6e5a] animate-pulse" />
+                        24/7 AI Coach
+                      </span>
+                      <span className="text-[9px] font-bold text-[#0d6e5a] bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60">
+                        {rawCredits?.isOwner ? "Unlimited" : `${rawCredits?.paidCredits ?? 0} Credits left`}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <button

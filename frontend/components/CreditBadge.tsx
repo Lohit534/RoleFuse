@@ -35,8 +35,15 @@ export default function CreditBadge({ refreshKey = 0 }: CreditBadgeProps) {
       }
     }
     fetchCredits();
+
+    const handleCreditsUpdated = () => {
+      fetchCredits();
+    };
+    window.addEventListener("credits-updated", handleCreditsUpdated);
+
     return () => {
       active = false;
+      window.removeEventListener("credits-updated", handleCreditsUpdated);
     };
   }, [refreshKey]);
 

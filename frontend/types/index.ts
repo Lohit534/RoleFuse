@@ -48,6 +48,7 @@ export interface CreditInfo {
   freeUsed: number;
   paidCredits: number;
   freeRemaining: number;
+  rolloverCredits?: number;
   resetAt: Date | string;
   isOwner?: boolean;
   isFirst50?: boolean;

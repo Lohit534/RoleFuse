@@ -216,6 +216,10 @@ export async function GET(request: NextRequest) {
       isFirst50 = false; // Explicitly set to Free by admin
     }
 
+    // Check if user currently has stored rollover credits from a previously expired subscription
+    const isRolloverCycle = typeof creditRow.billingCycle === "string" && creditRow.billingCycle.startsWith("rollover:");
+    const rolloverCredits = isRolloverCycle ? (parseInt(creditRow.billingCycle.split(":")[1]) || 0) : 0;
+
     // Check if plan has expired
     let expiresAt = creditRow.expiresAt ? new Date(creditRow.expiresAt) : null;
     let billingCycle = isPaidProMax ? "monthly" : (creditRow.billingCycle || "monthly");
@@ -225,10 +229,10 @@ export async function GET(request: NextRequest) {
     if (isPaidProMax && proMaxValidUntil) {
       expiresAt = proMaxValidUntil;
       billingCycle = "monthly";
-      paidCredits = PRO_MAX_CREDITS_PER_MONTH; // 90
 
       const targetExpiryStr = expiresAt.toISOString();
-      if (creditRow.billingCycle !== "monthly" || creditRow.paidCredits !== PRO_MAX_CREDITS_PER_MONTH || creditRow.expiresAt !== targetExpiryStr) {
+      // Initialize to 90 if newly purchased or uninitialized, otherwise preserve current consumed credit count
+      if (!creditRow.expiresAt || creditRow.paidCredits === 0) {
         await admin
           .from("Credit")
           .update({
@@ -240,7 +244,17 @@ export async function GET(request: NextRequest) {
         creditRow.paidCredits = PRO_MAX_CREDITS_PER_MONTH;
         creditRow.billingCycle = "monthly";
         creditRow.expiresAt = targetExpiryStr;
-        logger.info(`[credits] Corrected Pro Max plan to monthly (90 credits, expires ${targetExpiryStr}) for ${userEmail}`);
+        paidCredits = PRO_MAX_CREDITS_PER_MONTH;
+        logger.info(`[credits] Initialized Pro Max plan (90 credits, expires ${targetExpiryStr}) for ${userEmail}`);
+      } else {
+        paidCredits = creditRow.paidCredits;
+        if (creditRow.expiresAt !== targetExpiryStr) {
+          await admin
+            .from("Credit")
+            .update({ expiresAt: targetExpiryStr })
+            .eq("userId", activeUserId);
+          creditRow.expiresAt = targetExpiryStr;
+        }
       }
     } else {
       // For first 50 free promotional users ONLY, set 1 year expiry
@@ -254,11 +268,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // EXPIRATION CHECK: If plan has expired (now >= expiresAt), automatically revert to FREE!
-    const isExpired = expiresAt && now >= expiresAt && !isAdminPromax && !isAdminPremium;
-    if (isExpired) {
+    // EXPIRATION CHECK: If plan has expired (now >= expiresAt), automatically revert to FREE with Option 3 (Rollover on Renewal)!
+    const isExpired = ((expiresAt && now >= expiresAt) || isRolloverCycle) && !isAdminPromax && !isAdminPremium;
+    if (isExpired && !isRolloverCycle) {
+      const leftoverCredits = creditRow.paidCredits > 0 ? creditRow.paidCredits : 0;
+      // Option 3: Save unused credits as banked rollover credits so they unlock when user renews!
+      const rolloverCycleStr = leftoverCredits > 0 ? `rollover:${leftoverCredits}` : "monthly";
       paidCredits = 0;
-      billingCycle = "monthly";
+      billingCycle = rolloverCycleStr;
       expiresAt = null;
       isPaidProMax = false;
 
@@ -266,17 +283,17 @@ export async function GET(request: NextRequest) {
         .from("Credit")
         .update({
           paidCredits: 0,
-          billingCycle: "monthly",
+          billingCycle: rolloverCycleStr,
           expiresAt: null,
           freeUsed: creditRow.freeUsed || 0,
         })
         .eq("userId", activeUserId);
       
-      logger.info(`[credits] Plan expired for user ${user.email}. Automatically reverted to free tier.`);
+      logger.info(`[credits] Option 3: Plan expired for user ${user.email}. Saved ${leftoverCredits} rollover credits. Reverted to free tier.`);
     }
 
     // Auto-heal ONLY for non-paying users: If user has legacy abnormal credits (>20 and <90) and is not promax, clamp DB to 20 Pro credits
-    if (!isAdminPromax && !isExpired && creditRow.paidCredits > 20 && creditRow.paidCredits < 90) {
+    if (!isAdminPromax && !isExpired && creditRow.paidCredits > 20 && creditRow.paidCredits < 90 && !isPaidProMax) {
       if (creditRow.paidCredits !== PRO_CREDITS_PER_MONTH) {
         await admin
           .from("Credit")
@@ -296,7 +313,7 @@ export async function GET(request: NextRequest) {
 
     if (isNewMonth) {
       freeUsed = 0;
-      if (!isExpired && (isPaidProMax || isAdminPromax || paidCredits >= 90)) {
+      if (!isExpired && (isPaidProMax || isAdminPromax)) {
         paidCredits = PRO_MAX_CREDITS_PER_MONTH; // 90
       } else if (isAdminFree || isExpired) {
         paidCredits = 0;
@@ -329,26 +346,24 @@ export async function GET(request: NextRequest) {
       planId = "free";
     }
 
-    if (planId === "promax" && !isOwner) {
-      paidCredits = PRO_MAX_CREDITS_PER_MONTH; // 90
-    } else if (planId === "premium") {
-      paidCredits = paidCredits > 0 ? paidCredits : PRO_CREDITS_PER_MONTH; // 20
-    } else if (planId === "free") {
+    if (planId === "free") {
       paidCredits = 0;
       expiresAt = null;
+    } else {
+      paidCredits = isOwner ? 999999 : (creditRow.paidCredits ?? paidCredits);
     }
 
-    const totalAllowed = isOwner
+    const freeRemaining = isOwner
       ? 999999
-      : (planId === "promax"
-          ? PRO_MAX_CREDITS_PER_MONTH
-          : (planId === "premium" ? PRO_CREDITS_PER_MONTH : FREE_CREDITS_PER_MONTH));
-    const freeRemaining = isOwner ? 999999 : Math.min(totalAllowed, Math.max(0, totalAllowed - freeUsed));
+      : (planId === "free"
+          ? Math.max(0, FREE_CREDITS_PER_MONTH - freeUsed)
+          : Math.max(0, paidCredits));
 
     return NextResponse.json({
       freeUsed,
-      paidCredits: isOwner ? 999999 : (planId === "promax" ? PRO_MAX_CREDITS_PER_MONTH : (planId === "premium" ? PRO_CREDITS_PER_MONTH : 0)),
+      paidCredits: isOwner ? 999999 : (planId === "free" ? 0 : paidCredits),
       freeRemaining,
+      rolloverCredits: isExpired ? rolloverCredits : 0,
       resetAt: isNewMonth ? now.toISOString() : creditRow.resetAt,
       isOwner: false,
       isFirst50: isFirst50 && !isPaidProMax && !isExpired,
@@ -437,9 +452,19 @@ export async function POST(request: NextRequest) {
     // Fetch existing credit row to avoid not-null primary key constraint failures
     const { data: existingCredit } = await admin
       .from("Credit")
-      .select("id")
+      .select("id, billingCycle, paidCredits")
       .eq("userId", activeUserId)
       .maybeSingle();
+
+    // Option 3: If user had banked rollover credits from an earlier expired cycle, add them back upon renewal!
+    let rolloverBonus = 0;
+    if (existingCredit?.billingCycle && typeof existingCredit.billingCycle === "string" && existingCredit.billingCycle.startsWith("rollover:")) {
+      rolloverBonus = parseInt(existingCredit.billingCycle.split(":")[1]) || 0;
+    }
+    if (planId !== "free" && rolloverBonus > 0) {
+      paidCredits += rolloverBonus;
+      logger.info(`[credits POST] Option 3: Restored ${rolloverBonus} rollover credits for user ${user.email}. Total paidCredits: ${paidCredits}`);
+    }
 
     let query;
     if (existingCredit) {

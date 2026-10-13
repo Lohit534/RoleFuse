@@ -189,11 +189,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized. Please sign in." }, { status: 401 });
     }
 
-    // 2. Enforce Pro Max plan server-side (AI Chat is Pro Max exclusive)
+    // 2. Enforce strict plan rules and credit availability server-side
     const isOwner = isOwnerEmail(user.email);
+    const admin = getAdminClient() as any;
+    let activeUserId = user.id;
+    let currentPaidCredits = 0;
+    let isExpired = false;
+
     if (!isOwner) {
-      const admin = getAdminClient() as any;
-      let activeUserId = user.id;
       if (user.email) {
         const { data: existingUser } = await admin
           .from("User")
@@ -204,12 +207,44 @@ export async function POST(request: NextRequest) {
       }
       const { data: creditRow } = await admin
         .from("Credit")
-        .select("paidCredits")
+        .select("paidCredits, expiresAt, billingCycle")
         .eq("userId", activeUserId)
         .maybeSingle();
-      if (!creditRow || creditRow.paidCredits < 90) {
+
+      const now = new Date();
+      currentPaidCredits = creditRow?.paidCredits ?? 0;
+
+      // Expiration check: Option 3 (Rollover on Renewal)
+      const isRolloverCycle = typeof creditRow?.billingCycle === "string" && creditRow.billingCycle.startsWith("rollover:");
+      if (creditRow?.expiresAt) {
+        const exp = new Date(creditRow.expiresAt);
+        if (now >= exp) isExpired = true;
+      }
+      if (isRolloverCycle) isExpired = true;
+
+      const isAdminPromax = creditRow?.billingCycle === "admin_promax";
+
+      // If plan has expired, enforce automatic downgrade to free with saved rollover credits
+      if (isExpired && !isAdminPromax) {
+        if (!isRolloverCycle && creditRow) {
+          const leftoverCredits = creditRow.paidCredits > 0 ? creditRow.paidCredits : 0;
+          const rolloverCycleStr = leftoverCredits > 0 ? `rollover:${leftoverCredits}` : "monthly";
+          await admin
+            .from("Credit")
+            .update({ paidCredits: 0, expiresAt: null, billingCycle: rolloverCycleStr })
+            .eq("userId", activeUserId)
+            .catch(() => {});
+        }
         return NextResponse.json(
-          { error: "AI Chat is exclusive to Pro Max plan. Please upgrade to access this feature." },
+          { error: "Your subscription has expired and automatically reverted to the Free plan. Please renew your plan to continue using the 24/7 AI Assistant." },
+          { status: 403 }
+        );
+      }
+
+      // Pro Max / Paid credit requirement: Must have active credits
+      if (currentPaidCredits <= 0 && !isAdminPromax) {
+        return NextResponse.json(
+          { error: "You have 0 credits remaining. Please renew your plan or add credits to continue using the AI Assistant." },
           { status: 403 }
         );
       }
@@ -229,6 +264,25 @@ export async function POST(request: NextRequest) {
 
     const trimmedQuestion = question.trim();
 
+    // Helper: Deduct credits based on token consumption (1 credit per ~1,000 tokens, min 1 credit)
+    const deductTokens = async (totalTokens: number) => {
+      if (isOwner) {
+        return { creditsDeducted: 0, creditsRemaining: 999999 };
+      }
+      const creditsDeducted = Math.max(1, Math.round(totalTokens / 1000));
+      const creditsRemaining = Math.max(0, currentPaidCredits - creditsDeducted);
+      try {
+        await admin
+          .from("Credit")
+          .update({ paidCredits: creditsRemaining })
+          .eq("userId", activeUserId);
+        logger.info(`[support-chat] Charged ${creditsDeducted} credit(s) for ${totalTokens} tokens (${user.email}). Remaining: ${creditsRemaining}`);
+      } catch (err: any) {
+        logger.error("[support-chat] Failed to deduct chat credit:", err?.message);
+      }
+      return { creditsDeducted, creditsRemaining };
+    };
+
     const SYSTEM_PROMPT = `
 You are the FastHire AI Support Assistant. Your tone is professional, helpful, and concise.
 You must answer questions based on the following platform rules. NEVER invent pricing or policies.
@@ -243,6 +297,7 @@ You must answer questions based on the following platform rules. NEVER invent pr
 - Free Tier: Free monthly optimizations, standard ATS score, instant preview. (Users who didn't pay are on this plan).
 - Premium Pro (₹99/mo or ₹166/yr): 20 optimizations/month, full keyword gap, all templates, PDF/DOCX downloads.
 - Pro Max (₹199/mo or ₹332/yr): 90 optimizations/month, AI bullet rewriter, priority ATS processing, 24/7 AI Assistant.
+- Option 3 Rollover on Renewal: When an active subscription ends without immediate renewal, remaining unused credits are securely banked. As soon as you renew, your rollover credits are unlocked and added to your new cycle!
 - All plans are one-time payments. No recurring debits. Users upgrade securely via the Pricing page.
 
 3. Refund Policy:
@@ -277,7 +332,6 @@ IMPORTANT RULES FOR YOU:
     }
     systemPrompt += `\nUser: ${trimmedQuestion}\nAssistant:`;
 
-
     // 2. Try Primary Groq LPU (0.4s response) if GROQ_API_KEY is present
     const groqKey = (process.env.GROQ_API_KEY || "").replace(/^["']|["']$/g, "").trim();
     if (groqKey) {
@@ -301,9 +355,14 @@ IMPORTANT RULES FOR YOU:
           const json = await groqRes.json();
           const content = json.choices?.[0]?.message?.content;
           if (content && content.trim().length > 5) {
+            const tokens = json.usage?.total_tokens || Math.ceil((systemPrompt.length + content.length) / 4);
+            const { creditsDeducted, creditsRemaining } = await deductTokens(tokens);
             return NextResponse.json({
               answer: cleanAsterisks(content.trim()),
-              engine: "Groq AI (Llama 3.3)"
+              engine: "Groq AI (Llama 3.3)",
+              tokensUsed: tokens,
+              creditsDeducted,
+              creditsRemaining
             });
           }
         }
@@ -337,9 +396,14 @@ IMPORTANT RULES FOR YOU:
           const result: any = await Promise.race([genPromise, timeoutPromise]);
           const responseText = result.response.text();
           if (responseText && responseText.trim().length > 5) {
+            const tokens = result.response?.usageMetadata?.totalTokenCount || Math.ceil((systemPrompt.length + responseText.length) / 4);
+            const { creditsDeducted, creditsRemaining } = await deductTokens(tokens);
             return NextResponse.json({
               answer: cleanAsterisks(responseText.trim()),
-              engine: "Gemini AI"
+              engine: "Gemini AI",
+              tokensUsed: tokens,
+              creditsDeducted,
+              creditsRemaining
             });
           }
         } catch (e: any) {
@@ -348,21 +412,32 @@ IMPORTANT RULES FOR YOU:
       }
     }
 
-    // 3. Fallback to CallAIText Router
+    // 4. Fallback to CallAIText Router
     try {
       const aiResponse = await callAIText(systemPrompt);
       if (aiResponse && aiResponse.trim().length > 10) {
+        const tokens = Math.ceil((systemPrompt.length + aiResponse.length) / 4);
+        const { creditsDeducted, creditsRemaining } = await deductTokens(tokens);
         return NextResponse.json({
           answer: cleanAsterisks(aiResponse.trim()),
-          engine: "FastHire AI"
+          engine: "FastHire AI",
+          tokensUsed: tokens,
+          creditsDeducted,
+          creditsRemaining
         });
       }
     } catch (_aiErr) {}
 
-    // 4. Generic Fallback
+    // 5. Smart Contextual Fallback
+    const contextualAns = getSmartContextualAnswer(trimmedQuestion);
+    const tokens = Math.ceil((systemPrompt.length + contextualAns.length) / 4);
+    const { creditsDeducted, creditsRemaining } = await deductTokens(tokens);
     return NextResponse.json({
-      answer: getSmartContextualAnswer(trimmedQuestion),
-      engine: "FastHire Contextual Engine"
+      answer: contextualAns,
+      engine: "FastHire Contextual Engine",
+      tokensUsed: tokens,
+      creditsDeducted,
+      creditsRemaining
     });
 
   } catch (error: any) {

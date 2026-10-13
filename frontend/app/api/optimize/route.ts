@@ -288,15 +288,19 @@ export async function POST(request: NextRequest) {
       }
 
       if (creditRow) {
-        // Expiration check: If plan is expired, revert to free tier
+        // Expiration check: If plan is expired, revert to free tier (Option 3: save rollover credits)
+        const isRolloverCycle = typeof creditRow.billingCycle === "string" && creditRow.billingCycle.startsWith("rollover:");
         const expiresAt = creditRow.expiresAt ? new Date(creditRow.expiresAt) : null;
-        const isExpired = expiresAt && now >= expiresAt && creditRow.billingCycle !== "admin_promax" && creditRow.billingCycle !== "admin_premium";
-        if (isExpired) {
+        const isExpired = ((expiresAt && now >= expiresAt) || isRolloverCycle) && creditRow.billingCycle !== "admin_promax" && creditRow.billingCycle !== "admin_premium";
+        if (isExpired && !isRolloverCycle) {
+          const leftoverCredits = creditRow.paidCredits > 0 ? creditRow.paidCredits : 0;
+          const rolloverCycleStr = leftoverCredits > 0 ? `rollover:${leftoverCredits}` : "monthly";
           creditRow.paidCredits = 0;
           creditRow.expiresAt = null;
+          creditRow.billingCycle = rolloverCycleStr;
           await admin
             .from("Credit")
-            .update({ paidCredits: 0, expiresAt: null, billingCycle: "monthly" })
+            .update({ paidCredits: 0, expiresAt: null, billingCycle: rolloverCycleStr })
             .eq("userId", activeUserId)
             .catch(() => {});
         }

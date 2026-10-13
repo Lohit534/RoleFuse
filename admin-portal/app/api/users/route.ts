@@ -97,6 +97,10 @@ export async function GET(request: NextRequest) {
         if (now >= exp) isExpired = true;
       }
 
+      const isRollover = typeof billingCycle === "string" && billingCycle.startsWith("rollover:");
+      const rolloverCredits = isRollover ? (parseInt(billingCycle.split(":")[1]) || 0) : 0;
+      if (isRollover) isExpired = true;
+
       let plan: "owner" | "promax" | "premium" | "free" = "free";
       let displayPaidCredits = 0;
 
@@ -121,6 +125,7 @@ export async function GET(request: NextRequest) {
         ...u,
         plan,
         paidCredits: displayPaidCredits,
+        rolloverCredits: isExpired ? rolloverCredits : 0,
         freeUsed,
         billingCycle,
         expiresAt: isExpired ? null : (cred.expiresAt || null),

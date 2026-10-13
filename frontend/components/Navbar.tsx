@@ -147,6 +147,14 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
       }
     }
     fetchCredits();
+
+    const handleCreditsUpdated = (e: Event) => {
+      fetchCredits();
+    };
+    window.addEventListener("credits-updated", handleCreditsUpdated);
+    return () => {
+      window.removeEventListener("credits-updated", handleCreditsUpdated);
+    };
   }, [user, refreshKey]);
 
   // Click outside listener for profile dropdown
