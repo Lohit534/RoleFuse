@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Copy, Check, FileText, Sparkles, Phone, Mail, Globe } from "lucide-react";
+import { Loader2, Copy, Check, FileText, ShieldCheck, Phone, Mail, Globe } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { parseResumeIntoBlocks, stripMarkdownAsterisks, getCleanExportFilename, ResumeBlock, toSectionTitle, splitCertText } from "@/lib/export/pdf-document";
+import { parseResumeIntoBlocks, stripMarkdownAsterisks, getCleanExportFilename, ResumeBlock, toSectionTitle, splitCertText, isRoleOrTitle } from "@/lib/export/pdf-document";
 import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 
 const LinkedInIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -192,7 +192,7 @@ export default function ResumeViewer({
       {/* Top Header Panel */}
       <div className="bg-slate-50 px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-200 flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-[#0d6e5a] shrink-0" />
+          <ShieldCheck className="h-4 w-4 text-[#0d6e5a] shrink-0" />
           <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm">Optimized Resume Preview</h3>
         </div>
 
@@ -265,15 +265,13 @@ export default function ResumeViewer({
                   </h1>
                 );
               case "subtitle":
-                return (
-                  <div key={idx} className="text-center text-[11.5px] sm:text-[12.5px] font-bold text-black mb-1.5 select-text">
-                    {block.text}
-                  </div>
-                );
-              case "contact":
+                return null;
+              case "contact": {
+                const cleanSegments = block.segments.filter(seg => !isRoleOrTitle(seg.text));
+                if (cleanSegments.length === 0) return null;
                 return (
                   <div key={idx} className="flex justify-center items-center flex-wrap gap-y-0.5 gap-x-3 sm:gap-x-4 text-[9.5px] sm:text-[10px] text-center text-black mt-0.5 mb-2 leading-normal select-text">
-                    {block.segments.map((seg, sIdx) => {
+                    {cleanSegments.map((seg, sIdx) => {
                       const lower = (seg.text || "").toLowerCase() + " " + (seg.url || "").toLowerCase();
                       let IconComponent: React.ComponentType<{ className?: string }> = Globe;
                       if (seg.text.includes('@') || lower.includes('@')) IconComponent = Mail;
@@ -300,6 +298,7 @@ export default function ResumeViewer({
                     })}
                   </div>
                 );
+              }
               case "section":
                 return (
                   <h2 key={idx} className="text-[11.5px] sm:text-[12px] font-bold text-black border-b border-black mt-2.5 mb-1 pb-0 leading-snug select-text">

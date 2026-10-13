@@ -7,11 +7,35 @@ import { generateUUID } from "@/lib/utils";
 import fs from "fs";
 import path from "path";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const DATA_DIR = path.join(process.cwd(), "data");
 const FEEDBACK_FILE = path.join(DATA_DIR, "feedback.json");
+const DELETED_FEEDBACK_FILE = path.join(DATA_DIR, "deleted_feedback.json");
 
 function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+function readDeletedFeedbackIds(): Set<string> {
+  try {
+    ensureDir();
+    if (fs.existsSync(DELETED_FEEDBACK_FILE)) {
+      const content = fs.readFileSync(DELETED_FEEDBACK_FILE, "utf8");
+      return new Set(JSON.parse(content || "[]"));
+    }
+  } catch (e) {}
+  return new Set();
+}
+
+function recordDeletedFeedbackId(id: string) {
+  try {
+    ensureDir();
+    const ids = readDeletedFeedbackIds();
+    ids.add(id);
+    fs.writeFileSync(DELETED_FEEDBACK_FILE, JSON.stringify(Array.from(ids)), "utf8");
+  } catch (e) {}
 }
 
 function readFeedback(): any[] {
@@ -36,12 +60,28 @@ function writeFeedback(data: any[]) {
   }
 }
 
-function purgeOlderThan24h(records: any[]): any[] {
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-  return records.filter((r) => new Date(r.createdAt).getTime() > cutoff);
+async function verifyAdminUser(request: NextRequest): Promise<boolean> {
+  // 1. Check cookie session
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email && isOwnerEmail(user.email)) return true;
+  } catch {}
+
+  // 2. Check Bearer token (from admin portal or external API client)
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.replace(/^Bearer\s+/i, "");
+      const adminSupabase = getAdminClient();
+      const { data: { user } } = await adminSupabase.auth.getUser(token);
+      if (user?.email && isOwnerEmail(user.email)) return true;
+    } catch {}
+  }
+  return false;
 }
 
-// POST /api/feedback — save feedback message (writes to Supabase Feedback table + Resume table + local fallback)
+// POST /api/feedback — save feedback message from users
 export async function POST(request: NextRequest) {
   try {
     const supabase = createClient();
@@ -112,9 +152,8 @@ export async function POST(request: NextRequest) {
 
     // 3. Save to local JSON fallback
     const existing = readFeedback();
-    const fresh = purgeOlderThan24h(existing);
-    fresh.unshift(feedbackRecord);
-    writeFeedback(fresh);
+    existing.unshift(feedbackRecord);
+    writeFeedback(existing);
 
     logger.info(`[feedback] New feedback saved from ${senderEmail}: type=${type || "general"}`);
     return NextResponse.json({ success: true, id: recordId });
@@ -124,20 +163,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/feedback — admin only, returns all feedback (queries Supabase Feedback + Resume tables + local fallback, auto-purges >24h)
+// GET /api/feedback — admin only, returns all feedback
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user || !isOwnerEmail(user.email)) {
+    const isAuthorized = await verifyAdminUser(request);
+    if (!isAuthorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const now = Date.now();
-    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
     const adminSupabase = getAdminClient();
     const dbItemsMap = new Map();
+    const deletedIds = readDeletedFeedbackIds();
 
     // 1. Query dedicated "Feedback" table
     try {
@@ -147,12 +183,8 @@ export async function GET(request: NextRequest) {
         .order("createdAt", { ascending: false });
 
       if (fbRows && Array.isArray(fbRows)) {
-        const expiredIds: string[] = [];
         fbRows.forEach((row: any) => {
-          const createdAtTime = new Date(row.createdAt).getTime();
-          if (now - createdAtTime > TWENTY_FOUR_HOURS) {
-            expiredIds.push(row.id);
-          } else {
+          if (!deletedIds.has(row.id)) {
             dbItemsMap.set(row.id, {
               id: row.id,
               name: row.name || "Anonymous",
@@ -164,11 +196,6 @@ export async function GET(request: NextRequest) {
             });
           }
         });
-
-        // Auto-delete expired items asynchronously
-        if (expiredIds.length > 0) {
-          adminSupabase.from("Feedback").delete().in("id", expiredIds).then(() => {}).catch(() => {});
-        }
       }
     } catch (e: any) {}
 
@@ -181,12 +208,8 @@ export async function GET(request: NextRequest) {
         .order("createdAt", { ascending: false });
 
       if (dbRows && Array.isArray(dbRows)) {
-        const expiredIds: string[] = [];
         dbRows.forEach((row: any) => {
-          const createdAtTime = new Date(row.createdAt).getTime();
-          if (now - createdAtTime > TWENTY_FOUR_HOURS) {
-            expiredIds.push(row.id);
-          } else if (!dbItemsMap.has(row.id)) {
+          if (!deletedIds.has(row.id) && !dbItemsMap.has(row.id)) {
             try {
               const meta = JSON.parse(row.jobDescription || "{}");
               dbItemsMap.set(row.id, {
@@ -211,17 +234,13 @@ export async function GET(request: NextRequest) {
             }
           }
         });
-
-        if (expiredIds.length > 0) {
-          adminSupabase.from("Resume").delete().in("id", expiredIds).then(() => {}).catch(() => {});
-        }
       }
     } catch (e: any) {}
 
     // 3. Query local JSON fallback
-    const localRecords = purgeOlderThan24h(readFeedback());
+    const localRecords = readFeedback();
     localRecords.forEach((r) => {
-      if (r && r.id && !dbItemsMap.has(r.id)) {
+      if (r && r.id && !deletedIds.has(r.id) && !dbItemsMap.has(r.id)) {
         dbItemsMap.set(r.id, r);
       }
     });
@@ -229,24 +248,27 @@ export async function GET(request: NextRequest) {
     const combined = Array.from(dbItemsMap.values());
     combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    return NextResponse.json(combined);
+    return NextResponse.json(combined, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    });
   } catch (error: any) {
     logger.error("[feedback] Error fetching feedback:", error?.message);
     return NextResponse.json({ error: "Failed to fetch feedback." }, { status: 500 });
   }
 }
 
-// DELETE /api/feedback — admin only, delete a specific feedback by id
+// DELETE /api/feedback — admin only, permanently delete feedback by id
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user || !isOwnerEmail(user.email)) {
+    const isAuthorized = await verifyAdminUser(request);
+    if (!isAuthorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await request.json();
+    const body = await request.json().catch(() => ({}));
+    const id = body.id || body.messageId;
     if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
 
     const adminSupabase = getAdminClient();
@@ -262,6 +284,10 @@ export async function DELETE(request: NextRequest) {
     const updated = existing.filter((r) => r.id !== id);
     writeFeedback(updated);
 
+    // 3. Mark in permanent tombstone list so it can never be restored
+    recordDeletedFeedbackId(id);
+
+    logger.info(`[feedback] Permanently deleted feedback id=${id}`);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     logger.error("[feedback] Error deleting feedback:", error?.message);

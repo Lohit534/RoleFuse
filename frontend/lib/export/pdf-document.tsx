@@ -609,6 +609,21 @@ function swapEducationAndSkillsIfNeeded(blocks: ParsedResumeBlock[], isFresher =
   return sectionGroups.flatMap(g => g.blocks);
 }
 
+export function isRoleOrTitle(txt: string): boolean {
+  if (!txt) return false;
+  const clean = txt.trim().toLowerCase();
+  if (
+    /^(?:senior|junior|lead|principal|staff|associate|intern|trainee|full\s*stack|front\s*end|back\s*end|software|web|cloud|devops|data|ai|ml|mobile|android|ios|qa|test|ui\/?ux|product|project|java|python|react|node|javascript|c\+\+|golang)\b/i.test(clean) &&
+    /\b(engineer|developer|architect|designer|analyst|scientist|consultant|manager|specialist|programmer|lead|intern|trainee)\b/i.test(clean)
+  ) {
+    return true;
+  }
+  if (/^(?:engineer|developer|architect|designer|analyst|scientist|consultant|manager|specialist|programmer)$/i.test(clean)) {
+    return true;
+  }
+  return false;
+}
+
 export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
   const SECTION_NAMES_LIST = [
     'PROFESSIONAL SUMMARY', 'TECHNICAL SKILLS', 'PROFESSIONAL EXPERIENCE', 'WORK EXPERIENCE', 'EMPLOYMENT HISTORY',
@@ -680,9 +695,8 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       continue;
     }
 
-    // 2. Subtitle / Target Role below Name (e.g. "Java Backend Developer")
+    // 2. Subtitle / Target Role below Name (omit per user request)
     const hasAnySection = blocks.some(b => b.type === 'section');
-    const hasSubtitle = blocks.some(b => b.type === 'subtitle');
     const upperLine = line.toUpperCase().replace(/[^A-Z ]/g, '').trim();
     const isSection = SECTION_NAMES.includes(upperLine);
     const isContactLine = 
@@ -694,8 +708,8 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       line.toLowerCase().includes('github') ||
       line.toLowerCase().includes('portfolio');
 
-    if (!hasAnySection && !hasSubtitle && !isContactLine && !isSection) {
-      blocks.push({ type: 'subtitle', text: line });
+    if (!hasAnySection && !isContactLine && !isSection) {
+      // Omit standalone job title / subtitle line below candidate name
       continue;
     }
 
@@ -707,6 +721,8 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       parts.forEach(part => {
         const txt = stripMarkdownAsterisks(part.trim());
         if (!txt) return;
+        // Strictly filter out job names / roles in contact details
+        if (isRoleOrTitle(txt)) return;
         
         const emailMatch = txt.match(EMAIL_REGEX);
         const urlMatch = txt.match(URL_REGEX);
@@ -728,7 +744,10 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
         } else if (/\+?\d[\d\s\-\(\)]{7,}/.test(txt)) {
           segments.push({ text: txt, isLink: false });
         } else {
-          segments.push({ text: txt, isLink: false });
+          // If plain text looks like a job title, do NOT add to contact line
+          if (!isRoleOrTitle(txt)) {
+            segments.push({ text: txt, isLink: false });
+          }
         }
       });
       
@@ -1217,15 +1236,13 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, scaleOverrid
                 </Text>
               );
             case 'subtitle':
-              return (
-                <Text key={i} style={styles.subtitle}>
-                  {block.text}
-                </Text>
-              );
-            case 'contact':
+              return null;
+            case 'contact': {
+              const cleanSegments = block.segments.filter(seg => !isRoleOrTitle(seg.text));
+              if (cleanSegments.length === 0) return null;
               return (
                 <View key={i} style={styles.contactRow}>
-                  {block.segments.map((seg, sIdx) => {
+                  {cleanSegments.map((seg, sIdx) => {
                     const lower = (seg.text || "").toLowerCase() + " " + (seg.url || "").toLowerCase();
                     let iconType: 'phone' | 'email' | 'linkedin' | 'github' | 'globe' = 'globe';
                     if (seg.text.includes('@') || lower.includes('@')) iconType = 'email';
@@ -1252,6 +1269,7 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, scaleOverrid
                   })}
                 </View>
               );
+            }
             case 'section':
               return (
                 <View key={i} style={styles.sectionHeaderWrapper}>

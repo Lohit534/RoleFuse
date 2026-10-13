@@ -11,7 +11,7 @@ import { ResumeRecord, CreditInfo, isOwnerEmail } from "@/types";
 import { logger } from "@/lib/logger";
 import { generateSkillRoadmap, generateMultiSkillRoadmap } from "@/lib/roadmap-generator";
 import { extractTechTerms, extractKeywords } from "@/lib/ats/keywords";
-import { parseResumeIntoBlocks, toSectionTitle, splitCertText } from "@/lib/export/pdf-document";
+import { parseResumeIntoBlocks, toSectionTitle, splitCertText, isRoleOrTitle } from "@/lib/export/pdf-document";
 import { saveAs } from "file-saver";
 
 function getReadableLinkLabel(url: string, fallback?: string): string {
@@ -489,15 +489,13 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                         </h1>
                       );
                     case "subtitle":
-                      return (
-                        <div key={idx} className="text-center text-[11.5px] sm:text-[12.5px] font-bold text-black mb-1.5 select-text">
-                          {block.text}
-                        </div>
-                      );
-                    case "contact":
+                      return null;
+                    case "contact": {
+                      const cleanSegments = block.segments.filter(seg => !isRoleOrTitle(seg.text));
+                      if (cleanSegments.length === 0) return null;
                       return (
                         <div key={idx} className="flex justify-center flex-wrap gap-x-3 sm:gap-x-4 gap-y-0.5 text-[9.5px] sm:text-[10px] text-center text-black mt-0.5 mb-2 leading-normal select-text">
-                          {block.segments.map((seg, sIdx) => {
+                          {cleanSegments.map((seg, sIdx) => {
                             const isLinkedIn = (seg.text || "").toLowerCase().includes("linkedin") || (seg.url || "").toLowerCase().includes("linkedin");
                             const isGitHub = (seg.text || "").toLowerCase().includes("github") || (seg.url || "").toLowerCase().includes("github");
                             let display = (seg.text || "").replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
@@ -526,6 +524,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                           })}
                         </div>
                       );
+                    }
                     case "section":
                       return (
                         <h2 key={idx} className="text-[11.5px] sm:text-[12px] font-bold text-black border-b border-black mt-2.5 mb-1 pb-0 leading-snug select-text">

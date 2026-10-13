@@ -82,18 +82,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 5. Ensure payyalajyothika333@gmail.com is in users list if registered
-    const hasJyothika = users.some(u => (u.email || "").toLowerCase().trim() === "payyalajyothika333@gmail.com");
-    if (!hasJyothika) {
-      users.push({
-        id: "d9301154-778f-45d7-91e3-873c6d5be4aa",
-        email: "payyalajyothika333@gmail.com",
-        name: "Jyothika Payyala",
-        createdAt: "2026-09-12T06:32:35.000Z",
-      });
-    }
-
-    // 6. Merge user profiles with exact database credits and official pricing plans
+    // 5. Merge user profiles with exact database credits and official pricing plans
     const enriched = users.map((u: any) => {
       const emailLower = (u.email || "").toLowerCase().trim();
       const cred = creditMap[u.id] || {};
@@ -105,7 +94,7 @@ export async function GET(request: NextRequest) {
       let isExpired = false;
       if (cred.expiresAt) {
         const exp = new Date(cred.expiresAt);
-        if (now > exp) isExpired = true;
+        if (now >= exp) isExpired = true;
       }
 
       let plan: "owner" | "promax" | "premium" | "free" = "free";
@@ -114,7 +103,10 @@ export async function GET(request: NextRequest) {
       if (isAdminEmail(u.email)) {
         plan = "owner";
         displayPaidCredits = 999999;
-      } else if (emailLower === "payyalajyothika333@gmail.com" || billingCycle === "admin_promax" || (!isExpired && (rawPaidCredits >= 90 || planId === "promax"))) {
+      } else if (isExpired || billingCycle === "admin_free" || billingCycle === "free") {
+        plan = "free";
+        displayPaidCredits = 0;
+      } else if (billingCycle === "admin_promax" || (!isExpired && (rawPaidCredits >= 90 || planId === "promax"))) {
         plan = "promax";
         displayPaidCredits = rawPaidCredits >= 90 ? rawPaidCredits : 90;
       } else if (billingCycle === "admin_premium" || (!isExpired && (rawPaidCredits > 0 || planId === "premium" || billingCycle === "yearly"))) {
@@ -131,7 +123,7 @@ export async function GET(request: NextRequest) {
         paidCredits: displayPaidCredits,
         freeUsed,
         billingCycle,
-        expiresAt: cred.expiresAt || null,
+        expiresAt: isExpired ? null : (cred.expiresAt || null),
       };
     });
 

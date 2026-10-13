@@ -1,6 +1,6 @@
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, PageOrientation, convertInchesToTwip, ExternalHyperlink, TabStopType, Tab } from "docx";
 import { logger } from "../logger";
-import { parseResumeIntoBlocks, computeDensityScale, stripMarkdownAsterisks, toSectionTitle, splitCertText } from "./pdf-document";
+import { parseResumeIntoBlocks, computeDensityScale, stripMarkdownAsterisks, toSectionTitle, splitCertText, isRoleOrTitle } from "./pdf-document";
 
 function cleanText(str: string): string {
   if (!str) return "";
@@ -311,24 +311,20 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
           );
           break;
         case "subtitle":
-          children.push(
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [run(b.text, { bold: true, size: hp(12.5) })],
-              spacing: { after: sp(60) },
-            }),
-          );
+          // Omit subtitle/job name from DOCX
           break;
         case "contact": {
+          const cleanSegments = b.segments.filter(seg => !isRoleOrTitle(seg.text));
+          if (cleanSegments.length === 0) break;
           const parts: (TextRun | ExternalHyperlink)[] = [];
-          b.segments.forEach((seg, i) => {
+          cleanSegments.forEach((seg, i) => {
             const label = (seg.text || "").replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
             if (seg.isLink && seg.url) {
               parts.push(new ExternalHyperlink({ link: seg.url, children: [run(label || linkLabel(seg.url, seg.text), { size: hp(9.5), color: "000000", underline: {} })] }));
             } else {
               parts.push(run(label, { size: hp(9.5) }));
             }
-            if (i < b.segments.length - 1) parts.push(run("   ", { size: hp(9.5) }));
+            if (i < cleanSegments.length - 1) parts.push(run("   ", { size: hp(9.5) }));
           });
           children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: parts, spacing: { after: sp(100) } }));
           break;

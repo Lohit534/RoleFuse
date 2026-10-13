@@ -94,84 +94,59 @@ export async function GET(request: NextRequest) {
 
     const creditsList: any[] = credits ? [...credits] : [];
 
-    // 6. Guarantee payyalajyothika333@gmail.com has 90 Pro Max credits, monthly cycle, and expires on Oct 12, 2026
-    try {
-      const jyothikaTarget = usersList.find((u: any) => (u.email || "").toLowerCase().trim() === "payyalajyothika333@gmail.com");
-      const targetId = jyothikaTarget?.id || "d9301154-778f-45d7-91e3-873c6d5be4aa";
-
-      await admin.from("Credit").upsert({
-        id: "credit-" + targetId.slice(0, 8),
-        userId: targetId,
-        freeUsed: 0,
-        paidCredits: PRO_MAX_CREDITS_PER_MONTH, // 90
-        billingCycle: "monthly",
-        expiresAt: "2026-10-12T06:32:35.000Z",
-        resetAt: "2026-09-12T06:32:35.000Z",
-      }, { onConflict: "userId" });
-
-      const cIndex = creditsList.findIndex((c: any) => c.userId === targetId || c.userId === "d9301154-778f-45d7-91e3-873c6d5be4aa");
-      if (cIndex >= 0) {
-        creditsList[cIndex].paidCredits = PRO_MAX_CREDITS_PER_MONTH;
-        creditsList[cIndex].billingCycle = "monthly";
-        creditsList[cIndex].expiresAt = "2026-10-12T06:32:35.000Z";
-      } else {
-        creditsList.push({
-          id: "credit-" + targetId.slice(0, 8),
-          userId: targetId,
-          freeUsed: 0,
-          paidCredits: PRO_MAX_CREDITS_PER_MONTH,
-          billingCycle: "monthly",
-          expiresAt: "2026-10-12T06:32:35.000Z",
-        });
-      }
-    } catch (e: any) {
-      logger.warn("[admin/users] Auto-heal jyothika failed:", e.message);
-    }
-
+    // 6. User and plan expiration evaluation
     // Determine early promotional adopters (First 50 registered users get 1 year free Premium Pro)
     const sortedByCreated = [...usersList].sort((a, b) => 
       new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
     );
     const first50UserIds = new Set(sortedByCreated.slice(0, 50).map(u => u.id));
 
-    // 7. Merge users and credits
+    // 7. Merge users and credits with accurate expiration checking
     const merged = usersList.map((u: any) => {
       const userEmail = (u.email || "").toLowerCase().trim();
-      const credit = creditsList.find((c: any) => 
-        c.userId === u.id || 
-        (userEmail === "payyalajyothika333@gmail.com" && (c.userId === "d9301154-778f-45d7-91e3-873c6d5be4aa" || c.userId === u.id))
-      ) || {
+      const credit = creditsList.find((c: any) => c.userId === u.id) || {
         freeUsed: 0,
         paidCredits: 0,
         billingCycle: "monthly",
         expiresAt: null,
       };
 
-      const isKnownProMax = userEmail === "payyalajyothika333@gmail.com" || proMaxUserIds.has(u.id) || proMaxEmails.has(userEmail);
-      const isKnownPremium = !isKnownProMax && (premiumUserIds.has(u.id) || premiumEmails.has(userEmail));
-      const isEarlyPromotional = !isOwnerEmail(u.email) && !isKnownProMax && (first50UserIds.has(u.id) || usersList.length <= 50);
+      const now = new Date();
+      const expiresAtDate = credit.expiresAt ? new Date(credit.expiresAt) : null;
+      const isExpired = expiresAtDate && now >= expiresAtDate && credit.billingCycle !== "admin_promax" && credit.billingCycle !== "admin_premium";
+
+      const isKnownProMax = !isExpired && (proMaxUserIds.has(u.id) || proMaxEmails.has(userEmail));
+      const isKnownPremium = !isExpired && !isKnownProMax && (premiumUserIds.has(u.id) || premiumEmails.has(userEmail));
+      const isEarlyPromotional = !isExpired && !isOwnerEmail(u.email) && !isKnownProMax && (first50UserIds.has(u.id) || usersList.length <= 50);
 
       // Determine plan tier:
-      // Priority: Owner > Explicit Admin Selection > Pro Max > Premium Pro > Free Tier
+      // Priority: Owner > Expired (revert to Free) > Admin Selection > Pro Max > Premium Pro > Free Tier
       let plan = "free";
       if (isOwnerEmail(u.email)) {
         plan = "owner";
+      } else if (isExpired || credit.billingCycle === "admin_free" || credit.billingCycle === "free") {
+        plan = "free";
       } else if (credit.billingCycle === "admin_promax") {
         plan = "promax";
       } else if (credit.billingCycle === "admin_premium") {
         plan = "premium";
-      } else if (credit.billingCycle === "admin_free" || credit.billingCycle === "free") {
-        plan = "free";
-      } else if (isKnownProMax || credit.paidCredits >= 90) {
+      } else if (isKnownProMax || (credit.paidCredits >= 90 && !isExpired)) {
         plan = "promax";
-      } else if (isKnownPremium || credit.paidCredits > 0 || credit.billingCycle === "yearly" || isEarlyPromotional) {
+      } else if (isKnownPremium || (credit.paidCredits > 0 && !isExpired) || isEarlyPromotional) {
         plan = "premium";
       } else {
         plan = "free";
       }
 
+      // Auto-heal expired plans in database
+      if (isExpired && credit.paidCredits > 0) {
+        admin.from("Credit").update({ paidCredits: 0, expiresAt: null, billingCycle: "monthly" }).eq("userId", u.id).catch(() => {});
+        credit.paidCredits = 0;
+        credit.expiresAt = null;
+      }
+
       // If user is early promotional and had no Credit record or 0 credits, persist it
-      if (isEarlyPromotional && (!credit.id || credit.paidCredits === 0) && credit.billingCycle !== "admin_free" && credit.billingCycle !== "free") {
+      if (!isExpired && isEarlyPromotional && (!credit.id || credit.paidCredits === 0) && credit.billingCycle !== "admin_free" && credit.billingCycle !== "free") {
         admin.from("Credit").upsert({
           id: "credit-" + u.id.slice(0, 8),
           userId: u.id,
@@ -196,7 +171,7 @@ export async function GET(request: NextRequest) {
         freeUsed: credit.freeUsed ?? 0,
         paidCredits: displayCredits,
         billingCycle: plan === "promax" ? "monthly" : (credit.billingCycle || "monthly"),
-        expiresAt: (userEmail === "payyalajyothika333@gmail.com" || plan === "promax") ? (credit.expiresAt || "2026-10-12T06:32:35.000Z") : (credit.expiresAt || null),
+        expiresAt: isExpired ? null : (credit.expiresAt || null),
       };
     });
 

@@ -76,40 +76,37 @@ export function buildOptimizationPrompt(
     "EXACT SECTION ORDER (follow exactly):\n" +
     (pageBudget.level === "fresher"
       ? "1. NAME\n" +
-        "2. Target Role / Subtitle (e.g. Java Backend Developer)\n" +
-        "3. contact line (phone | email | LinkedIn | GitHub | Portfolio)\n" +
-        "4. (blank line)\n" +
-        "5. PROFESSIONAL SUMMARY\n" +
-        "6. (blank line)\n" +
-        "7. TECHNICAL SKILLS\n" +
-        "8. (blank line)\n" +
-        "9. PROJECTS\n" +
-        "10. (blank line)\n" +
-        "11. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n" +
-        "12. (blank line)\n" +
-        "13. EDUCATION\n\n"
+        "2. CONTACT LINE (phone | email | LinkedIn | GitHub | Portfolio)\n" +
+        "3. (blank line)\n" +
+        "4. PROFESSIONAL SUMMARY\n" +
+        "5. (blank line)\n" +
+        "6. TECHNICAL SKILLS\n" +
+        "7. (blank line)\n" +
+        "8. PROJECTS\n" +
+        "9. (blank line)\n" +
+        "10. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n" +
+        "11. (blank line)\n" +
+        "12. EDUCATION\n\n"
       : "1. NAME\n" +
-        "2. Target Role / Subtitle (e.g. Senior Java Backend Developer)\n" +
-        "3. contact line (phone | email | LinkedIn | GitHub | Portfolio)\n" +
-        "4. (blank line)\n" +
-        "5. PROFESSIONAL SUMMARY\n" +
-        "6. (blank line)\n" +
-        "7. PROFESSIONAL EXPERIENCE\n" +
-        "8. (blank line)\n" +
-        "9. TECHNICAL SKILLS\n" +
-        "10. (blank line)\n" +
-        "11. PROJECTS\n" +
-        "12. (blank line)\n" +
-        "13. CERTIFICATIONS  (omit if candidate has none)\n" +
-        "14. (blank line)\n" +
-        "15. EDUCATION\n\n") +
+        "2. CONTACT LINE (phone | email | LinkedIn | GitHub | Portfolio)\n" +
+        "3. (blank line)\n" +
+        "4. PROFESSIONAL SUMMARY\n" +
+        "5. (blank line)\n" +
+        "6. PROFESSIONAL EXPERIENCE\n" +
+        "7. (blank line)\n" +
+        "8. TECHNICAL SKILLS\n" +
+        "9. (blank line)\n" +
+        "10. PROJECTS\n" +
+        "11. (blank line)\n" +
+        "12. CERTIFICATIONS  (omit if candidate has none)\n" +
+        "13. (blank line)\n" +
+        "14. EDUCATION\n\n") +
     "EXACT LINE FORMAT FOR EACH SECTION:\n\n" +
     "NAME LINE:\n" +
     "  Candidate full name -- e.g. DINESH KAARTHIK MOODE\n\n" +
-    "ROLE SUBTITLE LINE:\n" +
-    "  Target Job Title / Domain matching the JD -- e.g. Java Backend Developer\n\n" +
     "CONTACT LINE (single line, | separator):\n" +
     "  phone | email | LinkedIn URL | GitHub URL | portfolio URL\n" +
+    "  CRITICAL: DO NOT add a target job title, job name, or domain subtitle line under the name or inside the contact details line. Place the contact line directly beneath candidate name.\n" +
     "  Preserve ALL URLs exactly as in original resume. Avoid personal info (photo, father's name, marital status, full address).\n\n" +
     "PROFESSIONAL SUMMARY:\n" +
     "  Header: PROFESSIONAL SUMMARY (ALL CAPS)\n" +
@@ -146,7 +143,8 @@ export function buildOptimizationPrompt(
     "    Line 2: Institution Name | CGPA: X.XX (only if in original)\n\n" +
     "CERTIFICATIONS & ACHIEVEMENTS:\n" +
     "  Header: CERTIFICATIONS & ACHIEVEMENTS (or CERTIFICATIONS)\n" +
-    "  Format: • Certification Name - Issuing Body (Year): Key skills covered\n\n" +
+    "  Format: • Certification Name - Issuing Body: Key skills covered (or • Certification Name | Issuing Body)\n" +
+    "  CRITICAL RULE FOR YEARS: NEVER invent, guess, or add a year or date to a certification if the candidate did NOT mention a year in their original resume! ONLY set the year if the user explicitly provided it.\n\n" +
     sep + "\n" +
     "STEP 1 — METRIC & DETAIL INTEGRATION\n" +
     sep + "\n\n" +

@@ -288,6 +288,19 @@ export async function POST(request: NextRequest) {
       }
 
       if (creditRow) {
+        // Expiration check: If plan is expired, revert to free tier
+        const expiresAt = creditRow.expiresAt ? new Date(creditRow.expiresAt) : null;
+        const isExpired = expiresAt && now >= expiresAt && creditRow.billingCycle !== "admin_promax" && creditRow.billingCycle !== "admin_premium";
+        if (isExpired) {
+          creditRow.paidCredits = 0;
+          creditRow.expiresAt = null;
+          await admin
+            .from("Credit")
+            .update({ paidCredits: 0, expiresAt: null, billingCycle: "monthly" })
+            .eq("userId", activeUserId)
+            .catch(() => {});
+        }
+
         const resetAt = new Date(creditRow.resetAt);
         const isNewMonth =
           now.getMonth() !== resetAt.getMonth() ||

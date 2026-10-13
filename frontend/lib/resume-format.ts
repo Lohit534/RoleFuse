@@ -177,6 +177,21 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
       if (!line.trim()) continue;
     }
 
+    // Certifications: Strip fabricated years that the user did not provide in the original resume
+    const isCert = /CERTIFICAT|ACHIEVEMENT|LICENS/.test(section) && !header;
+    if (isCert && line.trim()) {
+      const yearMatches = Array.from(line.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => m[1]);
+      for (const yr of yearMatches) {
+        if (!original.includes(yr)) {
+          line = line
+            .replace(new RegExp(`\\s*\\(?${yr}\\)?`, "g"), "")
+            .replace(/\s*-\s*:\s*/g, ": ")
+            .replace(/\s*:\s*$/, "")
+            .trim();
+        }
+      }
+    }
+
     // Drop standalone literal placeholders anywhere
     if (PLACEHOLDER_SEGMENT.test(line.trim().replace(/^[•\-*]\s*/, ""))) continue;
 
