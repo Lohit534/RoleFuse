@@ -150,7 +150,7 @@ export default function ResumeInput({
           <button
             type="button"
             onClick={() => onOpenSavedResumes?.()}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg text-[#526176] hover:text-[#087F6E] hover:bg-white/80 transition-all cursor-pointer whitespace-nowrap"
+            className="px-3 py-1.5 text-xs font-bold rounded-lg text-[#526176] hover:text-[#087F6E] transition-all cursor-pointer whitespace-nowrap"
           >
             Saved resumes
           </button>

@@ -95,19 +95,25 @@ export async function GET(request: NextRequest) {
       } catch (_e) {}
     }
 
-    // Filter to ONLY include normal/manual builder resumes (empty jobDescription)
-    const builderResumes = allResumes.filter(
-      (r: any) =>
-        (!r.jobDescription || r.jobDescription.trim() === "") &&
-        r.jobTitle !== "SUPPORT_TICKET" &&
-        r.jobTitle !== "USER_FEEDBACK"
-    );
+    const includeAll = request.nextUrl.searchParams.get("all") === "true";
+    const returnedResumes = includeAll
+      ? allResumes.filter(
+          (r: any) =>
+            r.jobTitle !== "SUPPORT_TICKET" &&
+            r.jobTitle !== "USER_FEEDBACK"
+        )
+      : allResumes.filter(
+          (r: any) =>
+            (!r.jobDescription || r.jobDescription.trim() === "") &&
+            r.jobTitle !== "SUPPORT_TICKET" &&
+            r.jobTitle !== "USER_FEEDBACK"
+        );
 
-    builderResumes.sort(
+    returnedResumes.sort(
       (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
     );
 
-    return NextResponse.json(builderResumes);
+    return NextResponse.json(returnedResumes);
   } catch (error: any) {
     logger.error("[api/resumes] GET unhandled error:", error.message);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

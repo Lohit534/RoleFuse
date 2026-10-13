@@ -44,15 +44,14 @@ export function UseSavedResumeModal({
   const fetchSavedResumes = async () => {
     setLoading(true);
     try {
-      const resumesRes = await fetch("/api/resumes");
+      const resumesRes = await fetch("/api/resumes?all=true");
       if (resumesRes.ok) {
-        const builderData = await resumesRes.json();
-        if (Array.isArray(builderData)) {
-          setResumes(builderData);
+        const data = await resumesRes.json();
+        if (Array.isArray(data)) {
+          setResumes(data);
         }
       }
     } catch (e) {
-      // silent — failed to load saved resumes
       toast.error("Failed to load saved resumes.");
     } finally {
       setLoading(false);
@@ -74,7 +73,7 @@ export function UseSavedResumeModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md border-slate-200 bg-white text-slate-900 shadow-2xl rounded-2xl p-6 select-none">
         <DialogHeader className="space-y-1.5 text-left">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#0d6e5a]">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#087F6E]">
             <FolderOpen className="h-4 w-4" />
             <span>Saved Resumes Library</span>
           </div>
@@ -89,7 +88,7 @@ export function UseSavedResumeModal({
         <div className="space-y-3 pt-2 max-h-[340px] overflow-y-auto pr-1">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-xs text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin text-[#0d6e5a]" />
+              <Loader2 className="h-4 w-4 animate-spin text-[#087F6E]" />
               <span>Fetching your saved resumes...</span>
             </div>
           ) : resumes.length === 0 ? (
@@ -105,10 +104,10 @@ export function UseSavedResumeModal({
               <div
                 key={r.id}
                 onClick={() => handleSelect(r)}
-                className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#087F6E] hover:bg-[#087F6E]/5 cursor-pointer transition-all group"
+                className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#087F6E] hover:bg-slate-100/70 cursor-pointer transition-all group"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-8 w-8 rounded-lg bg-[#087F6E]/10 border border-[#087F6E]/20 flex items-center justify-center shrink-0 text-[#087F6E] group-hover:scale-105 transition-transform">
+                  <div className="h-8 w-8 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 text-[#087F6E] group-hover:scale-105 transition-transform">
                     <FileText className="h-4 w-4" />
                   </div>
                   <div className="min-w-0">
@@ -126,7 +125,7 @@ export function UseSavedResumeModal({
                 </div>
                 <Button
                   size="sm"
-                  className="h-8 text-xs font-bold bg-[#087F6E] hover:bg-[#075E53] text-white shadow-xs transition-all px-3.5 rounded-xl border-none cursor-pointer"
+                  className="h-8 text-xs font-bold bg-[#087F6E] hover:bg-[#075E53] text-white shadow-xs transition-all px-3.5 rounded-xl border-none cursor-pointer shrink-0"
                 >
                   Use This <ArrowRight className="h-3.5 w-3.5 ml-1" />
                 </Button>
