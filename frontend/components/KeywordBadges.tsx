@@ -50,22 +50,20 @@ export default function KeywordBadges({ added, found }: KeywordBadgesProps) {
         </h4>
         <div className="flex flex-wrap gap-2">
           {displayKeywords.map((kw, idx) => (
-            <Badge
+            <span
               key={`${type}-${kw}-${idx}`}
-              variant="outline"
-              className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border shadow-xs transition-colors select-text ${badgeClass}`}
+              className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border shadow-2xs transition-colors select-text ${badgeClass}`}
             >
               {icon}
-              <span>{kw}</span>
-            </Badge>
+              <span className="font-semibold">{kw}</span>
+            </span>
           ))}
           {hiddenCount > 0 && (
-            <Badge
-              variant="outline"
-              className="text-xs px-2.5 py-1 rounded-full border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold shadow-xs select-none"
+            <span
+              className="inline-flex items-center text-xs px-2.5 py-1 rounded-full border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold shadow-2xs select-none"
             >
               +{hiddenCount} more
-            </Badge>
+            </span>
           )}
         </div>
       </div>
@@ -79,10 +77,10 @@ export default function KeywordBadges({ added, found }: KeywordBadgesProps) {
         added,
         "added",
         "Keywords Added from JD",
-        <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />,
-        "border-[#0d6e5a]/30 bg-[#0d6e5a]/8 text-[#0d6e5a] font-semibold hover:bg-[#0d6e5a]/15",
-        <Check className="h-4 w-4 text-[#0d6e5a] shrink-0" />,
-        "text-[#0d6e5a] bg-[#0d6e5a]/10 border border-[#0d6e5a]/20"
+        <Check className="h-3.5 w-3.5 text-teal-700 shrink-0" />,
+        "border-teal-300 bg-teal-50 text-teal-950 hover:bg-teal-100",
+        <Check className="h-4 w-4 text-teal-700 shrink-0" />,
+        "text-teal-950 bg-teal-50 border border-teal-300"
       )}
 
       {/* Already in Resume */}
