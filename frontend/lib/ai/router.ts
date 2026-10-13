@@ -758,7 +758,7 @@ export async function callAIText(prompt: string): Promise<string> {
     .replace(/^["']|["']$/g, "")
     .trim();
   if (apiKeyGemini) {
-    const GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.8-flash"];
+    const { GEMINI_MODELS } = await import("./gemini");
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(apiKeyGemini);
 
@@ -773,11 +773,15 @@ export async function callAIText(prompt: string): Promise<string> {
           const text = result.response.text();
           if (text) return text.trim();
         } catch (e: any) {
+          const errMsg = e?.message || "";
           logger.warn(
             `AI Router: Gemini text generation with ${modelName} attempt ${attempt} failed:`,
-            e?.message,
+            errMsg.substring(0, 100),
           );
-          if (attempt < 3 && (/503|429|demand/i.test(e?.message || "") || e?.status === 503)) {
+          if (e?.status === 429 || /429|quota/i.test(errMsg)) {
+            break;
+          }
+          if (attempt < 3 && (/503|demand/i.test(errMsg) || e?.status === 503)) {
             await new Promise((r) => setTimeout(r, 800 * attempt));
           }
         }

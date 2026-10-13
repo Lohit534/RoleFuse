@@ -156,17 +156,8 @@ export default function LandingPage() {
   const { setResumeText, setJobDescription } = useResumeStore();
   const [barReady, setBarReady] = useState(false);
 
-  // Synchronous check to avoid flash for logged-in users
-  const [checkingAuth, setCheckingAuth] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return Object.keys(localStorage).some(
-        (k) => (k.startsWith("sb-") && k.endsWith("-auth-token")) || k.includes("supabase.auth.token")
-      );
-    } catch {
-      return false;
-    }
-  });
+  // Default to true to show loading shimmer skeleton while resolving session and prevent flashing landing page
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
 
   useEffect(() => {
     localStorage.removeItem("fastHire_pendingSample");

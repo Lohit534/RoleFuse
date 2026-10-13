@@ -62,7 +62,25 @@ export default function OptimizingProgress({
   const stepStartTimes = useRef<Record<number, number>>({});
   const isMountedRef = useRef(true);
 
-  // Timer & Fun facts rotation
+  const STEP_RUNNING_PCT: Record<number, number> = {
+    1: 12,
+    2: 25,
+    3: 42,
+    4: 62,
+    5: 82,
+    6: 94,
+  };
+
+  const STEP_DONE_PCT: Record<number, number> = {
+    1: 20,
+    2: 38,
+    3: 55,
+    4: 76,
+    5: 90,
+    6: 100,
+  };
+
+  // Timer, smooth micro-ticker & Fun facts rotation
   useEffect(() => {
     isMountedRef.current = true;
     startRef.current = Date.now();
@@ -76,14 +94,24 @@ export default function OptimizingProgress({
       setElapsedSec(Math.floor((Date.now() - startRef.current) / 1000));
     }, 1000);
 
+    // Micro-ticker: smoothly advances progress between stream events without jerking
+    const smoothProgressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 98) return prev;
+        // Don't auto-tick past 50% if currently awaiting user input in detection Q&A
+        return prev + 1;
+      });
+    }, 400);
+
     return () => {
       isMountedRef.current = false;
       clearInterval(factInterval);
       clearInterval(timerInterval);
+      clearInterval(smoothProgressInterval);
     };
   }, []);
 
-  // Process SSE stream events (all steps 1-6 driven dynamically by the server)
+  // Process SSE stream events (strictly monotonic — progress never goes backwards)
   const processStreamChunk = (data: any) => {
     if (data.step && data.step >= 1) {
       if (data.status === "running") {
@@ -93,7 +121,8 @@ export default function OptimizingProgress({
             s.id === data.step ? { ...s, status: "running" } : s
           )
         );
-        setProgress(Math.round(((data.step - 1) / 6) * 100));
+        const target = STEP_RUNNING_PCT[data.step] || Math.round(((data.step - 1) / 6) * 100);
+        setProgress((prev) => Math.max(prev, target));
       }
 
       if (data.status === "done") {
@@ -109,7 +138,8 @@ export default function OptimizingProgress({
             s.id === data.step ? { ...s, status: "done", duration: dur } : s
           )
         );
-        setProgress(Math.round((data.step / 6) * 100));
+        const target = STEP_DONE_PCT[data.step] || Math.round((data.step / 6) * 100);
+        setProgress((prev) => Math.max(prev, target));
 
         if (data.result) {
           setProgress(100);
@@ -217,7 +247,7 @@ export default function OptimizingProgress({
     setSteps((prev) =>
       prev.map((s) => (s.id === 4 ? { ...s, status: "running" } : s))
     );
-    setProgress(55);
+    setProgress((prev) => Math.max(prev, 60));
 
     try {
       const res = await fetch("/api/optimize", {
@@ -291,12 +321,12 @@ export default function OptimizingProgress({
             cy="60"
             r="54"
             fill="none"
-            stroke="#0d6e5a"
+            stroke="#087F6E"
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={`${2 * Math.PI * 54}`}
             strokeDashoffset={`${2 * Math.PI * 54 * (1 - progress / 100)}`}
-            className="transition-all duration-500"
+            className="transition-all duration-300 ease-out"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">

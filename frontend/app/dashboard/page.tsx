@@ -775,8 +775,8 @@ export default function DashboardPage() {
             {!trackerAdded && (
               <div className="bg-gradient-to-r from-[#0d6e5a]/5 via-white to-transparent border border-[#0d6e5a]/10 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 select-none">
                 <div className="flex items-center gap-2.5 sm:gap-3">
-                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 flex items-center justify-center shrink-0">
-                    <Briefcase className="h-4 w-4 text-[#0d6e5a]" />
+                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-[#087F6E] flex items-center justify-center shrink-0 shadow-xs">
+                    <Briefcase className="h-4 w-4 text-white" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900">
