@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 interface ScrollFadeInProps {
   children: React.ReactNode;
   className?: string;
+  id?: string;
   delay?: number; // Delay in ms
   direction?: "up" | "down" | "left" | "right" | "none";
   threshold?: number;
@@ -13,6 +14,7 @@ interface ScrollFadeInProps {
 export default function ScrollFadeIn({
   children,
   className = "",
+  id,
   delay = 0,
   direction = "up",
   threshold = 0.05
@@ -65,6 +67,7 @@ export default function ScrollFadeIn({
   return (
     <div
       ref={ref}
+      id={id}
       className={`transition-all duration-700 ease-out transform ${transformClass} ${className}`}
     >
       {children}

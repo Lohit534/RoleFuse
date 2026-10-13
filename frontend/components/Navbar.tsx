@@ -26,6 +26,8 @@ import {
   X,
   PenLine,
   Zap,
+  Play,
+  Shield,
 } from "lucide-react";
 import { CreditInfo } from "@/types";
 import { toast } from "react-hot-toast";
@@ -57,6 +59,8 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [isDataPreferencesOpen, setIsDataPreferencesOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const resourcesRef = useRef<HTMLDivElement>(null);
+  const [isResourcesOpen, setIsResourcesOpen] = useState(false);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -157,11 +161,14 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
     };
   }, [user, refreshKey]);
 
-  // Click outside listener for profile dropdown
+  // Click outside listener for profile and resources dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (resourcesRef.current && !resourcesRef.current.contains(event.target as Node)) {
+        setIsResourcesOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -259,6 +266,77 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                     </Link>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Public Landing Navigation Links (when not logged in) */}
+            {!user && (
+              <div className="hidden md:flex items-center gap-6 h-16 ml-3">
+                <Link
+                  href="/#features"
+                  className="text-[14px] font-medium text-[#526176] hover:text-[#111827] transition-colors"
+                >
+                  Product
+                </Link>
+                <Link
+                  href="/#features"
+                  className="text-[14px] font-medium text-[#526176] hover:text-[#111827] transition-colors"
+                >
+                  Features
+                </Link>
+                <Link
+                  href="/dashboard/pricing"
+                  className="text-[14px] font-medium text-[#526176] hover:text-[#111827] transition-colors"
+                >
+                  Pricing
+                </Link>
+
+                {/* Resources dropdown */}
+                <div className="relative" ref={resourcesRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsResourcesOpen(!isResourcesOpen)}
+                    onMouseEnter={() => setIsResourcesOpen(true)}
+                    className="flex items-center gap-1 text-[14px] font-medium text-[#526176] hover:text-[#111827] transition-colors cursor-pointer"
+                  >
+                    <span>Resources</span>
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isResourcesOpen ? "rotate-180 text-[#087F6E]" : "text-slate-400"}`} />
+                  </button>
+                  {isResourcesOpen && (
+                    <div
+                      onMouseLeave={() => setIsResourcesOpen(false)}
+                      className="absolute top-full left-0 mt-2 w-52 bg-white border border-[#E2E8F0] rounded-xl shadow-lg p-1.5 space-y-0.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsResourcesOpen(false);
+                          setIsDemoModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[#111827] hover:bg-slate-50 hover:text-[#087F6E] transition-colors text-left cursor-pointer"
+                      >
+                        <Play className="h-3.5 w-3.5 text-[#087F6E]" />
+                        <span>Watch Demo</span>
+                      </button>
+                      <Link
+                        href="/#faq"
+                        onClick={() => setIsResourcesOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[#111827] hover:bg-slate-50 hover:text-[#087F6E] transition-colors text-left"
+                      >
+                        <HelpCircle className="h-3.5 w-3.5 text-slate-400" />
+                        <span>FAQs</span>
+                      </Link>
+                      <Link
+                        href="/privacy"
+                        onClick={() => setIsResourcesOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[#111827] hover:bg-slate-50 hover:text-[#087F6E] transition-colors text-left"
+                      >
+                        <Shield className="h-3.5 w-3.5 text-slate-400" />
+                        <span>Privacy &amp; Security</span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -572,19 +650,102 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               </>
             ) : (
               <div className="flex items-center gap-3 select-none">
-                <Link href="/dashboard/pricing" className="hidden sm:block text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors">
-                  Pricing
-                </Link>
-                <Link href="/auth/login">
-                  <Button size="sm" className="bg-[#0d6e5a] hover:bg-[#0a5a49] text-white font-bold h-8 text-[11px] rounded-lg px-5 shadow-sm">
-                    Get Started Free
-                  </Button>
-                </Link>
+                {/* Desktop public buttons */}
+                <div className="hidden sm:flex items-center gap-4">
+                  <Link
+                    href="/auth/login"
+                    className="text-[14px] font-medium text-[#111827] hover:text-[#087F6E] transition-colors px-2 py-1.5"
+                  >
+                    Sign In
+                  </Link>
+                  <Link href="/auth/signup">
+                    <button className="bg-[#087F6E] hover:bg-[#075E53] text-white text-[14px] font-semibold px-4.5 py-2 rounded-xl transition-colors shadow-xs cursor-pointer">
+                      Get Started Free
+                    </button>
+                  </Link>
+                </div>
+
+                {/* Mobile hamburger menu toggle */}
+                <div className="flex sm:hidden items-center gap-2">
+                  <Link href="/auth/signup">
+                    <button className="bg-[#087F6E] hover:bg-[#075E53] text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xs">
+                      Get Started
+                    </button>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    aria-label="Toggle navigation"
+                    className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Mobile Drawer Menu for Logged-Out Landing Page */}
+      {!user && isMobileMenuOpen && (
+        <div className="sm:hidden border-t border-[#E2E8F0] bg-white px-5 py-4 space-y-3 animate-in fade-in duration-150">
+          <Link
+            href="/#features"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
+          >
+            Product
+          </Link>
+          <Link
+            href="/#features"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
+          >
+            Features
+          </Link>
+          <Link
+            href="/dashboard/pricing"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
+          >
+            Pricing
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setIsMobileMenuOpen(false);
+              setIsDemoModalOpen(true);
+            }}
+            className="w-full text-left text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5 cursor-pointer"
+          >
+            Watch Demo
+          </button>
+          <Link
+            href="/#faq"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
+          >
+            FAQs
+          </Link>
+          <div className="border-t border-[#E2E8F0] pt-3 flex flex-col gap-2">
+            <Link
+              href="/auth/login"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full text-center py-2.5 rounded-xl border border-[#E2E8F0] text-sm font-semibold text-[#111827] hover:bg-slate-50 transition-colors"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/auth/signup"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full text-center py-2.5 rounded-xl bg-[#087F6E] hover:bg-[#075E53] text-sm font-semibold text-white shadow-xs transition-colors"
+            >
+              Get Started Free
+            </Link>
+          </div>
+        </div>
+      )}
 
       </nav>
 
