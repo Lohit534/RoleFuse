@@ -96,18 +96,45 @@ export async function GET(request: NextRequest) {
     }
 
     const includeAll = request.nextUrl.searchParams.get("all") === "true";
-    const returnedResumes = includeAll
-      ? allResumes.filter(
-          (r: any) =>
-            r.jobTitle !== "SUPPORT_TICKET" &&
-            r.jobTitle !== "USER_FEEDBACK"
-        )
-      : allResumes.filter(
-          (r: any) =>
-            (!r.jobDescription || r.jobDescription.trim() === "") &&
-            r.jobTitle !== "SUPPORT_TICKET" &&
-            r.jobTitle !== "USER_FEEDBACK"
-        );
+    let returnedResumes: any[] = [];
+
+    if (includeAll) {
+      returnedResumes = allResumes.filter(
+        (r: any) =>
+          r.jobTitle !== "SUPPORT_TICKET" &&
+          r.jobTitle !== "USER_FEEDBACK"
+      );
+    } else {
+      // 1. Collect all builder resumes (empty jobDescription)
+      const builderResumes = allResumes.filter(
+        (r: any) =>
+          (!r.jobDescription || r.jobDescription.trim() === "") &&
+          r.jobTitle !== "SUPPORT_TICKET" &&
+          r.jobTitle !== "USER_FEEDBACK"
+      );
+
+      const seen = new Set<string>();
+      const combined: any[] = [];
+
+      for (const r of builderResumes) {
+        const sig = (r.originalText ? r.originalText.slice(0, 150).trim() : "") || r.id;
+        seen.add(sig);
+        combined.push(r);
+      }
+
+      // 2. If user has other distinct resumes (e.g. base uploaded/saved resumes),
+      // include them deduplicated by base text/title so repetitive history runs are excluded
+      for (const r of allResumes) {
+        if (r.jobTitle === "SUPPORT_TICKET" || r.jobTitle === "USER_FEEDBACK") continue;
+        const sig = (r.originalText ? r.originalText.slice(0, 150).trim() : "") || r.id;
+        if (!seen.has(sig)) {
+          seen.add(sig);
+          combined.push(r);
+        }
+      }
+
+      returnedResumes = combined;
+    }
 
     returnedResumes.sort(
       (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()

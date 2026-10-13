@@ -61,7 +61,9 @@ export function serializeResumeJSONToText(json: ResumeJSON): string {
       lines.push(
         `${exp.role} | ${exp.company}${exp.location ? " | " + exp.location : ""}`,
       );
-      lines.push(exp.duration);
+      if (exp.duration && exp.duration.trim()) {
+        lines.push(exp.duration.trim());
+      }
       for (const b of exp.bullets) lines.push(`• ${b}`);
       lines.push("");
     }

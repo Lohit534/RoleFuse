@@ -54,6 +54,35 @@ export function buildOptimizationPrompt(
 
   // Dynamic page budget from the candidate's real experience dates
   const pageBudget = getPageBudget(resumeText);
+  const isFresher = pageBudget.level === "fresher";
+  const hasOriginalSummary = /(?:summary|about\s*me|objective|profile)\b/i.test(resumeText);
+  const hasOriginalLanguages = /(?:languages?|languages?\s*(?:spoken|known))\b/i.test(resumeText);
+  const includeSummary = !isFresher || hasOriginalSummary;
+
+  let sectionOrderStr = "1. NAME\n2. CONTACT LINE (phone | email | LinkedIn | GitHub | Portfolio)\n3. (blank line)\n";
+  let stepNum = 4;
+
+  if (includeSummary) {
+    sectionOrderStr += `${stepNum++}. PROFESSIONAL SUMMARY\n${stepNum++}. (blank line)\n`;
+  }
+
+  if (isFresher) {
+    sectionOrderStr += `${stepNum++}. TECHNICAL SKILLS\n${stepNum++}. (blank line)\n`;
+    sectionOrderStr += `${stepNum++}. PROJECTS\n${stepNum++}. (blank line)\n`;
+    sectionOrderStr += `${stepNum++}. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n${stepNum++}. (blank line)\n`;
+    sectionOrderStr += `${stepNum++}. EDUCATION\n`;
+  } else {
+    sectionOrderStr += `${stepNum++}. PROFESSIONAL EXPERIENCE\n${stepNum++}. (blank line)\n`;
+    sectionOrderStr += `${stepNum++}. TECHNICAL SKILLS\n${stepNum++}. (blank line)\n`;
+    sectionOrderStr += `${stepNum++}. PROJECTS\n${stepNum++}. (blank line)\n`;
+    sectionOrderStr += `${stepNum++}. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n${stepNum++}. (blank line)\n`;
+    sectionOrderStr += `${stepNum++}. EDUCATION\n`;
+  }
+
+  if (hasOriginalLanguages) {
+    sectionOrderStr += `${stepNum++}. (blank line)\n${stepNum++}. LANGUAGES\n`;
+  }
+  sectionOrderStr += "\n";
 
   return (
     "You are FastHire's elite ATS resume optimization engine.\n" +
@@ -73,34 +102,8 @@ export function buildOptimizationPrompt(
     "React.js Vue.js GraphQL FastAPI Django Kubernetes Docker TensorFlow PyTorch\n" +
     "GitHub GitLab VS Code Power BI CI/CD Machine Learning Deep Learning DevOps\n" +
     "REST API Microservices Cloud Native\n\n" +
-    "EXACT SECTION ORDER (follow exactly):\n" +
-    (pageBudget.level === "fresher"
-      ? "1. NAME\n" +
-        "2. CONTACT LINE (phone | email | LinkedIn | GitHub | Portfolio)\n" +
-        "3. (blank line)\n" +
-        "4. PROFESSIONAL SUMMARY\n" +
-        "5. (blank line)\n" +
-        "6. TECHNICAL SKILLS\n" +
-        "7. (blank line)\n" +
-        "8. PROJECTS\n" +
-        "9. (blank line)\n" +
-        "10. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n" +
-        "11. (blank line)\n" +
-        "12. EDUCATION\n\n"
-      : "1. NAME\n" +
-        "2. CONTACT LINE (phone | email | LinkedIn | GitHub | Portfolio)\n" +
-        "3. (blank line)\n" +
-        "4. PROFESSIONAL SUMMARY\n" +
-        "5. (blank line)\n" +
-        "6. PROFESSIONAL EXPERIENCE\n" +
-        "7. (blank line)\n" +
-        "8. TECHNICAL SKILLS\n" +
-        "9. (blank line)\n" +
-        "10. PROJECTS\n" +
-        "11. (blank line)\n" +
-        "12. CERTIFICATIONS  (omit if candidate has none)\n" +
-        "13. (blank line)\n" +
-        "14. EDUCATION\n\n") +
+    "EXACT SECTION ORDER (follow dynamically based on candidate's background):\n" +
+    sectionOrderStr +
     "EXACT LINE FORMAT FOR EACH SECTION:\n\n" +
     "NAME LINE:\n" +
     "  Candidate full name -- e.g. DINESH KAARTHIK MOODE\n\n" +
@@ -108,14 +111,17 @@ export function buildOptimizationPrompt(
     "  phone | email | LinkedIn URL | GitHub URL | portfolio URL\n" +
     "  CRITICAL: DO NOT add a target job title, job name, or domain subtitle line under the name or inside the contact details line. Place the contact line directly beneath candidate name.\n" +
     "  Preserve ALL URLs exactly as in original resume. Avoid personal info (photo, father's name, marital status, full address).\n\n" +
-    "PROFESSIONAL SUMMARY:\n" +
-    "  Header: PROFESSIONAL SUMMARY (ALL CAPS)\n" +
-    "  Content: 2-4 lines (45-70 words) pure narrative paragraph, NO bullets\n" +
-    "  Must state: candidate's target role, core technologies, type of systems built, and career value.\n" +
-    "  AVOID generic clichés: 'I am hardworking', 'Quick learner', 'Self motivated', 'Passionate'.\n" +
-    "  INSTEAD use direct impact: 'Java Backend Developer with hands-on experience building REST APIs using Spring Boot and MySQL.'\n\n" +
+    (includeSummary
+      ? "PROFESSIONAL SUMMARY:\n" +
+        "  Header: PROFESSIONAL SUMMARY (ALL CAPS)\n" +
+        "  Content: 2-3 lines (45-65 words) pure narrative paragraph, NO bullets\n" +
+        "  Highlight: target role, core technologies, scale of systems built, and measurable career value.\n" +
+        "  AVOID generic clichés: 'I am hardworking', 'Quick learner', 'Self motivated', 'Passionate'.\n" +
+        "  INSTEAD use direct impact: 'Experienced Backend Engineer specializing in Java, Spring Boot, and scalable microservices.'\n\n"
+      : "") +
     "TECHNICAL SKILLS:\n" +
     "  Header: TECHNICAL SKILLS (ALL CAPS)\n" +
+    "  CRITICAL: Output exactly ONE single skills section. NEVER output duplicate 'SKILLS' and 'TECHNICAL SKILLS' headers. Set only ONE.\n" +
     "  Organized into clean 'Category: values' lines (each on ONE single line):\n" +
     "    Programming Languages: Java, SQL, JavaScript\n" +
     "    Frameworks: Spring Boot, Spring MVC, Hibernate, JPA\n" +
@@ -126,15 +132,16 @@ export function buildOptimizationPrompt(
     "  List JD-matching skills FIRST in each category\n\n" +
     "PROFESSIONAL EXPERIENCE:\n" +
     "  Header: PROFESSIONAL EXPERIENCE (ALL CAPS)\n" +
-    "  For each role:\n" +
+    "  For each role / internship:\n" +
     "    Line 1: Role Title | Company Name | Tech Stack (optional)\n" +
     "    Line 2: Month YYYY - Month YYYY  (or Present)\n" +
     "    Lines 3+: bullet Strong bullet (one per line)\n" +
+    "    CRITICAL FOR DATES: NEVER invent, fabricate, or guess internship or job years/dates if missing in original resume! If missing and needed, output a placeholder in the placeholders array so the user is asked during optimization progress instead of adding blindly.\n" +
     "  Every bullet MUST begin with a powerful past-tense action verb and quantify impact.\n\n" +
     "PROJECTS:\n" +
     "  Header: PROJECTS (ALL CAPS)\n" +
     "  For each project:\n" +
-    "    Line 1: Project Name — Tech Stack | Year or Dates\n" +
+    "    Line 1: Project Name — Tech Stack (do NOT invent or append fake years/dates if candidate did not mention them!)\n" +
     "    Lines 2+: 2-4 impact-oriented bullets describing contributions, architectures, and outcomes.\n\n" +
     "EDUCATION:\n" +
     "  Header: EDUCATION (ALL CAPS)\n" +
@@ -144,7 +151,13 @@ export function buildOptimizationPrompt(
     "CERTIFICATIONS & ACHIEVEMENTS:\n" +
     "  Header: CERTIFICATIONS & ACHIEVEMENTS (or CERTIFICATIONS)\n" +
     "  Format: • Certification Name - Issuing Body: Key skills covered (or • Certification Name | Issuing Body)\n" +
-    "  CRITICAL RULE FOR YEARS: NEVER invent, guess, or add a year or date to a certification if the candidate did NOT mention a year in their original resume! ONLY set the year if the user explicitly provided it.\n\n" +
+    "  CRITICAL RULE FOR YEARS: NEVER invent, guess, or add a year or date to a certification or achievement if candidate did NOT mention a year in their original resume! ONLY set the year if the user explicitly provided it.\n\n" +
+    (hasOriginalLanguages
+      ? "LANGUAGES:\n" +
+        "  Header: LANGUAGES (ALL CAPS)\n" +
+        "  Format: • Language Name (e.g. • English, • Telugu, • Hindi)\n" +
+        "  CRITICAL: The candidate listed spoken languages in their original resume. You MUST preserve and include them here. NEVER drop or remove languages.\n\n"
+      : "") +
     sep + "\n" +
     "STEP 1 — METRIC & DETAIL INTEGRATION\n" +
     sep + "\n\n" +
@@ -227,16 +240,17 @@ export function buildOptimizationPrompt(
     sep + "\n" +
     "[ ] Name is ALL CAPS on line 1\n" +
     "[ ] Contact line has email | phone | location | URLs separated by |\n" +
-    "[ ] Professional Summary is exactly 3 sentences, no bullet points\n" +
-    "[ ] TECHNICAL SKILLS has exactly 5 category lines, each on ONE line only\n" +
+    (includeSummary ? "[ ] Professional Summary is a concise 2-3 sentence executive paragraph\n" : "[ ] No artificial professional summary added for fresher (jump straight to Technical Skills and Projects)\n") +
+    "[ ] TECHNICAL SKILLS appears exactly ONCE (zero duplicate 'SKILLS' header or extra divider lines)\n" +
     "[ ] Every experience AND project bullet starts with a strong past-tense verb AND contains a number/metric\n" +
     "[ ] Education institution copied verbatim -- no added university names or placeholders\n" +
     "[ ] Resume fits the PAGE BUDGET (" + pageBudget.maxPages + " page" + (pageBudget.maxPages > 1 ? "s" : "") + " max)\n" +
+    "[ ] Zero fabricated or invented dates/years for projects, internships, or certifications\n" +
     "[ ] Metrics/numbers added or [ADD:] placeholders used where missing\n" +
     "[ ] No LaTeX, no Markdown, no literal backslash-n in resume text\n" +
     "[ ] All original URLs preserved verbatim\n" +
     "[ ] No sections were dropped from the original resume\n" +
-    "[ ] LANGUAGES section contains ONLY spoken languages (if present)\n" +
+    (hasOriginalLanguages ? "[ ] LANGUAGES section preserved with all original spoken languages\n" : "") +
     "[ ] ALL " + allKeywordsToInject.length + " target keywords appear at least once\n\n" +
     sep + "\n" +
     "JOB DESCRIPTION:\n" +

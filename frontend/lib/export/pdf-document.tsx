@@ -591,14 +591,27 @@ function swapEducationAndSkillsIfNeeded(blocks: ParsedResumeBlock[], isFresher =
     sectionGroups.push(currentGroup);
   }
 
+  // Merge duplicate category groups (e.g. multiple SKILLS sections) into a single clean group
+  const mergedGroups: { category: string; blocks: ParsedResumeBlock[] }[] = [];
+  for (const group of sectionGroups) {
+    const existing = mergedGroups.find(g => g.category === group.category);
+    if (existing && existing.category !== 'HEADER') {
+      // Append non-section blocks from the duplicate group, skipping redundant section header
+      const contentBlocks = group.blocks.filter(b => b.type !== 'section');
+      existing.blocks.push(...contentBlocks);
+    } else {
+      mergedGroups.push(group);
+    }
+  }
+
   // Recommended resume structure:
-  //   Fresher:     Header -> Summary -> Skills -> (Internships) -> Projects -> Certifications & Achievements -> Education
-  //   Experienced: Header -> Summary -> Experience -> Skills -> Projects -> Certifications -> Education
+  //   Fresher:     Header -> Summary -> Skills -> (Internships) -> Projects -> Certifications & Achievements -> Education -> Languages
+  //   Experienced: Header -> Summary -> Experience -> Skills -> Projects -> Certifications -> Education -> Languages
   const priorityOrder = isFresher
     ? ['HEADER', 'SUMMARY', 'SKILLS', 'EXPERIENCE', 'PROJECTS', 'CERTIFICATIONS', 'ACHIEVEMENTS', 'EDUCATION', 'LANGUAGES']
     : ['HEADER', 'SUMMARY', 'EXPERIENCE', 'SKILLS', 'PROJECTS', 'CERTIFICATIONS', 'ACHIEVEMENTS', 'EDUCATION', 'LANGUAGES'];
 
-  sectionGroups.sort((a, b) => {
+  mergedGroups.sort((a, b) => {
     const idxA = priorityOrder.indexOf(a.category);
     const idxB = priorityOrder.indexOf(b.category);
     const posA = idxA !== -1 ? idxA : 99;
@@ -606,7 +619,7 @@ function swapEducationAndSkillsIfNeeded(blocks: ParsedResumeBlock[], isFresher =
     return posA - posB;
   });
 
-  return sectionGroups.flatMap(g => g.blocks);
+  return mergedGroups.flatMap(g => g.blocks);
 }
 
 export function isRoleOrTitle(txt: string): boolean {
@@ -764,6 +777,20 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
 
     // 3. Section Header check
     if (isSection) {
+      const isSkillHeader = ['TECHNICAL SKILLS', 'SKILLS', 'CORE SKILLS', 'SOFT SKILLS', 'SKILLS & COMPETENCIES', 'KEY SKILLS'].includes(upperLine);
+      const hasExistingSkillSection = blocks.some(b => b.type === 'section' && ['TECHNICAL SKILLS', 'SKILLS', 'CORE SKILLS', 'SOFT SKILLS', 'SKILLS & COMPETENCIES', 'KEY SKILLS'].includes(b.text.toUpperCase().replace(/[^A-Z ]/g, '').trim()));
+
+      if (isSkillHeader && hasExistingSkillSection) {
+        // Consolidate into single skills section — do NOT emit a duplicate header with a second underline
+        currentSection = 'TECHNICAL SKILLS';
+        continue;
+      }
+
+      if (upperLine === currentSection) {
+        // Prevent immediate duplicate header
+        continue;
+      }
+
       currentSection = upperLine;
       blocks.push({ type: 'section', text: line });
       continue;
