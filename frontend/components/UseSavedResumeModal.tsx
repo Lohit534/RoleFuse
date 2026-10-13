@@ -9,15 +9,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Loader2, Check, ArrowRight, FolderOpen, Sparkles } from "lucide-react";
+import { FileText, Loader2, ArrowRight, FolderOpen, User } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { serializeResumeJSONToText } from "@/lib/ai/router";
+import { createClient } from "@/lib/supabase/client";
 
 interface SavedResume {
   id: string;
   jobTitle?: string;
   originalText?: string;
   optimizedText?: string;
+  jobDescription?: string;
   createdAt: string;
 }
 
@@ -27,6 +28,17 @@ interface UseSavedResumeModalProps {
   onSelectResume: (text: string, title?: string) => void;
 }
 
+function extractCandidateName(text?: string): string | null {
+  if (!text) return null;
+  const firstLine = text.trim().split("\n")[0]?.trim();
+  if (!firstLine) return null;
+  if (/^[A-Z\s]{4,}$/.test(firstLine) || firstLine.includes("http") || firstLine.includes("@")) {
+    return null;
+  }
+  const cleanName = firstLine.replace(/^[#*_\-\s]+|[#*_\-\s]+$/g, "").trim();
+  return cleanName.length > 1 && cleanName.length < 50 ? cleanName : null;
+}
+
 export function UseSavedResumeModal({
   isOpen,
   onClose,
@@ -34,6 +46,7 @@ export function UseSavedResumeModal({
 }: UseSavedResumeModalProps) {
   const [loading, setLoading] = useState(true);
   const [resumes, setResumes] = useState<SavedResume[]>([]);
+  const supabase = createClient();
 
   useEffect(() => {
     if (isOpen) {
@@ -44,13 +57,44 @@ export function UseSavedResumeModal({
   const fetchSavedResumes = async () => {
     setLoading(true);
     try {
+      // 1. Fetch manual builder resumes from server
       const resumesRes = await fetch("/api/resumes");
       if (resumesRes.ok) {
         const data = await resumesRes.json();
-        if (Array.isArray(data)) {
-          setResumes(data);
+        if (Array.isArray(data) && data.length > 0) {
+          // Strictly manual builder resumes only (no optimization history)
+          const manualOnly = data.filter(
+            (r: SavedResume) => !r.jobDescription || r.jobDescription.trim() === ""
+          );
+          if (manualOnly.length > 0) {
+            setResumes(manualOnly);
+            setLoading(false);
+            return;
+          }
         }
       }
+
+      // 2. Fallback to localStorage cache for current user if server returned empty
+      if (typeof window !== "undefined") {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const cachedStr = localStorage.getItem(`fastHire_resumes_cache_${user.id}`);
+          if (cachedStr) {
+            const cached = JSON.parse(cachedStr);
+            if (Array.isArray(cached) && cached.length > 0) {
+              const manualOnly = cached.filter(
+                (r: SavedResume) => !r.jobDescription || r.jobDescription.trim() === ""
+              );
+              if (manualOnly.length > 0) {
+                setResumes(manualOnly);
+                setLoading(false);
+                return;
+              }
+            }
+          }
+        }
+      }
+      setResumes([]);
     } catch (e) {
       toast.error("Failed to load saved resumes.");
     } finally {
@@ -69,8 +113,14 @@ export function UseSavedResumeModal({
       toast.error("Selected resume has no text content.");
       return;
     }
-    onSelectResume(textToInsert, resume.jobTitle);
-    toast.success(`Loaded saved resume: ${resume.jobTitle || "Untitled Resume"}`);
+
+    const candidateName = extractCandidateName(textToInsert);
+    const chosenTitle = (resume.jobTitle && resume.jobTitle !== "Untitled Resume")
+      ? resume.jobTitle
+      : (candidateName ? `${candidateName}'s Resume` : "Saved Resume");
+
+    onSelectResume(textToInsert, chosenTitle);
+    toast.success(`Loaded saved resume: ${chosenTitle}`);
     onClose();
   };
 
@@ -86,7 +136,7 @@ export function UseSavedResumeModal({
             Use Saved Resume
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500 font-medium">
-            Select a resume from your saved resumes to auto-fill the editor.
+            Select your manually created resume to auto-fill the editor.
           </DialogDescription>
         </DialogHeader>
 
@@ -101,41 +151,54 @@ export function UseSavedResumeModal({
               <FileText className="h-8 w-8 text-slate-400 mx-auto" />
               <p className="text-xs font-bold text-slate-700">No saved resumes found</p>
               <p className="text-[10px] text-slate-500 max-w-xs mx-auto">
-                Build and save a resume in My Resumes to use it here.
+                Create and save a resume in My Resumes to use it here.
               </p>
             </div>
           ) : (
-            resumes.map((r) => (
-              <div
-                key={r.id}
-                onClick={() => handleSelect(r)}
-                className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#087F6E] hover:bg-slate-100/70 cursor-pointer transition-all group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-8 w-8 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 text-[#087F6E] group-hover:scale-105 transition-transform">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-900 truncate">
-                      {r.jobTitle || "Saved Resume"}
-                    </p>
-                    <p className="text-[10px] text-slate-500 font-medium">
-                      {new Date(r.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  className="h-8 text-xs font-bold bg-[#087F6E] hover:bg-[#075E53] text-white shadow-xs transition-all px-3.5 rounded-xl border-none cursor-pointer shrink-0"
+            resumes.map((r) => {
+              const textContent = r.optimizedText || r.originalText || "";
+              const candidateName = extractCandidateName(textContent);
+              const displayTitle = (r.jobTitle && r.jobTitle !== "Untitled Resume")
+                ? r.jobTitle
+                : (candidateName ? `${candidateName}'s Resume` : "Saved Resume");
+
+              return (
+                <div
+                  key={r.id}
+                  onClick={() => handleSelect(r)}
+                  className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#087F6E] hover:bg-slate-100/70 cursor-pointer transition-all group"
                 >
-                  Use This <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </div>
-            ))
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 text-[#087F6E] group-hover:scale-105 transition-transform">
+                      {candidateName ? <User className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                    </div>
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="text-xs font-bold text-slate-900 truncate">
+                        {displayTitle}
+                      </p>
+                      {candidateName && (
+                        <p className="text-[10px] font-semibold text-[#087F6E] truncate">
+                          Candidate: {candidateName}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        {new Date(r.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs font-bold bg-[#087F6E] hover:bg-[#075E53] text-white shadow-xs transition-all px-3.5 rounded-xl border-none cursor-pointer shrink-0"
+                  >
+                    Use This <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </div>
+              );
+            })
           )}
         </div>
       </DialogContent>

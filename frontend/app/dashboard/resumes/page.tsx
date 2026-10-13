@@ -157,9 +157,35 @@ export default function ResumesPage() {
           logger.error("Failed to query resumes from Supabase", dbError);
           toast.error("Could not load resumes.");
         } else if (dbData) {
-          setResumes(dbData as ResumeRecord[]);
-          if (typeof window !== "undefined" && dbData.length > 0) {
-            localStorage.setItem(`fastHire_resumes_cache_${user.id}`, JSON.stringify(dbData));
+          if (Array.isArray(dbData) && dbData.length > 0) {
+            setResumes(dbData as ResumeRecord[]);
+            if (typeof window !== "undefined") {
+              localStorage.setItem(`fastHire_resumes_cache_${user.id}`, JSON.stringify(dbData));
+            }
+          } else {
+            // If server returned empty, check if user has manually created resumes in cache to avoid wiping them out
+            const cachedStr = typeof window !== "undefined" ? localStorage.getItem(`fastHire_resumes_cache_${user.id}`) : null;
+            if (cachedStr) {
+              try {
+                const cachedResumes = JSON.parse(cachedStr);
+                if (Array.isArray(cachedResumes) && cachedResumes.length > 0) {
+                  setResumes(cachedResumes);
+                  for (const cr of cachedResumes) {
+                    fetch("/api/resumes", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(cr),
+                    }).catch(() => {});
+                  }
+                } else {
+                  setResumes([]);
+                }
+              } catch {
+                setResumes([]);
+              }
+            } else {
+              setResumes([]);
+            }
           }
         }
         setLoading(false);
@@ -656,7 +682,13 @@ export default function ResumesPage() {
       const data = await res.json();
       if (data) {
         const newRecord = data as ResumeRecord;
-        setResumes(prev => [newRecord, ...prev]);
+        setResumes(prev => {
+          const next = [newRecord, ...prev];
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`fastHire_resumes_cache_${userId}`, JSON.stringify(next));
+          }
+          return next;
+        });
         handleOpenEditor(newRecord);
         toast.success("New resume card created successfully!");
       }
@@ -683,7 +715,13 @@ export default function ResumesPage() {
         const errBody = await res.json().catch(() => ({}));
         throw new Error(errBody.error || "Failed to delete resume card on the server.");
       }
-      setResumes(prev => prev.filter(r => r.id !== recordId));
+      setResumes(prev => {
+        const next = prev.filter(r => r.id !== recordId);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`fastHire_resumes_cache_${userId}`, JSON.stringify(next));
+        }
+        return next;
+      });
       toast.success("Resume record deleted.");
     } catch (err: any) {
       toast.error(err.message || "Failed to delete resume record.");
@@ -707,7 +745,13 @@ export default function ResumesPage() {
     };
 
     setEditingResume(updatedRecord);
-    setResumes(prev => prev.map(r => r.id === editingResume.id ? updatedRecord : r));
+    setResumes(prev => {
+      const next = prev.map(r => r.id === editingResume.id ? updatedRecord : r);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`fastHire_resumes_cache_${userId}`, JSON.stringify(next));
+      }
+      return next;
+    });
 
     try {
       await fetch("/api/resumes", {
@@ -717,6 +761,7 @@ export default function ResumesPage() {
           id: editingResume.id,
           optimizedText: compiledText,
           originalText: compiledText,
+          jobTitle: updatedRecord.jobTitle,
           ...updateRecordFields
         })
       });
@@ -730,7 +775,17 @@ export default function ResumesPage() {
     if (!editorData) return;
     const updated = { ...editorData, [field]: value };
     setEditorData(updated);
-    saveEditorData(updated);
+
+    // Auto-update resume title with candidate name if untitled or empty
+    const extraUpdates: Partial<ResumeRecord> = {};
+    if (field === "name" && value.trim()) {
+      if (!editingResume?.jobTitle || editingResume.jobTitle === "Untitled Resume") {
+        const newTitle = `${value.trim()}'s Resume`;
+        extraUpdates.jobTitle = newTitle;
+        setTempTitle(newTitle);
+      }
+    }
+    saveEditorData(updated, extraUpdates);
   };
 
   const handleSummaryChange = (value: string) => {
@@ -1194,10 +1249,17 @@ export default function ResumesPage() {
                         <CardContent className="p-5 flex flex-col justify-between h-full min-h-[160px] space-y-4">
                           
                           <div className="flex justify-between items-start gap-4">
-                            <div className="space-y-1">
-                              <h3 className="font-bold text-base text-[#111827] truncate max-w-[150px]">
-                                {resume.jobTitle || "Untitled Resume"}
+                            <div className="space-y-1 min-w-0">
+                              <h3 className="font-bold text-base text-[#111827] truncate max-w-[180px]">
+                                {(resume.jobTitle && resume.jobTitle !== "Untitled Resume")
+                                  ? resume.jobTitle
+                                  : (parsedData.name ? `${parsedData.name}'s Resume` : "Untitled Resume")}
                               </h3>
+                              {parsedData.name && (
+                                <p className="text-[11px] font-semibold text-[#087F6E] truncate max-w-[180px]">
+                                  {parsedData.name}
+                                </p>
+                              )}
                               <p className="text-[11px] text-[#526176] font-medium select-none">
                                 Edited {formatDate(resume.createdAt)}
                               </p>
