@@ -292,21 +292,32 @@ export default function LandingPage() {
                 </span>
               </div>
 
-              {/* Social Proof Row */}
+              {/* Social Proof Row with AI Generated Job Seeker Photos */}
               <div className="flex items-center gap-3 pt-2">
-                <div className="flex -space-x-2 overflow-hidden">
-                  <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#087F6E] text-white text-[11px] font-bold flex items-center justify-center">
-                    JD
-                  </div>
-                  <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#075E53] text-white text-[11px] font-bold flex items-center justify-center">
-                    SK
-                  </div>
-                  <div className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-[#0A9682] text-white text-[11px] font-bold flex items-center justify-center">
-                    AM
-                  </div>
+                <div className="flex -space-x-2.5 overflow-hidden py-0.5">
+                  <img
+                    src="/avatars/user-1.jpg"
+                    alt="Job Seeker"
+                    className="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover shadow-xs"
+                  />
+                  <img
+                    src="/avatars/user-2.jpg"
+                    alt="Job Seeker"
+                    className="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover shadow-xs"
+                  />
+                  <img
+                    src="/avatars/user-3.jpg"
+                    alt="Job Seeker"
+                    className="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover shadow-xs"
+                  />
+                  <img
+                    src="/avatars/user-4.jpg"
+                    alt="Job Seeker"
+                    className="inline-block h-8 w-8 rounded-full ring-2 ring-white object-cover shadow-xs"
+                  />
                 </div>
                 <div className="text-xs text-[#526176]">
-                  <span className="font-semibold text-[#111827]">Trusted by job seekers</span>
+                  <span className="font-semibold text-[#111827]">Trusted by 10,000+ job seekers</span>
                   <span className="mx-1.5">•</span>
                   <span>4.9/5 satisfaction</span>
                 </div>

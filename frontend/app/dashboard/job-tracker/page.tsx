@@ -50,12 +50,12 @@ interface MiniResume {
   createdAt: string;
 }
 
-const COLUMNS: { id: Job["status"]; label: string; color: string; border: string }[] = [
-  { id: "wishlist", label: "Wishlist", color: "bg-indigo-500/10 text-indigo-400", border: "border-indigo-500/30" },
-  { id: "applied", label: "Applied", color: "bg-blue-500/10 text-blue-400", border: "border-blue-500/30" },
-  { id: "interviewing", label: "Interviewing", color: "bg-amber-500/10 text-amber-400", border: "border-amber-500/30" },
-  { id: "offered", label: "Offered", color: "bg-emerald-500/10 text-emerald-400", border: "border-emerald-500/30" },
-  { id: "rejected", label: "Rejected", color: "bg-rose-500/10 text-rose-400", border: "border-rose-500/30" }
+const COLUMNS: { id: Job["status"]; label: string; color: string; border: string; dot: string }[] = [
+  { id: "wishlist", label: "Wishlist", color: "bg-indigo-50 text-indigo-700", border: "border-indigo-200", dot: "bg-indigo-500" },
+  { id: "applied", label: "Applied", color: "bg-blue-50 text-blue-700", border: "border-blue-200", dot: "bg-blue-500" },
+  { id: "interviewing", label: "Interviewing", color: "bg-amber-50 text-amber-700", border: "border-amber-200", dot: "bg-amber-500" },
+  { id: "offered", label: "Offered", color: "bg-emerald-50 text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
+  { id: "rejected", label: "Rejected", color: "bg-rose-50 text-rose-700", border: "border-rose-200", dot: "bg-rose-500" }
 ];
 
 export default function JobTrackerPage() {
@@ -337,7 +337,7 @@ export default function JobTrackerPage() {
                 <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Total Tracked</p>
                 <h3 className="text-xl font-black text-[#111827] mt-1">{stats.total}</h3>
               </div>
-              <Briefcase className="h-6 w-6 text-[#087F6E] opacity-80" />
+              <Briefcase className="h-6 w-6 text-slate-500 opacity-80" />
             </CardContent>
           </Card>
           <Card className="border border-[#DCE7E9] bg-white rounded-2xl shadow-xs">
@@ -346,7 +346,7 @@ export default function JobTrackerPage() {
                 <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Applications</p>
                 <h3 className="text-xl font-black text-[#111827] mt-1">{stats.applied}</h3>
               </div>
-              <TrendingUp className="h-6 w-6 text-[#087F6E] opacity-80" />
+              <TrendingUp className="h-6 w-6 text-blue-500 opacity-80" />
             </CardContent>
           </Card>
           <Card className="border border-[#DCE7E9] bg-white rounded-2xl shadow-xs">
@@ -362,9 +362,9 @@ export default function JobTrackerPage() {
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Offers Received</p>
-                <h3 className="text-xl font-black text-[#087F6E] mt-1">{stats.offers}</h3>
+                <h3 className="text-xl font-black text-[#111827] mt-1">{stats.offers}</h3>
               </div>
-              <CheckCircle className="h-6 w-6 text-[#087F6E] opacity-80" />
+              <CheckCircle className="h-6 w-6 text-emerald-600 opacity-80" />
             </CardContent>
           </Card>
         </div>
@@ -378,18 +378,18 @@ export default function JobTrackerPage() {
                 key={col.id}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, col.id)}
-                className={`flex flex-col bg-[#F5FAFA] border border-[#DCE7E9] rounded-2xl p-3 min-w-[210px] transition-colors ${
-                  draggedJobId ? "hover:bg-[#E5F8F5]/50" : ""
+                className={`flex flex-col bg-slate-50 border border-slate-200/90 rounded-2xl p-3 min-w-[210px] transition-colors ${
+                  draggedJobId ? "hover:bg-slate-100/70" : ""
                 }`}
               >
                 
                 {/* Column header title */}
                 <div className="flex items-center justify-between mb-3.5 px-1 select-none">
                   <div className="flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full ${col.id === 'wishlist' ? 'bg-[#087F6E]' : col.id === 'applied' ? 'bg-blue-500' : col.id === 'interviewing' ? 'bg-amber-500' : col.id === 'offered' ? 'bg-[#087F6E]' : 'bg-rose-500'}`} />
+                    <span className={`w-2 h-2 rounded-full ${col.dot}`} />
                     <span className="font-bold text-xs text-[#111827]">{col.label}</span>
                   </div>
-                  <Badge className={`text-[9px] font-black border ${col.color} ${col.border}`}>
+                  <Badge className={`text-[9px] font-bold border ${col.color} ${col.border}`}>
                     {colJobs.length}
                   </Badge>
                 </div>
@@ -408,7 +408,7 @@ export default function JobTrackerPage() {
                           key={job.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, job.id)}
-                          className="group relative bg-white hover:bg-[#F5FAFA] border border-[#DCE7E9] hover:border-[#087F6E]/40 rounded-xl p-3.5 transition-all shadow-xs cursor-grab active:cursor-grabbing space-y-2.5"
+                          className="group relative bg-white hover:bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl p-3.5 transition-all shadow-xs cursor-grab active:cursor-grabbing space-y-2.5"
                         >
                           {/* Card header */}
                           <div className="space-y-0.5">
@@ -446,8 +446,8 @@ export default function JobTrackerPage() {
                               <span>{job.date}</span>
                             </div>
                             {associatedResume && (
-                              <div className="flex items-center gap-1 text-[9px] text-[#0d6e5a] font-bold bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 px-1.5 py-0.5 rounded max-w-full truncate">
-                                <FileText className="h-3 w-3 shrink-0" />
+                              <div className="flex items-center gap-1 text-[9px] text-slate-700 font-semibold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded max-w-full truncate">
+                                <FileText className="h-3 w-3 text-slate-500 shrink-0" />
                                 <span className="truncate">{associatedResume.jobTitle || "Custom Resume"}</span>
                               </div>
                             )}
@@ -594,7 +594,7 @@ export default function JobTrackerPage() {
                 <select
                   value={formResumeId}
                   onChange={(e) => setFormResumeId(e.target.value)}
-                  className="w-full h-9 border border-slate-200 bg-white text-slate-900 rounded-lg px-2.5 focus:border-[#0d6e5a] outline-none focus:ring-1 focus:ring-[#0d6e5a] text-xs font-semibold"
+                  className="w-full h-9 border border-slate-200 bg-white text-slate-900 rounded-lg px-2.5 focus:border-[#087F6E] outline-none focus:ring-1 focus:ring-[#087F6E] text-xs font-semibold"
                 >
                   <option value="none">-- None (Not Linked) --</option>
                   {resumes.map((res) => (
@@ -611,7 +611,7 @@ export default function JobTrackerPage() {
                 <select
                   value={formStatus}
                   onChange={(e) => setFormStatus(e.target.value as Job["status"])}
-                  className="w-full h-9 border border-slate-200 bg-white text-slate-900 rounded-lg px-2.5 focus:border-[#0d6e5a] outline-none focus:ring-1 focus:ring-[#0d6e5a] text-xs font-semibold"
+                  className="w-full h-9 border border-slate-200 bg-white text-slate-900 rounded-lg px-2.5 focus:border-[#087F6E] outline-none focus:ring-1 focus:ring-[#087F6E] text-xs font-semibold"
                 >
                   <option value="wishlist">Wishlist</option>
                   <option value="applied">Applied</option>
@@ -629,7 +629,7 @@ export default function JobTrackerPage() {
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                   rows={2}
-                  className="w-full p-2.5 border border-slate-200 bg-white text-slate-900 rounded-lg focus:border-[#0d6e5a] outline-none focus:ring-1 focus:ring-[#0d6e5a] font-sans text-xs resize-none"
+                  className="w-full p-2.5 border border-slate-200 bg-white text-slate-900 rounded-lg focus:border-[#087F6E] outline-none focus:ring-1 focus:ring-[#087F6E] font-sans text-xs resize-none"
                 />
               </div>
 
@@ -644,7 +644,7 @@ export default function JobTrackerPage() {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold h-8 text-xs rounded-lg px-4 shadow-sm transition-colors"
+                  className="bg-[#111827] hover:bg-slate-800 text-white font-bold h-8 text-xs rounded-lg px-4 shadow-sm transition-colors cursor-pointer"
                 >
                   {editingJob ? "Save Changes" : "Create Card"}
                 </Button>

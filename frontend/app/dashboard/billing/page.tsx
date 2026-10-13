@@ -177,12 +177,37 @@ export default function BillingPage() {
     return <BillingSkeleton />;
   }
 
-  // Quota computations
-  const totalLimit = activePlan === "free" ? 2 : activePlan === "premium" ? 20 : credits?.isOwner ? 999999 : 90;
+  // Quota computations directly synced with Profile & Credits API
   const isUnlimited = credits?.isOwner;
-  const used = credits?.freeUsed ?? 0;
-  const remaining = isUnlimited ? "Unlimited" : Math.max(0, totalLimit - used);
-  const percentUsed = isUnlimited ? 15 : Math.min(100, Math.round((used / totalLimit) * 100));
+  const totalLimit = isUnlimited
+    ? 999999
+    : activePlan === "promax" || activePlan === "team"
+    ? 90
+    : activePlan === "premium"
+    ? 20
+    : 2;
+
+  // Use authentic remaining balance from API (matches profile credits)
+  const remainingCredits = isUnlimited
+    ? "Unlimited"
+    : typeof credits?.freeRemaining === "number"
+    ? credits.freeRemaining
+    : typeof credits?.paidCredits === "number" && credits.paidCredits > 0
+    ? credits.paidCredits
+    : Math.max(0, totalLimit - (credits?.freeUsed ?? 0));
+
+  const remaining = remainingCredits;
+  const used = isUnlimited
+    ? 0
+    : typeof remaining === "number"
+    ? Math.max(0, totalLimit - remaining)
+    : (credits?.freeUsed ?? 0);
+
+  const percentUsed = isUnlimited
+    ? 15
+    : typeof remaining === "number"
+    ? Math.min(100, Math.round(((totalLimit - remaining) / totalLimit) * 100))
+    : 0;
 
   const planDisplayName = credits?.isOwner 
     ? "Developer Owner Account (Bypassed)"

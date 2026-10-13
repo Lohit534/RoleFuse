@@ -196,10 +196,10 @@ export default function DashboardPage() {
         }
 
         setUser(data.user);
-        // One-time feedback notification popup on Optimize page only
-        const hasSeenFeedback = localStorage.getItem("fastHire_feedback_one_time_shown");
-        if (!hasSeenFeedback) {
-          localStorage.setItem("fastHire_feedback_one_time_shown", "true");
+        // Feedback popup notification for this login session (shows once, if dismissed won't show on refresh, shows again on new login)
+        const lastLoginId = data.user.last_sign_in_at || data.user.id;
+        const dismissedLogin = sessionStorage.getItem("fastHire_feedback_dismissed_login");
+        if (dismissedLogin !== lastLoginId) {
           setShowOneTimeFeedback(true);
         }
         // Pre-load cached plan to prevent UI flash
@@ -662,6 +662,10 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => {
+                    if (user) {
+                      const lastLoginId = user.last_sign_in_at || user.id;
+                      sessionStorage.setItem("fastHire_feedback_dismissed_login", lastLoginId);
+                    }
                     window.dispatchEvent(new CustomEvent("open-feedback-toast"));
                     setShowOneTimeFeedback(false);
                   }}
@@ -670,7 +674,13 @@ export default function DashboardPage() {
                   Feedback
                 </button>
                 <button
-                  onClick={() => setShowOneTimeFeedback(false)}
+                  onClick={() => {
+                    if (user) {
+                      const lastLoginId = user.last_sign_in_at || user.id;
+                      sessionStorage.setItem("fastHire_feedback_dismissed_login", lastLoginId);
+                    }
+                    setShowOneTimeFeedback(false);
+                  }}
                   className="h-6 w-6 flex items-center justify-center text-[#526176] hover:text-[#111827] rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
                   title="Dismiss notification"
                 >

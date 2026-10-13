@@ -53,8 +53,8 @@ export default function Footer() {
             <p className="text-xs text-slate-600 leading-relaxed font-medium">
               AI resume optimization for people who’d rather be interviewing than reformatting.
             </p>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-[10px] font-bold text-[#0d6e5a]">
-              <Sparkles className="h-3 w-3" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700">
+              <Sparkles className="h-3 w-3 text-slate-500" />
               <span>ATS Score Lift 57+ pts</span>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default function Footer() {
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-xs text-slate-500 hover:text-[#0d6e5a] transition-colors font-medium inline-block"
+                    className="text-xs text-slate-500 hover:text-slate-900 transition-colors font-medium inline-block"
                   >
                     {item.label}
                   </Link>
@@ -89,7 +89,7 @@ export default function Footer() {
                   {item.isExternal ? (
                     <a
                       href={item.href}
-                      className="text-xs text-slate-500 hover:text-[#0d6e5a] transition-colors font-medium inline-flex items-center gap-1"
+                      className="text-xs text-slate-500 hover:text-slate-900 transition-colors font-medium inline-flex items-center gap-1"
                     >
                       <Mail className="h-3 w-3 text-slate-400" />
                       <span>{item.label}</span>
@@ -97,7 +97,7 @@ export default function Footer() {
                   ) : (
                     <Link
                       href={item.href}
-                      className="text-xs text-slate-500 hover:text-[#0d6e5a] transition-colors font-medium inline-block"
+                      className="text-xs text-slate-500 hover:text-slate-900 transition-colors font-medium inline-block"
                     >
                       {item.label}
                     </Link>
@@ -117,7 +117,7 @@ export default function Footer() {
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-xs text-slate-500 hover:text-[#0d6e5a] transition-colors font-medium inline-block"
+                    className="text-xs text-slate-500 hover:text-slate-900 transition-colors font-medium inline-block"
                   >
                     {item.label}
                   </Link>

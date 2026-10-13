@@ -178,6 +178,9 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("fastHire_feedback_dismissed_login");
+    }
     useResumeStore.getState().reset();
     setIsDropdownOpen(false);
     toast.success("Signed out successfully.");
