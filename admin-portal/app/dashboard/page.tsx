@@ -8,7 +8,6 @@ import {
   Search, TrendingUp, TrendingDown, Wallet, FileText,
   CheckCircle, User as UserIcon, Clock, AlertCircle,
   Trash2, CheckCircle2, RefreshCw, Menu, X,
-  UserPlus, Copy, ExternalLink, Mail, Check, ShieldCheck,
   Bell, ChevronRight, Activity, BarChart3,
   ArrowUpRight, ArrowDownRight, Filter, Eye, Send,
   Shield, CreditCard
@@ -76,20 +75,6 @@ export default function AdminDashboard() {
   const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
 
   const [refreshing, setRefreshing] = useState(false);
-
-  // Invite User Modal
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteName] = useState("");
-  const [invitePlan, setInvitePlan] = useState<"free" | "premium" | "promax">("free");
-  const [inviting, setInviting] = useState(false);
-  const [inviteResult, setInviteResult] = useState<{
-    emailSent: boolean;
-    inviteLink: string | null;
-    message: string;
-    email: string;
-  } | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -225,40 +210,6 @@ export default function AdminDashboard() {
       toast.success("Dashboard reloaded");
     } catch { toast.error("Failed to reload data"); }
     finally { setRefreshing(false); }
-  };
-
-  const handleInviteUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail || !inviteEmail.includes("@")) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-    setInviting(true);
-    try {
-      const res = await fetch("/api/invite", {
-        method: "POST",
-        headers: authHeaders(accessToken),
-        body: JSON.stringify({ email: inviteEmail.trim(), name: inviteName.trim(), planId: invitePlan }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setInviteResult({ emailSent: data.emailSent, inviteLink: data.inviteLink, message: data.message, email: inviteEmail.trim() });
-        toast.success(data.emailSent ? "Invitation email dispatched!" : "Invitation link generated!");
-        loadUsers(accessToken);
-      } else {
-        toast.error(data.error || "Failed to invite user");
-      }
-    } catch { toast.error("Connection error while sending invitation"); }
-    finally { setInviting(false); }
-  };
-
-  const resetInviteModal = () => {
-    setIsInviteModalOpen(false);
-    setInviteEmail("");
-    setInviteName("");
-    setInvitePlan("free");
-    setInviteResult(null);
-    setCopiedLink(false);
   };
 
   /* ── Actions ── */
@@ -485,13 +436,6 @@ export default function AdminDashboard() {
 
           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 px-3 pt-4 pb-1.5">Actions</p>
           <button
-            onClick={() => { setIsInviteModalOpen(true); setSidebarOpen(false); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-slate-600 hover:text-[#0d6e5a] hover:bg-teal-50 font-semibold transition-all group border-l-[3px] border-transparent"
-          >
-            <UserPlus className="h-4 w-4 text-slate-400 group-hover:text-[#0d6e5a] shrink-0" />
-            <span className="text-[13px]">Invite User</span>
-          </button>
-          <button
             onClick={() => { handleReload(); setSidebarOpen(false); }}
             disabled={refreshing}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-slate-600 hover:text-[#0d6e5a] hover:bg-teal-50 font-semibold transition-all group disabled:opacity-50 border-l-[3px] border-transparent"
@@ -555,13 +499,6 @@ export default function AdminDashboard() {
               </span>
               <span className="text-[10px] font-bold text-emerald-700">System Live</span>
             </div>
-            <button
-              onClick={() => setIsInviteModalOpen(true)}
-              className="flex items-center gap-2 text-xs font-bold text-white bg-[#0d6e5a] hover:bg-[#094d3f] px-3 py-2 rounded-xl shadow-sm transition-all cursor-pointer"
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Invite User</span>
-            </button>
           </div>
         </header>
 
@@ -731,10 +668,6 @@ export default function AdminDashboard() {
                     <Inbox className="h-3.5 w-3.5" />
                     Feedback Inbox
                   </button>
-                  <button onClick={() => setIsInviteModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm cursor-pointer">
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Invite New User
-                  </button>
                 </div>
               </div>
             </div>
@@ -748,13 +681,6 @@ export default function AdminDashboard() {
                   <h1 className="text-xl font-black text-slate-900">Users & Billing</h1>
                   <p className="text-xs text-slate-500 mt-0.5">Search and manage all registered users and their subscription tiers.</p>
                 </div>
-                <button
-                  onClick={() => setIsInviteModalOpen(true)}
-                  className="self-start sm:self-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0d6e5a] hover:bg-[#094d3f] text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  Invite New User
-                </button>
               </div>
 
               <div className="admin-card p-5 space-y-4">
@@ -1122,170 +1048,6 @@ export default function AdminDashboard() {
         </main>
       </div>
 
-      {/* ══ INVITE USER MODAL ══ */}
-      {isInviteModalOpen && (
-        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
-            {/* Modal header */}
-            <div className="flex items-center justify-between p-5 sm:p-6 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#0d6e5a]/10 flex items-center justify-center text-[#0d6e5a]">
-                  <UserPlus className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-slate-900">Invite New User</h3>
-                  <p className="text-[11px] text-slate-500 font-medium">Create an account & assign a plan tier</p>
-                </div>
-              </div>
-              <button
-                onClick={resetInviteModal}
-                className="h-8 w-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-5 sm:p-6">
-              {inviteResult ? (
-                <div className="space-y-4">
-                  <div className={`p-4 rounded-xl border text-xs ${
-                    inviteResult.emailSent
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                      : "bg-teal-50 border-teal-200 text-slate-900"
-                  }`}>
-                    <div className="flex items-center gap-2 font-bold mb-1">
-                      <CheckCircle2 className="h-4 w-4 text-[#0d6e5a]" />
-                      <span>{inviteResult.emailSent ? "Invitation Email Sent!" : "Account Created & Link Ready!"}</span>
-                    </div>
-                    <p className="text-[11px] leading-relaxed text-slate-600 mt-1">{inviteResult.message}</p>
-                  </div>
-
-                  {inviteResult.inviteLink && (
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-slate-700 block">
-                        {inviteResult.emailSent ? "Direct Activation Link (backup):" : "Direct Activation Link:"}
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          readOnly
-                          value={inviteResult.inviteLink}
-                          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 select-all outline-none cursor-text"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (inviteResult.inviteLink) {
-                              navigator.clipboard.writeText(inviteResult.inviteLink!);
-                              setCopiedLink(true);
-                              setTimeout(() => setCopiedLink(false), 2500);
-                              toast.success("Invite link copied!");
-                            }
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-[#0d6e5a] hover:bg-[#094d3f] text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
-                        >
-                          {copiedLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                          <span className="hidden sm:inline">{copiedLink ? "Copied!" : "Copy"}</span>
-                        </button>
-                      </div>
-
-                      <a
-                        href={`mailto:${inviteResult.email}?subject=${encodeURIComponent("You're invited to FastHire AI")}&body=${encodeURIComponent(
-                          `Hi ${inviteName || "there"},\n\nYou have been invited to FastHire AI — the AI resume optimizer.\n\nClick the link below to activate your account:\n${inviteResult.inviteLink}\n\nBest regards,\nFastHire AI Team`
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-2.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-700 transition-colors mt-2"
-                      >
-                        <Mail className="h-3.5 w-3.5 text-[#0d6e5a]" />
-                        Open in Email App
-                        <ExternalLink className="h-3 w-3 text-slate-400" />
-                      </a>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={resetInviteModal}
-                    className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
-                  >
-                    Done
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleInviteUser} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Email Address <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={inviteEmail}
-                      onChange={e => setInviteEmail(e.target.value)}
-                      placeholder="user@example.com"
-                      className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none focus:bg-white focus:border-[#0d6e5a] focus:ring-2 focus:ring-[#0d6e5a]/10 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      Full Name <span className="text-slate-400 font-normal">(optional)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={inviteName}
-                      onChange={e => setInviteName(e.target.value)}
-                      placeholder="Jane Doe"
-                      className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none focus:bg-white focus:border-[#0d6e5a] focus:ring-2 focus:ring-[#0d6e5a]/10 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">Initial Plan Tier</label>
-                    <select
-                      value={invitePlan}
-                      onChange={e => setInvitePlan(e.target.value as any)}
-                      className="w-full h-11 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 outline-none focus:bg-white focus:border-[#0d6e5a] transition-all cursor-pointer"
-                    >
-                      <option value="free">🆓 Free Tier (2 free monthly optimizations)</option>
-                      <option value="premium">⭐ Premium Pro (15 paid credits / month)</option>
-                      <option value="promax">⚡ Pro Max (Unlimited — 999,999 credits)</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#0d6e5a]/5 border border-[#0d6e5a]/15">
-                    <ShieldCheck className="h-4 w-4 text-[#0d6e5a] shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      <span className="font-bold text-slate-700">Resilient delivery: </span>
-                      If Supabase email limits are hit, a direct activation link is generated automatically — just copy and share it manually.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={resetInviteModal}
-                      className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={inviting || !inviteEmail.trim()}
-                      className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#0d6e5a] hover:bg-[#094d3f] text-white text-xs font-bold shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                      {inviting ? (
-                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span>Sending...</span></>
-                      ) : (
-                        <><Mail className="h-3.5 w-3.5" /><span>Send Invitation</span></>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

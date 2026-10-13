@@ -11,7 +11,6 @@ import { Progress } from "@/components/ui/progress";
 import { 
   CreditCard, 
   Loader2, 
-  ArrowLeft, 
   Calendar, 
   Check, 
   AlertCircle,
@@ -234,11 +233,6 @@ export default function BillingPage() {
         {/* Header Navigation & Title */}
         <ScrollFadeIn className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DCE7E9] pb-6">
           <div className="flex items-center gap-3.5">
-            <Link href="/dashboard">
-              <Button variant="outline" size="sm" className="border-[#DCE7E9] text-[#111827] hover:bg-[#F5FAFA] h-9 w-9 p-0 rounded-xl bg-white shadow-xs">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
             <div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#111827] tracking-tight flex items-center gap-2">
                 Billing &amp; Subscription
