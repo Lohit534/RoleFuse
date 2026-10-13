@@ -1,16 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../logger";
 
-// Active supported Gemini models in priority order (best quality first)
+// Active supported Gemini models in priority order
 const GEMINI_MODELS = [
   "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
   "gemini-3.8-flash",
-  "gemini-flash-latest",
-  "gemini-3.1-flash-lite",
-  "gemini-flash-lite-latest",
-  "gemma-4-26b-a4b-it",
-  "gemma-4-31b-it",
 ];
 
 // Helper to extract and clean JSON from AI output
@@ -76,85 +70,86 @@ export async function callGemini(
   let lastError: any = null;
 
   for (const modelName of GEMINI_MODELS) {
-    // 1. Try official SDK first
-    try {
-      logger.info(
-        `[gemini] Attempting generation with SDK model: ${modelName}`,
-      );
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          temperature: 0.2, // Lower = more deterministic, format-faithful
-          maxOutputTokens: 8192, // Raised from 4000 → handles long resumes without truncation
-          responseMimeType: "application/json", // Force JSON-only output where supported
-        },
-      });
-
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
-      if (responseText && responseText.trim().length > 50) {
-        const parsed = extractJSON(responseText);
+    // Retry up to 3 times per model with backoff for 503 transient spikes
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
         logger.info(
-          `[gemini] Successfully generated optimization via ${modelName} (SDK)`,
+          `[gemini] Attempt ${attempt}/3 with model: ${modelName}`,
         );
-        return parsed;
-      }
-    } catch (sdkError: any) {
-      lastError = sdkError;
-      logger.warn(
-        `[gemini] SDK attempt failed for ${modelName}:`,
-        sdkError?.message,
-      );
-    }
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            temperature: 0.2, // Lower = more deterministic, format-faithful
+            maxOutputTokens: 8192,
+            responseMimeType: "application/json",
+          },
+        });
 
-    // 2. Direct REST fallback for the same model
-    try {
-      logger.info(
-        `[gemini] Attempting generation with Direct REST endpoint: ${modelName}`,
-      );
-      const restRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.2,
-              maxOutputTokens: 8192,
-            },
-          }),
-        },
-      );
-
-      if (restRes.ok) {
-        const restJson = await restRes.json();
-        const candidateText =
-          restJson.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (candidateText && candidateText.trim().length > 50) {
-          const parsed = extractJSON(candidateText);
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        if (responseText && responseText.trim().length > 50) {
+          const parsed = extractJSON(responseText);
           logger.info(
-            `[gemini] Successfully generated optimization via ${modelName} (REST)`,
+            `[gemini] Successfully generated optimization via ${modelName} on attempt ${attempt}`,
           );
           return parsed;
         }
-      } else {
-        const errBody = await restRes.text();
+      } catch (sdkError: any) {
+        lastError = sdkError;
         logger.warn(
-          `[gemini] REST endpoint returned ${restRes.status} for ${modelName}:`,
-          errBody,
+          `[gemini] Model ${modelName} attempt ${attempt} failed: ${sdkError?.message}`,
         );
+
+        // If transient spike (503 or 429), short wait before retry
+        const isTransient = sdkError?.status === 503 || sdkError?.status === 429 || /503|429|demand/i.test(sdkError?.message || "");
+        if (isTransient && attempt < 3) {
+          await new Promise((r) => setTimeout(r, 800 * attempt));
+          continue;
+        }
+
+        // If not transient or last attempt, try direct REST fallback once
+        if (attempt === 3) {
+          try {
+            logger.info(
+              `[gemini] Attempting direct REST fallback for ${modelName}...`,
+            );
+            const restRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: prompt }] }],
+                  generationConfig: {
+                    temperature: 0.2,
+                    maxOutputTokens: 8192,
+                    responseMimeType: "application/json",
+                  },
+                }),
+              },
+            );
+
+            if (restRes.ok) {
+              const restJson = await restRes.json();
+              const candidateText =
+                restJson.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (candidateText && candidateText.trim().length > 50) {
+                const parsed = extractJSON(candidateText);
+                logger.info(
+                  `[gemini] Successfully generated optimization via ${modelName} (REST)`,
+                );
+                return parsed;
+              }
+            }
+          } catch (restErr: any) {
+            logger.warn(`[gemini] REST fallback also failed for ${modelName}:`, restErr?.message);
+          }
+        }
       }
-    } catch (restError: any) {
-      lastError = restError;
-      logger.warn(
-        `[gemini] REST attempt failed for ${modelName}:`,
-        restError?.message,
-      );
     }
   }
 
-  logger.error("All Gemini model fallbacks failed:", lastError);
+  logger.error("All Gemini model attempts failed:", lastError);
   return {
     resume: rawText,
     keywordsAdded: [],

@@ -83,9 +83,9 @@ export default function OptimizingProgress({
     };
   }, []);
 
-  // Process SSE stream events (steps 4 onward driven by API)
+  // Process SSE stream events (all steps 1-6 driven dynamically by the server)
   const processStreamChunk = (data: any) => {
-    if (data.step >= 4) {
+    if (data.step && data.step >= 1) {
       if (data.status === "running") {
         stepStartTimes.current[data.step] = Date.now();
         setSteps((prev) =>
@@ -115,7 +115,7 @@ export default function OptimizingProgress({
           setProgress(100);
           setTimeout(() => {
             if (isMountedRef.current) onComplete(data.result);
-          }, 100);
+          }, 80);
         }
       }
     }
@@ -128,40 +128,12 @@ export default function OptimizingProgress({
     let cancelled = false;
 
     const startPipeline = async () => {
-      // Step 1: rapid visual progression
+      // Step 1: initialize pipeline immediately
       stepStartTimes.current[1] = Date.now();
       setSteps((prev) =>
         prev.map((s) => (s.id === 1 ? { ...s, status: "running" } : s))
       );
-      setProgress(15);
-      await new Promise((r) => setTimeout(r, 60));
-      if (cancelled) return;
-
-      const dur1 = "0.1s";
-      setSteps((prev) =>
-        prev.map((s) => (s.id === 1 ? { ...s, status: "done", duration: dur1 } : s))
-      );
-
-      // Step 2: rapid visual progression
-      stepStartTimes.current[2] = Date.now();
-      setSteps((prev) =>
-        prev.map((s) => (s.id === 2 ? { ...s, status: "running" } : s))
-      );
-      setProgress(30);
-      await new Promise((r) => setTimeout(r, 60));
-      if (cancelled) return;
-
-      const dur2 = "0.1s";
-      setSteps((prev) =>
-        prev.map((s) => (s.id === 2 ? { ...s, status: "done", duration: dur2 } : s))
-      );
-
-      // Step 3: detection API call - initiates fetch immediately!
-      stepStartTimes.current[3] = Date.now();
-      setSteps((prev) =>
-        prev.map((s) => (s.id === 3 ? { ...s, status: "running" } : s))
-      );
-      setProgress(45);
+      setProgress(10);
 
       try {
         const res = await fetch("/api/optimize", {

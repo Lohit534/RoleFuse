@@ -126,10 +126,9 @@ export function UseSavedResumeModal({
                 </div>
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="h-7 text-[10px] font-bold border-slate-200 text-slate-700 group-hover:bg-[#0d6e5a] group-hover:text-white group-hover:border-[#0d6e5a] transition-all px-3 rounded-lg bg-white"
+                  className="h-8 text-xs font-bold bg-[#087F6E] hover:bg-[#075E53] text-white shadow-xs transition-all px-3.5 rounded-xl border-none cursor-pointer"
                 >
-                  Use This <ArrowRight className="h-3 w-3 ml-1" />
+                  Use This <ArrowRight className="h-3.5 w-3.5 ml-1" />
                 </Button>
               </div>
             ))

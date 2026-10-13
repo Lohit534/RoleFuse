@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { Textarea } from "@/components/ui/textarea";
 import { countWords } from "@/lib/utils";
@@ -24,6 +24,13 @@ export default function ResumeInput({
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Automatically switch to "paste" tab whenever resume text is loaded or changed
+  useEffect(() => {
+    if (value && value.trim().length > 0) {
+      setActiveTab("paste");
+    }
+  }, [value]);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[], rejectedFiles: any[]) => {
@@ -143,7 +150,7 @@ export default function ResumeInput({
           <button
             type="button"
             onClick={() => onOpenSavedResumes?.()}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg text-[#526176] hover:text-[#087F6E] hover:bg-white/60 transition-all cursor-pointer"
+            className="px-3 py-1.5 text-xs font-bold rounded-lg text-slate-800 hover:text-[#087F6E] hover:bg-white/80 transition-all cursor-pointer whitespace-nowrap"
           >
             Saved resumes
           </button>

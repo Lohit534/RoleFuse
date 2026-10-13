@@ -758,33 +758,29 @@ export async function callAIText(prompt: string): Promise<string> {
     .replace(/^["']|["']$/g, "")
     .trim();
   if (apiKeyGemini) {
-    const GEMINI_MODELS = [
-      "gemini-3.5-flash",
-      "gemini-3.5-flash-lite",
-      "gemini-3.8-flash",
-      "gemini-flash-latest",
-      "gemini-3.1-flash-lite",
-      "gemini-flash-lite-latest",
-      "gemma-4-26b-a4b-it",
-      "gemma-4-31b-it",
-    ];
+    const GEMINI_MODELS = ["gemini-3.5-flash", "gemini-3.8-flash"];
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(apiKeyGemini);
 
     for (const modelName of GEMINI_MODELS) {
-      try {
-        logger.info(
-          `AI Router: Generating text response via Gemini (${modelName})...`,
-        );
-        const model = genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        if (text) return text.trim();
-      } catch (e) {
-        logger.warn(
-          `AI Router: Gemini text generation with ${modelName} failed, trying next...`,
-          e,
-        );
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          logger.info(
+            `AI Router: Generating text response via Gemini (${modelName}) attempt ${attempt}...`,
+          );
+          const model = genAI.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent(prompt);
+          const text = result.response.text();
+          if (text) return text.trim();
+        } catch (e: any) {
+          logger.warn(
+            `AI Router: Gemini text generation with ${modelName} attempt ${attempt} failed:`,
+            e?.message,
+          );
+          if (attempt < 3 && (/503|429|demand/i.test(e?.message || "") || e?.status === 503)) {
+            await new Promise((r) => setTimeout(r, 800 * attempt));
+          }
+        }
       }
     }
   }

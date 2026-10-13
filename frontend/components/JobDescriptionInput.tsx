@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { countWords } from "@/lib/utils";
@@ -27,6 +27,13 @@ export default function JobDescriptionInput({
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [fetchSuccess, setFetchSuccess] = useState(false);
+
+  // Automatically switch to "paste" tab whenever job description text is loaded
+  useEffect(() => {
+    if (value && value.trim().length > 0) {
+      setActiveTab("paste");
+    }
+  }, [value]);
 
   const handleFetchUrl = async () => {
     if (!url.trim()) return;
