@@ -59,16 +59,16 @@ export default function GstInvoiceModal({
       <div className="max-w-2xl w-full bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden print:border-none print:shadow-none print:bg-white print:max-w-none print:w-full my-auto">
         
         {/* Modal Top Bar (Hidden on Print) */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-200 bg-slate-50 print:hidden">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#DCE7E9] bg-[#F5FAFA] print:hidden">
           <div className="flex items-center gap-2">
-            <Receipt className="h-4.5 w-4.5 text-[#0d6e5a]" />
-            <span className="font-extrabold text-slate-900 text-xs sm:text-sm">Official GST Tax Invoice</span>
+            <Receipt className="h-4.5 w-4.5 text-[#087F6E]" />
+            <span className="font-extrabold text-[#111827] text-xs sm:text-sm">Official GST Tax Invoice</span>
           </div>
           <div className="flex items-center gap-2">
             <Button
               onClick={handleDownload}
               size="sm"
-              className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-[11px] sm:text-xs h-8 px-3 rounded-lg flex items-center gap-1.5 shadow-sm"
+              className="bg-[#087F6E] hover:bg-[#075E53] text-white font-semibold text-xs h-8 px-3 rounded-lg flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
             >
               <Download className="h-3.5 w-3.5" />
               <span>Download PDF</span>

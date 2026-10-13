@@ -34,7 +34,6 @@ import { toast } from "react-hot-toast";
 import SupportChatbot from "@/components/SupportChatbot";
 
 import FeedbackToast from "@/components/FeedbackToast";
-import FeedbackBanner from "@/components/FeedbackBanner";
 import { ReferralModal } from "@/components/ReferralModal";
 import { DemoVideoModal } from "@/components/DemoVideoModal";
 import { DataPreferencesModal } from "@/components/DataPreferencesModal";
@@ -769,9 +768,6 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
             <span className="text-[10px] font-bold">History</span>
           </Link>
         </div>
-      )}
-      {user && !hideNav && pathname !== "/dashboard/history" && (
-        <FeedbackBanner onOpenFeedback={() => setIsFeedbackOpen(true)} />
       )}
       {/* Unified Help Center, Support Tickets & 24/7 AI Chatbot — paid/owner only */}
       {user && !hideNav && (isOwner || isPremium || isProMax) && (

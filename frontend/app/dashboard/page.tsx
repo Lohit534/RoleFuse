@@ -50,6 +50,7 @@ import {
   Check,
   CheckCircle2,
   AlertCircle,
+  Bell,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
@@ -125,6 +126,7 @@ export default function DashboardPage() {
   const [weakBullets, setWeakBullets] = useState<WeakBullet[]>([]);
   const [showBulletModal, setShowBulletModal] = useState(false);
   const [pendingResumeText, setPendingResumeText] = useState("");
+  const [showOneTimeFeedback, setShowOneTimeFeedback] = useState(false);
   const sampleLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -194,6 +196,12 @@ export default function DashboardPage() {
         }
 
         setUser(data.user);
+        // One-time feedback notification popup on Optimize page only
+        const hasSeenFeedback = localStorage.getItem("fastHire_feedback_one_time_shown");
+        if (!hasSeenFeedback) {
+          localStorage.setItem("fastHire_feedback_one_time_shown", "true");
+          setShowOneTimeFeedback(true);
+        }
         // Pre-load cached plan to prevent UI flash
         const cachedPlan = localStorage.getItem(
           `fastHire_plan_${data.user.id}`,
@@ -639,6 +647,40 @@ export default function DashboardPage() {
       />
 
       <main className="relative flex-1 mx-auto max-w-[1280px] w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-8">
+        {/* One-Time Feedback Notification (Only on Optimize page for logged in user) */}
+        {showOneTimeFeedback && (
+          <div className="w-full flex justify-center mb-6 select-none animate-in slide-in-from-top duration-300">
+            <div className="w-full max-w-[640px] bg-white text-[#111827] border border-[#DCE7E9] rounded-2xl py-2 px-4 shadow-sm flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-7 w-7 rounded-full bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0">
+                  <Bell className="h-4 w-4" />
+                </div>
+                <p className="text-xs sm:text-sm text-[#526176] font-medium truncate sm:whitespace-normal">
+                  <strong className="font-bold text-[#111827]">We'd love your feedback!</strong> Share your thoughts or report issues.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("open-feedback-toast"));
+                    setShowOneTimeFeedback(false);
+                  }}
+                  className="bg-[#087F6E] hover:bg-[#075E53] text-white text-xs font-semibold px-3 py-1 rounded-xl transition-all cursor-pointer"
+                >
+                  Feedback
+                </button>
+                <button
+                  onClick={() => setShowOneTimeFeedback(false)}
+                  className="h-6 w-6 flex items-center justify-center text-[#526176] hover:text-[#111827] rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="Dismiss notification"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── LOADING OVERLAY ─────────────────────────────────────── */}
         {optimizing && (
           <div className="fixed inset-0 bg-white/95 z-50 flex flex-col items-center justify-center p-6 select-none animate-in fade-in duration-300 overflow-y-auto">
@@ -662,18 +704,18 @@ export default function DashboardPage() {
           <div className="mb-6 flex items-center justify-between select-none">
             {/* Score improvement headline */}
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight">
                 Score improved{" "}
-                <span className="text-slate-500">
+                <span className="text-[#526176]">
                   {beforeScore?.overall ?? 0}%
                 </span>{" "}
                 →{" "}
-                <span className="text-emerald-600">
+                <span className="text-[#087F6E]">
                   {afterScore?.overall ?? 0}%
                 </span>
               </h1>
               {delta > 0 && (
-                <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                <span className="text-xs font-black px-3 py-1 rounded-full bg-[#E5F8F5] text-[#087F6E] border border-[#D4F3EF]">
                   +{delta} points
                 </span>
               )}
@@ -683,7 +725,7 @@ export default function DashboardPage() {
               <Link href="/dashboard/history">
                 <Button
                   size="sm"
-                  className="bg-slate-900 hover:bg-slate-700 text-white text-xs font-bold h-9 rounded-xl px-4"
+                  className="bg-[#111827] hover:bg-slate-800 text-white text-xs font-semibold h-9 rounded-xl px-4"
                 >
                   <History className="h-3.5 w-3.5 mr-1.5" />
                   Back to History
@@ -694,22 +736,18 @@ export default function DashboardPage() {
         ) : (
           /* Header Title Block */
           <div className="text-center space-y-3 mb-10 select-none">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] text-xs font-bold mx-auto mb-1">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Resume Optimizer</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-black text-[#111827] tracking-tight leading-none">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#111827] tracking-tight leading-[1.15]">
               Improve Your Resume{" "}
               <span className="bg-gradient-to-r from-[#087F6E] via-[#075E53] to-[#087F6E] bg-clip-text text-transparent">
                 for Any Job
               </span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#526176] max-w-xl mx-auto font-medium leading-relaxed">
+            <p className="text-sm sm:text-base text-[#526176] max-w-xl mx-auto font-normal leading-relaxed">
               Paste your resume and the job you want. We improve it to match
               &mdash; automatically. Get 2 free resumes per month.
             </p>
             <div>
-              <Badge className="bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] hover:bg-[#E5F8F5] px-3 py-1 text-[10px] rounded-full font-bold select-none">
+              <Badge className="bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] hover:bg-[#E5F8F5] px-3.5 py-1.5 text-xs rounded-full font-semibold select-none">
                 +1 extra resume for each referral
               </Badge>
             </div>

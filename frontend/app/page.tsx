@@ -77,7 +77,7 @@ function LandingFAQ() {
           >
             <button
               onClick={() => setOpenIdx(isOpen ? null : idx)}
-              className="w-full flex items-center justify-between p-5 text-left font-semibold text-[15px] sm:text-base text-[#111827] hover:text-[#087F6E] transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between p-5 text-left font-semibold text-[15px] sm:text-base text-[#111827] transition-colors cursor-pointer"
             >
               <span>{faq.q}</span>
               {isOpen ? (

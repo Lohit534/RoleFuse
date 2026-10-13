@@ -1126,10 +1126,10 @@ export default function ResumesPage() {
               {/* Header Details */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <h1 className="text-2xl font-black text-[#111827] tracking-tight flex items-center gap-2 select-none">
+                  <h1 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight flex items-center gap-2 select-none">
                     My Resumes
                   </h1>
-                  <p className="text-xs text-[#526176] font-medium mt-0.5">
+                  <p className="text-sm sm:text-base text-[#526176] font-normal mt-1">
                     Manage your saved resumes. Edit, optimize, or create a new version anytime. ({resumes.length} / {maxLimit})
                   </p>
                 </div>

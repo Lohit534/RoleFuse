@@ -215,10 +215,10 @@ export default function BillingPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black text-[#111827] tracking-tight flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#111827] tracking-tight flex items-center gap-2">
                 Billing &amp; Subscription
               </h1>
-              <p className="text-xs text-[#526176] font-medium mt-0.5">
+              <p className="text-sm sm:text-base text-[#526176] font-normal mt-1">
                 Understand your plan quotas, credit usage, and download GST tax invoices.
               </p>
             </div>
@@ -412,21 +412,21 @@ export default function BillingPage() {
           {/* Right 5 Columns: Invoices & Tax Receipts */}
           <div className="lg:col-span-5 space-y-6">
             
-            <Card className="border-slate-200 bg-white shadow-sm rounded-2xl overflow-hidden flex flex-col">
-              <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+            <Card className="border-[#DCE7E9] bg-white shadow-xs rounded-2xl overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-[#DCE7E9] flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <h3 className="text-sm font-extrabold text-slate-900">Invoice &amp; Receipts</h3>
-                  <p className="text-[10px] text-slate-500">Download official GST-compliant tax invoices.</p>
+                  <h3 className="text-base sm:text-lg font-black text-[#111827]">Invoice &amp; Receipts</h3>
+                  <p className="text-xs text-[#526176]">Download official GST-compliant tax invoices.</p>
                 </div>
-                <Receipt className="h-4 w-4 text-[#0d6e5a]" />
+                <Receipt className="h-5 w-5 text-[#087F6E]" />
               </div>
 
               <div className="p-6 space-y-3 min-h-[260px] flex flex-col justify-start">
                 {invoices.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center py-10 text-slate-500 space-y-2 select-none">
-                    <FileText className="h-8 w-8 text-slate-400" />
-                    <span className="text-xs font-bold text-slate-600">No Invoices Yet</span>
-                    <p className="text-[11px] text-slate-500 max-w-xs">
+                  <div className="flex-1 flex flex-col items-center justify-center text-center py-10 text-[#526176] space-y-2 select-none">
+                    <FileText className="h-9 w-9 text-slate-300" />
+                    <span className="text-sm font-bold text-[#111827]">No Invoices Yet</span>
+                    <p className="text-xs text-[#526176] max-w-xs">
                       When you upgrade to a paid plan, your GST receipts and transaction records will appear here.
                     </p>
                   </div>
@@ -435,32 +435,32 @@ export default function BillingPage() {
                     <div
                       key={inv.id}
                       onClick={() => handlePrintReceipt(inv)}
-                      className="bg-slate-50 border border-slate-200 hover:border-[#0d6e5a]/40 p-3.5 rounded-xl flex items-center justify-between gap-3 cursor-pointer group transition-all"
+                      className="bg-white border border-[#DCE7E9] hover:border-[#087F6E]/40 p-4 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all shadow-xs"
                     >
                       <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900 group-hover:text-[#0d6e5a] transition-colors truncate">
+                          <span className="text-sm font-semibold text-[#111827] truncate">
                             {inv.description}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                        <div className="flex items-center gap-2 text-xs text-[#526176] font-mono">
                           <span>{inv.date}</span>
                           <span>&bull;</span>
-                          <span className="text-emerald-700 font-semibold uppercase">{inv.status}</span>
+                          <span className="text-[#075E53] font-semibold uppercase">{inv.status}</span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-xs font-bold text-slate-900">{inv.amount}</span>
+                        <span className="text-sm font-bold text-[#111827]">{inv.amount}</span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handlePrintReceipt(inv);
                           }}
-                          className="h-7 px-2.5 rounded-lg bg-teal-50 group-hover:bg-[#0d6e5a] border border-teal-200 text-[#0d6e5a] group-hover:text-white transition-all flex items-center gap-1 text-[10px] font-bold"
-                          title="Download GST Invoice"
+                          className="h-8 px-3 rounded-lg bg-white hover:bg-[#F5FAFA] border border-[#DCE7E9] hover:border-[#087F6E] text-[#111827] hover:text-[#087F6E] transition-all flex items-center gap-1.5 text-xs font-semibold shadow-xs cursor-pointer"
+                          title="Download GST Invoice PDF"
                         >
-                          <Download className="h-3 w-3" />
+                          <Download className="h-3.5 w-3.5 text-[#087F6E]" />
                           <span>PDF</span>
                         </button>
                       </div>
@@ -469,8 +469,8 @@ export default function BillingPage() {
                 )}
               </div>
 
-              <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center gap-2.5 text-[10px] text-slate-500 select-none">
-                <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+              <div className="p-4 bg-[#F5FAFA] border-t border-[#DCE7E9] flex items-center gap-2.5 text-xs text-[#526176] select-none">
+                <ShieldCheck className="h-4 w-4 text-[#087F6E] shrink-0" />
                 <span>256-bit SSL secured payments &amp; 5% GST tax invoice receipts.</span>
               </div>
             </Card>

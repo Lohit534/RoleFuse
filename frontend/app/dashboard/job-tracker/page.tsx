@@ -300,11 +300,11 @@ export default function JobTrackerPage() {
         {/* Title and Controls Header Row */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-[#111827] tracking-tight flex items-center gap-2">
-              <Briefcase className="h-6 w-6 text-[#087F6E]" />
+            <h1 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight flex items-center gap-3">
+              <Briefcase className="h-7 w-7 text-[#087F6E]" />
               Job Application Tracker
             </h1>
-            <p className="text-xs text-[#526176] font-medium mt-0.5">
+            <p className="text-sm sm:text-base text-[#526176] font-normal mt-1">
               Track your applications and never miss an opportunity.
             </p>
           </div>

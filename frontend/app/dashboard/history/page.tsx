@@ -1388,12 +1388,12 @@ export default function HistoryPage() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-xl bg-[#E5F8F5] border border-[#D4F3EF] flex items-center justify-center text-[#087F6E]">
-                      <History className="h-4.5 w-4.5" />
+                    <div className="h-9 w-9 rounded-xl bg-[#E5F8F5] border border-[#D4F3EF] flex items-center justify-center text-[#087F6E]">
+                      <History className="h-5 w-5" />
                     </div>
-                    <h1 className="text-2xl font-black text-[#111827] tracking-tight">Optimization History</h1>
+                    <h1 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight">Optimization History</h1>
                   </div>
-                  <p className="text-xs text-[#526176] mt-1 ml-10 font-medium">
+                  <p className="text-sm sm:text-base text-[#526176] mt-1.5 ml-11 font-normal">
                     {resumes.length > 0
                       ? `${resumes.length} optimization${resumes.length !== 1 ? "s" : ""} — click any row to view details`
                       : "Your optimization history will appear here"}

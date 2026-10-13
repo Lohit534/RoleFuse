@@ -352,15 +352,15 @@ input::placeholder, textarea::placeholder {
   color: #9ca3af !important;
 }
 input:focus, textarea:focus {
-  border-color: #0d6e5a !important;
-  box-shadow: 0 0 0 2px rgba(13, 110, 90, 0.12) !important;
+  border-color: #087F6E !important;
+  box-shadow: 0 0 0 2px rgba(8, 127, 110, 0.12) !important;
 }
 
 /* Badge overrides */
 .badge-green {
-  background: rgba(13, 110, 90, 0.1);
-  color: #0d6e5a;
-  border: 1px solid rgba(13, 110, 90, 0.2);
+  background: rgba(8, 127, 110, 0.1);
+  color: #087F6E;
+  border: 1px solid rgba(8, 127, 110, 0.2);
 }
 
 /* Scrollbar - light */

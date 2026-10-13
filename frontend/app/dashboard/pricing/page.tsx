@@ -511,10 +511,10 @@ export default function PricingPage() {
 
         {/* Title details */}
         <ScrollFadeIn className="text-center space-y-4">
-          <h1 className="text-3xl md:text-4xl font-black text-[#111827] tracking-tight leading-none">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#111827] tracking-tight leading-[1.15]">
             Choose the plan that <span className="bg-gradient-to-r from-[#087F6E] via-[#075E53] to-[#087F6E] bg-clip-text text-transparent">fits your goals</span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#526176] max-w-xl mx-auto font-medium leading-relaxed">
+          <p className="text-sm sm:text-base text-[#526176] max-w-xl mx-auto font-normal leading-relaxed">
             Get access to powerful AI tools and take control of your career journey.
           </p>
 
@@ -700,33 +700,33 @@ export default function PricingPage() {
 
         {/* FAQ SECTION (Accordion dropdowns list) */}
         <div className="max-w-3xl mx-auto w-full space-y-4 select-none">
-          <div className="text-center space-y-1 mb-8">
-            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Frequently Asked Questions</h2>
-            <p className="text-xs text-slate-500">Everything you need to know about FastHire AI subscriptions.</p>
+          <div className="text-center space-y-2 mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">Frequently Asked Questions</h2>
+            <p className="text-sm sm:text-base text-[#526176]">Everything you need to know about FastHire AI subscriptions.</p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {FAQ_ITEMS.map((faq, idx) => {
               const isOpen = openFAQIndex === idx;
               return (
                 <div
                   key={idx}
-                  className="border border-slate-200 bg-white rounded-xl overflow-hidden transition-all duration-200 shadow-sm"
+                  className="border border-[#DCE7E9] bg-white rounded-2xl overflow-hidden transition-all duration-200 shadow-xs"
                 >
                   <button
                     onClick={() => toggleFAQ(idx)}
-                    className="w-full flex items-center justify-between p-4 text-left font-bold text-xs text-slate-900 hover:text-[#0d6e5a] transition-colors"
+                    className="w-full flex items-center justify-between p-5 text-left font-semibold text-sm sm:text-base text-[#111827] transition-colors cursor-pointer"
                   >
-                    <span>{faq.question}</span>
+                    <span className="text-[#111827]">{faq.question}</span>
                     {isOpen ? (
-                      <ChevronUp className="h-4 w-4 text-slate-500 shrink-0" />
+                      <ChevronUp className="h-4 w-4 text-[#526176] shrink-0 ml-3" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+                      <ChevronDown className="h-4 w-4 text-[#526176] shrink-0 ml-3" />
                     )}
                   </button>
 
                   {isOpen && (
-                    <div className="px-4 pb-4 text-xs text-slate-600 font-normal leading-relaxed border-t border-slate-100 pt-3 animate-in fade-in slide-in-from-top-1 duration-150 select-text">
+                    <div className="px-5 pb-5 text-sm sm:text-[15px] text-[#526176] font-normal leading-relaxed border-t border-[#DCE7E9] pt-4 select-text">
                       {faq.answer}
                     </div>
                   )}
