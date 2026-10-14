@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const premiumUserIds = new Set(premiumPurchasers.map((p: any) => p.userId).filter(Boolean));
     const premiumEmails = new Set(premiumPurchasers.map((p: any) => (p.email || "").toLowerCase().trim()).filter(Boolean));
 
-    // 3. Sync from Supabase Auth admin to ensure all registered accounts appear
+    // 3. Enrich existing DB users with Supabase Auth admin metadata (do NOT resurrect deleted users)
     try {
       const { data: authData } = await admin.auth.admin.listUsers();
       if (authData?.users) {
@@ -58,15 +58,13 @@ export async function GET(request: NextRequest) {
           const existing = usersList.find((u: any) => 
             u.id === au.id || (u.email && u.email.toLowerCase().trim() === auEmail)
           );
-          if (!existing) {
-            const newUser = {
-              id: au.id,
-              email: au.email,
-              name: au.user_metadata?.full_name || au.email?.split("@")[0] || null,
-              createdAt: au.created_at,
-            };
-            usersList.push(newUser);
-            await admin.from("User").upsert(newUser, { onConflict: "id" }).catch(() => {});
+          if (existing) {
+            if (!existing.name && au.user_metadata?.full_name) {
+              existing.name = au.user_metadata.full_name;
+            }
+            if (!existing.createdAt && au.created_at) {
+              existing.createdAt = au.created_at;
+            }
           }
         }
       }
@@ -380,3 +378,55 @@ export async function POST(request: NextRequest) {
 }
 
 export const PATCH = POST;
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!isOwnerEmail(user.email)) {
+      return NextResponse.json({ error: "Forbidden: Owner access required" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get("userId") || searchParams.get("id");
+    if (!targetUserId) {
+      return NextResponse.json({ error: "Missing target userId" }, { status: 400 });
+    }
+
+    const admin = getAdminClient() as any;
+
+    // Check if target is owner/admin
+    const { data: targetUser } = await admin
+      .from("User")
+      .select("email")
+      .eq("id", targetUserId)
+      .maybeSingle();
+
+    if (targetUser?.email && isOwnerEmail(targetUser.email)) {
+      return NextResponse.json({ error: "Owner account cannot be deleted." }, { status: 403 });
+    }
+
+    // Delete related records
+    await admin.from("Credit").delete().eq("userId", targetUserId).catch(() => {});
+    await admin.from("Resume").delete().eq("userId", targetUserId).catch(() => {});
+    await admin.from("User").delete().eq("id", targetUserId).catch(() => {});
+
+    // Delete from auth.users so it won't linger in Supabase Auth
+    try {
+      if (admin?.auth?.admin?.deleteUser) {
+        await admin.auth.admin.deleteUser(targetUserId);
+      }
+    } catch (_e) {}
+
+    logger.info(`[admin/users] User ${targetUserId} deleted by admin ${user.email}`);
+    return NextResponse.json({ success: true, deletedUserId: targetUserId });
+  } catch (error: any) {
+    logger.error("[admin/users] DELETE unhandled error:", error.message);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

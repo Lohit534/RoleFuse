@@ -1,22 +1,26 @@
 "use client";
 
 import React from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * SiteBackground
  * 
  * Recreates the exact signature backdrop from the user's reference image:
- * - Crisp, clean pure white page ground (#FFFFFF) — zero full-page color wash
- * - A large, elegant organic fluid curved backdrop shape in soft light teal (#E6F7F5, #D4F3EF, #ECFDF5)
- *   sweeping smoothly behind the main content area
- * - Playful, floating micro-accent chips matching the reference image:
- *   • Soft amber rounded square chip on the left (#F59E0B)
- *   • Soft purple rounded square chip on the right (#8B5CF6)
- *   • Soft rose/pink circular dot near the bottom (#F43F5E)
- *   • Soft mint diamond accent on the upper right (#087F6E)
- * - Hardware-accelerated, responsive, non-interactive (pointer-events: none)
+ * - Crisp, clean pure white page ground (#FFFFFF)
+ * - Large, elegant organic fluid curved backdrop shape in soft light teal
+ * - Playful, floating micro-accent chips
+ * - Strictly displayed ONLY on landing page and auth (login/signup) pages;
+ *   completely removed after login on /dashboard (optimization, resumes, job tracker, pricing, billing, etc.)
  */
 export default function SiteBackground() {
+  const pathname = usePathname();
+
+  // Hide on all logged-in dashboard tools (optimization, resumes, job-tracker, pricing, billing, history)
+  if (!pathname || pathname.startsWith("/dashboard")) {
+    return null;
+  }
+
   return (
     <div
       aria-hidden="true"

@@ -17,22 +17,7 @@ export async function GET(request: NextRequest) {
     const adminClient = getAdminClient(auth.token) as any;
     const now = new Date();
 
-    // 1. Fetch all auth users from Supabase Auth Admin API (most authoritative)
-    let authUsers: any[] = [];
-    try {
-      if (adminClient?.auth?.admin?.listUsers) {
-        const { data: authData, error: authErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-        if (!authErr && authData?.users) {
-          authUsers = authData.users;
-        } else if (authErr) {
-          console.warn("[users/GET] auth.admin.listUsers error:", authErr.message);
-        }
-      }
-    } catch (authErr: any) {
-      console.warn("[users/GET] auth.admin.listUsers exception:", authErr.message);
-    }
-
-    // 2. Fetch all User table records from database
+    // 1. Fetch all User table records from database (authoritative source of truth)
     let dbUsers: any[] = [];
     const { data: dbUserRows, error: usersErr } = await adminClient
       .from("User")
@@ -43,54 +28,33 @@ export async function GET(request: NextRequest) {
       dbUsers = dbUserRows;
     }
 
-    // 3. Merge: start with auth users (most authoritative), add any DB-only users
-    const userMap = new Map<string, any>();
-
-    // Add DB users first
-    for (const u of dbUsers) {
-      if (u.id) userMap.set(u.id, { ...u });
-      if (u.email) userMap.set(u.email.toLowerCase().trim(), { ...u });
+    // 2. Fetch auth users map strictly to enrich existing DB users with metadata (do NOT resurrect deleted users)
+    const authUsersMap = new Map<string, any>();
+    try {
+      if (adminClient?.auth?.admin?.listUsers) {
+        const { data: authData, error: authErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+        if (!authErr && authData?.users) {
+          for (const au of authData.users) {
+            authUsersMap.set(au.id, au);
+            if (au.email) authUsersMap.set(au.email.toLowerCase().trim(), au);
+          }
+        }
+      }
+    } catch (authErr: any) {
+      console.warn("[users/GET] auth.admin.listUsers exception:", authErr.message);
     }
 
-    // Merge / add auth users (auth is authoritative for email/name)
-    const mergedUsers: any[] = [];
-    const seenIds = new Set<string>();
-    const seenEmails = new Set<string>();
-
-    for (const au of authUsers) {
-      const auEmail = (au.email || "").toLowerCase().trim();
-      const auId = au.id;
-
-      if (seenIds.has(auId) || (auEmail && seenEmails.has(auEmail))) continue;
-      seenIds.add(auId);
-      if (auEmail) seenEmails.add(auEmail);
-
-      // Check if this auth user exists in DB
-      const dbMatch = userMap.get(auId) || (auEmail ? userMap.get(auEmail) : null);
-      
-      const merged = {
-        id: auId,
-        email: au.email || dbMatch?.email || "",
-        name: au.user_metadata?.full_name || dbMatch?.name || au.email?.split("@")[0] || null,
-        createdAt: au.created_at || dbMatch?.createdAt || now.toISOString(),
+    // Only include users who exist in the database (public.User).
+    // NEVER resurrect or auto-insert deleted users.
+    const mergedUsers = dbUsers.map((u: any) => {
+      const authMatch = authUsersMap.get(u.id) || (u.email ? authUsersMap.get(u.email.toLowerCase().trim()) : null);
+      return {
+        id: u.id,
+        email: u.email || authMatch?.email || "",
+        name: u.name || authMatch?.user_metadata?.full_name || authMatch?.email?.split("@")[0] || null,
+        createdAt: u.createdAt || authMatch?.created_at || now.toISOString(),
       };
-
-      mergedUsers.push(merged);
-
-      // Auto-sync: If auth user doesn't have a DB record, create one
-      if (!dbMatch) {
-        adminClient.from("User").upsert(merged, { onConflict: "id" }).catch(() => {});
-      }
-    }
-
-    // Add any DB users that weren't in the auth list (e.g. migrated users)
-    for (const u of dbUsers) {
-      if (!seenIds.has(u.id) && !(u.email && seenEmails.has(u.email.toLowerCase().trim()))) {
-        seenIds.add(u.id);
-        if (u.email) seenEmails.add(u.email.toLowerCase().trim());
-        mergedUsers.push(u);
-      }
-    }
+    });
 
     // Sort by createdAt descending
     mergedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -371,3 +335,47 @@ export async function POST(request: NextRequest) {
 }
 
 export const PATCH = POST;
+
+export async function DELETE(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const targetUserId = searchParams.get("userId") || searchParams.get("id");
+    if (!targetUserId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    }
+
+    const adminClient = getAdminClient(auth.token) as any;
+
+    // Check if target is admin/owner
+    const { data: targetUser } = await adminClient
+      .from("User")
+      .select("email")
+      .eq("id", targetUserId)
+      .maybeSingle();
+
+    if (targetUser?.email && isAdminEmail(targetUser.email)) {
+      return NextResponse.json({ error: "Owner account cannot be deleted." }, { status: 403 });
+    }
+
+    // Delete associated data from DB
+    await adminClient.from("Credit").delete().eq("userId", targetUserId).catch(() => {});
+    await adminClient.from("Resume").delete().eq("userId", targetUserId).catch(() => {});
+    await adminClient.from("User").delete().eq("id", targetUserId).catch(() => {});
+
+    // Delete from auth.users as well so it's completely cleaned up
+    try {
+      if (adminClient?.auth?.admin?.deleteUser) {
+        await adminClient.auth.admin.deleteUser(targetUserId);
+      }
+    } catch (_e) {}
+
+    return NextResponse.json({ success: true, deletedUserId: targetUserId });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}

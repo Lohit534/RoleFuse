@@ -28,6 +28,7 @@ import {
   Zap,
   Play,
   Shield,
+  CheckCircle2,
 } from "lucide-react";
 import { CreditInfo } from "@/types";
 import { toast } from "react-hot-toast";
@@ -278,7 +279,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
             {!user && (
               <div className="hidden md:flex items-center gap-6 h-16 ml-3">
                 <Link
-                  href="/#features"
+                  href="/auth/login"
                   className="text-[14px] font-medium text-[#526176] hover:text-[#111827] transition-colors"
                 >
                   Product
@@ -310,34 +311,40 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                   {isResourcesOpen && (
                     <div
                       onMouseLeave={() => setIsResourcesOpen(false)}
-                      className="absolute top-full left-0 mt-2 w-52 bg-white border border-[#E2E8F0] rounded-xl shadow-lg p-1.5 space-y-0.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                      className="absolute top-full left-0 mt-2 w-56 bg-white border border-[#E2E8F0] rounded-xl shadow-lg p-1.5 space-y-0.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
                     >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsResourcesOpen(false);
-                          setIsDemoModalOpen(true);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[#111827] hover:bg-slate-50 hover:text-[#087F6E] transition-colors text-left cursor-pointer"
-                      >
-                        <Play className="h-3.5 w-3.5 text-[#087F6E]" />
-                        <span>Watch Demo</span>
-                      </button>
                       <Link
-                        href="/#faq"
+                        href="/resume-builder"
                         onClick={() => setIsResourcesOpen(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[#111827] hover:bg-slate-50 hover:text-[#087F6E] transition-colors text-left"
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium text-[#111827] hover:bg-teal-50 hover:text-[#087F6E] transition-colors text-left"
                       >
-                        <HelpCircle className="h-3.5 w-3.5 text-slate-400" />
-                        <span>FAQs</span>
+                        <FileText className="h-4 w-4 text-[#087F6E]" />
+                        <div>
+                          <div className="font-semibold text-xs text-slate-900">Resume Builder</div>
+                          <div className="text-[10px] text-slate-500 font-normal">Build with keywords for specific jobs</div>
+                        </div>
                       </Link>
                       <Link
-                        href="/privacy"
+                        href="/ats-checker"
                         onClick={() => setIsResourcesOpen(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-[#111827] hover:bg-slate-50 hover:text-[#087F6E] transition-colors text-left"
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium text-[#111827] hover:bg-teal-50 hover:text-[#087F6E] transition-colors text-left"
                       >
-                        <Shield className="h-3.5 w-3.5 text-slate-400" />
-                        <span>Privacy &amp; Security</span>
+                        <CheckCircle2 className="h-4 w-4 text-[#087F6E]" />
+                        <div>
+                          <div className="font-semibold text-xs text-slate-900">ATS Checker</div>
+                          <div className="text-[10px] text-slate-500 font-normal">Score improvements &amp; scan tests</div>
+                        </div>
+                      </Link>
+                      <Link
+                        href="/ats-optimizer"
+                        onClick={() => setIsResourcesOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium text-[#111827] hover:bg-teal-50 hover:text-[#087F6E] transition-colors text-left"
+                      >
+                        <Sparkles className="h-4 w-4 text-[#087F6E]" />
+                        <div>
+                          <div className="font-semibold text-xs text-slate-900">ATS Optimizer</div>
+                          <div className="text-[10px] text-slate-500 font-normal">Role-specific keyword targeting</div>
+                        </div>
                       </Link>
                     </div>
                   )}
@@ -696,18 +703,32 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
       {!user && isMobileMenuOpen && (
         <div className="sm:hidden border-t border-[#DCE7E9] bg-white px-5 py-4 space-y-3 animate-in fade-in duration-150">
           <Link
-            href="/#features"
+            href="/auth/login"
             onClick={() => setIsMobileMenuOpen(false)}
             className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
           >
             Product
           </Link>
           <Link
-            href="/#features"
+            href="/resume-builder"
             onClick={() => setIsMobileMenuOpen(false)}
             className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
           >
-            Features
+            Resume Builder
+          </Link>
+          <Link
+            href="/ats-checker"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
+          >
+            ATS Checker
+          </Link>
+          <Link
+            href="/ats-optimizer"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
+          >
+            ATS Optimizer
           </Link>
           <Link
             href="/dashboard/pricing"
@@ -715,23 +736,6 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
             className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
           >
             Pricing
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              setIsMobileMenuOpen(false);
-              setIsDemoModalOpen(true);
-            }}
-            className="w-full text-left text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5 cursor-pointer"
-          >
-            Watch Demo
-          </button>
-          <Link
-            href="/#faq"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block text-sm font-medium text-[#111827] hover:text-[#087F6E] py-1.5"
-          >
-            FAQs
           </Link>
           <div className="border-t border-[#E2E8F0] pt-3 flex flex-col gap-2">
             <Link
