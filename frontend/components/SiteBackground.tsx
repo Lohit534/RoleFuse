@@ -15,18 +15,14 @@ import { usePathname } from "next/navigation";
  */
 export default function SiteBackground() {
   const pathname = usePathname();
-
-  // Hide on all logged-in dashboard tools (optimization, resumes, job-tracker, pricing, billing, history)
-  if (!pathname || pathname.startsWith("/dashboard")) {
-    return null;
-  }
+  const isDashboard = pathname ? pathname.startsWith("/dashboard") : false;
 
   return (
     <div
       aria-hidden="true"
       className="fixed inset-0 pointer-events-none -z-50 overflow-hidden select-none bg-white"
     >
-      {/* ── 1. The Signature Sweeping Organic Curved Light Teal Shape (Matches Reference Image) ── */}
+      {/* ── 1. The Signature Sweeping Organic Curved Light Teal Shape (Visible everywhere, including after login) ── */}
       <svg
         className="absolute top-0 left-0 w-full h-[620px] sm:h-[750px] lg:h-[900px] pointer-events-none opacity-90 transition-opacity duration-500"
         viewBox="0 0 1440 900"
@@ -100,40 +96,42 @@ export default function SiteBackground() {
         </defs>
       </svg>
 
-      {/* ── 2. Playful Floating Micro-Accent Shapes (Identical to Reference Image) ── */}
-      
-      {/* Amber/Gold Rounded Square Chip (Left Side) */}
-      <div
-        className="absolute left-[6%] sm:left-[10%] lg:left-[14%] top-[40%] sm:top-[42%] w-3 sm:w-3.5 h-3 sm:h-3.5 rounded-[4px] bg-[#F59E0B] shadow-[0_2px_8px_rgba(245,158,11,0.28)] transform -rotate-12 transition-transform duration-700 pointer-events-none"
-        style={{
-          animation: "floatingChip 6s ease-in-out infinite",
-        }}
-      />
+      {/* ── 2. Playful Floating Micro-Accent Color Bubbles (Visible before login; hidden after login on dashboard) ── */}
+      {!isDashboard && (
+        <>
+          {/* Amber/Gold Rounded Square Chip (Left Side) */}
+          <div
+            className="absolute left-[6%] sm:left-[10%] lg:left-[14%] top-[40%] sm:top-[42%] w-3 sm:w-3.5 h-3 sm:h-3.5 rounded-[4px] bg-[#F59E0B] shadow-[0_2px_8px_rgba(245,158,11,0.28)] transform -rotate-12 transition-transform duration-700 pointer-events-none"
+            style={{
+              animation: "floatingChip 6s ease-in-out infinite",
+            }}
+          />
 
-      {/* Soft Purple/Violet Rounded Square Chip (Right Side) */}
-      <div
-        className="absolute right-[5%] sm:right-[8%] lg:right-[11%] top-[36%] sm:top-[38%] w-3 sm:w-3.5 h-3 sm:h-3.5 rounded-[4px] bg-[#8B5CF6] shadow-[0_2px_8px_rgba(139,92,246,0.28)] transform rotate-12 transition-transform duration-700 pointer-events-none"
-        style={{
-          animation: "floatingChipReverse 7s ease-in-out infinite",
-        }}
-      />
+          {/* Soft Purple/Violet Rounded Square Chip (Right Side) */}
+          <div
+            className="absolute right-[5%] sm:right-[8%] lg:right-[11%] top-[36%] sm:top-[38%] w-3 sm:w-3.5 h-3 sm:h-3.5 rounded-[4px] bg-[#8B5CF6] shadow-[0_2px_8px_rgba(139,92,246,0.28)] transform rotate-12 transition-transform duration-700 pointer-events-none"
+            style={{
+              animation: "floatingChipReverse 7s ease-in-out infinite",
+            }}
+          />
 
-      {/* Soft Rose/Pink Circular Dot (Bottom Left) */}
-      <div
-        className="absolute left-[16%] sm:left-[20%] lg:left-[24%] bottom-[12%] sm:bottom-[15%] w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#F43F5E] shadow-[0_2px_6px_rgba(244,63,94,0.3)] opacity-85 pointer-events-none"
-        style={{
-          animation: "floatingChip 8s ease-in-out infinite 1s",
-        }}
-      />
+          {/* Soft Rose/Pink Circular Dot (Bottom Left) */}
+          <div
+            className="absolute left-[16%] sm:left-[20%] lg:left-[24%] bottom-[12%] sm:bottom-[15%] w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-[#F43F5E] shadow-[0_2px_6px_rgba(244,63,94,0.3)] opacity-85 pointer-events-none"
+            style={{
+              animation: "floatingChip 8s ease-in-out infinite 1s",
+            }}
+          />
 
-      {/* Soft Teal Diamond Chip (Top-Right Area) */}
-      <div
-        className="absolute right-[20%] sm:right-[24%] top-[14%] sm:top-[16%] w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-[3px] bg-[#087F6E]/45 shadow-[0_2px_6px_rgba(8,127,110,0.2)] transform rotate-45 pointer-events-none"
-        style={{
-          animation: "floatingChipReverse 6.5s ease-in-out infinite 0.5s",
-        }}
-      />
-
+          {/* Soft Teal Diamond Chip (Top-Right Area) */}
+          <div
+            className="absolute right-[20%] sm:right-[24%] top-[14%] sm:top-[16%] w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-[3px] bg-[#087F6E]/45 shadow-[0_2px_6px_rgba(8,127,110,0.2)] transform rotate-45 pointer-events-none"
+            style={{
+              animation: "floatingChipReverse 6.5s ease-in-out infinite 0.5s",
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
