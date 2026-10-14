@@ -116,19 +116,14 @@ export async function GET(request: NextRequest) {
       } catch (_e) {}
     }
 
-    const includeAll = request.nextUrl.searchParams.get("all") === "true";
-    const returnedResumes = includeAll
-      ? allResumes.filter(
-          (r: any) =>
-            r.jobTitle !== "SUPPORT_TICKET" &&
-            r.jobTitle !== "USER_FEEDBACK"
-        )
-      : allResumes.filter(
-          (r: any) =>
-            (!r.jobDescription || r.jobDescription.trim() === "") &&
-            r.jobTitle !== "SUPPORT_TICKET" &&
-            r.jobTitle !== "USER_FEEDBACK"
-        );
+    // Strictly normal user-created resumes only (empty jobDescription)
+    // Optimization history records are strictly excluded and accessed via /api/history
+    const returnedResumes = allResumes.filter(
+      (r: any) =>
+        (!r.jobDescription || r.jobDescription.trim() === "") &&
+        r.jobTitle !== "SUPPORT_TICKET" &&
+        r.jobTitle !== "USER_FEEDBACK"
+    );
 
     returnedResumes.sort(
       (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()

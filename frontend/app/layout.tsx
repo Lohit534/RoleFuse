@@ -74,7 +74,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`h-full ${inter.variable} ${plusJakarta.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-screen bg-[#F5FAFA] text-[#111827] flex flex-col antialiased font-sans relative selection:bg-[#087F6E]/15 selection:text-[#087F6E]">
+      <body className="min-h-screen bg-white text-[#111827] flex flex-col antialiased font-sans relative selection:bg-[#087F6E]/15 selection:text-[#087F6E]">
         <SiteBackground />
         <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
         <div className="flex flex-col min-h-screen flex-1 relative z-0">

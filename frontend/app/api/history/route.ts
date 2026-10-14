@@ -155,9 +155,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // JS-side filter: exclude system records AND apply retention window
+    // JS-side filter: exclude system records, exclude normal manual resumes, AND apply retention window
     dbData = dbData.filter((r: any) => {
       if (r.jobTitle && SYSTEM_TITLES.includes(r.jobTitle)) return false;
+      // Optimization history strictly requires a non-empty jobDescription
+      // Normal resumes created by the user without a JD belong to My Resumes / Saved Resumes
+      if (!r.jobDescription || r.jobDescription.trim() === "") return false;
       // Retention: only show records within the allowed date window (owners skip this)
       if (!isOwner && r.createdAt && new Date(r.createdAt) < cutoffDate) return false;
       return true;

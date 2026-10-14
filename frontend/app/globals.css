@@ -53,9 +53,9 @@
   --radius-full: 9999px;
 }
 
-/* ── FasthireAI Premium Light Mint & Teal Theme ─────────────── */
+/* ── FasthireAI Premium Clean White Ground & Light Teal Shape Theme ─────────────── */
 :root {
-  --background: #F5FAFA;
+  --background: #FFFFFF;
   --foreground: #111827;
   --card: #FFFFFF;
   --card-foreground: #111827;
@@ -86,7 +86,7 @@
 }
 
 .dark {
-  --background: #F5FAFA;
+  --background: #FFFFFF;
   --foreground: #111827;
   --card: #FFFFFF;
   --card-foreground: #111827;
@@ -126,7 +126,7 @@
     font-size: 16px;
     line-height: 1.5;
     letter-spacing: -0.01em;
-    background-color: #F5FAFA !important;
+    background-color: #FFFFFF !important;
     color: #111827 !important;
   }
   h1, h2, h3, h4, h5, h6 {
@@ -377,4 +377,23 @@ input:focus, textarea:focus {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Subtle floating micro-chips animation (SiteBackground) */
+@keyframes floatingChip {
+  0%, 100% {
+    transform: translateY(0px) rotate(-12deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-6deg);
+  }
+}
+
+@keyframes floatingChipReverse {
+  0%, 100% {
+    transform: translateY(0px) rotate(12deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(18deg);
+  }
 }
