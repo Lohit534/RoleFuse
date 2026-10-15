@@ -571,8 +571,7 @@ function swapEducationAndSkillsIfNeeded(blocks: ParsedResumeBlock[], isFresher =
     if (['PROJECTS', 'PERSONAL PROJECTS', 'KEY PROJECTS', 'ACADEMIC PROJECTS'].includes(name)) return 'PROJECTS';
     if (['TECHNICAL SKILLS', 'SKILLS', 'CORE SKILLS', 'SOFT SKILLS', 'SKILLS & COMPETENCIES', 'KEY SKILLS'].includes(name)) return 'SKILLS';
     if (['EDUCATION', 'ACADEMIC BACKGROUND', 'QUALIFICATIONS', 'ACADEMICS'].includes(name)) return 'EDUCATION';
-    if (['CERTIFICATIONS', 'CERTIFICATES'].includes(name)) return 'CERTIFICATIONS';
-    if (['ACHIEVEMENTS', 'KEY ACHIEVEMENTS', 'AWARDS', 'HONORS', 'CERTIFICATIONS & ACHIEVEMENTS'].includes(name)) return 'ACHIEVEMENTS';
+    if (['CERTIFICATIONS', 'CERTIFICATES', 'ACHIEVEMENTS', 'KEY ACHIEVEMENTS', 'AWARDS', 'HONORS', 'CERTIFICATIONS & ACHIEVEMENTS', 'CERTIFICATIONS AND ACHIEVEMENTS'].includes(name)) return 'CERTIFICATIONS & ACHIEVEMENTS';
     if (['LANGUAGES', 'LANGUAGES SPOKEN', 'LANGUAGES KNOWN'].includes(name)) return 'LANGUAGES';
     return name;
   };
@@ -591,25 +590,37 @@ function swapEducationAndSkillsIfNeeded(blocks: ParsedResumeBlock[], isFresher =
     sectionGroups.push(currentGroup);
   }
 
-  // Merge duplicate category groups (e.g. multiple SKILLS sections) into a single clean group
+  // Merge duplicate category groups (e.g. multiple SKILLS sections or CERTIFICATIONS & ACHIEVEMENTS) into a single clean group
   const mergedGroups: { category: string; blocks: ParsedResumeBlock[] }[] = [];
   for (const group of sectionGroups) {
     const existing = mergedGroups.find(g => g.category === group.category);
     if (existing && existing.category !== 'HEADER') {
+      if (existing.category === 'CERTIFICATIONS & ACHIEVEMENTS') {
+        const secHeader = existing.blocks.find(b => b.type === 'section');
+        if (secHeader && secHeader.type === 'section') {
+          secHeader.text = 'CERTIFICATIONS & ACHIEVEMENTS';
+        }
+      }
       // Append non-section blocks from the duplicate group, skipping redundant section header
       const contentBlocks = group.blocks.filter(b => b.type !== 'section');
       existing.blocks.push(...contentBlocks);
     } else {
+      if (group.category === 'CERTIFICATIONS & ACHIEVEMENTS') {
+        const secHeader = group.blocks.find(b => b.type === 'section');
+        if (secHeader && secHeader.type === 'section') {
+          secHeader.text = 'CERTIFICATIONS & ACHIEVEMENTS';
+        }
+      }
       mergedGroups.push(group);
     }
   }
 
   // Recommended resume structure:
   //   Fresher:     Header -> Summary -> Skills -> (Internships) -> Projects -> Certifications & Achievements -> Education -> Languages
-  //   Experienced: Header -> Summary -> Experience -> Skills -> Projects -> Certifications -> Education -> Languages
+  //   Experienced: Header -> Summary -> Experience -> Skills -> Projects -> Certifications & Achievements -> Education -> Languages
   const priorityOrder = isFresher
-    ? ['HEADER', 'SUMMARY', 'SKILLS', 'EXPERIENCE', 'PROJECTS', 'CERTIFICATIONS', 'ACHIEVEMENTS', 'EDUCATION', 'LANGUAGES']
-    : ['HEADER', 'SUMMARY', 'EXPERIENCE', 'SKILLS', 'PROJECTS', 'CERTIFICATIONS', 'ACHIEVEMENTS', 'EDUCATION', 'LANGUAGES'];
+    ? ['HEADER', 'SUMMARY', 'SKILLS', 'EXPERIENCE', 'PROJECTS', 'CERTIFICATIONS & ACHIEVEMENTS', 'EDUCATION', 'LANGUAGES']
+    : ['HEADER', 'SUMMARY', 'EXPERIENCE', 'SKILLS', 'PROJECTS', 'CERTIFICATIONS & ACHIEVEMENTS', 'EDUCATION', 'LANGUAGES'];
 
   mergedGroups.sort((a, b) => {
     const idxA = priorityOrder.indexOf(a.category);
@@ -719,7 +730,8 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       line.toLowerCase().includes('github.com') ||
       line.toLowerCase().includes('linkedin') ||
       line.toLowerCase().includes('github') ||
-      line.toLowerCase().includes('portfolio');
+      line.toLowerCase().includes('portfolio') ||
+      (!hasAnySection && !isSection && !isRoleOrTitle(line) && line.length < 80);
 
     if (!hasAnySection && !isContactLine && !isSection) {
       // Omit standalone job title / subtitle line below candidate name

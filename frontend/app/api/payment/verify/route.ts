@@ -104,12 +104,12 @@ export async function POST(request: NextRequest) {
       if (existingUser) {
         activeUserId = existingUser.id;
       } else {
-        await admin.from("User").insert({
+        await admin.from("User").upsert({
           id: user.id,
           email: user.email.toLowerCase().trim(),
           name: user.user_metadata?.full_name || null,
           createdAt: new Date().toISOString(),
-        });
+        }, { onConflict: "email", ignoreDuplicates: true });
       }
     }
 

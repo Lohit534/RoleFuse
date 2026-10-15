@@ -30,13 +30,19 @@ interface UseSavedResumeModalProps {
 
 function extractCandidateName(text?: string): string | null {
   if (!text) return null;
-  const firstLine = text.trim().split("\n")[0]?.trim();
-  if (!firstLine) return null;
-  if (/^[A-Z\s]{4,}$/.test(firstLine) || firstLine.includes("http") || firstLine.includes("@")) {
-    return null;
+  const lines = text.trim().split("\n");
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (line.includes("@") || line.includes("http") || line.includes("linkedin") || /^\+?\d{5,}/.test(line)) {
+      continue;
+    }
+    const clean = line.replace(/^[#*_\-\s]+|[#*_\-\s]+$/g, "").trim();
+    if (/^[a-zA-Z\s\.\,\'-]{2,50}$/.test(clean)) {
+      return clean;
+    }
   }
-  const cleanName = firstLine.replace(/^[#*_\-\s]+|[#*_\-\s]+$/g, "").trim();
-  return cleanName.length > 1 && cleanName.length < 50 ? cleanName : null;
+  return null;
 }
 
 export function UseSavedResumeModal({

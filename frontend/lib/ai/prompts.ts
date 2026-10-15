@@ -108,9 +108,12 @@ export function buildOptimizationPrompt(
     "NAME LINE:\n" +
     "  Candidate full name -- e.g. DINESH KAARTHIK MOODE\n\n" +
     "CONTACT LINE (single line, | separator):\n" +
-    "  phone | email | LinkedIn URL | GitHub URL | portfolio URL\n" +
-    "  CRITICAL: DO NOT add a target job title, job name, or domain subtitle line under the name or inside the contact details line. Place the contact line directly beneath candidate name.\n" +
-    "  Preserve ALL URLs exactly as in original resume. Avoid personal info (photo, father's name, marital status, full address).\n\n" +
+    "  phone | email | LinkedIn URL | GitHub URL | portfolio URL | location (City, State/Country)\n" +
+    "  CRITICAL CONTACT RULES:\n" +
+    "  - Extract and include ALL candidate contact details from the original resume: Phone number, Email address, LinkedIn profile, GitHub profile, Portfolio/Website, and Location/City.\n" +
+    "  - NEVER drop or omit candidate phone number, email, or location.\n" +
+    "  - DO NOT add a target job title, job name, or domain subtitle line under the name or inside the contact details line. Place the contact line directly beneath candidate name.\n" +
+    "  - Preserve ALL URLs exactly as in original resume.\n\n" +
     (includeSummary
       ? "PROFESSIONAL SUMMARY:\n" +
         "  Header: PROFESSIONAL SUMMARY (ALL CAPS)\n" +
@@ -130,13 +133,13 @@ export function buildOptimizationPrompt(
     "    Cloud: AWS (EC2, S3), GCP (if applicable)\n" +
     "    Core Concepts: REST APIs, Microservices, OOP, Multithreading, JWT Authentication\n" +
     "  List JD-matching skills FIRST in each category\n\n" +
-    "PROFESSIONAL EXPERIENCE:\n" +
+    "PROFESSIONAL EXPERIENCE & INTERNSHIPS:\n" +
     "  Header: PROFESSIONAL EXPERIENCE (ALL CAPS)\n" +
     "  For each role / internship:\n" +
     "    Line 1: Role Title | Company Name | Tech Stack (optional)\n" +
-    "    Line 2: Month YYYY - Month YYYY  (or Present)\n" +
+    "    Line 2 (ONLY IF DATES EXISTED IN ORIGINAL RESUME): Month YYYY - Month YYYY  (or Present)\n" +
     "    Lines 3+: bullet Strong bullet (one per line)\n" +
-    "    CRITICAL FOR DATES: NEVER invent, fabricate, or guess internship or job years/dates if missing in original resume! If missing and needed, output a placeholder in the placeholders array so the user is asked during optimization progress instead of adding blindly.\n" +
+    "    CRITICAL FOR INTERNSHIP DATES: NEVER invent, fabricate, guess, or append dates, years, or months for an internship or job if the user did NOT specify them in their original resume! If missing in the original resume, DO NOT add a dates line.\n" +
     "  Every bullet MUST begin with a powerful past-tense action verb and quantify impact.\n\n" +
     "PROJECTS:\n" +
     "  Header: PROJECTS (ALL CAPS)\n" +
@@ -145,13 +148,19 @@ export function buildOptimizationPrompt(
     "    Lines 2+: 2-4 impact-oriented bullets describing contributions, architectures, and outcomes.\n\n" +
     "EDUCATION:\n" +
     "  Header: EDUCATION (ALL CAPS)\n" +
+    "  CRITICAL EDUCATION RULE: Preserve EVERY education stage and credential mentioned in the original resume:\n" +
+    "  - College / University Degree (e.g. B.Tech, B.S., M.Tech, Degree)\n" +
+    "  - Intermediate / 12th / Class XII / Diploma (if present in original resume)\n" +
+    "  - SSC / 10th / Class X / Secondary School Certificate / Matriculation (if present in original resume)\n" +
+    "  NEVER DELETE, DROP, OR OMIT SSC OR INTERMEDIATE! Retain all candidate degrees and schooling records.\n" +
     "  For each entry:\n" +
-    "    Line 1: Degree Name | Graduated: YYYY (or Month YYYY - Month YYYY)\n" +
-    "    Line 2: Institution Name | CGPA: X.XX (only if in original)\n\n" +
+    "    Line 1: Degree / Qualification Name | Graduated: YYYY (or Month YYYY - Month YYYY)\n" +
+    "    Line 2: Institution Name | Board / Stream | CGPA / Percentage (only if in original resume)\n\n" +
     "CERTIFICATIONS & ACHIEVEMENTS:\n" +
-    "  Header: CERTIFICATIONS & ACHIEVEMENTS (or CERTIFICATIONS)\n" +
-    "  Format: • Certification Name - Issuing Body: Key skills covered (or • Certification Name | Issuing Body)\n" +
-    "  CRITICAL RULE FOR YEARS: NEVER invent, guess, or add a year or date to a certification or achievement if candidate did NOT mention a year in their original resume! ONLY set the year if the user explicitly provided it.\n\n" +
+    "  Header: CERTIFICATIONS & ACHIEVEMENTS (ALL CAPS)\n" +
+    "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section. Do NOT create two separate sections.\n" +
+    "  Format: • Item Details (e.g. • AWS Certified Solutions Architect - Amazon Web Services, or • 1st Place at National Hackathon)\n" +
+    "  CRITICAL RULE FOR YEARS: NEVER invent, guess, or add a year or date to a certification or achievement if candidate did NOT mention a year in their original resume! ONLY set the year if explicitly in the original resume.\n\n" +
     (hasOriginalLanguages
       ? "LANGUAGES:\n" +
         "  Header: LANGUAGES (ALL CAPS)\n" +
@@ -239,16 +248,17 @@ export function buildOptimizationPrompt(
     "PRE-FLIGHT CHECKLIST (verify ALL before outputting):\n" +
     sep + "\n" +
     "[ ] Name is ALL CAPS on line 1\n" +
-    "[ ] Contact line has email | phone | location | URLs separated by |\n" +
+    "[ ] Contact line has email | phone | location | URLs separated by | (ALL contact items from original resume preserved)\n" +
     (includeSummary ? "[ ] Professional Summary is a concise 2-3 sentence executive paragraph\n" : "[ ] No artificial professional summary added for fresher (jump straight to Technical Skills and Projects)\n") +
     "[ ] TECHNICAL SKILLS appears exactly ONCE (zero duplicate 'SKILLS' header or extra divider lines)\n" +
     "[ ] Every experience AND project bullet starts with a strong past-tense verb AND contains a number/metric\n" +
-    "[ ] Education institution copied verbatim -- no added university names or placeholders\n" +
+    "[ ] Education contains all candidate stages including SSC (10th) and Intermediate (12th) if in original resume -- zero dropped education entries\n" +
     "[ ] Resume fits the PAGE BUDGET (" + pageBudget.maxPages + " page" + (pageBudget.maxPages > 1 ? "s" : "") + " max)\n" +
-    "[ ] Zero fabricated or invented dates/years for projects, internships, or certifications\n" +
+    "[ ] Zero fabricated or invented dates/years/months for internships, projects, or certifications\n" +
+    "[ ] Certifications and achievements combined into a single CERTIFICATIONS & ACHIEVEMENTS section\n" +
     "[ ] Metrics/numbers added or [ADD:] placeholders used where missing\n" +
     "[ ] No LaTeX, no Markdown, no literal backslash-n in resume text\n" +
-    "[ ] All original URLs preserved verbatim\n" +
+    "[ ] All original URLs and contact info preserved verbatim\n" +
     "[ ] No sections were dropped from the original resume\n" +
     (hasOriginalLanguages ? "[ ] LANGUAGES section preserved with all original spoken languages\n" : "") +
     "[ ] ALL " + allKeywordsToInject.length + " target keywords appear at least once\n\n" +

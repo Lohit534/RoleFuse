@@ -573,17 +573,12 @@ export default function ResumesPage() {
       text += `\n`;
     }
 
-    if (data.certifications && data.certifications.length > 0) {
-      text += `CERTIFICATIONS\n`;
-      data.certifications.forEach(cert => {
+    if ((data.certifications && data.certifications.length > 0) || (data.achievements && data.achievements.length > 0)) {
+      text += `CERTIFICATIONS & ACHIEVEMENTS\n`;
+      (data.certifications || []).forEach(cert => {
         text += `• ${cert}\n`;
       });
-      text += `\n`;
-    }
-
-    if (data.achievements && data.achievements.length > 0) {
-      text += `ACHIEVEMENTS\n`;
-      data.achievements.forEach(ach => {
+      (data.achievements || []).forEach(ach => {
         text += `• ${ach}\n`;
       });
       text += `\n`;

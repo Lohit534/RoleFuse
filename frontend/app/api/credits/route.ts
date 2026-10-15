@@ -70,14 +70,22 @@ export async function GET(request: NextRequest) {
           logger.info(`[credits] Creating new User record for email ${user.email} with ID ${user.id} and signup time ${signupTime}`);
           const { error: insertUserErr } = await admin
             .from("User")
-            .insert({
+            .upsert({
               id: user.id,
               email: user.email.toLowerCase().trim(),
               name: user.user_metadata?.full_name || null,
               createdAt: signupTime,
-            });
+            }, { onConflict: "email", ignoreDuplicates: true });
+
           if (insertUserErr) {
-            logger.error("[credits] Failed to insert new User record:", insertUserErr.message);
+            const { data: fallbackUser } = await admin
+              .from("User")
+              .select("id")
+              .eq("email", user.email.toLowerCase().trim())
+              .maybeSingle();
+            if (fallbackUser?.id) {
+              activeUserId = fallbackUser.id;
+            }
           }
         }
       }

@@ -151,6 +151,20 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
       }
     }
 
+    // Experience / Internships: Strip fabricated date ranges the user did not specify in original resume
+    const isExp = /EXPERIENCE|INTERNSHIP|WORK HISTORY/.test(section) && !header;
+    if (isExp && line.trim()) {
+      const isDateLine = /^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\b(19\d{2}|20\d{2})\b\s*[-–—]\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?(?:\b(19\d{2}|20\d{2})\b|Present)$/i.test(line.trim());
+      if (isDateLine) {
+        const yearsInLine = Array.from(line.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => m[1]);
+        const anyYearInOriginal = yearsInLine.some((yr) => original.includes(yr));
+        if (!anyYearInOriginal) {
+          // AI fabricated this internship date range without user stating it — drop the fake date line
+          continue;
+        }
+      }
+    }
+
     const isEducation = /EDUCATION|ACADEM|QUALIFICATION/.test(section) && !header;
     if (isEducation && line.trim()) {
       // Split by commas but keep pipes (degree | dates) intact
@@ -198,5 +212,124 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
     out.push(line.replace(/[ \t]+([,.])(\s|$)/g, "$1$2"));
   }
 
-  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  // Preserve and restore SSC (10th) and Intermediate (12th) if present in original but dropped by AI
+  const hasOriginalSSC = /\b(ssc|10th|class x|matriculation|secondary school)\b/i.test(originalLower);
+  const hasOriginalInter = /\b(intermediate|12th|class xii|hsc|senior secondary|higher secondary)\b/i.test(originalLower);
+
+  const resultLower = out.join("\n").toLowerCase();
+  const hasResultSSC = /\b(ssc|10th|class x|matriculation|secondary school)\b/i.test(resultLower);
+  const hasResultInter = /\b(intermediate|12th|class xii|hsc|senior secondary|higher secondary)\b/i.test(resultLower);
+
+  if (hasOriginalSSC && !hasResultSSC) {
+    const originalLines = original.split(/\r?\n/);
+    const sscLines = originalLines.filter((l) => /\b(ssc|10th|class x|matriculation|secondary school)\b/i.test(l));
+    if (sscLines.length > 0) {
+      const eduIdx = out.findIndex((l) => /^EDUCATION\b/i.test(l.trim()));
+      if (eduIdx !== -1) {
+        let insertIdx = out.length;
+        for (let i = eduIdx + 1; i < out.length; i++) {
+          if (detectSectionHeader(out[i])) {
+            insertIdx = i;
+            break;
+          }
+        }
+        out.splice(insertIdx, 0, sscLines[0].trim());
+      }
+    }
+  }
+
+  if (hasOriginalInter && !hasResultInter) {
+    const originalLines = original.split(/\r?\n/);
+    const interLines = originalLines.filter((l) => /\b(intermediate|12th|class xii|hsc|senior secondary|higher secondary)\b/i.test(l));
+    if (interLines.length > 0) {
+      const eduIdx = out.findIndex((l) => /^EDUCATION\b/i.test(l.trim()));
+      if (eduIdx !== -1) {
+        let insertIdx = out.length;
+        for (let i = eduIdx + 1; i < out.length; i++) {
+          if (detectSectionHeader(out[i])) {
+            insertIdx = i;
+            break;
+          }
+        }
+        out.splice(insertIdx, 0, interLines[0].trim());
+      }
+    }
+  }
+
+  let finalResume = out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  finalResume = preserveCandidateContactDetails(finalResume, original);
+  return finalResume;
+}
+
+/** Guarantee candidate contact info from original resume is never lost */
+export function preserveCandidateContactDetails(optimized: string, original: string): string {
+  if (!optimized || !original) return optimized;
+
+  const originalLines = original.split(/\r?\n/).slice(0, 15);
+  const originalHeader = originalLines.join("\n");
+
+  // Extract phone number from original
+  const phoneMatch = originalHeader.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\+91[\s-]?\d{10}|\b\d{10}\b/);
+  const originalPhone = phoneMatch ? phoneMatch[0].trim() : null;
+
+  // Extract email from original
+  const emailMatch = originalHeader.match(/[\w.-]+@[\w.-]+\.\w+/i);
+  const originalEmail = emailMatch ? emailMatch[0].trim() : null;
+
+  // Extract LinkedIn from original
+  const linkedinMatch = originalHeader.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w.-]+\/?/i);
+  const originalLinkedin = linkedinMatch ? linkedinMatch[0].trim() : null;
+
+  // Extract GitHub from original
+  const githubMatch = originalHeader.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w.-]+\/?/i);
+  const originalGithub = githubMatch ? githubMatch[0].trim() : null;
+
+  // Extract location from original (e.g. "Hyderabad, India", "Bangalore, Karnataka", "Visakhapatnam, AP")
+  const locationMatch = originalHeader.match(/\b([A-Z][a-zA-Z\s]+,\s*(?:India|USA|UK|Canada|Telangana|Andhra Pradesh|Karnataka|Maharashtra|Tamil Nadu|Delhi))\b/i);
+  const originalLocation = locationMatch ? locationMatch[1].trim() : null;
+
+  const lines = optimized.split(/\r?\n/);
+  if (lines.length < 2) return optimized;
+
+  // Find contact line (first non-empty line after candidate name that comes before any section header)
+  let contactLineIdx = -1;
+  for (let i = 1; i < Math.min(lines.length, 6); i++) {
+    const l = lines[i].trim();
+    if (l && !detectSectionHeader(l)) {
+      if (l.includes("@") || l.includes("|") || /\d{7,}/.test(l) || l.includes("http") || l.includes("linkedin")) {
+        contactLineIdx = i;
+        break;
+      }
+    }
+  }
+
+  if (contactLineIdx !== -1) {
+    const contactLine = lines[contactLineIdx];
+    const contactParts = contactLine.split(/\s*\|\s*/).map((p) => p.trim()).filter(Boolean);
+
+    // Ensure phone is present
+    if (originalPhone && !contactLine.includes(originalPhone) && !contactParts.some((p) => /\d{10}/.test(p.replace(/\D/g, "")))) {
+      contactParts.unshift(originalPhone);
+    }
+    // Ensure email is present
+    if (originalEmail && !contactLine.toLowerCase().includes(originalEmail.toLowerCase())) {
+      contactParts.splice(1, 0, originalEmail);
+    }
+    // Ensure LinkedIn is present
+    if (originalLinkedin && !contactLine.toLowerCase().includes("linkedin.com")) {
+      contactParts.push(originalLinkedin);
+    }
+    // Ensure GitHub is present
+    if (originalGithub && !contactLine.toLowerCase().includes("github.com")) {
+      contactParts.push(originalGithub);
+    }
+    // Ensure location is present
+    if (originalLocation && !contactLine.toLowerCase().includes(originalLocation.toLowerCase())) {
+      contactParts.push(originalLocation);
+    }
+
+    lines[contactLineIdx] = contactParts.join(" | ");
+  }
+
+  return lines.join("\n");
 }
