@@ -60,6 +60,7 @@ export default function AdminDashboard() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [userSearch, setUserSearch] = useState("");
   const [updatingPlanId, setUpdatingPlanId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   // Tickets
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -234,6 +235,28 @@ export default function AdminDashboard() {
       }
     } catch { toast.error("Connection error."); }
     finally { setUpdatingPlanId(null); }
+  };
+
+  const handleDeleteUser = async (targetUserId: string, targetEmail: string) => {
+    if (!confirm(`Permanently delete user "${targetEmail}"? This removes their account from both Supabase Auth and Database.`)) return;
+    setDeletingUserId(targetUserId);
+    try {
+      const res = await fetch(`/api/users?userId=${targetUserId}`, {
+        method: "DELETE",
+        headers: authHeaders(accessToken),
+      });
+      if (res.ok) {
+        toast.success(`User ${targetEmail} deleted.`);
+        setUsers(prev => prev.filter(u => u.id !== targetUserId));
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || "Failed to delete user.");
+      }
+    } catch {
+      toast.error("Failed to delete user.");
+    } finally {
+      setDeletingUserId(null);
+    }
   };
 
   const handleReply = async (e: React.FormEvent) => {
@@ -768,18 +791,35 @@ export default function AdminDashboard() {
                             <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Modify Plan</span>
                             {u.plan === "owner" ? (
                               <span className="text-[9px] text-[#0d6e5a] font-bold bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">👑 Owner</span>
-                            ) : updatingPlanId === u.id ? (
-                              <Loader2 className="h-3.5 w-3.5 text-[#0d6e5a] animate-spin" />
                             ) : (
-                              <select
-                                value={u.plan}
-                                onChange={e => handleUpdatePlan(u.id, e.target.value as any)}
-                                className="bg-white text-slate-800 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold focus:outline-none focus:border-[#0d6e5a] cursor-pointer shadow-sm"
-                              >
-                                <option value="free">Free Tier</option>
-                                <option value="premium">Premium Pro</option>
-                                <option value="promax">Pro Max</option>
-                              </select>
+                              <div className="flex items-center gap-1.5">
+                                {updatingPlanId === u.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 text-[#0d6e5a] animate-spin" />
+                                ) : (
+                                  <select
+                                    value={u.plan}
+                                    onChange={e => handleUpdatePlan(u.id, e.target.value as any)}
+                                    className="bg-white text-slate-800 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-bold focus:outline-none focus:border-[#0d6e5a] cursor-pointer shadow-sm"
+                                  >
+                                    <option value="free">Free Tier</option>
+                                    <option value="premium">Premium Pro</option>
+                                    <option value="promax">Pro Max</option>
+                                  </select>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUser(u.id, u.email)}
+                                  disabled={deletingUserId === u.id}
+                                  title="Permanently Delete User"
+                                  className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border border-transparent hover:border-rose-200"
+                                >
+                                  {deletingUserId === u.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-rose-500" />
+                                  ) : (
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              </div>
                             )}
                           </div>
                         </div>

@@ -17,7 +17,22 @@ export async function GET(request: NextRequest) {
     const adminClient = getAdminClient(auth.token) as any;
     const now = new Date();
 
-    // 1. Fetch all User table records from database (authoritative source of truth)
+    // 1. Fetch all auth users from Supabase Auth (the definitive source of active accounts in Supabase)
+    let authUsers: any[] = [];
+    try {
+      if (adminClient?.auth?.admin?.listUsers) {
+        const { data: authData, error: authErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+        if (!authErr && Array.isArray(authData?.users)) {
+          authUsers = authData.users;
+        } else if (authErr) {
+          console.warn("[users/GET] auth.admin.listUsers error:", authErr.message);
+        }
+      }
+    } catch (authErr: any) {
+      console.warn("[users/GET] auth.admin.listUsers exception:", authErr.message);
+    }
+
+    // 2. Fetch all User table records from database
     let dbUsers: any[] = [];
     const { data: dbUserRows, error: usersErr } = await adminClient
       .from("User")
@@ -28,33 +43,52 @@ export async function GET(request: NextRequest) {
       dbUsers = dbUserRows;
     }
 
-    // 2. Fetch auth users map strictly to enrich existing DB users with metadata (do NOT resurrect deleted users)
-    const authUsersMap = new Map<string, any>();
-    try {
-      if (adminClient?.auth?.admin?.listUsers) {
-        const { data: authData, error: authErr } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-        if (!authErr && authData?.users) {
-          for (const au of authData.users) {
-            authUsersMap.set(au.id, au);
-            if (au.email) authUsersMap.set(au.email.toLowerCase().trim(), au);
-          }
-        }
-      }
-    } catch (authErr: any) {
-      console.warn("[users/GET] auth.admin.listUsers exception:", authErr.message);
+    const dbUserMap = new Map<string, any>();
+    for (const u of dbUsers) {
+      if (u.id) dbUserMap.set(u.id, u);
+      if (u.email) dbUserMap.set(u.email.toLowerCase().trim(), u);
     }
 
-    // Only include users who exist in the database (public.User).
-    // NEVER resurrect or auto-insert deleted users.
-    const mergedUsers = dbUsers.map((u: any) => {
-      const authMatch = authUsersMap.get(u.id) || (u.email ? authUsersMap.get(u.email.toLowerCase().trim()) : null);
-      return {
+    let mergedUsers: any[] = [];
+
+    // 3. If Supabase Auth returned the active accounts (e.g. only 2 users):
+    // Strictly respect Supabase Auth as the source of truth, and purge orphaned DB rows
+    if (authUsers.length > 0) {
+      const validAuthIds = new Set(authUsers.map((u: any) => u.id));
+      const validAuthEmails = new Set(authUsers.map((u: any) => (u.email || "").toLowerCase().trim()).filter(Boolean));
+
+      // Asynchronously purge orphaned DB records for users who were deleted from Supabase
+      const orphanedUsers = dbUsers.filter((u: any) => {
+        const emailLower = (u.email || "").toLowerCase().trim();
+        return !validAuthIds.has(u.id) && !validAuthEmails.has(emailLower) && !isAdminEmail(u.email);
+      });
+
+      for (const orphan of orphanedUsers) {
+        adminClient.from("Credit").delete().eq("userId", orphan.id).catch(() => {});
+        adminClient.from("Resume").delete().eq("userId", orphan.id).catch(() => {});
+        adminClient.from("User").delete().eq("id", orphan.id).catch(() => {});
+      }
+
+      // Merge ONLY active Supabase Auth users
+      for (const au of authUsers) {
+        const auEmail = (au.email || "").toLowerCase().trim();
+        const dbMatch = dbUserMap.get(au.id) || (auEmail ? dbUserMap.get(auEmail) : null);
+        mergedUsers.push({
+          id: au.id,
+          email: au.email || dbMatch?.email || "",
+          name: au.user_metadata?.full_name || dbMatch?.name || au.email?.split("@")[0] || null,
+          createdAt: au.created_at || dbMatch?.createdAt || now.toISOString(),
+        });
+      }
+    } else {
+      // Fallback if auth.admin.listUsers is unavailable
+      mergedUsers = dbUsers.map((u: any) => ({
         id: u.id,
-        email: u.email || authMatch?.email || "",
-        name: u.name || authMatch?.user_metadata?.full_name || authMatch?.email?.split("@")[0] || null,
-        createdAt: u.createdAt || authMatch?.created_at || now.toISOString(),
-      };
-    });
+        email: u.email || "",
+        name: u.name || u.email?.split("@")[0] || null,
+        createdAt: u.createdAt || now.toISOString(),
+      }));
+    }
 
     // Sort by createdAt descending
     mergedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

@@ -4,6 +4,10 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 import { isOwnerEmail, PRO_CREDITS_PER_MONTH, PRO_MAX_CREDITS_PER_MONTH } from "@/types";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createClient();
@@ -21,15 +25,65 @@ export async function GET(request: NextRequest) {
 
     const admin = getAdminClient() as any;
 
-    // 1. Fetch all users from User table
+    // 1. Fetch all auth users from Supabase Auth (the absolute source of truth for accounts in Supabase)
+    let authUsers: any[] = [];
+    try {
+      const { data: authData, error: authErr } = await admin.auth.admin.listUsers();
+      if (!authErr && Array.isArray(authData?.users)) {
+        authUsers = authData.users;
+      }
+    } catch (authErr: any) {
+      logger.warn("[admin/users] auth.admin.listUsers error:", authErr.message);
+    }
+
+    // 2. Fetch all users from User table
     const { data: dbUsers, error: usersErr } = await admin
       .from("User")
       .select("id, email, name, createdAt")
       .order("createdAt", { ascending: false });
 
-    let usersList: any[] = dbUsers ? [...dbUsers] : [];
+    let rawDbUsers: any[] = dbUsers ? [...dbUsers] : [];
+    const dbUserMap = new Map<string, any>();
+    for (const u of rawDbUsers) {
+      if (u.id) dbUserMap.set(u.id, u);
+      if (u.email) dbUserMap.set(u.email.toLowerCase().trim(), u);
+    }
 
-    // 2. Query all real payments from PaymentLog (isFreeGrant=false ensures no admin grants slip in)
+    let usersList: any[] = [];
+
+    // 3. Reconcile with Supabase Auth:
+    // If Supabase Auth returns active users (e.g. only 2 users), ONLY display those 2 users.
+    if (authUsers.length > 0) {
+      const validAuthIds = new Set(authUsers.map((u: any) => u.id));
+      const validAuthEmails = new Set(authUsers.map((u: any) => (u.email || "").toLowerCase().trim()).filter(Boolean));
+
+      // Asynchronously purge orphaned DB records for users who were deleted from Supabase
+      const orphanedUsers = rawDbUsers.filter((u: any) => {
+        const emailLower = (u.email || "").toLowerCase().trim();
+        return !validAuthIds.has(u.id) && !validAuthEmails.has(emailLower) && !isOwnerEmail(u.email);
+      });
+
+      for (const orphan of orphanedUsers) {
+        admin.from("Credit").delete().eq("userId", orphan.id).catch(() => {});
+        admin.from("Resume").delete().eq("userId", orphan.id).catch(() => {});
+        admin.from("User").delete().eq("id", orphan.id).catch(() => {});
+      }
+
+      for (const au of authUsers) {
+        const auEmail = (au.email || "").toLowerCase().trim();
+        const dbMatch = dbUserMap.get(au.id) || (auEmail ? dbUserMap.get(auEmail) : null);
+        usersList.push({
+          id: au.id,
+          email: au.email || dbMatch?.email || "",
+          name: au.user_metadata?.full_name || dbMatch?.name || au.email?.split("@")[0] || null,
+          createdAt: au.created_at || dbMatch?.createdAt || new Date().toISOString(),
+        });
+      }
+    } else {
+      usersList = rawDbUsers;
+    }
+
+    // 4. Query all real payments from PaymentLog (isFreeGrant=false ensures no admin grants slip in)
     const { data: allPayments } = await admin
       .from("PaymentLog")
       .select("userId, email, planId")
@@ -40,50 +94,11 @@ export async function GET(request: NextRequest) {
     const proMaxPurchasers = paymentsList.filter((p: any) => p.planId === "promax");
     const proMaxUserIds = new Set(proMaxPurchasers.map((p: any) => p.userId).filter(Boolean));
     const proMaxEmails = new Set(proMaxPurchasers.map((p: any) => (p.email || "").toLowerCase().trim()).filter(Boolean));
-    // Hardcode known Pro Max purchaser (Jyothika) as safety fallback
-    proMaxEmails.add("payyalajyothika333@gmail.com");
-    proMaxUserIds.add("d9301154-778f-45d7-91e3-873c6d5be4aa");
 
     // Build sets for premium (paid, non-promax) purchasers
     const premiumPurchasers = paymentsList.filter((p: any) => p.planId === "premium");
     const premiumUserIds = new Set(premiumPurchasers.map((p: any) => p.userId).filter(Boolean));
     const premiumEmails = new Set(premiumPurchasers.map((p: any) => (p.email || "").toLowerCase().trim()).filter(Boolean));
-
-    // 3. Enrich existing DB users with Supabase Auth admin metadata (do NOT resurrect deleted users)
-    try {
-      const { data: authData } = await admin.auth.admin.listUsers();
-      if (authData?.users) {
-        for (const au of authData.users) {
-          const auEmail = (au.email || "").toLowerCase().trim();
-          const existing = usersList.find((u: any) => 
-            u.id === au.id || (u.email && u.email.toLowerCase().trim() === auEmail)
-          );
-          if (existing) {
-            if (!existing.name && au.user_metadata?.full_name) {
-              existing.name = au.user_metadata.full_name;
-            }
-            if (!existing.createdAt && au.created_at) {
-              existing.createdAt = au.created_at;
-            }
-          }
-        }
-      }
-    } catch (authErr: any) {
-      logger.warn("[admin/users] auth.admin.listUsers error:", authErr.message);
-    }
-
-    // 4. Ensure payyalajyothika333@gmail.com is in usersList
-    const jyothikaInList = usersList.find((u: any) => (u.email || "").toLowerCase().trim() === "payyalajyothika333@gmail.com");
-    if (!jyothikaInList) {
-      const jyothikaUser = {
-        id: "d9301154-778f-45d7-91e3-873c6d5be4aa",
-        email: "payyalajyothika333@gmail.com",
-        name: "Jyothika Payyala",
-        createdAt: "2026-09-12T06:32:35.000Z",
-      };
-      usersList.unshift(jyothikaUser);
-      await admin.from("User").upsert(jyothikaUser, { onConflict: "id" }).catch(() => {});
-    }
 
     // 5. Fetch all credits
     const { data: credits, error: creditsErr } = await admin
