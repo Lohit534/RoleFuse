@@ -10,77 +10,88 @@ export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let currentUser: any = null;
 
-    if (authError || !user) {
+    // 1. Support Bearer token authentication (used by admin-portal)
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "").trim();
+      const admin = getAdminClient() as any;
+      if (admin?.auth?.getUser) {
+        try {
+          const { data, error } = await admin.auth.getUser(token);
+          if (!error && data?.user) {
+            currentUser = data.user;
+          }
+        } catch {}
+      }
+    }
+
+    // 2. Support cookie authentication (used by dashboard inside frontend)
+    if (!currentUser) {
+      try {
+        const supabase = createClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (!authError && user) {
+          currentUser = user;
+        }
+      } catch {}
+    }
+
+    if (!currentUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isOwner = isOwnerEmail(user.email);
+    const isOwner = isOwnerEmail(currentUser.email);
     if (!isOwner) {
-      logger.warn(`Unauthorized access attempt to GET /api/admin/users by ${user.email}`);
+      logger.warn(`Unauthorized access attempt to GET /api/admin/users by ${currentUser.email}`);
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const admin = getAdminClient() as any;
 
-    // 1. Fetch all auth users from Supabase Auth (the absolute source of truth for accounts in Supabase)
-    let authUsers: any[] = [];
-    try {
-      const { data: authData, error: authErr } = await admin.auth.admin.listUsers();
-      if (!authErr && Array.isArray(authData?.users)) {
-        authUsers = authData.users;
-      }
-    } catch (authErr: any) {
-      logger.warn("[admin/users] auth.admin.listUsers error:", authErr.message);
-    }
-
-    // 2. Fetch all users from User table
+    // 3. Fetch all users from User table (the database records in Supabase)
     const { data: dbUsers, error: usersErr } = await admin
       .from("User")
       .select("id, email, name, createdAt")
       .order("createdAt", { ascending: false });
 
-    let rawDbUsers: any[] = dbUsers ? [...dbUsers] : [];
-    const dbUserMap = new Map<string, any>();
-    for (const u of rawDbUsers) {
-      if (u.id) dbUserMap.set(u.id, u);
-      if (u.email) dbUserMap.set(u.email.toLowerCase().trim(), u);
+    let usersList: any[] = Array.isArray(dbUsers) ? [...dbUsers] : [];
+
+    // Ensure owner is always in usersList
+    const hasOwner = usersList.some((u: any) => isOwnerEmail(u.email));
+    if (!hasOwner && currentUser?.email && isOwnerEmail(currentUser.email)) {
+      usersList.unshift({
+        id: currentUser.id || "owner-lohit",
+        email: currentUser.email,
+        name: currentUser.user_metadata?.full_name || "Lohith (Owner)",
+        createdAt: currentUser.created_at || new Date().toISOString(),
+      });
     }
 
-    let usersList: any[] = [];
-
-    // 3. Reconcile with Supabase Auth:
-    // If Supabase Auth returns active users (e.g. only 2 users), ONLY display those 2 users.
-    if (authUsers.length > 0) {
-      const validAuthIds = new Set(authUsers.map((u: any) => u.id));
-      const validAuthEmails = new Set(authUsers.map((u: any) => (u.email || "").toLowerCase().trim()).filter(Boolean));
-
-      // Asynchronously purge orphaned DB records for users who were deleted from Supabase
-      const orphanedUsers = rawDbUsers.filter((u: any) => {
-        const emailLower = (u.email || "").toLowerCase().trim();
-        return !validAuthIds.has(u.id) && !validAuthEmails.has(emailLower) && !isOwnerEmail(u.email);
-      });
-
-      for (const orphan of orphanedUsers) {
-        admin.from("Credit").delete().eq("userId", orphan.id).catch(() => {});
-        admin.from("Resume").delete().eq("userId", orphan.id).catch(() => {});
-        admin.from("User").delete().eq("id", orphan.id).catch(() => {});
+    // 4. Enrich users with Supabase Auth admin metadata if available
+    try {
+      if (admin?.auth?.admin?.listUsers) {
+        const { data: authData } = await admin.auth.admin.listUsers();
+        if (authData?.users) {
+          for (const au of authData.users) {
+            const auEmail = (au.email || "").toLowerCase().trim();
+            const existing = usersList.find((u: any) => 
+              u.id === au.id || (u.email && u.email.toLowerCase().trim() === auEmail)
+            );
+            if (existing) {
+              if (!existing.name && au.user_metadata?.full_name) {
+                existing.name = au.user_metadata.full_name;
+              }
+              if (!existing.createdAt && au.created_at) {
+                existing.createdAt = au.created_at;
+              }
+            }
+          }
+        }
       }
-
-      for (const au of authUsers) {
-        const auEmail = (au.email || "").toLowerCase().trim();
-        const dbMatch = dbUserMap.get(au.id) || (auEmail ? dbUserMap.get(auEmail) : null);
-        usersList.push({
-          id: au.id,
-          email: au.email || dbMatch?.email || "",
-          name: au.user_metadata?.full_name || dbMatch?.name || au.email?.split("@")[0] || null,
-          createdAt: au.created_at || dbMatch?.createdAt || new Date().toISOString(),
-        });
-      }
-    } else {
-      usersList = rawDbUsers;
+    } catch (authErr: any) {
+      logger.warn("[admin/users] auth.admin.listUsers notice:", authErr?.message);
     }
 
     // 4. Query all real payments from PaymentLog (isFreeGrant=false ensures no admin grants slip in)
