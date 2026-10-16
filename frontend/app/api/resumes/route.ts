@@ -251,6 +251,33 @@ export async function PUT(request: NextRequest) {
     const activeUserId = await getActiveUserId(user);
     const admin = getAdminClient() as any;
 
+    // Check ownership before updating (prevent IDOR)
+    const { data: existingResume, error: checkError } = await admin
+      .from("Resume")
+      .select("userId")
+      .eq("id", body.id)
+      .maybeSingle();
+
+    if (checkError) {
+      logger.error("[api/resumes] PUT ownership check failed:", checkError.message);
+      return NextResponse.json({ error: "Database error" }, { status: 500 });
+    }
+
+    if (!existingResume) {
+      return NextResponse.json({ error: "Resume not found" }, { status: 404 });
+    }
+
+    const isOwner =
+      existingResume.userId === activeUserId ||
+      existingResume.userId === user.id ||
+      existingResume.userId === user.email ||
+      (user.email && existingResume.userId === user.email.toLowerCase().trim());
+
+    if (!isOwner) {
+      logger.warn(`User ${user.email} attempted to update unauthorized resume ${body.id}`);
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const updateData: any = {};
     if (body.optimizedText !== undefined) updateData.optimizedText = body.optimizedText;
     if (body.originalText !== undefined) updateData.originalText = body.originalText;

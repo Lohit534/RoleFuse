@@ -228,6 +228,45 @@ export async function PATCH(request: NextRequest) {
 
     const admin = getAdminClient() as any;
 
+    let activeUserId = user.id;
+    try {
+      if (user.email) {
+        const { data: existingUser } = await admin
+          .from("User")
+          .select("id")
+          .eq("email", user.email.toLowerCase().trim())
+          .maybeSingle();
+        if (existingUser?.id) activeUserId = existingUser.id;
+      }
+    } catch (_e) {}
+
+    // Verify ownership before updating
+    const { data: existingResume, error: checkErr } = await admin
+      .from("Resume")
+      .select("userId")
+      .eq("id", resumeId)
+      .maybeSingle();
+
+    if (checkErr) {
+      logger.error("[history PATCH] Ownership check error:", checkErr.message);
+      return NextResponse.json({ error: "Database error" }, { status: 500 });
+    }
+
+    if (!existingResume) {
+      return NextResponse.json({ error: "Resume not found" }, { status: 404 });
+    }
+
+    const isOwner =
+      existingResume.userId === activeUserId ||
+      existingResume.userId === user.id ||
+      existingResume.userId === user.email ||
+      (user.email && existingResume.userId === user.email.toLowerCase().trim());
+
+    if (!isOwner) {
+      logger.warn(`User ${user.email} attempted to patch unauthorized resume ${resumeId}`);
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const updatePayload: any = {};
     if (scoreAfter !== undefined) updatePayload.scoreAfter = Math.round(scoreAfter);
     if (optimizedText !== undefined) updatePayload.optimizedText = optimizedText;

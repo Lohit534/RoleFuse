@@ -189,16 +189,39 @@ export async function POST(request: NextRequest) {
 
     logger.info(`[fetch-jd] Fetching JD from safe URL: ${url}`);
 
-    // Strategy 1: Direct server-side fetch (works for many public job boards)
+    // Strategy 1: Direct server-side fetch with SSRF-safe redirect checking
     try {
-      const directRes = await fetch(url, {
+      let targetFetchUrl = url;
+      let directRes = await fetch(targetFetchUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "Accept-Language": "en-US,en;q=0.5",
         },
+        redirect: "manual",
         signal: AbortSignal.timeout(8000),
       });
+
+      // Safely handle HTTP redirects by validating target URL against SSRF policy
+      if (directRes.status >= 300 && directRes.status < 400) {
+        const redirectLocation = directRes.headers.get("location");
+        if (redirectLocation) {
+          const resolvedRedirect = new URL(redirectLocation, targetFetchUrl).toString();
+          if (isSafePublicUrl(resolvedRedirect)) {
+            targetFetchUrl = resolvedRedirect;
+            directRes = await fetch(targetFetchUrl, {
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              },
+              redirect: "manual",
+              signal: AbortSignal.timeout(8000),
+            });
+          } else {
+            logger.warn(`[fetch-jd] Blocked unsafe redirect to: ${resolvedRedirect}`);
+          }
+        }
+      }
 
       if (directRes.ok) {
         const contentType = directRes.headers.get("content-type") || "";

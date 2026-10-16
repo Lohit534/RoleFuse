@@ -14,5 +14,9 @@
   },
   "dependencies": {
     "recharts": "^3.10.1"
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "typescript": "^5"
   }
 }

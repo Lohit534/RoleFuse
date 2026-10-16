@@ -26,12 +26,14 @@ const CGPA_RE = /\bCGPA[:\s]+[\d.]+\b/gi;
 // We anonymize only the very first non-empty line if it looks like a name
 function anonymizeFirstLine(text: string): string {
   const lines = text.split("\n");
-  if (lines.length > 0) {
-    const first = lines[0].trim();
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
     // Likely a name if it's 2-5 words of pure letters / spaces (no @ / digits)
-    if (first && /^[A-Za-z\s]{2,50}$/.test(first) && first.split(" ").length <= 5) {
-      lines[0] = "[NAME]";
+    if (/^[A-Za-z\s]{2,50}$/.test(line) && line.split(/\s+/).length <= 5) {
+      lines[i] = "[NAME]";
     }
+    break;
   }
   return lines.join("\n");
 }

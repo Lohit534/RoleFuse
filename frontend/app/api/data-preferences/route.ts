@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
       .eq("userId", user.id)
       .maybeSingle();
 
-    // Default: opted-in (true) if no row exists yet
-    const dataTrainingEnabled = row ? row.dataTrainingEnabled : true;
+    // Default: opt-out (false) if no row exists yet (explicit opt-in required)
+    const dataTrainingEnabled = row ? row.dataTrainingEnabled : false;
     return NextResponse.json({ dataTrainingEnabled }, { status: 200 });
   } catch (err: any) {
     logger.error("[data-preferences GET]", err?.message);

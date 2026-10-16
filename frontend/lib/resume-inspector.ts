@@ -4,6 +4,8 @@
  * that would make the AI result inaccurate. Returns a list of prompts to show the user.
  */
 
+import { estimateYearsOfExperience } from "@/lib/resume-format";
+
 export interface MissingField {
   id: string;
   label: string;
@@ -161,19 +163,22 @@ export function detectMissingFields(resumeText: string): MissingField[] {
   }
 
   // ── 7. Summary / Objective missing ──────────────────────────────────
+  // Per user rule: If entry level / fresher, do NOT ask for or require a summary.
+  // Only prompt for summary if the candidate has established professional experience.
   const hasSummary =
     upperText.includes("SUMMARY") ||
     upperText.includes("OBJECTIVE") ||
     upperText.includes("PROFILE") ||
     upperText.includes("ABOUT ME");
 
-  if (!hasSummary) {
+  const expYears = estimateYearsOfExperience(text);
+  if (!hasSummary && expYears >= 1) {
     fields.push({
       id: "summary_objective",
       label: "Professional Summary / Objective",
       description:
         "Provide a brief summary or career objective (target roles and key strengths)",
-      placeholder: "e.g. Full Stack Developer with 3+ years experience building scalable web apps with React and Node.js",
+      placeholder: "e.g. Software Engineer with 3+ years experience building scalable web apps with React and Node.js",
       type: "textarea",
       section: "Professional Summary",
       required: false,

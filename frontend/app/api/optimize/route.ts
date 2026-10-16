@@ -863,18 +863,18 @@ export async function POST(request: NextRequest) {
     // dataTrainingConsent comes from the frontend (localStorage mirror) AND
     // we double-check the server-side preference row for maximum security.
     try {
-      let serverConsentEnabled = true; // default: opt-in
+      let serverConsentEnabled = false; // default: opt-out (explicit opt-in required)
       const { data: prefRow } = await (admin as any)
         .from("DataPreferences")
         .select("dataTrainingEnabled")
         .eq("userId", activeUserId)
         .maybeSingle();
       if (prefRow) {
-        serverConsentEnabled = prefRow.dataTrainingEnabled;
+        serverConsentEnabled = Boolean(prefRow.dataTrainingEnabled);
       }
 
-      // Honour the STRICTER of client hint vs server row
-      const consentGranted = (dataTrainingConsent !== false) && serverConsentEnabled;
+      // Honour the STRICTER of client hint vs server row (requires explicit opt-in)
+      const consentGranted = Boolean(dataTrainingConsent) && serverConsentEnabled;
 
       if (consentGranted) {
         const sample = buildTrainingSample({
