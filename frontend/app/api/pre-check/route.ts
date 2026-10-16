@@ -77,30 +77,67 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
   const text = resumeText || "";
   const upperText = text.toUpperCase();
 
-  // 1. Missing Year / Dates / Duration (experience or total years)
-  const datePattern = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+20\d{2}\b|\b20\d{2}\s*[–\-]\s*(20\d{2}|Present|Current)\b/i;
-  const hasExpDates = datePattern.test(text);
-  const hasYearsMentioned = /\b\d+\+?\s*years?\b/i.test(text);
+  // 1. Internship / Work Experience Duration & Dates Detection
+  const hasInternship = /\b(intern|internship|trainee|apprentice)\b/i.test(text);
+  const hasExpSection = /(?:EXPERIENCE|WORK EXPERIENCE|INTERNSHIPS?|EMPLOYMENT HISTORY)\b/i.test(text);
 
-  // Only ask when dates are genuinely missing (exact dates already present => no question)
-  if (!hasExpDates && !hasYearsMentioned) {
+  // Extract experience/internship section text to check if dates/durations exist specifically in that section
+  const expMatch = text.match(/(?:EXPERIENCE|WORK EXPERIENCE|INTERNSHIPS?|EMPLOYMENT HISTORY)[\s\S]*?(?=(?:EDUCATION|PROJECTS?|TECHNICAL SKILLS|SKILLS|CERTIFICATIONS?|LANGUAGES?|$))/i);
+  const expSectionText = expMatch ? expMatch[0] : (hasInternship ? text : "");
+
+  const expDatePattern = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+20\d{2}\b|\b20\d{2}\s*[–\-]\s*(20\d{2}|Present|Current)\b|\b\d+\s*(?:months?|weeks?|yrs?|years?)\b/i;
+  const hasExpSpecificDates = expSectionText ? expDatePattern.test(expSectionText) : false;
+
+  if ((hasInternship || hasExpSection) && !hasExpSpecificDates) {
     questions.push({
-      id: "experience_dates",
+      id: "internship_duration",
       category: "year_date",
-      title: "Work / Internship Dates & Year",
-      question: "What were the start and end dates or year range for your experience/internship?",
-      hint: "e.g., Jan 2023 – Present or 2022 – 2024 (or total years like '3+ years')",
+      title: "Internship / Work Duration & Period",
+      question: "What was the duration or time period (start & end months/year) for your internship or work experience?",
+      hint: "e.g., June 2023 – August 2023 (3 Months) or May 2024 – July 2024",
     });
   }
 
-  // 2. Education Details (Graduation year & CGPA/GPA)
+  // 2. Internship & Project Tech Stack Detection
+  const hasProjects = /(?:PROJECTS?|ACADEMIC PROJECTS?|KEY PROJECTS?)\b/i.test(upperText);
+  // Check if projects or internship have explicit tech stack notation or if candidate needs to specify stack
+  const projMatch = text.match(/(?:PROJECTS?|ACADEMIC PROJECTS?|KEY PROJECTS?)[\s\S]*?(?=(?:EDUCATION|EXPERIENCE|WORK EXPERIENCE|INTERNSHIPS?|SKILLS|CERTIFICATIONS?|$))/i);
+  const projSectionText = projMatch ? projMatch[0] : "";
+  const hasExplicitTechInProjs = /(?:tech\s*stack|technologies|tools\s*used|stack|\bused\s*:)\b/i.test(projSectionText) ||
+    /\|\s*(?:React|Node|Python|Java|SQL|Spring|Django|Express|AWS|MongoDB)/i.test(projSectionText);
+
+  if ((hasProjects && !hasExplicitTechInProjs) || (hasInternship && !/(?:React|Node|Python|Java|SQL|Spring|Django|Express|AWS|MongoDB|TypeScript|C\+\+)\b/i.test(expSectionText))) {
+    questions.push({
+      id: "tech_stack",
+      category: "tech_stack",
+      title: "Internship & Project Tech Stack",
+      question: "Which technologies, frameworks, and programming languages did you use during your internship and key projects?",
+      hint: "e.g., React.js, Node.js, Express, PostgreSQL, Tailwind CSS, Git",
+    });
+  }
+
+  // 3. SSC (10th) School Education Detection
   const hasEducation =
     upperText.includes("EDUCATION") ||
     upperText.includes("B.TECH") ||
     upperText.includes("BACHELOR") ||
     upperText.includes("COLLEGE") ||
-    upperText.includes("UNIVERSITY");
+    upperText.includes("UNIVERSITY") ||
+    upperText.includes("ACADEMIC");
 
+  const hasSSC = /\b(ssc|10th|class\s*x\b|secondary\s*school|matriculation|high\s*school)\b/i.test(text);
+
+  if (hasEducation && !hasSSC) {
+    questions.push({
+      id: "ssc_education",
+      category: "education",
+      title: "SSC (10th) School & Education Details",
+      question: "What is your SSC / 10th school name, education board, passing year, and CGPA or percentage?",
+      hint: "e.g., Z.P. High School | State Board | 2018 | CGPA: 9.2 or 88%",
+    });
+  }
+
+  // 4. College Graduation Year & CGPA/GPA
   const hasGPA = /(GPA|CGPA|%)\s*:?\s*[\d.]+/i.test(text);
   const hasGradYear = /\b20\d{2}\b/.test(text);
 
@@ -108,26 +145,13 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
     questions.push({
       id: "education_details",
       category: "education",
-      title: "Graduation Year & GPA / CGPA",
-      question: "What is your graduation year and GPA/CGPA or percentage?",
+      title: "College Graduation Year & GPA / CGPA",
+      question: "What is your college graduation year and GPA/CGPA or percentage?",
       hint: "e.g., 2021 – 2025 | CGPA: 8.5 / 10",
     });
   }
 
-  // 3. Weak experience / project bullets missing quantifiable metrics
-  const weakBullets = findWeakBulletsLocally(resumeText);
-  for (const b of weakBullets) {
-    questions.push({
-      id: b.id,
-      category: "metrics",
-      title: "Quantified Metric",
-      originalBullet: b.originalBullet,
-      question: b.question,
-      hint: b.hint,
-    });
-  }
-
-  // 4. Missing target Job Description skills
+  // 5. Missing target Job Description skills
   if (jobDescription && jobDescription.length > 50) {
     const score = localScore(resumeText, jobDescription);
     const topMissing = score.missingKeywords.slice(0, 3);
@@ -142,16 +166,16 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
     }
   }
 
-  // Fallback: Project tech stack if missing
-  const hasProjects = upperText.includes("PROJECT");
-  const techPattern = /\b(Python|Java|React|Node|TypeScript|PostgreSQL|Docker|AWS|SQL)\b/i;
-  if (hasProjects && !techPattern.test(text)) {
+  // 6. Weak experience / project bullets missing quantifiable metrics
+  const weakBullets = findWeakBulletsLocally(resumeText);
+  for (const b of weakBullets) {
     questions.push({
-      id: "project_tech_stack",
-      category: "tech_stack",
-      title: "Project Technologies & Tools",
-      question: "Which technologies and frameworks were used in your projects?",
-      hint: "e.g., React, Node.js, Python, PostgreSQL, AWS",
+      id: b.id,
+      category: "metrics",
+      title: "Quantified Metric",
+      originalBullet: b.originalBullet,
+      question: b.question,
+      hint: b.hint,
     });
   }
 

@@ -879,7 +879,9 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       const isBullet = /^\s*([•\-\*–—+•\u2022\u25cf\u2043]|\d+\.)\s*/.test(rawLine);
       if (!isBullet) {
         const dateMatch = line.match(/\b\d{4}\b/);
-        const hasDatePattern = dateMatch && (line.toLowerCase().includes('present') || line.toLowerCase().includes('current') || line.includes('–') || line.includes('-'));
+        const hasDatePattern = (dateMatch && (line.toLowerCase().includes('present') || line.toLowerCase().includes('current') || line.includes('–') || line.includes('-'))) ||
+          /\b\d+\s*(?:months?|weeks?|yrs?|years?)\b/i.test(line) ||
+          /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*[–\-]\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*/i.test(line);
         
         let lastJobIdx = -1;
         for (let i = blocks.length - 1; i >= 0; i--) {

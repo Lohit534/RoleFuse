@@ -539,21 +539,57 @@ export async function POST(request: NextRequest) {
             .join("\n") +
           "\nSeamlessly integrate these verified user details into the corresponding sections and bullets. Do NOT output raw placeholder strings or placeholders like [ADD: ...], X.XX, or Company Name.";
 
-        const datesVal = userAnswers["experience_dates"];
-        const eduVal = userAnswers["education_details"];
-        const techVal = userAnswers["project_tech_stack"];
+        const findAnswer = (keywords: string[]): string | undefined => {
+          for (const [k, v] of Object.entries(userAnswers)) {
+            if (typeof v === "string" && v.trim()) {
+              const kLow = k.toLowerCase();
+              if (keywords.some(kw => kLow.includes(kw.toLowerCase()))) {
+                return v.trim();
+              }
+            }
+          }
+          return undefined;
+        };
+
+        const datesVal = findAnswer(["internship_duration", "experience_dates", "duration", "period", "work / internship", "internship dates"]);
+        const eduVal = findAnswer(["education_details", "graduation year", "college", "cgpa", "gpa"]);
+        const techVal = findAnswer(["tech_stack", "project_tech_stack", "technologies", "tools", "stack", "framework"]);
+        const sscVal = findAnswer(["ssc_education", "ssc", "10th", "secondary school", "matriculation"]);
+
         const extraItems: string[] = [];
-        if (datesVal && typeof datesVal === "string" && datesVal.trim()) {
-          extraItems.push(`[Verified Experience Dates/Year: ${datesVal.trim()}]`);
+        if (datesVal) {
+          extraItems.push(`[Verified Internship Duration & Period: ${datesVal}]`);
+          combinedInstructions += `\n\n• VERIFIED INTERNSHIP DURATION & PERIOD: "${datesVal}"\n  MANDATORY: You MUST include this verified internship time period/duration directly under the internship/experience title. Format: Month YYYY – Month YYYY (or duration). NEVER drop or omit this date line!`;
         }
-        if (eduVal && typeof eduVal === "string" && eduVal.trim()) {
-          extraItems.push(`[Verified Graduation Year & GPA: ${eduVal.trim()}]`);
+        if (techVal) {
+          extraItems.push(`[Verified Project & Internship Technologies: ${techVal}]`);
+          combinedInstructions += `\n\n• VERIFIED INTERNSHIP & PROJECT TECH STACK: "${techVal}"\n  MANDATORY: You MUST integrate these technologies into the TECHNICAL SKILLS section (under appropriate categories) and prominently tag or mention them in the project and internship bullet points!`;
         }
-        if (techVal && typeof techVal === "string" && techVal.trim()) {
-          extraItems.push(`[Verified Project Technologies: ${techVal.trim()}]`);
+        if (sscVal) {
+          extraItems.push(`[Verified SSC (10th) Education: ${sscVal}]`);
+          combinedInstructions += `\n\n• VERIFIED SSC (10th) SCHOOL EDUCATION: "${sscVal}"\n  MANDATORY: You MUST include this SSC / 10th School Education entry under the EDUCATION section! Format: SSC / Class X | School Name | Board | Passing Year | CGPA / Percentage. DO NOT DROP OR OMIT THIS SSC EDUCATION RECORD UNDER ANY CIRCUMSTANCE!`;
+          
+          // Inject SSC directly into preparedResumeText if not already present
+          if (!/\b(ssc|10th|class\s*x|secondary\s*school)\b/i.test(preparedResumeText)) {
+            const eduIdx = preparedResumeText.search(/^EDUCATION\b/im);
+            if (eduIdx !== -1) {
+              const nextSecIdx = preparedResumeText.slice(eduIdx + 9).search(/^[A-Z\s&]{4,}\b/m);
+              const insertAt = nextSecIdx !== -1 ? eduIdx + 9 + nextSecIdx : preparedResumeText.length;
+              preparedResumeText = 
+                preparedResumeText.slice(0, insertAt).trimEnd() + 
+                `\nSecondary School Certificate (SSC / 10th)\n${sscVal}\n\n` + 
+                preparedResumeText.slice(insertAt);
+            } else {
+              preparedResumeText += `\n\nEDUCATION\nSecondary School Certificate (SSC / 10th)\n${sscVal}\n`;
+            }
+          }
+        }
+        if (eduVal) {
+          extraItems.push(`[Verified Graduation Year & GPA: ${eduVal}]`);
+          combinedInstructions += `\n\n• VERIFIED COLLEGE GRADUATION YEAR & GPA: "${eduVal}"\n  MANDATORY: Ensure the college / university degree entry in the EDUCATION section includes this graduation year and GPA/percentage.`;
         }
         if (extraItems.length > 0) {
-          enrichedResumeText += `\n\n--- USER VERIFIED DATES, YEARS & DETAILS ---\n${extraItems.join("\n")}`;
+          enrichedResumeText = preparedResumeText + `\n\n--- USER VERIFIED DATES, YEARS & DETAILS ---\n${extraItems.join("\n")}`;
         }
       }
     }

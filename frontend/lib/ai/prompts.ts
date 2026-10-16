@@ -136,10 +136,10 @@ export function buildOptimizationPrompt(
     "PROFESSIONAL EXPERIENCE & INTERNSHIPS:\n" +
     "  Header: PROFESSIONAL EXPERIENCE (ALL CAPS)\n" +
     "  For each role / internship:\n" +
-    "    Line 1: Role Title | Company Name | Tech Stack (optional)\n" +
-    "    Line 2 (ONLY IF DATES EXISTED IN ORIGINAL RESUME): Month YYYY - Month YYYY  (or Present)\n" +
-    "    Lines 3+: bullet Strong bullet (one per line)\n" +
-    "    CRITICAL FOR INTERNSHIP DATES: NEVER invent, fabricate, guess, or append dates, years, or months for an internship or job if the user did NOT specify them in their original resume! If missing in the original resume, DO NOT add a dates line.\n" +
+    "    Line 1: Role Title | Company Name | Tech Stack\n" +
+    "    Line 2 (IF DATES EXIST IN RESUME OR USER-VERIFIED ANSWERS): Month YYYY - Month YYYY (or Duration / Present)\n" +
+    "    Lines 3+: • Strong bullet (one per line)\n" +
+    "    CRITICAL FOR INTERNSHIP DATES: If the user provided verified internship duration/period in their answers or original resume, you MUST include it on Line 2! However, NEVER invent or guess fake years/dates if neither the resume nor the user provided them.\n" +
     "  Every bullet MUST begin with a powerful past-tense action verb and quantify impact.\n\n" +
     "PROJECTS:\n" +
     "  Header: PROJECTS (ALL CAPS)\n" +
@@ -148,14 +148,14 @@ export function buildOptimizationPrompt(
     "    Lines 2+: 2-4 impact-oriented bullets describing contributions, architectures, and outcomes.\n\n" +
     "EDUCATION:\n" +
     "  Header: EDUCATION (ALL CAPS)\n" +
-    "  CRITICAL EDUCATION RULE: Preserve EVERY education stage and credential mentioned in the original resume:\n" +
+    "  CRITICAL EDUCATION RULE: Preserve EVERY education stage and credential mentioned in original resume or user answers:\n" +
     "  - College / University Degree (e.g. B.Tech, B.S., M.Tech, Degree)\n" +
-    "  - Intermediate / 12th / Class XII / Diploma (if present in original resume)\n" +
-    "  - SSC / 10th / Class X / Secondary School Certificate / Matriculation (if present in original resume)\n" +
-    "  NEVER DELETE, DROP, OR OMIT SSC OR INTERMEDIATE! Retain all candidate degrees and schooling records.\n" +
+    "  - Intermediate / 12th / Class XII / Diploma (if present)\n" +
+    "  - SSC / 10th / Class X / Secondary School Certificate / Matriculation (MANDATORY if present in resume or provided in user answers)\n" +
+    "  NEVER DELETE, DROP, OR OMIT SSC OR INTERMEDIATE! Retain all candidate schooling and degree records.\n" +
     "  For each entry:\n" +
     "    Line 1: Degree / Qualification Name | Graduated: YYYY (or Month YYYY - Month YYYY)\n" +
-    "    Line 2: Institution Name | Board / Stream | CGPA / Percentage (only if in original resume)\n\n" +
+    "    Line 2: Institution / School Name | Board / Stream | CGPA / Percentage (only if available)\n\n" +
     "CERTIFICATIONS & ACHIEVEMENTS:\n" +
     "  Header: CERTIFICATIONS & ACHIEVEMENTS (ALL CAPS)\n" +
     "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section. Do NOT create two separate sections.\n" +

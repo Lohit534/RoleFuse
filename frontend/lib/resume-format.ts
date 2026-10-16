@@ -154,11 +154,12 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
     // Experience / Internships: Strip fabricated date ranges the user did not specify in original resume
     const isExp = /EXPERIENCE|INTERNSHIP|WORK HISTORY/.test(section) && !header;
     if (isExp && line.trim()) {
-      const isDateLine = /^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\b(19\d{2}|20\d{2})\b\s*[-–—]\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?(?:\b(19\d{2}|20\d{2})\b|Present)$/i.test(line.trim());
+      const isDateLine = /^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\b(19\d{2}|20\d{2})\b\s*[-–—]\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?(?:\b(19\d{2}|20\d{2})\b|Present)(?:\s*\([^)]*\))?$/i.test(line.trim());
       if (isDateLine) {
         const yearsInLine = Array.from(line.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => m[1]);
-        const anyYearInOriginal = yearsInLine.some((yr) => original.includes(yr));
-        if (!anyYearInOriginal) {
+        const anyYearInOriginal = yearsInLine.length === 0 || yearsInLine.some((yr) => original.includes(yr));
+        const durationInOriginal = /\b(?:months?|weeks?|duration)\b/i.test(line) && /\b(?:months?|weeks?|duration)\b/i.test(original);
+        if (!anyYearInOriginal && !durationInOriginal) {
           // AI fabricated this internship date range without user stating it — drop the fake date line
           continue;
         }
@@ -212,7 +213,7 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
     out.push(line.replace(/[ \t]+([,.])(\s|$)/g, "$1$2"));
   }
 
-  // Preserve and restore SSC (10th) and Intermediate (12th) if present in original but dropped by AI
+  // Preserve and restore SSC (10th) and Intermediate (12th) if present in original or user verified answers but dropped by AI
   const hasOriginalSSC = /\b(ssc|10th|class x|matriculation|secondary school)\b/i.test(originalLower);
   const hasOriginalInter = /\b(intermediate|12th|class xii|hsc|senior secondary|higher secondary)\b/i.test(originalLower);
 
@@ -222,7 +223,11 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
 
   if (hasOriginalSSC && !hasResultSSC) {
     const originalLines = original.split(/\r?\n/);
-    const sscLines = originalLines.filter((l) => /\b(ssc|10th|class x|matriculation|secondary school)\b/i.test(l));
+    const sscLines = originalLines
+      .filter((l) => /\b(ssc|10th|class x|matriculation|secondary school)\b/i.test(l))
+      .map((l) => l.replace(/^\s*\[Verified[^\]]*:\s*/i, "").replace(/\]\s*$/, "").replace(/^[•\-\*]\s*/, "").trim())
+      .filter(Boolean);
+
     if (sscLines.length > 0) {
       const eduIdx = out.findIndex((l) => /^EDUCATION\b/i.test(l.trim()));
       if (eduIdx !== -1) {
@@ -233,14 +238,22 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
             break;
           }
         }
-        out.splice(insertIdx, 0, sscLines[0].trim());
+        const rawEntry = sscLines[0];
+        const sscBlock = rawEntry.toLowerCase().includes("ssc") || rawEntry.toLowerCase().includes("10th") || rawEntry.toLowerCase().includes("secondary")
+          ? rawEntry
+          : `Secondary School Certificate (SSC / 10th)\n${rawEntry}`;
+        out.splice(insertIdx, 0, sscBlock);
       }
     }
   }
 
   if (hasOriginalInter && !hasResultInter) {
     const originalLines = original.split(/\r?\n/);
-    const interLines = originalLines.filter((l) => /\b(intermediate|12th|class xii|hsc|senior secondary|higher secondary)\b/i.test(l));
+    const interLines = originalLines
+      .filter((l) => /\b(intermediate|12th|class xii|hsc|senior secondary|higher secondary)\b/i.test(l))
+      .map((l) => l.replace(/^\s*\[Verified[^\]]*:\s*/i, "").replace(/\]\s*$/, "").replace(/^[•\-\*]\s*/, "").trim())
+      .filter(Boolean);
+
     if (interLines.length > 0) {
       const eduIdx = out.findIndex((l) => /^EDUCATION\b/i.test(l.trim()));
       if (eduIdx !== -1) {
@@ -251,7 +264,7 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
             break;
           }
         }
-        out.splice(insertIdx, 0, interLines[0].trim());
+        out.splice(insertIdx, 0, interLines[0]);
       }
     }
   }
