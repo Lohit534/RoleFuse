@@ -917,7 +917,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
                     {/* PROFILE DROPDOWN MENU */}
                     {isDropdownOpen && (
-                      <div className="absolute right-0 mt-2 w-[275px] bg-white text-slate-800 border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2.5 select-none animate-in fade-in slide-in-from-top-2 duration-150 z-50">
+                      <div className="absolute right-0 mt-2 w-[280px] max-w-[calc(100vw-1.5rem)] bg-white text-slate-800 border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2.5 select-none animate-in fade-in slide-in-from-top-2 duration-150 z-50">
                         {/* 1. User Header with Google Profile Picture */}
                         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -1057,6 +1057,14 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
                         {/* 3. Navigation Links List */}
                         <div className="space-y-0.5 pt-0.5">
+                          <Link
+                            href="/dashboard/pricing"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
+                          >
+                            <DollarSign className="h-3.5 w-3.5 text-slate-400" />
+                            <span>Pricing Plans</span>
+                          </Link>
                           <Link
                             href="/dashboard/billing"
                             onClick={() => setIsDropdownOpen(false)}
@@ -1239,6 +1247,48 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               </Link>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Mobile Bottom Navigation Bar (for logged-in users on mobile) */}
+      {user && !hideNav && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-200 flex items-center justify-around px-2 py-3 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          <Link
+            href="/dashboard"
+            className={`flex flex-col items-center gap-1 transition-colors ${
+              pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            <Sparkles className="h-5 w-5" />
+            <span className="text-[10px] font-bold">Optimize</span>
+          </Link>
+          <Link
+            href="/dashboard/resumes"
+            className={`flex flex-col items-center gap-1 transition-colors ${
+              pathname === "/dashboard/resumes" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            <FileText className="h-5 w-5" />
+            <span className="text-[10px] font-bold">Resumes</span>
+          </Link>
+          <Link
+            href="/dashboard/job-tracker"
+            className={`flex flex-col items-center gap-1 transition-colors ${
+              pathname === "/dashboard/job-tracker" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            <Briefcase className="h-5 w-5" />
+            <span className="text-[10px] font-bold">Tracker</span>
+          </Link>
+          <Link
+            href="/dashboard/history"
+            className={`flex flex-col items-center gap-1 transition-colors ${
+              pathname === "/dashboard/history" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            <History className="h-5 w-5" />
+            <span className="text-[10px] font-bold">History</span>
+          </Link>
         </div>
       )}
 
