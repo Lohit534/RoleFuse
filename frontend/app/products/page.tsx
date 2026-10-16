@@ -56,7 +56,7 @@ export default function ProductsPage() {
 
     if (currentUser) {
       // Map public fallback paths to authenticated dashboard routes
-      if (path === "/ats-optimizer") {
+      if (path === "/ats-optimizer" || path === "/ats-checker") {
         router.push("/dashboard");
         return;
       }

@@ -113,6 +113,27 @@ export default function AtsResumePage() {
     }
   };
 
+  const handleScanResume = async () => {
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        currentUser = data?.session?.user ?? null;
+      } catch (e) {}
+    }
+    if (!currentUser) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        currentUser = data?.user ?? null;
+      } catch (e) {}
+    }
+    if (currentUser) {
+      router.push("/dashboard");
+    } else {
+      router.push("/ats-checker");
+    }
+  };
+
   const handleUseTemplate = async (templateId: string) => {
     let currentUser = user;
     if (!currentUser) {
@@ -157,12 +178,14 @@ export default function AtsResumePage() {
             </p>
 
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link href="/ats-checker">
-                <Button className="h-12 px-7 bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-sm rounded-xl shadow-md transition-all gap-2 cursor-pointer w-full sm:w-auto">
-                  <Search className="h-4 w-4" />
-                  <span>Scan Resume Compatibility</span>
-                </Button>
-              </Link>
+              <Button
+                type="button"
+                onClick={handleScanResume}
+                className="h-12 px-7 bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-sm rounded-xl shadow-md transition-all gap-2 cursor-pointer w-full sm:w-auto"
+              >
+                <Search className="h-4 w-4" />
+                <span>Scan Resume Compatibility</span>
+              </Button>
               <Button
                 type="button"
                 onClick={handleStartBuilding}
@@ -205,11 +228,13 @@ export default function AtsResumePage() {
                   </div>
                 </div>
                 <div className="pt-3">
-                  <Link href="/ats-checker">
-                    <Button className="w-full h-11 bg-slate-900 hover:bg-[#087F6E] text-white font-bold text-xs rounded-xl shadow-xs transition-all">
-                      <span>Test Your Resume Now</span>
-                    </Button>
-                  </Link>
+                  <Button
+                    type="button"
+                    onClick={handleScanResume}
+                    className="w-full h-11 bg-slate-900 hover:bg-[#087F6E] text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                  >
+                    <span>Test Your Resume Now</span>
+                  </Button>
                 </div>
               </div>
 

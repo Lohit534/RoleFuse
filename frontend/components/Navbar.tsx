@@ -259,7 +259,6 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
     { label: "Job Tracker", href: "/dashboard/job-tracker", icon: <Briefcase className="h-4 w-4" /> },
     { label: "History", href: "/dashboard/history", icon: <History className="h-4 w-4" /> },
     { label: "Pricing", href: "/dashboard/pricing", icon: <DollarSign className="h-4 w-4" /> },
-    { label: "Billing", href: "/dashboard/billing", icon: <CreditCard className="h-4 w-4" /> },
   ];
 
   // Calculations for credit percentage and plan
@@ -354,7 +353,11 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                         <button
                           onClick={() => {
                             setActiveMenu(null);
-                            router.push("/ats-checker");
+                            if (user) {
+                              router.push("/dashboard");
+                            } else {
+                              router.push("/ats-checker");
+                            }
                           }}
                           className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
                         >
@@ -473,7 +476,11 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                         <button
                           onClick={() => {
                             setActiveMenu(null);
-                            router.push("/ats-checker");
+                            if (user) {
+                              router.push("/dashboard");
+                            } else {
+                              router.push("/ats-checker");
+                            }
                           }}
                           className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
                         >
@@ -545,14 +552,20 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
                         {/* Bottom Action Button for ATS Resume */}
                         <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <Link href="/ats-checker" onClick={() => setActiveMenu(null)}>
-                            <button
-                              type="button"
-                              className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-4 rounded-xl transition-all cursor-pointer shadow-xs"
-                            >
-                              Check ATS Score
-                            </button>
-                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveMenu(null);
+                              if (user) {
+                                router.push("/dashboard");
+                              } else {
+                                router.push("/ats-checker");
+                              }
+                            }}
+                            className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-4 rounded-xl transition-all cursor-pointer shadow-xs"
+                          >
+                            Check ATS Score
+                          </button>
                           <Link
                             href="/ats-resume"
                             onClick={() => setActiveMenu(null)}
@@ -1045,38 +1058,6 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                         {/* 3. Navigation Links List */}
                         <div className="space-y-0.5 pt-0.5">
                           <Link
-                            href="/dashboard"
-                            onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
-                          >
-                            <Compass className="h-3.5 w-3.5 text-slate-400" />
-                            <span>Optimize Resume</span>
-                          </Link>
-                          <Link
-                            href="/dashboard/resumes"
-                            onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
-                          >
-                            <FileText className="h-3.5 w-3.5 text-slate-400" />
-                            <span>My Resumes</span>
-                          </Link>
-                          <Link
-                            href="/dashboard/job-tracker"
-                            onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
-                          >
-                            <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                            <span>Job Tracker</span>
-                          </Link>
-                          <Link
-                            href="/dashboard/pricing"
-                            onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
-                          >
-                            <DollarSign className="h-3.5 w-3.5 text-slate-400" />
-                            <span>Pricing Plans</span>
-                          </Link>
-                          <Link
                             href="/dashboard/billing"
                             onClick={() => setIsDropdownOpen(false)}
                             className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
@@ -1261,47 +1242,6 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
         </div>
       )}
 
-      {/* Mobile Bottom Navigation Bar (for logged-in users on internal dashboard) */}
-      {user && !hideNav && isDashboardSubpage && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-200 flex items-center justify-around px-2 py-3 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-          <Link
-            href="/dashboard"
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            <Sparkles className="h-5 w-5" />
-            <span className="text-[10px] font-bold">Optimize</span>
-          </Link>
-          <Link
-            href="/dashboard/resumes"
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              pathname === "/dashboard/resumes" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            <FileText className="h-5 w-5" />
-            <span className="text-[10px] font-bold">Resumes</span>
-          </Link>
-          <Link
-            href="/dashboard/job-tracker"
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              pathname === "/dashboard/job-tracker" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            <Briefcase className="h-5 w-5" />
-            <span className="text-[10px] font-bold">Tracker</span>
-          </Link>
-          <Link
-            href="/dashboard/history"
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              pathname === "/dashboard/history" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            <History className="h-5 w-5" />
-            <span className="text-[10px] font-bold">History</span>
-          </Link>
-        </div>
-      )}
 
       {/* Persistent Support, Feedback & Paywall */}
       {user && !hideNav && (isOwner || isPremium || isProMax) && <SupportChatbot />}
