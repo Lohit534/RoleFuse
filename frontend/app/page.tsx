@@ -156,8 +156,7 @@ export default function LandingPage() {
   const { setResumeText, setJobDescription } = useResumeStore();
   const [barReady, setBarReady] = useState(false);
 
-  // Default to true to show loading shimmer skeleton while resolving session and prevent flashing landing page
-  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(false);
 
   useEffect(() => {
     localStorage.removeItem("fastHire_pendingSample");
@@ -168,19 +167,7 @@ export default function LandingPage() {
 
     async function checkLoggedIn() {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (data?.session?.user) {
-          router.replace("/dashboard");
-          return;
-        }
-      } catch (e) {}
-
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user) {
-          router.replace("/dashboard");
-          return;
-        }
+        await supabase.auth.getSession();
       } catch (e) {}
 
       if (isMounted) {
@@ -252,18 +239,16 @@ export default function LandingPage() {
               {/* CTAs */}
               <div className="flex flex-wrap items-center gap-3.5 pt-1">
                 <Link href="/auth/signup">
-                  <button className="bg-[#087F6E] hover:bg-[#075E53] text-white px-7 py-3.5 text-[15px] font-semibold flex items-center gap-2 rounded-xl shadow-xs transition-colors cursor-pointer">
+                  <button className="bg-[#087F6E] hover:bg-[#075E53] text-white px-7 py-3.5 text-[15px] font-semibold flex items-center justify-center rounded-xl shadow-xs transition-colors cursor-pointer">
                     <span>Get Started Free</span>
-                    <ArrowRight className="h-4 w-4" />
                   </button>
                 </Link>
 
                 <button
                   onClick={handleTrySample}
-                  className="border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-7 py-3.5 text-[15px] font-semibold rounded-xl flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+                  className="border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-7 py-3.5 text-[15px] font-semibold rounded-xl flex items-center justify-center shadow-xs transition-colors cursor-pointer"
                 >
                   <span>Try Sample Resume</span>
-                  <ArrowRight className="h-4 w-4 text-[#526176]" />
                 </button>
               </div>
 
@@ -534,26 +519,48 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* 4 Core Features Grid (Resume Optimizer, Job Matcher, Application Tracker, Career Insights) */}
+          {/* 4 Core Features Grid with Realistic Visual Mockups */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             {/* Feature 1: Resume Optimizer */}
-            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between">
-                <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
-                  <FileText className="h-5.5 w-5.5" />
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-5 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
+                    <FileText className="h-5.5 w-5.5" />
+                  </div>
+                  <span className="text-xs font-semibold text-[#087F6E] bg-teal-50/80 px-3 py-1 rounded-full border border-teal-200/60">
+                    Core Tool
+                  </span>
                 </div>
-                <span className="text-xs font-semibold text-[#087F6E] bg-teal-50/80 px-3 py-1 rounded-full border border-teal-200/60">
-                  Core Tool
-                </span>
+                <div className="space-y-1.5">
+                  <h3 className="font-heading font-bold text-[#111827] text-xl">
+                    Resume Optimizer
+                  </h3>
+                  <p className="text-[14px] text-[#526176] leading-[1.6]">
+                    ATS-friendly suggestions and resume improvements. Paste your resume against any job description to detect missing keywords, score compatibility, and rewrite bullet points for measurable impact.
+                  </p>
+                </div>
+
+                {/* Visual Interface Mockup */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 select-none">
+                  <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 font-bold uppercase">
+                    <span>Keyword Gap Injector</span>
+                    <span className="text-[#087F6E]">+57 Pts Lift</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="bg-white border border-teal-200 text-[#087F6E] text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <span className="text-teal-600 font-bold">✓</span> Distributed Systems
+                    </span>
+                    <span className="bg-white border border-teal-200 text-[#087F6E] text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <span className="text-teal-600 font-bold">✓</span> AWS Architecture
+                    </span>
+                    <span className="bg-white border border-teal-200 text-[#087F6E] text-[10px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <span className="text-teal-600 font-bold">✓</span> Microservices
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="font-heading font-bold text-[#111827] text-xl">
-                  Resume Optimizer
-                </h3>
-                <p className="text-[15px] text-[#526176] leading-[1.68]">
-                  ATS-friendly suggestions and resume improvements. Paste your resume against any job description to detect missing keywords, score compatibility, and rewrite bullet points for measurable impact.
-                </p>
-              </div>
+
               <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#526176]">
                 <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Keyword Density</span>
                 <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Bullet Rewrites</span>
@@ -562,23 +569,43 @@ export default function LandingPage() {
             </div>
 
             {/* Feature 2: Job Matcher */}
-            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between">
-                <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
-                  <Target className="h-5.5 w-5.5" />
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-5 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
+                    <Target className="h-5.5 w-5.5" />
+                  </div>
+                  <span className="text-xs font-semibold text-[#087F6E] bg-teal-50/80 px-3 py-1 rounded-full border border-teal-200/60">
+                    Targeting
+                  </span>
                 </div>
-                <span className="text-xs font-semibold text-[#087F6E] bg-teal-50/80 px-3 py-1 rounded-full border border-teal-200/60">
-                  Targeting
-                </span>
+                <div className="space-y-1.5">
+                  <h3 className="font-heading font-bold text-[#111827] text-xl">
+                    Job Matcher
+                  </h3>
+                  <p className="text-[14px] text-[#526176] leading-[1.6]">
+                    Relevant job opportunities matched to your profile. Inspect alignment percentages, uncover role-specific requirements, and tailor applications specifically for each company before applying.
+                  </p>
+                </div>
+
+                {/* Visual Interface Mockup */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5 select-none">
+                  <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 font-bold uppercase">
+                    <span>Role Alignment Radar</span>
+                    <span className="text-[#087F6E]">94% Fit</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] font-semibold text-slate-700">
+                      <span>Technical Requirements</span>
+                      <span className="text-[#087F6E]">96%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-[#087F6E] w-[96%]" />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="font-heading font-bold text-[#111827] text-xl">
-                  Job Matcher
-                </h3>
-                <p className="text-[15px] text-[#526176] leading-[1.68]">
-                  Relevant job opportunities matched to your profile. Inspect alignment percentages, uncover role-specific requirements, and tailor applications specifically for each company before applying.
-                </p>
-              </div>
+
               <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#526176]">
                 <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Match Percentage</span>
                 <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Role Requirements</span>
@@ -587,23 +614,42 @@ export default function LandingPage() {
             </div>
 
             {/* Feature 3: Application Tracker */}
-            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between">
-                <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
-                  <Briefcase className="h-5.5 w-5.5" />
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-5 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
+                    <Briefcase className="h-5.5 w-5.5" />
+                  </div>
+                  <span className="text-xs font-semibold text-[#087F6E] bg-teal-50/80 px-3 py-1 rounded-full border border-teal-200/60">
+                    Organization
+                  </span>
                 </div>
-                <span className="text-xs font-semibold text-[#087F6E] bg-teal-50/80 px-3 py-1 rounded-full border border-teal-200/60">
-                  Organization
-                </span>
+                <div className="space-y-1.5">
+                  <h3 className="font-heading font-bold text-[#111827] text-xl">
+                    Application Tracker
+                  </h3>
+                  <p className="text-[14px] text-[#526176] leading-[1.6]">
+                    Organized job applications in a single pipeline. Track your submissions across Wishlist, Applied, Interviewing, and Offered stages without juggling messy spreadsheets.
+                  </p>
+                </div>
+
+                {/* Visual Interface Mockup */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 grid grid-cols-3 gap-1.5 select-none">
+                  <div className="bg-white border border-slate-200 rounded-lg p-1.5 text-center">
+                    <span className="text-[8px] font-bold text-slate-500 uppercase block">Applied</span>
+                    <span className="text-xs font-bold text-slate-800">12</span>
+                  </div>
+                  <div className="bg-white border border-teal-200 rounded-lg p-1.5 text-center">
+                    <span className="text-[8px] font-bold text-[#087F6E] uppercase block">Interview</span>
+                    <span className="text-xs font-bold text-[#087F6E]">4</span>
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-lg p-1.5 text-center">
+                    <span className="text-[8px] font-bold text-slate-700 uppercase block">Offer</span>
+                    <span className="text-xs font-bold text-slate-900">1</span>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="font-heading font-bold text-[#111827] text-xl">
-                  Application Tracker
-                </h3>
-                <p className="text-[15px] text-[#526176] leading-[1.68]">
-                  Organized job applications in a single pipeline. Track your submissions across Wishlist, Applied, Interviewing, and Offered stages without juggling messy spreadsheets.
-                </p>
-              </div>
+
               <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#526176]">
                 <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Stage Pipeline</span>
                 <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Interview Dates</span>
@@ -612,27 +658,153 @@ export default function LandingPage() {
             </div>
 
             {/* Feature 4: Career Insights */}
-            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-4 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between">
-                <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
-                  <TrendingUp className="h-5.5 w-5.5" />
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-7 sm:p-8 space-y-5 shadow-xs hover:border-[#087F6E]/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="h-11 w-11 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#087F6E]">
+                    <TrendingUp className="h-5.5 w-5.5" />
+                  </div>
+                  <span className="text-xs font-semibold text-[#087F6E] bg-teal-50/80 px-3 py-1 rounded-full border border-teal-200/60">
+                    Analytics
+                  </span>
                 </div>
-                <span className="text-xs font-semibold text-[#087F6E] bg-teal-50/80 px-3 py-1 rounded-full border border-teal-200/60">
-                  Analytics
-                </span>
+                <div className="space-y-1.5">
+                  <h3 className="font-heading font-bold text-[#111827] text-xl">
+                    Career Insights
+                  </h3>
+                  <p className="text-[14px] text-[#526176] leading-[1.6]">
+                    Personalized progress and skill development. Monitor your ATS score trajectory over time, review historical optimization logs, and pinpoint skill development areas for future career moves.
+                  </p>
+                </div>
+
+                {/* Visual Interface Mockup */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between select-none">
+                  <div className="space-y-0.5">
+                    <span className="text-[9px] font-mono text-slate-500 font-bold uppercase block">ATS Score Progression</span>
+                    <span className="text-xs font-bold text-slate-800">34% → 91% Average Lift</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#087F6E] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full">
+                    +57 Pts
+                  </span>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="font-heading font-bold text-[#111827] text-xl">
-                  Career Insights
-                </h3>
-                <p className="text-[15px] text-[#526176] leading-[1.68]">
-                  Personalized progress and skill development. Monitor your ATS score trajectory over time, review historical optimization logs, and pinpoint skill development areas for future career moves.
-                </p>
-              </div>
+
               <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-[#526176]">
                 <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Score History</span>
                 <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Skill Gap Roadmap</span>
                 <span className="bg-[#F5FAFA] border border-[#DCE7E9] px-2.5 py-1 rounded-md">Past Scans</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 1. RESUME BUILDER SECTION ── */}
+          <div className="pt-12 pb-8 border-t border-[#DCE7E9]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+              {/* Content Column */}
+              <div className="lg:col-span-6 space-y-6">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-bold tracking-wide">
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>AI Resume Builder</span>
+                </div>
+
+                <h2 className="font-heading text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-[#111827] tracking-tight leading-[1.15]">
+                  Build Your Best Resume <br />
+                  <span className="text-[#087F6E]">Recruiter-Approved &amp; ATS-Ready</span>
+                </h2>
+
+                <p className="text-base text-[#526176] leading-relaxed font-normal">
+                  Create a professional, high-scoring resume in minutes. Choose recruiter-tested layouts, adjust accents, and preview your live ATS document in real time.
+                </p>
+
+                <div className="space-y-3.5 text-sm text-[#374151]">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-[#087F6E] shrink-0 mt-0.5" />
+                    <span>Single-column linear structure guaranteed to pass Taleo, Workday, and Greenhouse</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-[#087F6E] shrink-0 mt-0.5" />
+                    <span>Curated typography and color palettes tailored for optimal human and algorithmic reading</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-[#087F6E] shrink-0 mt-0.5" />
+                    <span>Instant export to clean, high-resolution ATS PDF and editable DOCX formats</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Link href="/resume-builder">
+                    <button className="bg-[#087F6E] hover:bg-[#075E53] text-white px-7 py-3.5 text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer">
+                      Build ATS Resume Free
+                    </button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Visual Showcase Column */}
+              <div className="lg:col-span-6 flex justify-center">
+                <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-gradient-to-br from-emerald-50/40 via-white to-teal-50/30 p-4 sm:p-6 w-full max-w-[540px]">
+                  <img
+                    src="/images/resume-builder-feature.png"
+                    alt="FastHire AI Resume Builder Format Preview"
+                    className="w-full h-auto object-contain select-none rounded-xl"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 2. BEAT THE BOTS SECTION ── */}
+          <div className="pt-16 pb-10 border-t border-[#DCE7E9]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+              {/* Visual Showcase Column (Left on desktop) */}
+              <div className="lg:col-span-6 order-2 lg:order-1 flex justify-center">
+                <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-gradient-to-br from-teal-50/40 via-white to-slate-50 p-4 sm:p-6 w-full max-w-[540px]">
+                  <img
+                    src="/images/beat-the-bots.png"
+                    alt="Beat the Bots ATS Resume Inspection Tips"
+                    className="w-full h-auto object-contain select-none rounded-xl"
+                  />
+                </div>
+              </div>
+
+              {/* Content Column (Right on desktop) */}
+              <div className="lg:col-span-6 order-1 lg:order-2 space-y-6">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-bold tracking-wide">
+                  <Shield className="h-3.5 w-3.5" />
+                  <span>Beat the Bots</span>
+                </div>
+
+                <h2 className="font-heading text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-[#111827] tracking-tight leading-[1.15]">
+                  Beat the Bots &amp; <br />
+                  <span className="text-[#087F6E]">Land More Job Interviews</span>
+                </h2>
+
+                <p className="text-base text-[#526176] leading-relaxed font-normal">
+                  Over 75% of resumes are discarded by automated applicant tracking filters before a human recruiter even sees them. FastHire AI identifies formatting traps, missing keywords, and section errors so your resume reaches decision makers.
+                </p>
+
+                <div className="space-y-3.5 text-sm text-[#374151]">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-[#087F6E] shrink-0 mt-0.5" />
+                    <span>Keyword Density Audit: Discover exactly which critical terms are missing from your target role</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-[#087F6E] shrink-0 mt-0.5" />
+                    <span>Formatting Error Detection: Eliminate multi-column layouts, tables, and unreadable graphics</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-[#087F6E] shrink-0 mt-0.5" />
+                    <span>Objective ATS Compatibility Score: Benchmark your resume against top commercial screening engines</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <Link href="/ats-checker">
+                    <button className="bg-[#087F6E] hover:bg-[#075E53] text-white px-7 py-3.5 text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer">
+                      Scan Your Resume Free
+                    </button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

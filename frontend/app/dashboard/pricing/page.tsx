@@ -157,7 +157,7 @@ export default function PricingPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [authLoading, setAuthLoading] = useState(true);
-  const [currentPlan, setCurrentPlan] = useState<string>("free");
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [isOwner, setIsOwner] = useState(false);
   const [isFirst50, setIsFirst50] = useState(false);
@@ -203,6 +203,8 @@ export default function PricingPage() {
       try {
         const { data, error } = await supabase.auth.getUser();
         if (error || !data?.user) {
+          setUserId(null);
+          setCurrentPlan(null);
           setAuthLoading(false);
           return;
         }
@@ -257,8 +259,11 @@ export default function PricingPage() {
 
   const handlePlanAction = async (plan: Plan) => {
     if (!userId) {
-      toast.error("Please sign in to subscribe to a plan.");
-      router.push("/auth/login");
+      if (plan.id === "free") {
+        router.push("/auth/signup");
+      } else {
+        router.push("/auth/login?redirect=/dashboard/pricing");
+      }
       return;
     }
     if (isOwner) {
@@ -427,7 +432,7 @@ export default function PricingPage() {
             }
           },
           prefill: { email: userEmail },
-          theme: { color: "#7c3aed" },
+          theme: { color: "#087F6E" },
           modal: {
             ondismiss: function () {
               setCheckoutLoading(false);
@@ -544,105 +549,87 @@ export default function PricingPage() {
           </div>
 
           {/* Non-refundable policy notice */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center max-w-xl mx-auto select-none">
-            <p className="text-[11px] text-amber-800 font-semibold flex items-center justify-center gap-2">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-center max-w-xl mx-auto select-none">
+            <p className="text-[11px] text-slate-700 font-medium flex items-center justify-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-[#087F6E] shrink-0" />
               <span><strong>Policy Notice:</strong> All payments &amp; plan switches are final. Money is <strong>strictly non-refundable</strong> under any circumstances.</span>
             </p>
           </div>
+
+          {/* First 50 Users Promotion Banner (Placed above grid to preserve card alignment) */}
+          {isFirst50 && (
+            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-3.5 text-center max-w-xl mx-auto flex items-center justify-center gap-2.5 shadow-2xs">
+              <Sparkles className="h-4 w-4 text-[#087F6E] shrink-0" />
+              <p className="text-xs font-semibold text-[#087F6E]">
+                <strong>First 50 Users Offer:</strong> 1 Year Free Premium unlocked on your account (365 credits available).
+              </p>
+            </div>
+          )}
         </ScrollFadeIn>
 
-        {/* Pricing Cards Grid */}
-        <ScrollFadeIn className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto w-full items-stretch">
+        {/* Pricing Cards Grid with Clean Neutral Borders & Aligned Cards */}
+        <ScrollFadeIn className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto w-full items-stretch">
           {PLANS.map((plan) => {
-            const isActive = currentPlan === plan.id;
+            const isActive = Boolean(userId && currentPlan === plan.id);
             const price = billingCycle === "monthly" ? plan.priceMonthly : plan.priceYearly;
             const period = billingCycle === "monthly" ? plan.periodMonthly : plan.periodYearly;
 
-            const isProMax = plan.id === "promax";
             const isPro = plan.id === "premium";
 
             return (
-              <Card
+              <div
                 key={plan.id}
-                className={`relative flex flex-col justify-between overflow-hidden rounded-2xl shadow-xs transition-all duration-300 bg-white ${
-                  isActive
-                    ? "border-[#087F6E] ring-2 ring-[#087F6E]/20"
-                    : isProMax
-                    ? "border-amber-400/60 ring-1 ring-amber-400/20 hover:border-amber-400"
-                    : isPro
-                    ? "border-[#087F6E] ring-2 ring-[#087F6E]/20 scale-105 shadow-md hover:border-[#087F6E]"
-                    : "border-[#DCE7E9] hover:border-[#087F6E]/40"
-                }`}
+                className="relative flex flex-col justify-between rounded-3xl transition-all duration-200 bg-white border border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-xs"
               >
-                {/* Active Plan Top Border Glow */}
-                {isActive && (
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-[#087F6E]" />
-                )}
-
-                {/* Pro Max Golden Top Border Glow */}
-                {isProMax && !isActive && (
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500/0 via-amber-400 to-amber-500/0 animate-pulse" />
-                )}
-
-                {/* Pro - Most Popular Badge */}
-                {isPro && !isActive && (
-                  <div className="absolute top-0 right-0">
-                    <Badge className="bg-[#087F6E] border-none text-white rounded-bl-xl rounded-tr-none px-3 py-1 font-extrabold text-[9px] uppercase tracking-wider shadow-xs select-none">
+                {/* Most Popular Badge in Middle */}
+                {isPro && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10">
+                    <span className="bg-[#087F6E] text-white px-3.5 py-1 font-bold text-[10px] uppercase tracking-wider rounded-full shadow-xs select-none inline-block whitespace-nowrap">
                       Most Popular
-                    </Badge>
+                    </span>
                   </div>
                 )}
 
-                {/* Pro Max Golden Badge */}
-                {isProMax && (
-                  <div className="absolute top-0 right-0">
-                    <Badge className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 border border-amber-300 text-slate-950 rounded-bl-xl rounded-tr-none px-3 py-1 font-black text-[9px] uppercase tracking-wider shadow-md select-none">
-                      PRO MAX
-                    </Badge>
-                  </div>
-                )}
-
-                {/* First 50 Users Banner (only on Premium card) */}
-                {plan.id === "premium" && isFirst50 && !isActive && (
-                  <div className="mx-4 mt-4 p-2.5 rounded-xl bg-[#E5F8F5] border border-[#D4F3EF] flex items-center gap-2">
-                    <span className="text-base">🎁</span>
-                    <div>
-                      <p className="text-[10px] font-extrabold text-[#087F6E]">First 50 Users — 1 Year Free!</p>
-                      <p className="text-[9px] text-[#075E53] font-medium">You have 365 Premium credits. Enjoy!</p>
+                <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
+                  {/* Top Block: Badges, Title, Price, Divider & Features */}
+                  <div className="space-y-5">
+                    {/* Status badge slot */}
+                    <div className="h-6 flex items-center justify-center">
+                      {isActive && (
+                        <span className="text-[10px] font-bold text-[#087F6E] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                          Current Plan
+                        </span>
+                      )}
                     </div>
-                  </div>
-                )}
 
-                <CardContent className="p-6 flex-1 flex flex-col justify-between space-y-6">
-
-                  {/* Tier details */}
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <h3 className={`font-extrabold text-base select-none ${isProMax ? "text-amber-800" : isPro ? "text-[#087F6E]" : "text-[#111827]"}`}>
+                    {/* Tier Title and Description */}
+                    <div className="space-y-1.5">
+                      <h3 className="font-heading font-extrabold text-xl text-slate-900 select-none">
                         {plan.name}
                       </h3>
-                      <p className="text-xs text-[#526176] leading-relaxed font-normal">{plan.description}</p>
+                      <p className="text-xs text-slate-500 leading-relaxed font-normal min-h-[36px]">
+                        {plan.description}
+                      </p>
                     </div>
 
                     {/* Price Tag */}
-                    <div className="flex items-baseline">
-                      <span className={`text-3xl font-black tracking-tight ${isProMax ? "text-amber-800" : "text-[#111827]"}`}>
+                    <div className="flex items-baseline pt-1">
+                      <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
                         {price}
                       </span>
-                      <span className="text-xs text-[#526176] font-semibold ml-1.5 uppercase tracking-wider">
+                      <span className="text-xs text-slate-500 font-semibold ml-1.5 uppercase tracking-wider">
                         / {period}
                       </span>
                     </div>
 
-                    {/* Divider */}
-                    <div className="border-t border-[#DCE7E9] pt-4" />
+                    {/* Clean Border Divider */}
+                    <div className="border-t border-slate-100" />
 
-                    {/* Feature items */}
-                    <ul className="space-y-2.5">
+                    {/* Feature Items List */}
+                    <ul className="space-y-3">
                       {plan.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5 text-xs text-[#111827] font-medium">
-                          <Check className={`h-4 w-4 shrink-0 mt-0.5 ${isProMax ? "text-amber-600" : "text-[#087F6E]"}`} />
+                        <li key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 font-medium">
+                          <Check className="h-4 w-4 shrink-0 text-[#087F6E] mt-0.5" />
                           <span className="leading-snug">{feature}</span>
                         </li>
                       ))}
@@ -650,9 +637,9 @@ export default function PricingPage() {
                   </div>
 
                   {/* Actions CTA Trigger */}
-                  <div className="space-y-2 pt-2">
+                  <div className="space-y-2 pt-6 mt-6 border-t border-slate-100">
                     {isActive && plan.id !== "free" && expiresAt && (
-                      <div className="flex flex-col items-center justify-center gap-0.5 py-1 text-xs font-semibold text-[#526176]">
+                      <div className="flex flex-col items-center justify-center gap-0.5 py-1 text-xs font-semibold text-slate-500">
                         <span>
                           Plan ends: {new Date(expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                         </span>
@@ -660,34 +647,33 @@ export default function PricingPage() {
                     )}
                     <Button
                       onClick={() => handlePlanAction(plan)}
-                      className={`w-full font-bold text-xs h-10 rounded-xl transition-all cursor-pointer ${
+                      className={`w-full font-bold text-xs h-11 rounded-xl transition-all cursor-pointer ${
                         isActive
-                          ? "bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] hover:bg-[#D4F3EF] shadow-xs"
-                          : isProMax
-                          ? "bg-[#087F6E] hover:bg-[#075E53] text-white font-extrabold shadow-sm"
-                          : isPro
-                          ? "bg-[#087F6E] hover:bg-[#075E53] text-white font-extrabold shadow-sm"
-                          : "bg-white border border-[#DCE7E9] text-[#111827] hover:bg-[#F5FAFA] shadow-xs"
+                          ? "bg-teal-50 border border-teal-200 text-[#087F6E] hover:bg-teal-100 shadow-2xs"
+                          : plan.id === "free"
+                          ? "bg-slate-100 hover:bg-slate-200 text-slate-800"
+                          : "bg-[#087F6E] hover:bg-[#065F53] text-white shadow-2xs"
                       }`}
                     >
                       {isActive
                         ? (isOwner ? "✓ Active (Owner Unlimited)" : "✓ Current Plan")
+                        : !userId
+                        ? (plan.id === "free" ? "Get Started Free" : plan.cta)
                         : plan.id === "free"
                         ? "Free Plan"
                         : (isOwner ? `Simulate ${plan.name}` : plan.cta)}
                     </Button>
                   </div>
-
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </ScrollFadeIn>
 
         {/* Security badges & Trust banners */}
         <div className="flex flex-col items-center justify-center gap-2 text-center mt-4 select-none max-w-lg mx-auto">
-          <div className="flex items-center gap-1.5 text-xs text-slate-600 font-bold">
-            <Lock className="h-4 w-4 text-[#0d6e5a]" />
+          <div className="flex items-center gap-1.5 text-xs text-slate-700 font-bold">
+            <Lock className="h-4 w-4 text-[#087F6E]" />
             <span>256-Bit SSL Secure Razorpay Payments</span>
           </div>
           <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
@@ -711,7 +697,7 @@ export default function PricingPage() {
               return (
                 <div
                   key={idx}
-                  className="border border-[#DCE7E9] bg-white rounded-2xl overflow-hidden transition-all duration-200 shadow-xs"
+                  className="border border-slate-200 bg-white rounded-2xl overflow-hidden transition-all duration-200 shadow-xs"
                 >
                   <button
                     onClick={() => toggleFAQ(idx)}

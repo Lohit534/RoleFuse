@@ -88,7 +88,6 @@ export default function AtsCheckerPage() {
                 <Button className="h-12 px-7 bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-sm rounded-xl shadow-md transition-all gap-2 cursor-pointer w-full sm:w-auto">
                   <Lock className="h-4 w-4" />
                   <span>Sign In to Check Your Resume</span>
-                  <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
               <Link href="/ats-optimizer">
@@ -100,6 +99,17 @@ export default function AtsCheckerPage() {
             <p className="text-[11px] text-slate-400 font-medium">
               Free monthly scans &bull; Instant ATS compatibility score in under 30 seconds
             </p>
+
+            {/* Visual ATS Audit Report Preview */}
+            <div className="pt-6 max-w-4xl mx-auto">
+              <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-white">
+                <img
+                  src="/images/ats-scanner-audit.jpg"
+                  alt="Real-time ATS Resume Scanner Audit Report"
+                  className="w-full h-auto object-cover select-none"
+                />
+              </div>
+            </div>
           </div>
         </section>
 

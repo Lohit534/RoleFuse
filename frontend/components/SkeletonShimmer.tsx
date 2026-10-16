@@ -426,8 +426,8 @@ export function PricingSkeleton() {
             { title: "Premium Pro", isPopular: true },
             { title: "Pro Max", isPopular: false }
           ].map((plan, idx) => (
-            <div 
-              key={idx} 
+            <div
+              key={idx}
               className="bg-white rounded-2xl p-6 shadow-sm flex flex-col gap-5 border border-slate-200"
             >
               {plan.isPopular && (
@@ -624,6 +624,31 @@ export function AdminSkeleton() {
 
         <AdminUsersSkeleton count={6} />
       </main>
+    </div>
+  );
+}
+
+export function AuthSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col items-center justify-center p-4 select-none">
+      <div className="w-full max-w-[420px] bg-white border border-slate-200/90 rounded-3xl p-7 shadow-xs space-y-6">
+        <div className="flex flex-col items-center text-center space-y-2">
+          <Bone width={40} height={40} borderRadius={12} duration={1.2} />
+          <Bone width={180} height={24} borderRadius={6} duration={1.2} />
+          <Bone width={240} height={14} borderRadius={4} duration={1.2} />
+        </div>
+        <div className="space-y-3 pt-2">
+          <Bone width="100%" height={46} borderRadius={14} duration={1.3} />
+          <div className="flex items-center gap-3 py-1">
+            <div className="h-[1px] flex-1 bg-slate-200" />
+            <Bone width={30} height={10} borderRadius={2} duration={1.3} />
+            <div className="h-[1px] flex-1 bg-slate-200" />
+          </div>
+          <Bone width="100%" height={42} borderRadius={12} duration={1.3} />
+          <Bone width="100%" height={42} borderRadius={12} duration={1.3} />
+          <Bone width="100%" height={44} borderRadius={12} duration={1.3} />
+        </div>
+      </div>
     </div>
   );
 }
