@@ -1044,10 +1044,11 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
     if (currentSection === 'EDUCATION' || currentSection === 'ACADEMIC BACKGROUND' || currentSection === 'QUALIFICATIONS' || currentSection === 'ACADEMICS') {
       const lowerLine = line.toLowerCase();
       const DEGREE_KEYWORDS = [
-        'b.tech', 'btech', 'intermediate', 'ssc', 'b.s.', 'bs', 'bachelor', 'master', 
-        'm.tech', 'mtech', 'ph.d', 'phd', 'class xii', 'class x', 'class 12', 'class 10',
-        'diploma', 'matriculation', 'secondary', 'hsc', 'cbse', 'board', 'high school',
-        '10th', '12th', 'senior secondary', 'higher secondary', 'degree', 'university', 'college', 'school'
+        'b.tech', 'btech', 'b.e.', 'be', 'b.s.', 'bs', 'b.sc', 'bsc', 'bca', 'b.com', 'bcom', 'bachelor',
+        'm.tech', 'mtech', 'm.s.', 'ms', 'm.sc', 'msc', 'mca', 'master', 'mba', 'ph.d', 'phd',
+        'class xii', 'class x', 'class 12', 'class 10', 'diploma', 'matriculation', 'secondary school',
+        'secondary', 'hsc', 'cbse', 'board', 'high school', '10th', '12th', 'senior secondary',
+        'higher secondary', 'intermediate', 'ssc', 'plus two', '+2'
       ];
       
       let lastEdu: EducationBlock | undefined;
@@ -1101,15 +1102,33 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       
       cleanText = stripMarkdownAsterisks(cleanText.replace(/^[\s\|\-\u2013\u2014\:]+|[\s\|\-\u2013\u2014\:]+$/g, ""));
 
-      const isNewEntry = (DEGREE_KEYWORDS.some(kw => lowerLine.includes(kw)) || 
-                          lowerLine.startsWith('b.') || lowerLine.startsWith('m.') ||
-                          !lastEdu || hasPipeWithDate) && (!lastEdu || lastEdu.school !== "");
+      const containsDegreeKeyword = DEGREE_KEYWORDS.some(kw => lowerLine.includes(kw)) || lowerLine.startsWith('b.') || lowerLine.startsWith('m.');
+      const isSchoolName = (lowerLine.includes('school') ||
+                            lowerLine.includes('college') ||
+                            lowerLine.includes('university') ||
+                            lowerLine.includes('institute') ||
+                            lowerLine.includes('academy')) &&
+                           !containsDegreeKeyword;
+
+      const isNewEntry = !isSchoolName && (
+        (containsDegreeKeyword && (!lastEdu || lastEdu.degree.toLowerCase() !== cleanText.toLowerCase())) || 
+        !lastEdu || 
+        hasPipeWithDate || 
+        (lastEdu && lastEdu.school !== "" && containsDegreeKeyword)
+      );
       
       if (isNewEntry) {
+        let degreeName = cleanText || "Degree";
+        let schoolName = "";
+        if (cleanText.includes(" | ")) {
+          const parts = cleanText.split(" | ").map(p => p.trim());
+          degreeName = parts[0];
+          schoolName = parts.slice(1).join(", ");
+        }
         blocks.push({
           type: 'education',
-          degree: cleanText || "Degree",
-          school: "",
+          degree: degreeName,
+          school: schoolName,
           dates: dates,
           gpa: gpa
         });
@@ -1168,32 +1187,7 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
     }
   }
 
-  // Dynamically filter lower-tier degrees when a bachelor's or higher is present
-  const degreeLevel = (deg: string): number => {
-    const d = (deg || "").toLowerCase();
-    if (/ph\.?d|doctor/.test(d)) return 5;
-    if (/m\.?tech|m\.?e\.?|master|mba|m\.?s\.?\b|mca/.test(d)) return 4;
-    if (/b\.?tech|b\.?e\.?|bachelor|b\.?s\.?\b|b\.?sc\.?\b|degree|bca/.test(d)) return 3;
-    if (/diploma|polytechnic/.test(d)) return 2;
-    if (/intermediate|hsc|class xii|class 12|12th|senior secondary|higher secondary|\binter\b/.test(d)) return 1.5;
-    if (/ssc|class x|class 10|10th|matriculation|secondary school|high school/.test(d)) return 1;
-    return 0;
-  };
-  const eduBlocks = blocks.filter(b => b.type === 'education');
-  if (eduBlocks.length > 0) {
-    const maxLevel = Math.max(...eduBlocks.map(b => degreeLevel(b.degree)));
-    if (maxLevel >= 3) {
-      const filteredBlocks: ParsedResumeBlock[] = [];
-      for (const b of blocks) {
-        if (b.type === 'education' && degreeLevel(b.degree) < 3) {
-          continue; // omit secondary/higher secondary/diploma when degree exists
-        }
-        filteredBlocks.push(b);
-      }
-      blocks.length = 0;
-      blocks.push(...filteredBlocks);
-    }
-  }
+  // Retain all genuine education entries (B.Tech, Intermediate, SSC / 10th Class)
 
   return compactBlocks(swapEducationAndSkillsIfNeeded(blocks, isFresherResume(text)));
 }

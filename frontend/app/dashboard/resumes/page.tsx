@@ -46,6 +46,7 @@ interface StructuredResume {
   phone: string;
   location: string;
   linkedin: string;
+  github: string;
   website: string;
   summary: string;
   experience: { id: string; company: string; title: string; date: string; bullets: string[] }[];
@@ -106,12 +107,24 @@ export default function ResumesPage() {
 
     async function loadResumes() {
       try {
-        const { data, error } = await supabase.auth.getUser();
-        const user = data?.user;
+        let { data, error } = await supabase.auth.getUser();
+        let user = data?.user;
 
-        if (error || !user) {
+        if (!user) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          user = sessionData?.session?.user;
+        }
+
+        if (!user) {
+          // Grace period for session hydration
+          await new Promise((r) => setTimeout(r, 350));
+          const { data: retrySession } = await supabase.auth.getSession();
+          user = retrySession?.session?.user;
+        }
+
+        if (!user) {
           toast.error("Please sign in to view your resumes.");
-          router.push("/auth/login");
+          router.push("/auth/login?redirect=/dashboard/resumes");
           return;
         }
 
@@ -218,6 +231,7 @@ export default function ResumesPage() {
       phone: "",
       location: "",
       linkedin: "",
+      github: "",
       website: "",
       summary: "",
       experience: [],
@@ -233,36 +247,50 @@ export default function ResumesPage() {
       resume.name = lines[0].replace(/^[#\s\-\*\_]+|[\#\s\-\*\_]+$/g, "").trim();
     }
 
-    // Try finding the contact line
-    const contactLine = lines.find(l => l.includes("@") || l.includes("|") || l.toLowerCase().includes("email:") || l.toLowerCase().includes("phone:"));
-    if (contactLine) {
-      const cleanContactLine = contactLine.replace(/^[#\s\-\*\_]+|[\#\s\-\*\_]+$/g, "").trim();
+    // Try finding the contact lines (all lines before the first section header)
+    const contactLines: string[] = [];
+    for (let i = 1; i < Math.min(lines.length, 8); i++) {
+      const l = lines[i];
+      if (!l) continue;
+      const cleanUpper = l.replace(/^[#\s\-\*\_\u2022]+/, "").replace(/:$/, "").trim().toUpperCase();
+      if (/^(?:PROFESSIONAL SUMMARY|SUMMARY|ABOUT|EXPERIENCE|WORK EXPERIENCE|EDUCATION|PROJECTS|SKILLS|TECHNICAL SKILLS|CERTIFICATIONS|LANGUAGES|ACHIEVEMENTS)\b/.test(cleanUpper)) {
+        break;
+      }
+      contactLines.push(l);
+    }
+
+    contactLines.forEach(cLine => {
+      const cleanContactLine = cLine.replace(/^[#\s\-\*\_]+|[\#\s\-\*\_]+$/g, "").trim();
       const parts = cleanContactLine.split("|").map(p => p.trim());
       parts.forEach(part => {
         const lower = part.toLowerCase();
         if (lower.startsWith("email:")) {
           resume.email = part.substring(6).trim();
-        } else if (lower.startsWith("phone:")) {
-          resume.phone = part.substring(6).trim();
+        } else if (lower.startsWith("phone:") || lower.startsWith("mobile:") || lower.startsWith("tel:")) {
+          resume.phone = part.replace(/^(?:phone|mobile|tel):\s*/i, "").trim();
         } else if (lower.startsWith("linkedin:")) {
           resume.linkedin = part.substring(9).trim();
+        } else if (lower.startsWith("github:")) {
+          resume.github = part.substring(7).trim();
         } else if (lower.startsWith("portfolio:")) {
           resume.website = part.substring(10).trim();
         } else if (lower.startsWith("website:")) {
           resume.website = part.substring(8).trim();
         } else if (part.includes("@")) {
           resume.email = part;
-        } else if (part.includes("linkedin.com")) {
+        } else if (lower.includes("linkedin.com")) {
           resume.linkedin = part;
-        } else if (/^\+?[\d\-\(\)\s]{9,18}$/.test(part)) {
+        } else if (lower.includes("github.com")) {
+          resume.github = part;
+        } else if (/(?:\+?91[\s-]?)?[6-9]\d{9}|^\+?[\d\-\(\)\s]{9,18}$/.test(part)) {
           resume.phone = part;
-        } else if ((part.includes(".") || part.includes("localhost")) && !resume.website) {
+        } else if ((part.includes("http") || part.includes(".io") || part.includes(".dev") || part.includes(".com")) && !resume.website && !lower.includes("linkedin") && !lower.includes("github")) {
           resume.website = part;
-        } else if (!resume.location && part.length < 50) {
+        } else if (!resume.location && part.length < 50 && !part.includes("http") && !part.includes("@")) {
           resume.location = part;
         }
       });
-    }
+    });
 
     // Parse Sections via simple state check
     let currentSection = "";
@@ -272,7 +300,7 @@ export default function ResumesPage() {
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i];
-      if (!line || line === contactLine) continue;
+      if (!line || contactLines.includes(line)) continue;
 
       // Clean the line for matching section headers
       const cleanLine = line.replace(/^[#\s\-\*\_\u2022]+/, "").replace(/:$/, "").trim();
@@ -340,14 +368,16 @@ export default function ResumesPage() {
 
         // Check if this line is a new education entry
         const DEGREE_KEYWORDS = [
-          'b.tech', 'btech', 'intermediate', 'ssc', 'b.s.', 'bs', 'bachelor', 'master', 
-          'm.tech', 'mtech', 'ph.d', 'phd', 'class xii', 'class x', 'diploma', 'matriculation', 
-          'secondary', 'hsc', 'cbse', 'board', 'high school', '10th', '12th', 'degree'
+          'b.tech', 'btech', 'b.e.', 'be', 'b.s.', 'bs', 'b.sc', 'bsc', 'bca', 'b.com', 'bcom', 'bachelor',
+          'm.tech', 'mtech', 'm.s.', 'ms', 'm.sc', 'msc', 'mca', 'master', 'mba', 'ph.d', 'phd',
+          'class xii', 'class x', 'class 12', 'class 10', 'diploma', 'matriculation', 'secondary school',
+          'secondary', 'hsc', 'cbse', 'board', 'high school', '10th', '12th', 'degree', 'intermediate', 'ssc',
+          'plus two', '+2', 'senior secondary', 'higher secondary'
         ];
         
-        const isNewEntry = (DEGREE_KEYWORDS.some(kw => lowerLine.includes(kw)) || 
-                           lowerLine.startsWith('b.') || lowerLine.startsWith('m.') ||
-                           resume.education.length === 0) && (!currentEdu || currentEdu.school !== "");
+        const hasDegreeKeyword = DEGREE_KEYWORDS.some(kw => lowerLine.includes(kw)) || lowerLine.startsWith('b.') || lowerLine.startsWith('m.');
+        const isSchoolName = (lowerLine.includes('school') || lowerLine.includes('college') || lowerLine.includes('university') || lowerLine.includes('institute') || lowerLine.includes('academy')) && !hasDegreeKeyword;
+        const isNewEntry = !isSchoolName && (hasDegreeKeyword || (!currentEdu && resume.education.length === 0) || (currentEdu && currentEdu.school !== "" && hasDegreeKeyword));
 
         // Parse date and GPA out of the line
         let cleanText = line.replace(/^\*\*|\*\*$/g, "").trim();
@@ -379,18 +409,23 @@ export default function ResumesPage() {
         cleanText = cleanText.replace(/^[\s\|\-\–\—\:]+|[\s\|\-\–\—\:]+$/g, "").trim();
 
         if (isNewEntry) {
-          // Parse degree and field out of cleanText if it contains " in "
           let degree = cleanText;
+          let school = "";
           let field = "";
-          const inIndex = cleanText.toLowerCase().indexOf(" in ");
+          if (cleanText.includes(" | ")) {
+            const parts = cleanText.split(" | ").map(p => p.trim());
+            degree = parts[0];
+            school = parts.slice(1).join(", ");
+          }
+          const inIndex = degree.toLowerCase().indexOf(" in ");
           if (inIndex !== -1) {
-            degree = cleanText.substring(0, inIndex).trim();
-            field = cleanText.substring(inIndex + 4).trim();
+            field = degree.substring(inIndex + 4).trim();
+            degree = degree.substring(0, inIndex).trim();
           }
           
           currentEdu = {
             id: Math.random().toString(36).substr(2, 9),
-            school: "",
+            school,
             degree,
             field,
             date,
@@ -400,12 +435,14 @@ export default function ResumesPage() {
           resume.education.push(currentEdu);
         } else {
           if (currentEdu) {
-            // This is the school line
-            currentEdu.school = cleanText;
-            if (date) currentEdu.date = date;
-            if (gpa) currentEdu.gpa = gpa;
+            if (!currentEdu.school) {
+              currentEdu.school = cleanText;
+            } else {
+              currentEdu.school = `${currentEdu.school}, ${cleanText}`;
+            }
+            if (date && !currentEdu.date) currentEdu.date = date;
+            if (gpa && !currentEdu.gpa) currentEdu.gpa = gpa;
           } else {
-            // Fallback in case we don't have a current education block
             currentEdu = {
               id: Math.random().toString(36).substr(2, 9),
               school: cleanText,
@@ -501,7 +538,7 @@ export default function ResumesPage() {
   // Compile structured format back to flat text string
   const compileStructuredResume = (data: StructuredResume): string => {
     let text = `${data.name || "Jane Smith"}\n`;
-    const contactParts = [data.email, data.phone, data.location, data.linkedin, data.website].filter(Boolean);
+    const contactParts = [data.email, data.phone, data.location, data.linkedin, data.github, data.website].filter(Boolean);
     text += `${contactParts.join(" | ")}\n\n`;
     
     if (data.summary) {
@@ -612,6 +649,7 @@ export default function ResumesPage() {
           phone: "",
           location: "",
           linkedin: "",
+          github: "",
           website: "",
           summary: "",
           experience: [],
@@ -1553,6 +1591,15 @@ export default function ResumesPage() {
                             placeholder="e.g. linkedin.com/in/alexis"
                             value={editorData.linkedin}
                             onChange={(e) => handlePersonalInfoChange("linkedin", e.target.value)}
+                            className="h-9 border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a]"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-slate-500 uppercase tracking-wide">GitHub Profile</label>
+                          <Input
+                            placeholder="e.g. github.com/alexis"
+                            value={editorData.github || ""}
+                            onChange={(e) => handlePersonalInfoChange("github", e.target.value)}
                             className="h-9 border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a]"
                           />
                         </div>

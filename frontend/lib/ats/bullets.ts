@@ -105,14 +105,33 @@ export function cleanBulletText(line: string): string {
   return line.replace(BULLET_MARKER_REGEX, "").replace(/\*\*/g, "").trim();
 }
 
+export function isContactOrHeaderLine(str: string): boolean {
+  if (!str) return false;
+  const s = str.trim();
+  // Check email
+  if (/[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}/i.test(s)) return true;
+  // Check LinkedIn / GitHub / URLs / portfolio
+  if (/(?:linkedin\.com|github\.com|https?:\/\/|www\.)/i.test(s)) return true;
+  // Check phone numbers (Indian & international)
+  if (/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\+91[\s-]?\d{10}|\b[6-9]\d{9}\b/.test(s)) return true;
+  // Contact labels
+  if (/^(?:email|phone|mobile|tel|linkedin|github|portfolio|website|location|address)\s*[:\-]/i.test(s)) return true;
+  // Common locations
+  if (/\b(?:India|USA|UK|Canada|Telangana|Andhra Pradesh|Karnataka|Maharashtra|Tamil Nadu|Delhi|Bangalore|Bengaluru|Hyderabad|Pune|Mumbai|Chennai|California|Texas|New York)\b/i.test(s) && (s.includes(",") || s.includes("|") || s.length < 50)) return true;
+  // Pipe separated candidate contact info
+  if (s.includes("|") && (s.includes("@") || /\d{8,}/.test(s) || /linkedin|github/i.test(s))) return true;
+  return false;
+}
+
 /**
  * Section-aware extraction of work-impact bullets (Experience, Internships, Projects).
- * Certifications, Languages, Education, Skills, Summary are ALWAYS ignored.
- * If the resume has no recognizable headers at all, falls back to all bullet lines.
+ * Certifications, Languages, Education, Skills, Summary and Contact Info are ALWAYS ignored.
  */
 export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
   const lines = (resumeText || "").split(/\r?\n/);
   const results: ExtractedBullet[] = [];
+  const hasRecognizableHeaders = lines.some((l) => detectSectionHeader(l.trim()) !== null);
+
   let currentSection = "";
   let currentScorable = false;
   let sawAnyHeader = false;
@@ -129,7 +148,14 @@ export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
       return;
     }
 
-    if (sawAnyHeader && !currentScorable) return;
+    // Never evaluate lines before the first section header (candidate contact block)
+    if (!sawAnyHeader) return;
+
+    // Skip all non-scorable sections (Skills, Education, Summary, Certifications, etc.)
+    if (hasRecognizableHeaders && !currentScorable) return;
+
+    // Contact details must NEVER be evaluated as work bullets
+    if (isContactOrHeaderLine(trimmed)) return;
 
     const isBullet = BULLET_MARKER_REGEX.test(line);
     const clean = cleanBulletText(trimmed);
@@ -141,12 +167,11 @@ export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
     }
 
     // Lines that lost their bullet marker during PDF extraction: only inside scorable
-    // sections, must start with a strong verb, and must not look like a header row.
+    // sections, must start with a strong verb, and must not look like a header row or contact details.
     if (
-      sawAnyHeader &&
       currentScorable &&
-      clean.length > 30 &&
-      !/@|https?:/i.test(clean) &&
+      clean.length > 25 &&
+      !isContactOrHeaderLine(clean) &&
       looksLikeSentenceBullet(clean)
     ) {
       results.push({ index, rawLine: line, cleanText: clean, section: currentSection });

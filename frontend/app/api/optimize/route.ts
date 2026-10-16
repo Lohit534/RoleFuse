@@ -564,6 +564,16 @@ export async function POST(request: NextRequest) {
         if (techVal) {
           extraItems.push(`[Verified Project & Internship Technologies: ${techVal}]`);
           combinedInstructions += `\n\n• VERIFIED INTERNSHIP & PROJECT TECH STACK: "${techVal}"\n  MANDATORY: You MUST integrate these technologies into the TECHNICAL SKILLS section (under appropriate categories) and prominently tag or mention them in the project and internship bullet points!`;
+
+          // Inject techVal directly into preparedResumeText under skills section if not present
+          const skillsHeaderMatch = preparedResumeText.match(/(?:^|\n)(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS)\n/i);
+          if (skillsHeaderMatch && skillsHeaderMatch.index !== undefined) {
+            const insertPos = skillsHeaderMatch.index + skillsHeaderMatch[0].length;
+            preparedResumeText =
+              preparedResumeText.slice(0, insertPos) +
+              `• Technologies & Tools: ${techVal}\n` +
+              preparedResumeText.slice(insertPos);
+          }
         }
         if (sscVal) {
           extraItems.push(`[Verified SSC (10th) Education: ${sscVal}]`);

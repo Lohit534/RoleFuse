@@ -421,7 +421,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { planId, billingCycle = "monthly" } = await request.json();
+    const { planId, billingCycle = "monthly", isEarlyUser = false } = await request.json();
     const isOwner = isOwnerEmail(user.email);
 
     // Owner is always unlimited - no credits update needed
@@ -470,8 +470,8 @@ export async function POST(request: NextRequest) {
     let expiresAt: Date | null = null;
 
     if (planId === "premium") {
-      paidCredits = PRO_CREDITS_PER_MONTH;
-      const days = billingCycle === "yearly" ? 365 : 30;
+      paidCredits = isEarlyUser ? 365 : PRO_CREDITS_PER_MONTH;
+      const days = (billingCycle === "yearly" || isEarlyUser) ? 365 : 30;
       expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
     } else if (planId === "team" || planId === "promax") {
       paidCredits = PRO_MAX_CREDITS_PER_MONTH;

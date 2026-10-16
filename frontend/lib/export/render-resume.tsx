@@ -424,21 +424,8 @@ export const ResumePDFFromJSON: React.FC<ResumePDFFromJSONProps> = ({ data }) =>
 
         {/* ── EDUCATION ── */}
         {(() => {
-          if (!data.education || data.education.length === 0) return null;
-          const degreeLevel = (deg: string): number => {
-            const d = (deg || "").toLowerCase();
-            if (/ph\.?d|doctor/.test(d)) return 5;
-            if (/m\.?tech|m\.?e\.?|master|mba|m\.?s\.?\b|mca/.test(d)) return 4;
-            if (/b\.?tech|b\.?e\.?|bachelor|b\.?s\.?\b|b\.?sc\.?\b|degree|bca/.test(d)) return 3;
-            if (/diploma|polytechnic/.test(d)) return 2;
-            if (/intermediate|hsc|class xii|class 12|12th|senior secondary|higher secondary|\binter\b/.test(d)) return 1.5;
-            if (/ssc|class x|class 10|10th|matriculation|secondary school|high school/.test(d)) return 1;
-            return 0;
-          };
-          const maxLevel = Math.max(...data.education.map((e) => degreeLevel(e.degree)));
-          const filtered = maxLevel >= 3
-            ? data.education.filter((e) => degreeLevel(e.degree) >= 3)
-            : data.education;
+          // Retain all genuine education entries (B.Tech, Intermediate, SSC / 10th Class)
+          const filtered = data.education;
           if (filtered.length === 0) return null;
 
           return (

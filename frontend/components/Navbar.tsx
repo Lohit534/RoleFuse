@@ -124,6 +124,10 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
   useEffect(() => {
     async function getSessionUser() {
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user) {
+          setUser(sessionData.session.user);
+        }
         const { data } = await supabase.auth.getUser();
         if (data?.user) {
           setUser(data.user);
@@ -232,9 +236,16 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
     router.refresh();
   };
 
-  const handleProtectedNavigate = (path: string) => {
+  const handleProtectedNavigate = async (path: string) => {
     setActiveMenu(null);
-    if (!user) {
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        currentUser = data?.session?.user ?? null;
+      } catch (e) {}
+    }
+    if (!currentUser) {
       router.push(`/auth/login?redirect=${encodeURIComponent(path)}`);
     } else {
       router.push(path);
@@ -341,7 +352,10 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                         </button>
 
                         <button
-                          onClick={() => handleProtectedNavigate("/ats-checker")}
+                          onClick={() => {
+                            setActiveMenu(null);
+                            router.push("/ats-checker");
+                          }}
                           className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
                         >
                           <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
@@ -457,7 +471,10 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                     {activeMenu === "ats" && (
                       <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[320px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
                         <button
-                          onClick={() => handleProtectedNavigate("/ats-checker")}
+                          onClick={() => {
+                            setActiveMenu(null);
+                            router.push("/ats-checker");
+                          }}
                           className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
                         >
                           <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">

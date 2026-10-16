@@ -80,13 +80,54 @@ export default function AtsResumePage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then((res: any) => {
-      setUser(res.data?.user ?? null);
+    supabase.auth.getSession().then(({ data }: any) => {
+      if (data?.session?.user) setUser(data.session.user);
     });
+    supabase.auth.getUser().then((res: any) => {
+      if (res.data?.user) setUser(res.data.user);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleUseTemplate = (templateId: string) => {
-    if (user) {
+  const handleStartBuilding = async () => {
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        currentUser = data?.session?.user ?? null;
+      } catch (e) {}
+    }
+    if (!currentUser) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        currentUser = data?.user ?? null;
+      } catch (e) {}
+    }
+    if (currentUser) {
+      router.push("/dashboard/resumes");
+    } else {
+      router.push("/resume-builder");
+    }
+  };
+
+  const handleUseTemplate = async (templateId: string) => {
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        currentUser = data?.session?.user ?? null;
+      } catch (e) {}
+    }
+    if (!currentUser) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        currentUser = data?.user ?? null;
+      } catch (e) {}
+    }
+    if (currentUser) {
       router.push(`/dashboard/resumes?template=${templateId}`);
     } else {
       router.push(`/auth/login?redirect=${encodeURIComponent(`/dashboard/resumes?template=${templateId}`)}`);
@@ -122,15 +163,15 @@ export default function AtsResumePage() {
                   <span>Scan Resume Compatibility</span>
                 </Button>
               </Link>
-              <Link href={user ? "/dashboard/resumes" : "/resume-builder"}>
-                <Button
-                  variant="outline"
-                  className="h-12 px-6 bg-white hover:bg-slate-50 text-slate-800 border-slate-300 font-bold text-sm rounded-xl transition-all cursor-pointer w-full sm:w-auto"
-                >
-                  <FileText className="h-4 w-4 text-[#087F6E]" />
-                  <span>Build ATS Resume Free</span>
-                </Button>
-              </Link>
+              <Button
+                type="button"
+                onClick={handleStartBuilding}
+                variant="outline"
+                className="h-12 px-6 bg-white hover:bg-slate-50 text-slate-800 border-slate-300 font-bold text-sm rounded-xl transition-all cursor-pointer w-full sm:w-auto"
+              >
+                <FileText className="h-4 w-4 text-[#087F6E]" />
+                <span>Build ATS Resume Free</span>
+              </Button>
             </div>
           </div>
         </section>
@@ -197,11 +238,13 @@ export default function AtsResumePage() {
                   </div>
                 </div>
                 <div className="pt-3">
-                  <Link href={user ? "/dashboard/resumes" : "/resume-builder"}>
-                    <Button className="w-full h-11 bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs rounded-xl shadow-xs transition-all">
-                      <span>Start Building Free</span>
-                    </Button>
-                  </Link>
+                  <Button
+                    type="button"
+                    onClick={handleStartBuilding}
+                    className="w-full h-11 bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                  >
+                    <span>Start Building Free</span>
+                  </Button>
                 </div>
               </div>
             </div>

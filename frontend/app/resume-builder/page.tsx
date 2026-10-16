@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { supabase } from "@/lib/supabase/client";
 import {
   FileText,
   Sparkles,
@@ -51,8 +53,32 @@ const ROLE_EXAMPLES = [
 ];
 
 export default function ResumeBuilderPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
   const [selectedRoleIndex, setSelectedRoleIndex] = useState(0);
   const activeRole = ROLE_EXAMPLES[selectedRoleIndex];
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }: any) => {
+      if (data?.session?.user) {
+        setUser(data.session.user);
+        router.replace("/dashboard/resumes");
+      }
+    });
+    supabase.auth.getUser().then(({ data }: any) => {
+      if (data?.user) {
+        setUser(data.user);
+        router.replace("/dashboard/resumes");
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      if (session?.user) {
+        setUser(session.user);
+        router.replace("/dashboard/resumes");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   return (
     <div className="flex flex-col min-h-screen bg-white text-[#111827] font-sans selection:bg-[#087F6E]/15 selection:text-[#087F6E]">
@@ -74,10 +100,10 @@ export default function ResumeBuilderPage() {
             </p>
 
             <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-              <Link href="/auth/login?redirect=/dashboard/resumes">
+              <Link href={user ? "/dashboard/resumes" : "/auth/login?redirect=/dashboard/resumes"}>
                 <Button className="h-12 px-7 bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-sm rounded-xl shadow-md transition-all gap-2 cursor-pointer w-full sm:w-auto">
-                  <Lock className="h-4 w-4" />
-                  <span>Sign In to Access Resume Builder</span>
+                  {!user && <Lock className="h-4 w-4" />}
+                  <span>{user ? "Open Resume Builder" : "Sign In to Access Resume Builder"}</span>
                 </Button>
               </Link>
               <Link href="/ats-checker">
@@ -262,10 +288,10 @@ export default function ResumeBuilderPage() {
               Sign in to use the full Resume Builder tool. Save multiple custom resumes named after you, export clean ATS-ready PDFs, and apply with confidence.
             </p>
             <div className="pt-2">
-              <Link href="/auth/login?redirect=/dashboard/resumes">
+              <Link href={user ? "/dashboard/resumes" : "/auth/login?redirect=/dashboard/resumes"}>
                 <Button className="h-12 px-8 bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-sm rounded-xl shadow-lg transition-all gap-2 cursor-pointer">
-                  <Lock className="h-4 w-4" />
-                  <span>Sign In to Access Resume Builder</span>
+                  {!user && <Lock className="h-4 w-4" />}
+                  <span>{user ? "Open Resume Builder" : "Sign In to Access Resume Builder"}</span>
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>

@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { supabase } from "@/lib/supabase/client";
 import {
   Sparkles,
   ArrowRight,
@@ -59,8 +61,32 @@ const OPTIMIZATION_CASE_STUDIES = [
 ];
 
 export default function AtsOptimizerPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
   const [selectedCaseIndex, setSelectedCaseIndex] = useState(0);
   const currentCase = OPTIMIZATION_CASE_STUDIES[selectedCaseIndex];
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }: any) => {
+      if (data?.session?.user) {
+        setUser(data.session.user);
+        router.replace("/dashboard");
+      }
+    });
+    supabase.auth.getUser().then(({ data }: any) => {
+      if (data?.user) {
+        setUser(data.user);
+        router.replace("/dashboard");
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      if (session?.user) {
+        setUser(session.user);
+        router.replace("/dashboard");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   return (
     <div className="flex flex-col min-h-screen bg-white text-[#111827] font-sans selection:bg-[#087F6E]/15 selection:text-[#087F6E]">
@@ -82,10 +108,10 @@ export default function AtsOptimizerPage() {
             </p>
 
             <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-              <Link href="/auth/login?redirect=/dashboard">
+              <Link href={user ? "/dashboard" : "/auth/login?redirect=/dashboard"}>
                 <Button className="h-12 px-7 bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-sm rounded-xl shadow-md transition-all gap-2 cursor-pointer w-full sm:w-auto">
-                  <Lock className="h-4 w-4" />
-                  <span>Sign In to Optimize Your Resume</span>
+                  {!user && <Lock className="h-4 w-4" />}
+                  <span>{user ? "Open AI Optimizer" : "Sign In to Optimize Your Resume"}</span>
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
@@ -198,10 +224,10 @@ export default function AtsOptimizerPage() {
               Sign in to input your current resume and paste the target job description. Get an ATS-optimized rewrite and downloadable PDF in under 30 seconds.
             </p>
             <div className="pt-2">
-              <Link href="/auth/login?redirect=/dashboard">
+              <Link href={user ? "/dashboard" : "/auth/login?redirect=/dashboard"}>
                 <Button className="h-12 px-8 bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-sm rounded-xl shadow-lg transition-all gap-2 cursor-pointer">
-                  <Lock className="h-4 w-4" />
-                  <span>Sign In to Access ATS Optimizer</span>
+                  {!user && <Lock className="h-4 w-4" />}
+                  <span>{user ? "Open AI Optimizer" : "Sign In to Access ATS Optimizer"}</span>
                   <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>

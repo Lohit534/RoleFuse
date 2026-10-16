@@ -184,6 +184,9 @@ export default function PricingPage() {
   // FAQ open/close index state
   const [openFAQIndex, setOpenFAQIndex] = useState<number | null>(null);
 
+  // Early user offer loading state
+  const [earlyUserLoading, setEarlyUserLoading] = useState(false);
+
   // Load Razorpay Script dynamically
   useEffect(() => {
     const script = document.createElement("script");
@@ -334,6 +337,36 @@ export default function PricingPage() {
     // Trigger billing modal
     setSelectedPlan(plan);
     setIsCheckoutOpen(true);
+  };
+
+  // Claim early user free 1-year premium offer
+  const handleAccessEarlyUser = async () => {
+    if (!userId) {
+      router.push("/auth/login?redirect=/dashboard/pricing");
+      return;
+    }
+    setEarlyUserLoading(true);
+    try {
+      const res = await fetch("/api/credits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: "premium", billingCycle: "yearly", isEarlyUser: true }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to activate early user offer");
+      }
+
+      localStorage.setItem(`fastHire_plan_${userId}`, "premium");
+      localStorage.setItem(`fastHire_claimed_early_user_${userId}`, "true");
+      setCurrentPlan("premium");
+      setIsFirst50(false);
+      toast.success("Welcome! You've claimed 1 Year Free Premium Pro as an early user! 🎉");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to activate early user offer");
+    } finally {
+      setEarlyUserLoading(false);
+    }
   };
 
   // Checkout submission handler
@@ -555,16 +588,6 @@ export default function PricingPage() {
               <span><strong>Policy Notice:</strong> All payments &amp; plan switches are final. Money is <strong>strictly non-refundable</strong> under any circumstances.</span>
             </p>
           </div>
-
-          {/* First 50 Users Promotion Banner (Placed above grid to preserve card alignment) */}
-          {isFirst50 && (
-            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-3.5 text-center max-w-xl mx-auto flex items-center justify-center gap-2.5 shadow-2xs">
-              <Sparkles className="h-4 w-4 text-[#087F6E] shrink-0" />
-              <p className="text-xs font-semibold text-[#087F6E]">
-                <strong>First 50 Users Offer:</strong> 1 Year Free Premium unlocked on your account (365 credits available).
-              </p>
-            </div>
-          )}
         </ScrollFadeIn>
 
         {/* Pricing Cards Grid with Clean Neutral Borders & Aligned Cards */}
@@ -579,7 +602,11 @@ export default function PricingPage() {
             return (
               <div
                 key={plan.id}
-                className="relative flex flex-col justify-between rounded-3xl transition-all duration-200 bg-white border border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-xs"
+                className={`relative flex flex-col justify-between rounded-3xl transition-all duration-200 bg-white ${
+                  isActive
+                    ? "border-2 border-[#087F6E] shadow-sm ring-1 ring-[#087F6E]/10"
+                    : "border border-slate-200 hover:border-slate-300 shadow-2xs hover:shadow-xs"
+                }`}
               >
                 {/* Most Popular Badge in Middle */}
                 {isPro && (
@@ -593,14 +620,8 @@ export default function PricingPage() {
                 <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between">
                   {/* Top Block: Badges, Title, Price, Divider & Features */}
                   <div className="space-y-5">
-                    {/* Status badge slot */}
-                    <div className="h-6 flex items-center justify-center">
-                      {isActive && (
-                        <span className="text-[10px] font-bold text-[#087F6E] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
-                          Current Plan
-                        </span>
-                      )}
-                    </div>
+                    {/* Top spacing */}
+                    <div className="h-2" />
 
                     {/* Tier Title and Description */}
                     <div className="space-y-1.5">
@@ -634,6 +655,27 @@ export default function PricingPage() {
                         </li>
                       ))}
                     </ul>
+
+                    {/* First 50 Users Special Offer Box - shown inside Premium Pro, completely hidden once plan is taken */}
+                    {isPro && !isActive && currentPlan !== "premium" && currentPlan !== "promax" && (
+                      <div className="mt-4 p-3.5 rounded-2xl bg-teal-50 border border-teal-200 space-y-2 text-center select-none shadow-2xs">
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#087F6E]">
+                          <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                          <span>First 50 Users Early Offer</span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 leading-snug">
+                          Get 1 Year Free Premium Pro unlocked on your account with full access.
+                        </p>
+                        <Button
+                          type="button"
+                          disabled={earlyUserLoading}
+                          onClick={handleAccessEarlyUser}
+                          className="w-full h-8 text-[11px] font-bold bg-[#087F6E] hover:bg-[#065F53] text-white rounded-lg shadow-xs cursor-pointer transition-all"
+                        >
+                          {earlyUserLoading ? "Unlocking Access..." : "Access as Early User"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions CTA Trigger */}

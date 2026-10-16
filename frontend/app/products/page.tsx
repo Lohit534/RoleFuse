@@ -27,13 +27,48 @@ export default function ProductsPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then((res: any) => {
-      setUser(res.data?.user ?? null);
+    supabase.auth.getSession().then(({ data }: any) => {
+      if (data?.session?.user) setUser(data.session.user);
     });
+    supabase.auth.getUser().then((res: any) => {
+      if (res.data?.user) setUser(res.data.user);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleNavigate = (path: string, requiresAuth = false) => {
-    if (requiresAuth && !user) {
+  const handleNavigate = async (path: string, requiresAuth = false) => {
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        currentUser = data?.session?.user ?? null;
+      } catch (e) {}
+    }
+    if (!currentUser) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        currentUser = data?.user ?? null;
+      } catch (e) {}
+    }
+
+    if (currentUser) {
+      // Map public fallback paths to authenticated dashboard routes
+      if (path === "/ats-optimizer") {
+        router.push("/dashboard");
+        return;
+      }
+      if (path === "/resume-builder") {
+        router.push("/dashboard/resumes");
+        return;
+      }
+      router.push(path);
+      return;
+    }
+
+    if (requiresAuth) {
       router.push(`/auth/login?redirect=${encodeURIComponent(path)}`);
     } else {
       router.push(path);

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { hasQuantifiedMetric } from "@/lib/ats/scorer";
-import { extractScorableBullets, hasStrongActionVerb, cleanBulletText } from "@/lib/ats/bullets";
+import { extractScorableBullets, hasStrongActionVerb, cleanBulletText, isContactOrHeaderLine } from "@/lib/ats/bullets";
 import {
   Sparkles,
   CheckCircle2,
@@ -158,6 +158,12 @@ export default function BulletImprover({
     }
 
     const currentLines = resumeText.split(/\r?\n/);
+    const targetLine = currentLines[bulletIdx] || "";
+    if (/@|https?:|linkedin\.com|github\.com|\b(?:phone|mobile|tel|email)\b|\+91|\b\d{10}\b/i.test(targetLine) || isContactOrHeaderLine(targetLine)) {
+      toast.error("Contact details cannot be overwritten by a bullet rewrite.");
+      return;
+    }
+
     currentLines[bulletIdx] = `• ${finalBullet}`;
     const updatedResume = currentLines.join("\n");
     onChange(updatedResume, true);
