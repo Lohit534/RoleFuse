@@ -401,7 +401,7 @@ export default function AdminDashboard() {
             <img
               src="/logo.svg"
               alt="RoleFuse Logo"
-              className="h-6 w-6 object-contain shrink-0"
+              className="h-5 w-5 object-contain shrink-0"
             />
             <div>
               <p className="text-sm font-extrabold text-slate-900 leading-tight">RoleFuse</p>

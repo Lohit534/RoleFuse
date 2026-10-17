@@ -153,16 +153,16 @@ export default function BillingPage() {
   const handlePrintReceipt = (invoice: Invoice) => {
     const isProMax = activePlan === "promax" || activePlan === "team" || invoice.description.includes("Pro Max");
     const isYear = billingCycle === "yearly";
-    const base = isProMax ? (isYear ? 332 : 199) : (isYear ? 166 : 99);
-    const gst = isProMax ? (isYear ? 17 : 10) : (isYear ? 8 : 5);
-    const total = isProMax ? (isYear ? 349 : 209) : (isYear ? 174 : 104);
+    const base = isProMax ? (isYear ? 2388 : 199) : (isYear ? 1188 : 99);
+    const gst = isProMax ? (isYear ? 119 : 10) : (isYear ? 59 : 5);
+    const total = isProMax ? (isYear ? 2507 : 209) : (isYear ? 1247 : 104);
 
     setSelectedInvoiceData({
       invoiceNumber: invoice.id.toUpperCase(),
       date: invoice.date,
-      userName: "FastHire Subscriber",
-      userEmail: userEmail || "subscriber@fasthire.ai",
-      planName: isProMax ? "FastHire Pro Max (1 Month Access)" : "FastHire Premium Pro",
+      userName: "RoleFuse Subscriber",
+      userEmail: userEmail || "subscriber@rolefuse.ai",
+      planName: isProMax ? "RoleFuse Pro Max (1 Year Access)" : "RoleFuse Premium Pro",
       billingCycle: (isYear ? "yearly" : "monthly") as any,
       basePrice: base,
       gstAmount: gst,
@@ -219,8 +219,8 @@ export default function BillingPage() {
   const planPriceDisplay = activePlan === "free" 
     ? "₹0 / month" 
     : activePlan === "premium" 
-    ? (billingCycle === "yearly" ? "₹166 / year" : "₹99 / month") 
-    : (billingCycle === "yearly" ? "₹332 / year" : "₹199 / month");
+    ? (billingCycle === "yearly" ? "₹99 / mo (₹1,188/yr)" : "₹99 / month") 
+    : (billingCycle === "yearly" ? "₹199 / mo (₹2,388/yr)" : "₹199 / month");
 
   const pdfDownloadLimit = activePlan === "free" ? "1 PDF (Sample)" : "Unlimited PDFs / month";
 

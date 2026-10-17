@@ -291,7 +291,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                 <img
                   src="/logo.svg"
                   alt="RoleFuse Logo"
-                  className="h-6 w-6 object-contain group-hover:scale-105 transition-transform"
+                  className="h-5 w-5 object-contain group-hover:scale-105 transition-transform"
                 />
                 <span className="font-heading font-black text-[19px] tracking-tight text-[#111827] leading-none">
                   RoleFuse

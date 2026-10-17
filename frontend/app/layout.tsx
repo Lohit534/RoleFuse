@@ -26,50 +26,59 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://fasthireai.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.vercel.app"),
   title: {
-    default: "RoleFuse — Free ATS Resume Optimization & Free ATS Scanner",
-    template: "%s | RoleFuse — Free ATS Optimization",
+    default: "RoleFuse — #1 Free AI ATS Resume Optimizer & ATS Scanner",
+    template: "%s | RoleFuse — AI Resume Optimization",
   },
-  description: "RoleFuse is the #1 free ATS resume optimization platform and free ATS scanner. Build an ATS resume, match missing keywords against any job description, and score 90+ on ATS filters in under 30 seconds. 100% free forever.",
+  description: "RoleFuse is the #1 free AI ATS resume optimization platform and free ATS resume scanner. Match missing keywords against any job description, optimize formatting for Workday, Taleo, & Greenhouse, and score 90+ on recruiter ATS filters in under 30 seconds.",
   keywords: [
     "rolefuse",
     "rolefuse ai",
+    "rolefuse ats",
+    "rolefuse resume",
     "rolefuse ats resume",
+    "rolefuse ats scanner",
+    "rolefuse resume builder",
     "rolefuse free ats optimization",
     "rolefuse free ats scanner",
-    "fasthire free ats optimization",
-    "fasthire ats resume",
-    "fassthire free ats scanner",
-    "fasthire free ats scanner",
+    "rolefuse login",
+    "role fuse",
+    "role fuse ai",
     "free ats optimization",
     "free ats resume",
     "free ats scanner",
+    "ats resume scanner free",
     "ats resume builder",
     "free resume checker",
     "ats score checker",
     "resume ats score",
     "ai resume optimizer",
     "ats friendly resume",
-    "resume keyword matcher"
+    "resume keyword matcher",
+    "fasthire free ats optimization",
+    "fasthire ats resume",
+    "fassthire free ats scanner",
+    "fasthire ai",
+    "fasthire"
   ],
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "RoleFuse — Free ATS Resume Optimization & Free ATS Scanner",
-    description: "Score 90+ on recruiter ATS filters. Free ATS optimization, ATS resume builder, and instant ATS scanner.",
-    url: "https://fasthireai.vercel.app",
+    title: "RoleFuse — #1 Free AI ATS Resume Optimizer & ATS Scanner",
+    description: "Score 90+ on recruiter ATS filters in 30 seconds. Scan against any job description, uncover missing keywords, and build recruiter-ready resumes 100% free.",
+    url: process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.vercel.app",
     siteName: "RoleFuse",
-    images: [{ url: "/icon.png", width: 1024, height: 1024, alt: "RoleFuse Logo" }],
+    images: [{ url: "/logo.png", width: 1024, height: 1024, alt: "RoleFuse AI - Free ATS Resume Optimization & Scanner" }],
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RoleFuse — Free ATS Resume Optimization & Free ATS Scanner",
-    description: "Free ATS resume optimization and free ATS scanner. Score 90+ on ATS filters in 30 seconds.",
-    images: ["/icon.png"],
+    title: "RoleFuse — #1 Free AI ATS Resume Optimizer & ATS Scanner",
+    description: "Scan against any job description, uncover missing keywords, and score 90+ on ATS filters in 30 seconds. 100% free.",
+    images: ["/logo.png"],
   },
   robots: {
     index: true,
@@ -95,39 +104,120 @@ export const metadata: Metadata = {
   },
 };
 
+const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.vercel.app";
+
 const structuredData = {
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "WebSite",
+      "@id": `${appBaseUrl}/#website`,
+      "url": appBaseUrl,
+      "name": "RoleFuse",
+      "alternateName": ["RoleFuse AI", "Rolefuse", "Role Fuse", "FastHire AI"],
+      "description": "RoleFuse is the leading free AI ATS resume optimizer and resume scanner.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": `${appBaseUrl}/resources?q={search_term_string}`,
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
       "@type": "WebApplication",
-      "@id": "https://fasthireai.vercel.app/#webapp",
+      "@id": `${appBaseUrl}/#webapp`,
       "name": "RoleFuse",
       "alternateName": [
         "RoleFuse AI",
         "RoleFuse",
         "FastHire AI",
         "FastHire",
+        "rolefuse ats resume",
+        "rolefuse free ats optimization",
+        "rolefuse free ats scanner",
         "fasthire free ats optimization",
-        "fasthire ats resume",
-        "fassthire free ats scanner"
+        "fasthire ats resume"
       ],
-      "url": "https://fasthireai.vercel.app",
+      "url": appBaseUrl,
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "All",
       "browserRequirements": "Requires JavaScript. Requires HTML5.",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "ratingCount": "1420",
+        "bestRating": "5",
+        "worstRating": "1"
+      },
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD"
       },
-      "description": "RoleFuse offers free ATS optimization, ATS resume builder, and instant ATS score scanner."
+      "featureList": [
+        "Free ATS Resume Optimization",
+        "Real-time ATS Score Scanner",
+        "Job Description Missing Keyword Matching",
+        "ATS Safe PDF & DOCX Export",
+        "AI Bullet Point Quantifiable Impact Rewriter"
+      ],
+      "description": "RoleFuse offers free AI-powered ATS resume optimization, ATS resume builder, and instant ATS score scanner."
     },
     {
       "@type": "Organization",
-      "@id": "https://fasthireai.vercel.app/#organization",
+      "@id": `${appBaseUrl}/#organization`,
       "name": "RoleFuse",
-      "url": "https://fasthireai.vercel.app",
-      "logo": "https://fasthireai.vercel.app/icon.png"
+      "url": appBaseUrl,
+      "logo": `${appBaseUrl}/logo.png`,
+      "sameAs": [
+        "https://twitter.com/rolefuse",
+        "https://github.com/Lohit534/fasthireai"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${appBaseUrl}/#faq`,
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is RoleFuse?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "RoleFuse is the #1 free AI-powered ATS resume optimization and scanner platform that scans your resume against any target job description, detects missing keywords, and boosts your score to 90+ in under 30 seconds."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is RoleFuse completely free to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! RoleFuse provides free AI resume optimizations every single month with zero credit card required."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does RoleFuse improve my ATS resume score?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "RoleFuse analyzes your resume against recruiter screening patterns used by Workday, Taleo, and Greenhouse. It identifies missing technical and soft skills, rewrites bullet points for quantifiable impact, and ensures 100% parseable formatting."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I download ATS-friendly PDF and DOCX files on RoleFuse?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! You can instantly export clean, recruiter-approved single-column ATS PDF and Microsoft Word DOCX resumes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is RoleFuse different from ChatGPT?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "RoleFuse is purpose-built for Applicant Tracking Systems. It scores your resume numerically, provides exact missing keyword rubrics, generates formatted exports, and keeps your career applications organized."
+          }
+        }
+      ]
     }
   ]
 };

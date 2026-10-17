@@ -44,7 +44,7 @@ export default function Footer() {
               <img
                 src="/logo.svg"
                 alt="RoleFuse Logo"
-                className="h-6 w-6 object-contain"
+                className="h-5 w-5 object-contain"
               />
               <span className="font-extrabold text-slate-900 text-lg tracking-tight leading-none">
                 RoleFuse

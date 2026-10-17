@@ -69,7 +69,7 @@ function SignupFormContent() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 select-none group w-fit transition-transform hover:scale-[1.02]">
-          <img src="/logo.svg" alt="RoleFuse Logo" className="h-6 w-6 object-contain" />
+          <img src="/logo.svg" alt="RoleFuse Logo" className="h-5 w-5 object-contain" />
           <span className="font-extrabold text-[20px] leading-none tracking-tight text-white">
             RoleFuse
           </span>

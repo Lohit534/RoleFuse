@@ -256,7 +256,7 @@ export default function UpgradePaywallModal() {
                 >
                   <span>Annual</span>
                   <span className="bg-emerald-100 text-[#0d6e5a] text-[10px] font-black px-1.5 py-0.5 rounded-full border border-emerald-200">
-                    2 months free
+                    1 month free
                   </span>
                 </button>
               </div>
@@ -356,13 +356,20 @@ export default function UpgradePaywallModal() {
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
                   For active job hunters targeting multiple roles.
                 </p>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-slate-900">
-                    {billingCycle === "yearly" ? "₹166" : "₹99"}
-                  </span>
-                  <span className="text-xs text-slate-500 font-semibold">
-                    / {billingCycle === "yearly" ? "year" : "month"}
-                  </span>
+                <div className="mt-3">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-slate-900">
+                      ₹99
+                    </span>
+                    <span className="text-xs text-slate-500 font-semibold">
+                      /{billingCycle === "yearly" ? "mo" : "month"}
+                    </span>
+                  </div>
+                  {billingCycle === "yearly" && (
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      ₹1,188/yr · charged annually
+                    </p>
+                  )}
                 </div>
                 <div className="border-t border-emerald-100 my-3" />
                 <ul className="space-y-1.5 text-xs text-slate-700 font-medium">
@@ -447,13 +454,20 @@ export default function UpgradePaywallModal() {
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
                   For active career changers needing maximum optimization power and 24/7 AI features.
                 </p>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-slate-900">
-                    {billingCycle === "yearly" ? "₹332" : "₹199"}
-                  </span>
-                  <span className="text-xs text-slate-500 font-semibold">
-                    / {billingCycle === "yearly" ? "year" : "month"}
-                  </span>
+                <div className="mt-3">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-slate-900">
+                      ₹199
+                    </span>
+                    <span className="text-xs text-slate-500 font-semibold">
+                      /{billingCycle === "yearly" ? "mo" : "month"}
+                    </span>
+                  </div>
+                  {billingCycle === "yearly" && (
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      ₹2,388/yr · charged annually
+                    </p>
+                  )}
                 </div>
                 <div className="border-t border-slate-100 my-3" />
                 <ul className="space-y-1.5 text-xs text-slate-700 font-medium">

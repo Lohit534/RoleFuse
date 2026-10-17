@@ -11,12 +11,12 @@ import { logger } from "@/lib/logger";
 // Plan amount mapping in paise (INR × 100) including 5% GST and payment gateway surcharge
 const PLAN_AMOUNTS: Record<string, Record<string, number>> = {
   premium: {
-    monthly: 10400, // ₹104 (₹99 Base + ₹5 GST & Gateway fees)
-    yearly:  17400, // ₹174 (₹166 Base + ₹8 GST & Gateway fees)
+    monthly: 10400,  // ₹104 (₹99 Base + ₹5 GST & Gateway fees)
+    yearly:  124700, // ₹1,247 (₹1,188 Base [99*12] + ₹59 GST [5%])
   },
   promax: {
-    monthly: 20900, // ₹209 (₹199 Base + ₹10 GST & Gateway fees)
-    yearly:  34900, // ₹349 (₹332 Base + ₹17 GST & Gateway fees)
+    monthly: 20900,  // ₹209 (₹199 Base + ₹10 GST & Gateway fees)
+    yearly:  250700, // ₹2,507 (₹2,388 Base [199*12] + ₹119 GST [5%])
   },
 };
 

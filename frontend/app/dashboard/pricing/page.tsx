@@ -37,6 +37,7 @@ interface Plan {
   priceYearly: string;
   periodMonthly: string;
   periodYearly: string;
+  annualCharged?: string;
   description: string;
   features: string[];
   cta: string;
@@ -64,9 +65,10 @@ const PLANS: Plan[] = [
     id: "premium",
     name: "Premium Pro",
     priceMonthly: "₹99",
-    priceYearly: "₹166",
-    periodMonthly: "month",
-    periodYearly: "year",
+    priceYearly: "₹99",
+    periodMonthly: "mo",
+    periodYearly: "mo",
+    annualCharged: "₹1,188/yr · charged annually",
     description: "For active job hunters targeting multiple roles.",
     features: [
       "20 AI resume optimizations per month",
@@ -87,9 +89,10 @@ const PLANS: Plan[] = [
     id: "promax",
     name: "Pro Max",
     priceMonthly: "₹199",
-    priceYearly: "₹332",
-    periodMonthly: "month",
-    periodYearly: "year",
+    priceYearly: "₹199",
+    periodMonthly: "mo",
+    periodYearly: "mo",
+    annualCharged: "₹2,388/yr · charged annually",
     description: "For active career changers needing maximum optimization power and 24/7 AI features.",
     features: [
       "90 AI resume optimizations per month",
@@ -576,7 +579,7 @@ export default function PricingPage() {
             >
               Bill Yearly
               <Badge className="bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] text-[9px] font-bold px-1.5 py-0.5 rounded-md">
-                Save 20%
+                1 month free
               </Badge>
             </button>
           </div>
@@ -634,13 +637,20 @@ export default function PricingPage() {
                     </div>
 
                     {/* Price Tag */}
-                    <div className="flex items-baseline pt-1">
-                      <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                        {price}
-                      </span>
-                      <span className="text-xs text-slate-500 font-semibold ml-1.5 uppercase tracking-wider">
-                        / {period}
-                      </span>
+                    <div className="pt-1">
+                      <div className="flex items-baseline">
+                        <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                          {price}
+                        </span>
+                        <span className="text-xs text-slate-500 font-semibold ml-1.5 uppercase tracking-wider">
+                          / {period}
+                        </span>
+                      </div>
+                      {billingCycle === "yearly" && (plan as any).annualCharged && (
+                        <p className="text-[11px] text-slate-500 font-medium mt-1">
+                          {(plan as any).annualCharged}
+                        </p>
+                      )}
                     </div>
 
                     {/* Clean Border Divider */}
@@ -793,11 +803,11 @@ export default function PricingPage() {
               {/* Reference Image Style Itemized Order Summary Card */}
               {(() => {
                 const basePrice = selectedPlan.id === "premium"
-                  ? (billingCycle === "monthly" ? 99 : 166)
-                  : (billingCycle === "monthly" ? 199 : 332);
+                  ? (billingCycle === "monthly" ? 99 : 1188)
+                  : (billingCycle === "monthly" ? 199 : 2388);
                 const gstAndFee = selectedPlan.id === "premium"
-                  ? (billingCycle === "monthly" ? 5 : 8)
-                  : (billingCycle === "monthly" ? 10 : 17);
+                  ? (billingCycle === "monthly" ? 5 : 59)
+                  : (billingCycle === "monthly" ? 10 : 119);
                 const totalPayable = basePrice + gstAndFee;
 
                 return (

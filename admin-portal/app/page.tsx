@@ -142,7 +142,7 @@ export default function LoginPage() {
           <img 
             src="/logo.svg" 
             alt="RoleFuse Logo" 
-            className="h-7 w-7 object-contain" 
+            className="h-5 w-5 object-contain" 
           />
           <div className="flex flex-col">
             <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-none">
