@@ -362,12 +362,12 @@ export default function UpgradePaywallModal() {
                       ₹99
                     </span>
                     <span className="text-xs text-slate-500 font-semibold">
-                      /{billingCycle === "yearly" ? "mo" : "month"}
+                      /month
                     </span>
                   </div>
                   {billingCycle === "yearly" && (
                     <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                      ₹1,188/yr · charged annually
+                      ₹1,188/yr · <span className="text-emerald-600 font-semibold">charged annually</span>
                     </p>
                   )}
                 </div>
@@ -460,12 +460,12 @@ export default function UpgradePaywallModal() {
                       ₹199
                     </span>
                     <span className="text-xs text-slate-500 font-semibold">
-                      /{billingCycle === "yearly" ? "mo" : "month"}
+                      /month
                     </span>
                   </div>
                   {billingCycle === "yearly" && (
                     <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                      ₹2,388/yr · charged annually
+                      ₹2,388/yr · <span className="text-emerald-600 font-semibold">charged annually</span>
                     </p>
                   )}
                 </div>

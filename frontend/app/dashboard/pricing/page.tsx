@@ -66,9 +66,9 @@ const PLANS: Plan[] = [
     name: "Premium Pro",
     priceMonthly: "₹99",
     priceYearly: "₹99",
-    periodMonthly: "mo",
-    periodYearly: "mo",
-    annualCharged: "₹1,188/yr · charged annually",
+    periodMonthly: "month",
+    periodYearly: "month",
+    annualCharged: "₹1,188/yr",
     description: "For active job hunters targeting multiple roles.",
     features: [
       "20 AI resume optimizations per month",
@@ -90,9 +90,9 @@ const PLANS: Plan[] = [
     name: "Pro Max",
     priceMonthly: "₹199",
     priceYearly: "₹199",
-    periodMonthly: "mo",
-    periodYearly: "mo",
-    annualCharged: "₹2,388/yr · charged annually",
+    periodMonthly: "month",
+    periodYearly: "month",
+    annualCharged: "₹2,388/yr",
     description: "For active career changers needing maximum optimization power and 24/7 AI features.",
     features: [
       "90 AI resume optimizations per month",
@@ -648,7 +648,7 @@ export default function PricingPage() {
                       </div>
                       {billingCycle === "yearly" && (plan as any).annualCharged && (
                         <p className="text-[11px] text-slate-500 font-medium mt-1">
-                          {(plan as any).annualCharged}
+                          {(plan as any).annualCharged} · <span className="text-emerald-600 font-semibold">charged annually</span>
                         </p>
                       )}
                     </div>
