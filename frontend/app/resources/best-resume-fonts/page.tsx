@@ -150,7 +150,7 @@ export default function BestResumeFontsPage() {
               Build With Calibrated Typography
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-              FastHire AI automates all typography sizing and line heights for clean, verified ATS exports.
+              RoleFuse automates all typography sizing and line heights for clean, verified ATS exports.
             </p>
             <div className="pt-2">
               <Link href="/resume-builder">

@@ -331,7 +331,7 @@ export default function ProductsPage() {
           <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8 text-center space-y-5">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-semibold">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>The Complete FastHire AI Career Platform</span>
+              <span>The Complete RoleFuse Career Platform</span>
             </div>
 
             <h1 className="font-heading text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.12]">
@@ -349,7 +349,7 @@ export default function ProductsPage() {
               <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-slate-900">
                 <img
                   src="/images/products-showcase.jpg"
-                  alt="FastHire AI Product Suite Dashboard"
+                  alt="RoleFuse Product Suite Dashboard"
                   className="w-full h-auto object-cover select-none"
                 />
               </div>

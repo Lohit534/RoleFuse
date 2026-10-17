@@ -861,7 +861,7 @@ export default function LandingPage() {
               Trusted by Job Seekers Worldwide
             </h2>
             <p className="text-[#526176] text-base max-w-md mx-auto leading-relaxed">
-              Job seekers have landed interview callbacks using FastHire AI’s precision optimizations.
+              Job seekers have landed interview callbacks using RoleFuse’s precision optimizations.
             </p>
           </div>
 

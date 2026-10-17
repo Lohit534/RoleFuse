@@ -263,8 +263,8 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
     }
   };
 
-  const shareText = `Check out my resume ATS score improvement on FastHire-AI: from ${resume.scoreBefore} to ${resume.scoreAfter} (+${delta} pts)! 🚀`;
-  const linkedinShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://fasthire-ai.vercel.app")}`;
+  const shareText = `Check out my resume ATS score improvement on RoleFuse: from ${resume.scoreBefore} to ${resume.scoreAfter} (+${delta} pts)! 🚀`;
+  const linkedinShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://rolefuse.vercel.app")}`;
   const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
   return (
@@ -693,7 +693,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
               </h3>
 
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-600 leading-relaxed font-sans select-text">
-                &ldquo;Took my resume from {resume.scoreBefore}% to {resume.scoreAfter}% ATS match with FastHire — took under a minute: https://fasthire-ai.vercel.app&rdquo;
+                &ldquo;Took my resume from {resume.scoreBefore}% to {resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.vercel.app&rdquo;
               </div>
 
               <div className="grid grid-cols-3 gap-2">

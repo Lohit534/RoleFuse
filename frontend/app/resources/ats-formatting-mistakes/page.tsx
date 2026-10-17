@@ -128,7 +128,7 @@ export default function AtsFormattingMistakesPage() {
               Build an ATS-Safe Resume in Minutes
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-              FastHire AI automatically applies all 7 formatting rules. Zero tables, zero header traps, and 100% clean selectable text layers.
+              RoleFuse automatically applies all 7 formatting rules. Zero tables, zero header traps, and 100% clean selectable text layers.
             </p>
             <div className="pt-2">
               <Link href="/resume-builder">

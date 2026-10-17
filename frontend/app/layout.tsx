@@ -56,11 +56,9 @@ export const metadata: Metadata = {
     "ai resume optimizer",
     "ats friendly resume",
     "resume keyword matcher",
-    "fasthire free ats optimization",
-    "fasthire ats resume",
-    "fassthire free ats scanner",
-    "fasthire ai",
-    "fasthire"
+    "rolefuse score",
+    "rolefuse app",
+    "rolefuse ats score"
   ],
   alternates: {
     canonical: "/",
@@ -114,7 +112,7 @@ const structuredData = {
       "@id": `${appBaseUrl}/#website`,
       "url": appBaseUrl,
       "name": "RoleFuse",
-      "alternateName": ["RoleFuse AI", "Rolefuse", "Role Fuse", "FastHire AI"],
+      "alternateName": ["RoleFuse AI", "Rolefuse", "Role Fuse"],
       "description": "RoleFuse is the leading free AI ATS resume optimizer and resume scanner.",
       "potentialAction": {
         "@type": "SearchAction",
@@ -128,14 +126,13 @@ const structuredData = {
       "name": "RoleFuse",
       "alternateName": [
         "RoleFuse AI",
-        "RoleFuse",
-        "FastHire AI",
-        "FastHire",
+        "Rolefuse",
+        "Role Fuse",
         "rolefuse ats resume",
         "rolefuse free ats optimization",
         "rolefuse free ats scanner",
-        "fasthire free ats optimization",
-        "fasthire ats resume"
+        "rolefuse resume builder",
+        "rolefuse ats scanner"
       ],
       "url": appBaseUrl,
       "applicationCategory": "BusinessApplication",
@@ -169,8 +166,7 @@ const structuredData = {
       "url": appBaseUrl,
       "logo": `${appBaseUrl}/logo.png`,
       "sameAs": [
-        "https://twitter.com/rolefuse",
-        "https://github.com/Lohit534/fasthireai"
+        "https://twitter.com/rolefuse"
       ]
     },
     {

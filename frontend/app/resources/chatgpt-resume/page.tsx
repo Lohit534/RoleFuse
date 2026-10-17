@@ -247,7 +247,7 @@ export default function ChatGptResumePage() {
                 Build your best resume yet
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Create a polished, ATS-friendly resume with FastHire AI's resume builder. Start fresh or upload yours,
+                Create a polished, ATS-friendly resume with RoleFuse's resume builder. Start fresh or upload yours,
                 tailor it to the job, and apply with confidence all in one place.
               </p>
               <div>
@@ -319,7 +319,7 @@ export default function ChatGptResumePage() {
                 ChatGPT is great for drafting text, but it won't format your resume or tailor it for ATS.
               </p>
               <p>
-                That is where FastHire AI's ATS resume builder comes in. It organizes your content, chooses clean layouts, and optimizes every section for automated hiring systems.
+                That is where RoleFuse's ATS resume builder comes in. It organizes your content, chooses clean layouts, and optimizes every section for automated hiring systems.
               </p>
             </div>
           </section>
@@ -526,7 +526,7 @@ export default function ChatGptResumePage() {
                 prompt="Help me tailor my resume for a specific job application. I will provide the job description and my resume. Please adjust my resume to highlight the most relevant experiences and skills that align with the job requirements. Also, suggest any changes or additions that would make my resume more appealing for this position."
               />
               <p className="text-slate-600">
-                ChatGPT can guess at keywords, but it cannot measure your exact match score. Run your resume through FastHire AI's ATS scanner to see exactly which keywords are present or missing.
+                ChatGPT can guess at keywords, but it cannot measure your exact match score. Run your resume through RoleFuse's ATS scanner to see exactly which keywords are present or missing.
               </p>
             </div>
           </section>
@@ -625,7 +625,7 @@ export default function ChatGptResumePage() {
                 ChatGPT is a powerful drafting assistant, but it cannot test your resume against ATS parsers, format PDF margins, or check keyword density.
               </p>
               <p>
-                Combining generative AI with a dedicated platform like FastHire AI gives you the best of both worlds: compelling bullet points backed by guaranteed ATS-compatible formatting and real-time keyword scoring.
+                Combining generative AI with a dedicated platform like RoleFuse gives you the best of both worlds: compelling bullet points backed by guaranteed ATS-compatible formatting and real-time keyword scoring.
               </p>
             </div>
           </section>
@@ -722,14 +722,14 @@ export default function ChatGptResumePage() {
               </li>
               <li className="flex items-start gap-2.5">
                 <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0 mt-0.5" />
-                <span>FastHire AI bridges the gap between raw text generation and verified ATS-friendly documents.</span>
+                <span>RoleFuse bridges the gap between raw text generation and verified ATS-friendly documents.</span>
               </li>
             </ul>
 
             <div className="pt-3">
               <Link href="/resume-builder">
                 <Button className="h-11 px-6 bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs rounded-xl shadow-lg transition-all cursor-pointer">
-                  Build Your ATS Resume on FastHire AI
+                  Build Your ATS Resume on RoleFuse
                 </Button>
               </Link>
             </div>
@@ -752,7 +752,7 @@ export default function ChatGptResumePage() {
                   href="/resources"
                   className="text-xs font-bold text-[#087F6E] hover:underline"
                 >
-                  Explore More FastHire Career Resources
+                  Explore More RoleFuse Career Resources
                 </Link>
               </div>
             </div>

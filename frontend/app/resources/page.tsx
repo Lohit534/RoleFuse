@@ -68,7 +68,7 @@ const ALL_RESOURCES = [
     icon: Star,
   },
   {
-    title: "FastHire Career Blog",
+    title: "RoleFuse Career Blog",
     subtitle: "Advice and guides for job seekers.",
     href: "/resources/blog",
     icon: BookOpen,
@@ -89,7 +89,7 @@ export default function ResourcesPage() {
               <span>Career Resources &amp; Guides</span>
             </div>
             <h1 className="font-heading text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              FastHire AI Career Resources
+              RoleFuse Career Resources
             </h1>
             <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
               Explore our comprehensive guides on ATS scoring, keyword optimization, formatting
@@ -101,7 +101,7 @@ export default function ResourcesPage() {
               <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-white">
                 <img
                   src="/images/resources-guide.jpg"
-                  alt="FastHire AI Career Growth & ATS Optimization Advice"
+                  alt="RoleFuse Career Growth & ATS Optimization Advice"
                   className="w-full h-auto object-cover select-none"
                 />
               </div>

@@ -130,7 +130,7 @@ export default function ResumeKeywordsPage() {
           {/* Action CTA */}
           <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-10 text-center space-y-5">
             <h2 className="font-heading text-2xl sm:text-3xl font-extrabold">
-              Detect Missing Keywords with FastHire AI
+              Detect Missing Keywords with RoleFuse
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
               Paste your target job description and see exactly which hard keywords are missing from your resume before you apply.

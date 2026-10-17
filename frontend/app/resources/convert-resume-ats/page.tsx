@@ -80,7 +80,7 @@ export default function ConvertResumeAtsPage() {
           {/* Action CTA */}
           <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-10 text-center space-y-5">
             <h2 className="font-heading text-2xl sm:text-3xl font-extrabold">
-              Convert Your Resume Instantly With FastHire AI
+              Convert Your Resume Instantly With RoleFuse
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
               Upload your old resume and let our AI parser restructure your experience into clean, verified ATS templates.

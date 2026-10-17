@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           <div className="space-y-4 text-sm text-slate-600 leading-relaxed font-medium">
             <h2 className="text-base font-bold text-slate-900 pt-2">1. Information We Collect</h2>
             <p>
-              FastHire-AI collects your name, email address, and authentication credentials when you create an account via email or Google OAuth. We also collect the resume text and job descriptions that you upload or paste into the dashboard to perform scoring and optimizations.
+              RoleFuse collects your name, email address, and authentication credentials when you create an account via email or Google OAuth. We also collect the resume text and job descriptions that you upload or paste into the dashboard to perform scoring and optimizations.
             </p>
 
             <h2 className="text-base font-bold text-slate-900 pt-2">2. How We Use Your Data</h2>

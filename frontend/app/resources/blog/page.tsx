@@ -63,7 +63,7 @@ export default function BlogPage() {
               <span>Career Advice &amp; Recruiter Insights</span>
             </div>
             <h1 className="font-heading text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              FastHire Career Blog &amp; Guides
+              RoleFuse Career Blog &amp; Guides
             </h1>
             <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
               Actionable advice, hiring trends, and resume optimization secrets curated
@@ -116,7 +116,7 @@ export default function BlogPage() {
               Ready to Upgrade Your Application?
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-              Test your resume against real applicant tracking systems with FastHire AI.
+              Test your resume against real applicant tracking systems with RoleFuse.
             </p>
             <div className="pt-2">
               <Link href="/ats-checker">

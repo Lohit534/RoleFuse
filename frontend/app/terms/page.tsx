@@ -27,7 +27,7 @@ export default function TermsPage() {
           <div className="space-y-4 text-sm text-slate-600 leading-relaxed font-medium">
             <h2 className="text-base font-bold text-slate-900 pt-2">1. Agreement to Terms</h2>
             <p>
-              By accessing FastHire-AI, you agree to comply with and be bound by these Terms of Service. If you do not agree with any part of these terms, you are prohibited from using the application.
+              By accessing RoleFuse, you agree to comply with and be bound by these Terms of Service. If you do not agree with any part of these terms, you are prohibited from using the application.
             </p>
 
             <h2 className="text-base font-bold text-slate-900 pt-2">2. Account Responsibility</h2>
@@ -42,7 +42,7 @@ export default function TermsPage() {
 
             <h2 className="text-base font-bold text-slate-900 pt-2">4. Disclaimers</h2>
             <p>
-              FastHire-AI calculates match percentages and bullet suggestions based on custom statistical heuristics and Gemini AI models. We do not guarantee employment, interviews, or final selection outcomes by using optimized resumes.
+              RoleFuse calculates match percentages and bullet suggestions based on custom statistical heuristics and Gemini AI models. We do not guarantee employment, interviews, or final selection outcomes by using optimized resumes.
             </p>
           </div>
         </div>

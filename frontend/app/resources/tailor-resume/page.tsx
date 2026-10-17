@@ -83,7 +83,7 @@ export default function TailorResumePage() {
               Automate Resume Tailoring with AI
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-              Paste your target job description into FastHire AI and get a customized, keyword-tailored resume in under 30 seconds.
+              Paste your target job description into RoleFuse and get a customized, keyword-tailored resume in under 30 seconds.
             </p>
             <div className="pt-2">
               <Link href="/ats-optimizer">

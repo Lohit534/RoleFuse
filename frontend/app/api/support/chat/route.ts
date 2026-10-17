@@ -1,7 +1,7 @@
 /**
  * POST /api/support/chat
  *
- * FastHire-AI Assistant Chatbot handler.
+ * RoleFuse AI Assistant Chatbot handler.
  * Powered by Google Gemini and Groq AI, with intelligent contextual fallbacks.
  * Answers any platform question: safety, pricing plans, ATS scoring, career roadmaps, and support.
  * Guaranteed 100% clean formatting without asterisks.
@@ -12,6 +12,13 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail } from "@/types";
 import { logger } from "@/lib/logger";
 import { callAIText } from "@/lib/ai/router";
+
+/**
+ * In-memory token pool cache mapping userId -> remaining sub-credit tokens (0 to 7999)
+ * 1 full optimization credit = 8,000 tokens (~30-50 chat messages per credit)
+ */
+const chatTokenPoolCache = new Map<string, number>();
+const TOKENS_PER_CREDIT = 8000;
 
 /**
  * Remove all markdown asterisks (**bold**, *italics*, and bullet asterisks)
@@ -48,7 +55,7 @@ function getSmartContextualAnswer(question: string): string {
     q.includes("data")
   ) {
     return cleanAsterisks(
-      "FastHire AI is 100% safe, trustworthy, and enterprise-grade secure:\n\n" +
+      "RoleFuse is 100% safe, trustworthy, and enterprise-grade secure:\n\n" +
       "• 256-Bit SSL Encryption: All web traffic and resumes are encrypted in transit and at rest.\n" +
       "• RBI-Regulated Payments: All transactions are processed through Razorpay, a certified PCI-DSS Level 1 compliant gateway.\n" +
       "• Zero Payment Storage: We never store your UPI PINs, credit/debit card numbers, or banking credentials.\n" +
@@ -67,7 +74,7 @@ function getSmartContextualAnswer(question: string): string {
     q.includes("downgrade")
   ) {
     return cleanAsterisks(
-      "About switching plans on FastHire AI:\n\n" +
+      "About switching plans on RoleFuse:\n\n" +
       "• If you have not purchased a plan, your account strictly remains on the Free Tier with your free monthly credits.\n" +
       "• All 3 plans (Free, Premium Pro, and Pro Max) are shown on the Pricing page so you can easily compare features.\n" +
       "• You will never be switched or billed unexpectedly. A plan is only activated after you voluntarily complete a secure checkout.\n" +
@@ -88,8 +95,8 @@ function getSmartContextualAnswer(question: string): string {
     return cleanAsterisks(
       "RoleFuse offers 3 simple, transparent plans:\n\n" +
       "• Free Tier: Free monthly optimizations, standard ATS score breakdown, and instant resume preview.\n" +
-      "• Premium Pro (₹99/mo or ₹1,188/yr charged annually): 20 resume optimizations/month, full keyword gap analysis, all resume templates, and PDF & DOCX downloads.\n" +
-      "• Pro Max (₹199/mo or ₹2,388/yr charged annually): 90 AI resume optimizations/month, AI bullet point rewriter, priority ATS processing, 24/7 AI Assistant, and official GST tax invoices.\n\n" +
+      "• Premium Pro (₹99/month or ₹1,188/yr charged annually): 20 resume optimizations/month, full keyword gap analysis, all resume templates, and PDF & DOCX downloads.\n" +
+      "• Pro Max (₹199/month or ₹2,388/yr charged annually): 90 AI resume optimizations/month, AI bullet point rewriter, priority ATS processing, 24/7 AI Assistant, and official GST tax invoices.\n\n" +
       "All plans are processed securely via Razorpay with 5% GST."
     );
   }
@@ -97,7 +104,7 @@ function getSmartContextualAnswer(question: string): string {
   // ATS Scoring & Resume Optimization
   if (q.includes("ats") || q.includes("score") || q.includes("tailor") || q.includes("optimize") || q.includes("90")) {
     return cleanAsterisks(
-      "To score 90+ on FastHire AI's ATS scanner:\n\n" +
+      "To score 90+ on RoleFuse's ATS scanner:\n\n" +
       "1. Paste your target Job Description (JD) into the optimization panel.\n" +
       "2. Match critical hard skills and tools listed in the JD within your Skills and Experience sections.\n" +
       "3. Use strong action verbs and measurable metrics (e.g., Increased performance by 40% or reduced costs by ₹2L).\n" +
@@ -117,7 +124,7 @@ function getSmartContextualAnswer(question: string): string {
   // Downloads & Formats
   if (q.includes("download") || q.includes("pdf") || q.includes("docx") || q.includes("export") || q.includes("format")) {
     return cleanAsterisks(
-      "FastHire AI supports full resume exports:\n\n" +
+      "RoleFuse supports full resume exports:\n\n" +
       "• ATS-Compliant PDF: Formatted cleanly for corporate Applicant Tracking Systems.\n" +
       "• Editable Word DOCX: Perfect for making quick manual adjustments or submitting to recruiters who require Word files.\n" +
       "• Both download options are available directly on the editor and in your History page."
@@ -127,7 +134,7 @@ function getSmartContextualAnswer(question: string): string {
   // Job Application Tracker
   if (q.includes("job tracker") || q.includes("tracker") || q.includes("applied") || q.includes("application")) {
     return cleanAsterisks(
-      "FastHire AI includes an integrated Job Application Tracker:\n\n" +
+      "RoleFuse includes an integrated Job Application Tracker:\n\n" +
       "• Organize your job search across Wishlist, Applied, Interviewing, Offer, and Rejected stages.\n" +
       "• Add job URLs, salary ranges, deadlines, and notes.\n" +
       "• Directly link the specific tailored resume used for each application so you're always prepared for interviews."
@@ -144,7 +151,7 @@ function getSmartContextualAnswer(question: string): string {
   // Refunds & Support
   if (q.includes("refund") || q.includes("money back") || q.includes("cancel") || q.includes("return")) {
     return cleanAsterisks(
-      "FastHire AI Refund Policy:\n\n" +
+      "RoleFuse Refund Policy:\n\n" +
       "• As clearly stated on our Pricing page, all payments, plan upgrades, and plan switches are strictly non-refundable under any circumstances.\n" +
       "• Because digital optimization credits and AI features are activated immediately upon purchase, payments cannot be refunded or reversed.\n" +
       "• If you experience any technical issues with your credits, our team is ready to assist you promptly via an Admin Support Ticket."
@@ -160,7 +167,7 @@ function getSmartContextualAnswer(question: string): string {
   }
 
   return cleanAsterisks(
-    "FastHire AI helps you create ATS-optimized resumes tailored to any job description, track your job applications, and boost interview callbacks.\n\n" +
+    "RoleFuse helps you create ATS-optimized resumes tailored to any job description, track your job applications, and boost interview callbacks.\n\n" +
     "You can ask me about:\n" +
     "• How to achieve a 90+ ATS score\n" +
     "• How to tailor your resume for any Job Description\n" +
@@ -282,20 +289,24 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // STRICT: AI Chat is exclusively a Pro Max feature (requires 90 credits or admin_promax)
+      // STRICT: AI Chat is exclusively a Pro Max feature (requires 90 credits or admin_promax or active Pro Max plan)
       // Premium (20 credits) users do NOT have access to AI Chat
-      const hasProMaxAccess = isAdminPromax || isPaidProMax || currentPaidCredits >= 90;
+      const hasProMaxAccess =
+        isAdminPromax ||
+        isPaidProMax ||
+        (currentPaidCredits > 0 && !creditRow?.billingCycle?.includes("premium") && creditRow?.billingCycle !== "admin_premium") ||
+        currentPaidCredits >= 90;
 
       if (!hasProMaxAccess) {
         const isPremiumUser = isAdminPremium || currentPaidCredits > 0;
         if (isPremiumUser) {
           return NextResponse.json(
-            { error: "24/7 AI Assistant is exclusive to the Pro Max plan (₹199/mo). Your Premium Pro plan does not include AI Chat. Please upgrade to Pro Max to unlock this feature." },
+            { error: "24/7 AI Assistant is exclusive to the Pro Max plan (₹199/month). Your Premium Pro plan does not include AI Chat. Please upgrade to Pro Max to unlock this feature." },
             { status: 403 }
           );
         }
         return NextResponse.json(
-          { error: "AI Chat is exclusive to Pro Max plan. Please upgrade to Pro Max (₹199/mo) to access the 24/7 AI Assistant." },
+          { error: "AI Chat is exclusive to Pro Max plan. Please upgrade to Pro Max (₹199/month) to access the 24/7 AI Assistant." },
           { status: 403 }
         );
       }
@@ -323,39 +334,72 @@ export async function POST(request: NextRequest) {
 
     const trimmedQuestion = question.trim();
 
-    // Helper: Deduct credits based on token consumption (1 credit per ~1,000 tokens, min 1 credit)
+    // Helper: Deduct credits on an accumulated token-pool basis (gentle fractional charging: 8,000 tokens = 1 credit)
     const deductTokens = async (totalTokens: number) => {
       if (isOwner) {
-        return { creditsDeducted: 0, creditsRemaining: 999999 };
+        return { creditsDeducted: 0, creditsRemaining: 999999, tokenPool: 0 };
       }
-      const creditsDeducted = Math.max(1, Math.round(totalTokens / 1000));
-      const creditsRemaining = Math.max(0, currentPaidCredits - creditsDeducted);
+
+      // Read current token pool from in-memory cache or Supabase user_metadata
+      const cachedPool = chatTokenPoolCache.get(activeUserId);
+      const metadataPool = typeof user.user_metadata?.chat_tokens_pool === "number"
+        ? user.user_metadata.chat_tokens_pool
+        : 0;
+      
+      const currentPool = typeof cachedPool === "number" ? cachedPool : metadataPool;
+      const accumulatedTokens = currentPool + totalTokens;
+      const creditsDeducted = Math.floor(accumulatedTokens / TOKENS_PER_CREDIT);
+      const remainingPool = accumulatedTokens % TOKENS_PER_CREDIT;
+
+      // Update in-memory cache immediately
+      chatTokenPoolCache.set(activeUserId, remainingPool);
+
+      // Asynchronously persist new pool into user_metadata
       try {
-        await admin
-          .from("Credit")
-          .update({ paidCredits: creditsRemaining })
-          .eq("userId", activeUserId);
-        logger.info(`[support-chat] Charged ${creditsDeducted} credit(s) for ${totalTokens} tokens (${user.email}). Remaining: ${creditsRemaining}`);
-      } catch (err: any) {
-        logger.error("[support-chat] Failed to deduct chat credit:", err?.message);
+        if (admin?.auth?.admin?.updateUserById) {
+          admin.auth.admin.updateUserById(user.id, {
+            user_metadata: {
+              ...(user.user_metadata || {}),
+              chat_tokens_pool: remainingPool
+            }
+          }).catch(() => {});
+        }
+      } catch (_metaErr) {}
+
+      let creditsRemaining = currentPaidCredits;
+
+      if (creditsDeducted > 0) {
+        creditsRemaining = Math.max(0, currentPaidCredits - creditsDeducted);
+        try {
+          await admin
+            .from("Credit")
+            .update({ paidCredits: creditsRemaining })
+            .eq("userId", activeUserId);
+          logger.info(`[support-chat] Charged ${creditsDeducted} credit(s) after reaching ${accumulatedTokens} tokens (${user.email}). Remaining credits: ${creditsRemaining}, remaining token pool: ${remainingPool}/${TOKENS_PER_CREDIT}`);
+        } catch (err: any) {
+          logger.error("[support-chat] Failed to deduct chat credit:", err?.message);
+        }
+      } else {
+        logger.info(`[support-chat] AI assistance consumed ${totalTokens} tokens (${user.email}). Pool: ${remainingPool}/${TOKENS_PER_CREDIT} tokens (0 full credits deducted). Credits left: ${creditsRemaining}`);
       }
-      return { creditsDeducted, creditsRemaining };
+
+      return { creditsDeducted, creditsRemaining, tokenPool: remainingPool };
     };
 
     const SYSTEM_PROMPT = `
-You are the FastHire AI Support Assistant. Your tone is professional, helpful, and concise.
+You are the RoleFuse AI Support Assistant. Your tone is professional, helpful, and concise.
 You must answer questions based on the following platform rules. NEVER invent pricing or policies.
 
 1. Safety & Security:
-- FastHire AI is 100% safe, trustworthy, and enterprise-grade secure.
+- RoleFuse is 100% safe, trustworthy, and enterprise-grade secure.
 - 256-Bit SSL Encryption for all traffic.
 - Payments use Razorpay (PCI-DSS Level 1 compliant). We NEVER store UPI PINs or card details.
 - No auto-debits; strictly one-time payments.
 
 2. Plans & Pricing:
 - Free Tier: Free monthly optimizations, standard ATS score, instant preview. (Users who didn't pay are on this plan).
-- Premium Pro (₹99/mo or ₹1,188/yr charged annually): 20 optimizations/month, full keyword gap, all templates, PDF/DOCX downloads.
-- Pro Max (₹199/mo or ₹2,388/yr charged annually): 90 optimizations/month, AI bullet rewriter, priority ATS processing, 24/7 AI Assistant.
+- Premium Pro (₹99/month or ₹1,188/yr charged annually): 20 optimizations/month, full keyword gap, all templates, PDF/DOCX downloads.
+- Pro Max (₹199/month or ₹2,388/yr charged annually): 90 optimizations/month, AI bullet rewriter, priority ATS processing, 24/7 AI Assistant.
 - Option 3 Rollover on Renewal: When an active subscription ends without immediate renewal, remaining unused credits are securely banked. As soon as you renew, your rollover credits are unlocked and added to your new cycle!
 - All plans are one-time payments. No recurring debits. Users upgrade securely via the Pricing page.
 
@@ -415,11 +459,13 @@ IMPORTANT RULES FOR YOU:
           const content = json.choices?.[0]?.message?.content;
           if (content && content.trim().length > 5) {
             const tokens = json.usage?.total_tokens || Math.ceil((systemPrompt.length + content.length) / 4);
-            const { creditsDeducted, creditsRemaining } = await deductTokens(tokens);
+            const { creditsDeducted, creditsRemaining, tokenPool } = await deductTokens(tokens);
             return NextResponse.json({
               answer: cleanAsterisks(content.trim()),
               engine: "Groq AI (Llama 3.3)",
               tokensUsed: tokens,
+              tokenPool,
+              tokensPerCredit: TOKENS_PER_CREDIT,
               creditsDeducted,
               creditsRemaining
             });
@@ -456,11 +502,13 @@ IMPORTANT RULES FOR YOU:
           const responseText = result.response.text();
           if (responseText && responseText.trim().length > 5) {
             const tokens = result.response?.usageMetadata?.totalTokenCount || Math.ceil((systemPrompt.length + responseText.length) / 4);
-            const { creditsDeducted, creditsRemaining } = await deductTokens(tokens);
+            const { creditsDeducted, creditsRemaining, tokenPool } = await deductTokens(tokens);
             return NextResponse.json({
               answer: cleanAsterisks(responseText.trim()),
               engine: "Gemini AI",
               tokensUsed: tokens,
+              tokenPool,
+              tokensPerCredit: TOKENS_PER_CREDIT,
               creditsDeducted,
               creditsRemaining
             });
@@ -476,11 +524,13 @@ IMPORTANT RULES FOR YOU:
       const aiResponse = await callAIText(systemPrompt);
       if (aiResponse && aiResponse.trim().length > 10) {
         const tokens = Math.ceil((systemPrompt.length + aiResponse.length) / 4);
-        const { creditsDeducted, creditsRemaining } = await deductTokens(tokens);
+        const { creditsDeducted, creditsRemaining, tokenPool } = await deductTokens(tokens);
         return NextResponse.json({
           answer: cleanAsterisks(aiResponse.trim()),
-          engine: "FastHire AI",
+          engine: "RoleFuse AI",
           tokensUsed: tokens,
+          tokenPool,
+          tokensPerCredit: TOKENS_PER_CREDIT,
           creditsDeducted,
           creditsRemaining
         });
@@ -490,11 +540,13 @@ IMPORTANT RULES FOR YOU:
     // 5. Smart Contextual Fallback
     const contextualAns = getSmartContextualAnswer(trimmedQuestion);
     const tokens = Math.ceil((systemPrompt.length + contextualAns.length) / 4);
-    const { creditsDeducted, creditsRemaining } = await deductTokens(tokens);
+    const { creditsDeducted, creditsRemaining, tokenPool } = await deductTokens(tokens);
     return NextResponse.json({
       answer: contextualAns,
-      engine: "FastHire Contextual Engine",
+      engine: "RoleFuse Contextual Engine",
       tokensUsed: tokens,
+      tokenPool,
+      tokensPerCredit: TOKENS_PER_CREDIT,
       creditsDeducted,
       creditsRemaining
     });

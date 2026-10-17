@@ -56,10 +56,10 @@ export default function BestFreeResumeBuildersPage() {
           <div className="max-w-4xl mx-auto space-y-4 text-center">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-bold">
               <FileText className="h-3.5 w-3.5" />
-              <span>FastHire AI Resume Builder Guide</span>
+              <span>RoleFuse Resume Builder Guide</span>
             </div>
             <h1 className="font-heading text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              Build an ATS-Friendly Resume for Free with FastHire AI
+              Build an ATS-Friendly Resume for Free with RoleFuse
             </h1>
             <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
               Create a recruiter-ready, ATS-compliant resume without hidden fees, paywall traps, or complex design software.
@@ -72,7 +72,7 @@ export default function BestFreeResumeBuildersPage() {
           {/* Core FastHire Capabilities */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
             <h2 className="font-heading font-extrabold text-xl text-slate-900">
-              Why Job Seekers Choose FastHire AI
+              Why Job Seekers Choose RoleFuse
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -101,7 +101,7 @@ export default function BestFreeResumeBuildersPage() {
           {/* Standards & Best Practices */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
             <h2 className="font-heading font-extrabold text-xl text-slate-900">
-              FastHire AI Resume Quality Standards
+              RoleFuse Resume Quality Standards
             </h2>
             <div className="space-y-3 text-xs sm:text-sm text-slate-600 leading-relaxed">
               {BEST_PRACTICES.map((tip) => (
@@ -116,7 +116,7 @@ export default function BestFreeResumeBuildersPage() {
           {/* Action CTA */}
           <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-10 text-center space-y-5">
             <h2 className="font-heading text-2xl sm:text-3xl font-extrabold">
-              Build Your Resume with FastHire AI
+              Build Your Resume with RoleFuse
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
               Step into an ATS-optimized career path with our intelligent builder. Free, fast, and verified for modern hiring systems.
