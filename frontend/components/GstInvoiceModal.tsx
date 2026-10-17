@@ -90,16 +90,16 @@ export default function GstInvoiceModal({
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <img
-                  src="https://qasfeyddyolpdvmiogkl.supabase.co/storage/v1/object/public/assets/logo.png"
-                  alt="FastHire AI"
-                  className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg shadow-sm"
+                  src="/logo.svg"
+                  alt="RoleFuse"
+                  className="h-6 w-6 object-contain"
                   onError={(e) => { (e.currentTarget as any).style.display = 'none'; }}
                 />
-                <span className="font-black text-lg sm:text-xl text-slate-900 print:text-black tracking-tight">FastHire AI</span>
+                <span className="font-black text-lg sm:text-xl text-slate-900 print:text-black tracking-tight">RoleFuse</span>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-600 print:text-slate-600 font-semibold">FastHire AI Cloud Technologies</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-600 print:text-slate-600 font-semibold">RoleFuse Cloud Technologies</p>
               <p className="text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">SAC Code: 998313 &bull; IT Software as a Service</p>
-              <p className="text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">support@fasthire.ai</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">support@rolefuse.ai</p>
             </div>
 
             <div className="sm:text-right space-y-1 w-full sm:w-auto">
@@ -174,8 +174,8 @@ export default function GstInvoiceModal({
           {/* Footer note */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-3 pt-4 border-t border-slate-200 print:border-slate-200 text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">
             <div className="space-y-0.5">
-              <p className="font-semibold text-slate-600 print:text-slate-600">Thank you for subscribing to FastHire AI!</p>
-              <p>Computer-generated GST tax receipt authorized by FastHire AI.</p>
+              <p className="font-semibold text-slate-600 print:text-slate-600">Thank you for subscribing to RoleFuse!</p>
+              <p>Computer-generated GST tax receipt authorized by RoleFuse.</p>
             </div>
             <div className="sm:text-right">
               <div className="inline-flex items-center gap-1 text-emerald-700 print:text-emerald-700 font-bold bg-emerald-50 print:bg-emerald-50 px-2 py-1 rounded border border-emerald-200 print:border-emerald-200 text-[10px]">

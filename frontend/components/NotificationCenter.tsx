@@ -96,7 +96,7 @@ export function getActiveNotifications(
         id: notifId,
         type: "upgrade",
         title: "Upgrade to Best Features (Pro Max)",
-        message: "Unlock FastHire's best features! Upgrade to Pro Max for unlimited AI resume optimizations, highest ATS score accuracy, and priority exports.",
+        message: "Unlock RoleFuse's best features! Upgrade to Pro Max for unlimited AI resume optimizations, highest ATS score accuracy, and priority exports.",
         actionText: "Upgrade to Best Features",
         actionHref: "/dashboard/pricing",
         dateStr: "Monthly Highlight",
@@ -406,7 +406,7 @@ export function MonthlyNotificationModal({
       setModalData({
         badge: "MONTHLY PRO MAX UPGRADE",
         title: "Upgrade to Best Features - Pro Max Tier",
-        description: "Unlock FastHire's best features this month! Upgrade from Premium Pro to Pro Max for unlimited ATS resume optimizations, priority export speed, and executive Harvard templates.",
+        description: "Unlock RoleFuse's best features this month! Upgrade from Premium Pro to Pro Max for unlimited ATS resume optimizations, priority export speed, and executive Harvard templates.",
         actionText: "Upgrade to Best Features",
         actionHref: "/dashboard/pricing",
         isExpiring: false,
@@ -426,8 +426,8 @@ export function MonthlyNotificationModal({
       setModalDismissKey(monthlyStorageKey);
       setModalData({
         badge: "MONTHLY PRO HIGHLIGHT",
-        title: "Upgrade to Best Features - FastHire Pro",
-        description: "Supercharge your job applications this month! Upgrade to access FastHire's best features: 20 monthly AI resume optimizations, full PDF and Word DOCX downloads, tailored cover letters, and custom career skill roadmaps.",
+        title: "Upgrade to Best Features - RoleFuse Pro",
+        description: "Supercharge your job applications this month! Upgrade to access RoleFuse's best features: 20 monthly AI resume optimizations, full PDF and Word DOCX downloads, tailored cover letters, and custom career skill roadmaps.",
         actionText: "Upgrade to Best Features",
         actionHref: "/dashboard/pricing",
         isExpiring: false,

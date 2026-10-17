@@ -142,8 +142,8 @@ export default function UpgradePaywallModal() {
         key: orderData.keyId,
         amount: orderData.amount,
         currency: "INR",
-        name: "FastHire AI",
-        description: planId === "premium" ? "FastHire Premium Pro (20 Optimizations)" : "FastHire Pro Max (90 Optimizations)",
+        name: "RoleFuse",
+        description: planId === "premium" ? "RoleFuse Premium Pro (20 Optimizations)" : "RoleFuse Pro Max (90 Optimizations)",
         image: "/logo.png",
         order_id: orderData.orderId,
         prefill: {

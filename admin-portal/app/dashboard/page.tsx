@@ -397,20 +397,14 @@ export default function AdminDashboard() {
       >
         {/* Sidebar Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-100 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#0d6e5a] to-[#0f766e] flex items-center justify-center shadow-md overflow-hidden">
-              <img
-                src="/logo.png"
-                alt="FastHire"
-                className="h-6 w-6 object-contain"
-                onError={(e: any) => {
-                  e.target.style.display = "none";
-                  e.target.parentElement.innerHTML = '<span style="color:white;font-size:12px;font-weight:800">F</span>';
-                }}
-              />
-            </div>
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/logo.svg"
+              alt="RoleFuse Logo"
+              className="h-6 w-6 object-contain shrink-0"
+            />
             <div>
-              <p className="text-sm font-extrabold text-slate-900 leading-tight">FastHire AI</p>
+              <p className="text-sm font-extrabold text-slate-900 leading-tight">RoleFuse</p>
               <p className="text-[9px] font-black text-[#0d6e5a] uppercase tracking-widest leading-tight">Admin Console</p>
             </div>
           </div>

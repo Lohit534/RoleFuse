@@ -90,8 +90,8 @@ const FAQS: FAQItem[] = [
   },
   {
     id: "ats-scoring",
-    question: "How does FastHire ATS scoring & keyword optimization work?",
-    answer: "FastHire AI analyzes your resume against target job description keywords, technical requirements, and industry-standard ATS rubrics, highlighting exact keyword gaps and upgrading weak bullet points to help you reach a 90+ score."
+    question: "How does RoleFuse ATS scoring & keyword optimization work?",
+    answer: "RoleFuse analyzes your resume against target job description keywords, technical requirements, and industry-standard ATS rubrics, highlighting exact keyword gaps and upgrading weak bullet points to help you reach a 90+ score."
   },
   {
     id: "gst-invoices",
@@ -175,7 +175,7 @@ export default function SupportChatbot() {
   const [aiHistory, setAiHistory] = useState<ChatMessage[]>([
     {
       sender: "ai",
-      text: "Hello! I am your FastHire AI Assistant. Ask me anything about resume optimization, ATS keywords, pricing plans, or career advice!",
+      text: "Hello! I am your RoleFuse AI Assistant. Ask me anything about resume optimization, ATS keywords, pricing plans, or career advice!",
       timestamp: new Date()
     }
   ]);
@@ -324,7 +324,7 @@ export default function SupportChatbot() {
           ...newHistory,
           {
             sender: "ai",
-            text: cleanAsterisks(data.answer) || "I am here to assist with any questions about FastHire AI!",
+            text: cleanAsterisks(data.answer) || "I am here to assist with any questions about RoleFuse!",
             timestamp: new Date()
           }
         ]);
@@ -599,7 +599,7 @@ export default function SupportChatbot() {
                             )}
                           </div>
                           <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                            24/7 AI Assistant &bull; Ask anything about FastHire
+                            24/7 AI Assistant &bull; Ask anything about RoleFuse
                           </p>
                         </div>
                       </div>
@@ -757,7 +757,7 @@ export default function SupportChatbot() {
                               <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
                                 <div className="flex items-center gap-1.5 text-[10px] text-[#0d6e5a] font-black uppercase tracking-wider">
                                   <ShieldCheck className="h-3.5 w-3.5 text-[#0d6e5a]" />
-                                  <span>FastHire Support Reply</span>
+                                  <span>RoleFuse Support Reply</span>
                                 </div>
                                 <span className="text-[9px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/60">
                                   Official
@@ -827,7 +827,7 @@ export default function SupportChatbot() {
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                   <div>
-                    <h3 className="font-extrabold text-slate-900 text-xs tracking-tight">FastHire AI Assistant</h3>
+                    <h3 className="font-extrabold text-slate-900 text-xs tracking-tight">RoleFuse AI Assistant</h3>
                     <div className="flex items-center gap-2 select-none">
                       <span className="text-[9px] text-slate-500 font-semibold flex items-center gap-1">
                         <span className="h-1.5 w-1.5 rounded-full bg-[#0d6e5a] animate-pulse" />
@@ -873,7 +873,7 @@ export default function SupportChatbot() {
                   <div className="flex justify-start">
                     <div className="bg-white border border-slate-200 text-slate-600 rounded-2xl rounded-bl-none px-3.5 py-2.5 text-xs flex items-center gap-2 shadow-sm">
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0d6e5a]" />
-                      <span>FastHire AI is thinking...</span>
+                      <span>RoleFuse AI is thinking...</span>
                     </div>
                   </div>
                 )}

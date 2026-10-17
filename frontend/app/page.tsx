@@ -31,11 +31,11 @@ import { DashboardSkeleton } from "@/components/SkeletonShimmer";
 /* ── Landing FAQ ─────────────────────────────────────────── */
 const LANDING_FAQS = [
   {
-    q: "Is FastHire AI completely free?",
+    q: "Is RoleFuse completely free?",
     a: "Yes! You get 2 free AI resume optimizations every month with no credit card required. You can upgrade to Premium Pro or Pro Max for more optimizations and features.",
   },
   {
-    q: "How does FastHire AI improve my resume?",
+    q: "How does RoleFuse improve my resume?",
     a: "Our AI analyzes your resume against the job description, identifies missing keywords, rewrites bullet points for impact, and scores your ATS compatibility — all in under 30 seconds.",
   },
   {
@@ -51,16 +51,16 @@ const LANDING_FAQS = [
     a: "You can download your optimized resume as a professionally formatted PDF and DOCX (Word) file. Both are ATS-compatible and recruiter-ready.",
   },
   {
-    q: "Can I use FastHire AI for different job roles?",
+    q: "Can I use RoleFuse for different job roles?",
     a: "Yes! You can optimize your resume for as many different job roles or companies as you want. Just paste a new job description each time to get role-specific optimization.",
   },
   {
-    q: "How is FastHire AI different from ChatGPT?",
-    a: "FastHire AI is purpose-built for ATS optimization. It doesn't just rewrite — it scores your resume, identifies specific missing keywords, generates PDF/DOCX exports, tracks your history, and produces cover letters tailored to each JD.",
+    q: "How is RoleFuse different from ChatGPT?",
+    a: "RoleFuse is purpose-built for ATS optimization. It doesn't just rewrite — it scores your resume, identifies specific missing keywords, generates PDF/DOCX exports, tracks your history, and produces cover letters tailored to each JD.",
   },
   {
     q: "Do I need to install anything?",
-    a: "No downloads required. FastHire AI works entirely in your browser. Just sign up and start optimizing your resume in seconds.",
+    a: "No downloads required. RoleFuse works entirely in your browser. Just sign up and start optimizing your resume in seconds.",
   },
 ];
 
@@ -220,7 +220,7 @@ export default function LandingPage() {
               {/* Announcement Pill */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#DCE7E9] shadow-xs text-[#075E53] text-xs font-semibold tracking-wide">
                 <span className="h-2 w-2 rounded-full bg-[#087F6E] animate-pulse shrink-0" />
-                <span>FastHire Free ATS Optimization &amp; Free ATS Scanner &bull; 2 Free Scans / Month</span>
+                <span>RoleFuse Free ATS Optimization &amp; Free ATS Scanner &bull; 2 Free Scans / Month</span>
               </div>
 
               {/* Main Headline */}
@@ -232,7 +232,7 @@ export default function LandingPage() {
 
               {/* Supporting Copy */}
               <p className="text-base sm:text-lg text-[#526176] max-w-xl leading-[1.68] font-normal">
-                <strong>FastHire free ATS optimization</strong> and instant <strong>ATS resume scanner</strong>. Test your resume against any job description, identify missing keywords, rewrite bullet points with impact, and generate an ATS-friendly resume guaranteed to pass recruiter screening.
+                <strong>RoleFuse free ATS optimization</strong> and instant <strong>ATS resume scanner</strong>. Test your resume against any job description, identify missing keywords, rewrite bullet points with impact, and generate an ATS-friendly resume guaranteed to pass recruiter screening.
               </p>
 
               {/* CTAs */}
@@ -744,7 +744,7 @@ export default function LandingPage() {
                 <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-gradient-to-br from-emerald-50/40 via-white to-teal-50/30 p-4 sm:p-6 w-full max-w-[540px]">
                   <img
                     src="/images/resume-builder-feature.png"
-                    alt="FastHire AI Resume Builder Format Preview"
+                    alt="RoleFuse Resume Builder Format Preview"
                     className="w-full h-auto object-contain select-none rounded-xl"
                   />
                 </div>
@@ -779,7 +779,7 @@ export default function LandingPage() {
                 </h2>
 
                 <p className="text-base text-[#526176] leading-relaxed font-normal">
-                  Over 75% of resumes are discarded by automated applicant tracking filters before a human recruiter even sees them. FastHire AI identifies formatting traps, missing keywords, and section errors so your resume reaches decision makers.
+                  Over 75% of resumes are discarded by automated applicant tracking filters before a human recruiter even sees them. RoleFuse identifies formatting traps, missing keywords, and section errors so your resume reaches decision makers.
                 </p>
 
                 <div className="space-y-3.5 text-sm text-[#374151]">
@@ -952,7 +952,7 @@ export default function LandingPage() {
               What Job Seekers Are Saying
             </h2>
             <p className="text-[#526176] text-base max-w-md mx-auto leading-relaxed">
-              Transparent feedback from professionals optimizing their careers with FastHire AI.
+              Transparent feedback from professionals optimizing their careers with RoleFuse.
             </p>
           </div>
 
@@ -968,7 +968,7 @@ export default function LandingPage() {
                 name: "Priya Menon",
                 role: "Data Analyst",
                 country: "India",
-                text: "FastHire AI rewrote my bullet points to match the target JD perfectly. I used to get zero callbacks. Now I have 3 interviews lined up.",
+                text: "RoleFuse rewrote my bullet points to match the target JD perfectly. I used to get zero callbacks. Now I have 3 interviews lined up.",
               },
               {
                 name: "Rohan Gupta",
@@ -992,7 +992,7 @@ export default function LandingPage() {
                 name: "Ayesha Khan",
                 role: "UI/UX Designer",
                 country: "Pakistan",
-                text: "Went from months of silent rejections to getting 2 solid offers in 3 weeks after optimizing with FastHire AI. The difference is night and day!",
+                text: "Went from months of silent rejections to getting 2 solid offers in 3 weeks after optimizing with RoleFuse. The difference is night and day!",
               },
             ].map(({ name, role, country, text }, i) => (
               <div
@@ -1030,7 +1030,7 @@ export default function LandingPage() {
               Used Across the World
             </h2>
             <p className="text-[#526176] text-sm sm:text-base max-w-md mx-auto leading-relaxed">
-              Job seekers from over 30 countries use FastHire AI to land interviews faster.
+              Job seekers from over 30 countries use RoleFuse to land interviews faster.
             </p>
           </div>
 
@@ -1099,7 +1099,7 @@ export default function LandingPage() {
               Frequently Asked Questions
             </h2>
             <p className="text-[#526176] text-base max-w-md mx-auto leading-relaxed">
-              Everything you need to know about FastHire AI and our optimization process.
+              Everything you need to know about RoleFuse and our optimization process.
             </p>
           </div>
 

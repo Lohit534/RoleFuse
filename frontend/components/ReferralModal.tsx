@@ -61,7 +61,7 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
   };
 
   const shareText = encodeURIComponent(
-    `Hey! I'm using FastHire-AI to optimize my resume and score 90+ on ATS tests. Use my referral link to get +1 FREE AI resume optimization credit!`
+    `Hey! I'm using RoleFuse to optimize my resume and score 90+ on ATS tests. Use my referral link to get +1 FREE AI resume optimization credit!`
   );
 
   return (
@@ -82,7 +82,7 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
             Give 1 Free Credit, Get 1 Free Credit
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
-            Invite your job-seeking friends to FastHire AI. When they sign up, you <strong className="text-slate-800">BOTH receive +1 Free AI Resume Optimization credit</strong>!
+            Invite your job-seeking friends to RoleFuse. When they sign up, you <strong className="text-slate-800">BOTH receive +1 Free AI Resume Optimization credit</strong>!
           </DialogDescription>
         </DialogHeader>
 

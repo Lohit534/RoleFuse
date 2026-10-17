@@ -409,7 +409,7 @@ export default function PricingPage() {
           amount,
           currency,
           order_id: orderId,
-          name: "FastHire AI",
+          name: "RoleFuse",
           description: `${selectedPlan.name} (${billingCycle})`,
           image: "https://qasfeyddyolpdvmiogkl.supabase.co/storage/v1/object/public/assets/logo.png",
           handler: async function (response: any) {
@@ -719,7 +719,7 @@ export default function PricingPage() {
             <span>256-Bit SSL Secure Razorpay Payments</span>
           </div>
           <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
-            FastHire processes transactions securely. You can downgrade, cancel, or switch billing cycles at any point from your billing profile page.
+            RoleFuse processes transactions securely. You can downgrade, cancel, or switch billing cycles at any point from your billing profile page.
           </p>
         </div>
 
@@ -730,7 +730,7 @@ export default function PricingPage() {
         <div className="max-w-3xl mx-auto w-full space-y-4 select-none">
           <div className="text-center space-y-2 mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">Frequently Asked Questions</h2>
-            <p className="text-sm sm:text-base text-[#526176]">Everything you need to know about FastHire AI subscriptions.</p>
+            <p className="text-sm sm:text-base text-[#526176]">Everything you need to know about RoleFuse subscriptions.</p>
           </div>
 
           <div className="space-y-3.5">
@@ -873,7 +873,7 @@ export default function PricingPage() {
               </div>
               <h3 className="text-xl font-black tracking-tight">Payment Successful!</h3>
               <p className="text-xs text-emerald-100 font-medium mt-1">
-                Your account is upgraded to FastHire {successDetails.planName}
+                Your account is upgraded to RoleFuse {successDetails.planName}
               </p>
             </div>
 

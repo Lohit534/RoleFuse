@@ -6,8 +6,8 @@ const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://admin.fasthireai.com"),
-  title: "FastHire AI — Admin Portal",
-  description: "Secure administrator control panel — FastHire AI",
+  title: "RoleFuse — Admin Portal",
+  description: "Secure administrator control panel — RoleFuse",
   robots: "noindex, nofollow",
   icons: {
     icon: [

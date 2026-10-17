@@ -28,17 +28,20 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://fasthireai.vercel.app"),
   title: {
-    default: "FastHire AI — Free ATS Resume Optimization & Free ATS Scanner",
-    template: "%s | FastHire AI — Free ATS Optimization",
+    default: "RoleFuse — Free ATS Resume Optimization & Free ATS Scanner",
+    template: "%s | RoleFuse — Free ATS Optimization",
   },
-  description: "FastHire AI is the #1 free ATS optimization platform and free ATS scanner. Build an ATS resume, match missing keywords against any job description, and score 90+ on ATS filters in under 30 seconds. 100% free forever.",
+  description: "RoleFuse is the #1 free ATS resume optimization platform and free ATS scanner. Build an ATS resume, match missing keywords against any job description, and score 90+ on ATS filters in under 30 seconds. 100% free forever.",
   keywords: [
+    "rolefuse",
+    "rolefuse ai",
+    "rolefuse ats resume",
+    "rolefuse free ats optimization",
+    "rolefuse free ats scanner",
     "fasthire free ats optimization",
     "fasthire ats resume",
     "fassthire free ats scanner",
     "fasthire free ats scanner",
-    "fasthire",
-    "fassthire",
     "free ats optimization",
     "free ats resume",
     "free ats scanner",
@@ -54,17 +57,17 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "FastHire AI — Free ATS Resume Optimization & Free ATS Scanner",
+    title: "RoleFuse — Free ATS Resume Optimization & Free ATS Scanner",
     description: "Score 90+ on recruiter ATS filters. Free ATS optimization, ATS resume builder, and instant ATS scanner.",
     url: "https://fasthireai.vercel.app",
-    siteName: "FastHire AI",
-    images: [{ url: "/icon.png", width: 1024, height: 1024, alt: "FastHire AI Logo" }],
+    siteName: "RoleFuse",
+    images: [{ url: "/icon.png", width: 1024, height: 1024, alt: "RoleFuse Logo" }],
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "FastHire AI — Free ATS Resume Optimization & Free ATS Scanner",
+    title: "RoleFuse — Free ATS Resume Optimization & Free ATS Scanner",
     description: "Free ATS resume optimization and free ATS scanner. Score 90+ on ATS filters in 30 seconds.",
     images: ["/icon.png"],
   },
@@ -98,13 +101,15 @@ const structuredData = {
     {
       "@type": "WebApplication",
       "@id": "https://fasthireai.vercel.app/#webapp",
-      "name": "FastHire AI",
+      "name": "RoleFuse",
       "alternateName": [
+        "RoleFuse AI",
+        "RoleFuse",
+        "FastHire AI",
         "FastHire",
         "fasthire free ats optimization",
         "fasthire ats resume",
-        "fassthire free ats scanner",
-        "fasthire free ats scanner"
+        "fassthire free ats scanner"
       ],
       "url": "https://fasthireai.vercel.app",
       "applicationCategory": "BusinessApplication",
@@ -115,12 +120,12 @@ const structuredData = {
         "price": "0",
         "priceCurrency": "USD"
       },
-      "description": "FastHire AI offers free ATS optimization, ATS resume builder, and instant ATS score scanner."
+      "description": "RoleFuse offers free ATS optimization, ATS resume builder, and instant ATS score scanner."
     },
     {
       "@type": "Organization",
       "@id": "https://fasthireai.vercel.app/#organization",
-      "name": "FastHire AI",
+      "name": "RoleFuse",
       "url": "https://fasthireai.vercel.app",
       "logo": "https://fasthireai.vercel.app/icon.png"
     }

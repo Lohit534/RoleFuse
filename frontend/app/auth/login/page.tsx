@@ -74,9 +74,9 @@ function LoginFormContent() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 select-none group w-fit transition-transform hover:scale-[1.02]">
-          <img src="/logo.svg" alt="FastHire AI Logo" className="h-8 w-8 object-contain drop-shadow-sm" />
-          <span className="font-extrabold text-xl tracking-tight text-white">
-            FastHire
+          <img src="/logo.svg" alt="RoleFuse Logo" className="h-6 w-6 object-contain" />
+          <span className="font-extrabold text-[20px] leading-none tracking-tight text-white">
+            RoleFuse
           </span>
         </Link>
 
@@ -120,7 +120,7 @@ function LoginFormContent() {
         <div className="max-w-[340px] bg-white/10 border border-white/20 p-5 rounded-xl space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-[10px] text-[#E5F8F5] font-bold uppercase tracking-wider">ATS Score</span>
-            <span className="text-xs text-[#D4F3EF] font-bold">+57 pts after FastHire</span>
+            <span className="text-xs text-[#D4F3EF] font-bold">+57 pts after RoleFuse</span>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex-1 bg-red-500/20 border border-red-300/30 text-red-100 p-3 text-center rounded-xl">
@@ -216,7 +216,7 @@ function LoginFormContent() {
               <span>Fast &amp; Secure Authentication</span>
             </div>
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              FastHire AI uses official Google OAuth 2.0 for instant, verified, and secure account access.
+              RoleFuse uses official Google OAuth 2.0 for instant, verified, and secure account access.
             </p>
             <div className="flex items-center gap-4 pt-1 text-[11px] font-semibold text-slate-500 border-t border-slate-200/60">
               <span className="flex items-center gap-1.5">

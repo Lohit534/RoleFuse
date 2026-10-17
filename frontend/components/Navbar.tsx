@@ -287,14 +287,14 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
             {/* Left: Brand logo & Navigation */}
             <div className="flex items-center gap-7">
               {/* Brand Logo */}
-              <Link href="/" className="flex items-center gap-2.5 group select-none">
+              <Link href="/" className="flex items-center gap-2 group select-none">
                 <img
                   src="/logo.svg"
-                  alt="FastHire AI Logo"
-                  className="h-8 w-8 object-contain drop-shadow-xs group-hover:scale-105 transition-transform"
+                  alt="RoleFuse Logo"
+                  className="h-6 w-6 object-contain group-hover:scale-105 transition-transform"
                 />
-                <span className="font-heading font-extrabold text-lg tracking-tight text-[#111827]">
-                  FastHire AI
+                <span className="font-heading font-black text-[19px] tracking-tight text-[#111827] leading-none">
+                  RoleFuse
                 </span>
               </Link>
 
@@ -771,7 +771,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                             </div>
                             <div className="min-w-0">
                               <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                FastHire Career Blog
+                                RoleFuse Career Blog
                               </div>
                               <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
                                 Advice and guides for job seekers.

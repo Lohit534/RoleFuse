@@ -119,8 +119,8 @@ export default function LoginPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f8fafc]">
         <div className="text-center space-y-3">
-          <div className="relative mx-auto h-12 w-12 flex items-center justify-center">
-            <img src="/logo.png" alt="FastHire Logo" className="h-9 w-9 rounded-xl object-contain animate-pulse" />
+          <div className="relative mx-auto h-10 w-10 flex items-center justify-center">
+            <img src="/logo.svg" alt="RoleFuse Logo" className="h-8 w-8 object-contain animate-pulse" />
           </div>
           <p className="text-xs text-slate-500 font-semibold tracking-wider uppercase">Authenticating Administrative Session...</p>
         </div>
@@ -137,18 +137,18 @@ export default function LoginPage() {
         <div className="absolute top-1/4 left-1/4 h-[400px] w-[400px] rounded-full bg-teal-500/5 blur-[120px] -z-10 pointer-events-none" />
         <div className="absolute bottom-10 right-10 h-[300px] w-[300px] rounded-full bg-emerald-500/5 blur-[100px] -z-10 pointer-events-none" />
 
-        {/* Top: FastHire Logo & Brand Header */}
-        <div className="flex items-center gap-3 select-none">
+        {/* Top: RoleFuse Logo & Brand Header */}
+        <div className="flex items-center gap-2.5 select-none">
           <img 
-            src="/logo.png" 
-            alt="FastHire Logo" 
-            className="h-9 w-9 rounded-xl object-contain drop-shadow-xs" 
+            src="/logo.svg" 
+            alt="RoleFuse Logo" 
+            className="h-7 w-7 object-contain" 
           />
           <div className="flex flex-col">
-            <span className="font-extrabold text-lg tracking-tight text-slate-900">
-              FastHire AI
+            <span className="font-extrabold text-lg tracking-tight text-slate-900 leading-none">
+              RoleFuse
             </span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#0d6e5a]">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#0d6e5a] mt-0.5">
               Admin Workspace
             </span>
           </div>
@@ -162,7 +162,7 @@ export default function LoginPage() {
               Secure Enterprise Console
             </div>
             <h2 className="text-3xl lg:text-4xl font-black tracking-tight text-slate-900 leading-tight">
-              Control, monitor, and scale FastHire AI in real-time.
+              Control, monitor, and scale RoleFuse in real-time.
             </h2>
             <p className="text-sm text-slate-600 font-medium leading-relaxed">
               Unified command center for registered users, billing tier modifications, support ticketing workflows, and user feedback telemetry.
@@ -213,7 +213,7 @@ export default function LoginPage() {
             </span>
             <span className="text-slate-600 text-[11px] font-medium">System Status: Operational</span>
           </div>
-          <span className="text-[11px] text-slate-500">FastHire Admin v2.0</span>
+          <span className="text-[11px] text-slate-500">RoleFuse Admin v2.0</span>
         </div>
       </div>
 
@@ -222,10 +222,10 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-6">
 
           {/* Mobile Top Header (only visible on mobile) */}
-          <div className="flex lg:hidden items-center justify-center gap-2.5 mb-2 select-none">
-            <img src="/logo.png" alt="FastHire Logo" className="h-8 w-8 rounded-xl object-contain" />
+          <div className="flex lg:hidden items-center justify-center gap-2 mb-2 select-none">
+            <img src="/logo.svg" alt="RoleFuse Logo" className="h-6 w-6 object-contain" />
             <span className="font-extrabold text-lg tracking-tight text-slate-900">
-              FastHire AI <span className="text-[#0d6e5a] text-xs uppercase ml-1 font-black">Admin</span>
+              RoleFuse <span className="text-[#0d6e5a] text-xs uppercase ml-1 font-black">Admin</span>
             </span>
           </div>
 
@@ -371,7 +371,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-[11px] text-slate-500 font-medium">
-            Strictly restricted to FastHire AI administrators. Unauthorized access attempts are monitored and logged.
+            Strictly restricted to RoleFuse administrators. Unauthorized access attempts are monitored and logged.
           </p>
         </div>
       </div>

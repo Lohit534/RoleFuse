@@ -23,7 +23,7 @@ export default function Footer() {
   const trustLinks = [
     { label: "Privacy policy", href: "/privacy" },
     { label: "Terms", href: "/terms" },
-    { label: "Contact support", href: "mailto:fasthireai@gmail.com", isExternal: true },
+    { label: "Contact support", href: "mailto:support@rolefuse.ai", isExternal: true },
   ];
 
   const accountLinks = [
@@ -43,11 +43,11 @@ export default function Footer() {
             <div className="flex items-center gap-2 select-none">
               <img
                 src="/logo.svg"
-                alt="FastHire AI Logo"
-                className="h-8 w-8 object-contain shadow-xs"
+                alt="RoleFuse Logo"
+                className="h-6 w-6 object-contain"
               />
-              <span className="font-extrabold text-slate-900 text-base tracking-tight">
-                FastHire AI
+              <span className="font-extrabold text-slate-900 text-lg tracking-tight leading-none">
+                RoleFuse
               </span>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed font-medium">
@@ -130,7 +130,7 @@ export default function Footer() {
         {/* Bottom Bar: Copyright & Compliance */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-slate-100">
           <p className="text-xs text-slate-500 font-medium text-center sm:text-left">
-            © {new Date().getFullYear()} FastHire AI. All rights reserved.
+            © {new Date().getFullYear()} RoleFuse. All rights reserved.
           </p>
           <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
             <span className="flex items-center gap-1.5">
