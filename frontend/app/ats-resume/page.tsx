@@ -169,12 +169,11 @@ export default function AtsResumePage() {
             </div>
 
             <h1 className="font-heading text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.12]">
-              The Complete <span className="text-[#087F6E]">ATS Resume</span> Guide &amp; Hub
+              FastHire <span className="text-[#087F6E]">ATS Resume</span> &amp; Free ATS Optimization Hub
             </h1>
 
             <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
-              Over 75% of resumes are discarded before a recruiter ever looks at them. FastHire AI
-              helps you build, test, and download resumes guaranteed to pass algorithmic screening.
+              Over 75% of job applications are filtered out by applicant tracking systems. FastHire ATS resume tools and our free ATS scanner help you build, test, and download resumes proven to pass algorithmic filters.
             </p>
 
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">

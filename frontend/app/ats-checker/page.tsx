@@ -100,13 +100,13 @@ export default function AtsCheckerPage() {
           <div className="text-center max-w-3xl mx-auto space-y-5">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-bold tracking-wide">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Real-Time ATS Checker</span>
+              <span>FastHire Free ATS Scanner &bull; Instant ATS Score Checker</span>
             </div>
             <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-              Check Your Resume Against Any <span className="text-[#087F6E]">Job Description</span>
+              FastHire Free ATS Scanner: Test Your Resume Against Any <span className="text-[#087F6E]">Job Description</span>
             </h1>
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto">
-              Simulate actual applicant tracking systems like Greenhouse, Lever, Workday, and Taleo. See your exact ATS match score and discover which keywords are missing before you apply.
+              FastHire free ATS optimization scores your ATS resume against modern applicant tracking systems like Greenhouse, Lever, Workday, and Taleo. Discover missing keywords, optimize formatting, and beat recruiter filters before you apply.
             </p>
 
             <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3.5">

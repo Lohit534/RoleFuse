@@ -42,9 +42,9 @@ export default function Footer() {
           <div className="sm:col-span-2 md:col-span-1 space-y-3.5">
             <div className="flex items-center gap-2 select-none">
               <img
-                src="/logo.png"
+                src="/logo.svg"
                 alt="FastHire AI Logo"
-                className="h-8 w-8 rounded-xl object-contain shadow-xs"
+                className="h-8 w-8 object-contain shadow-xs"
               />
               <span className="font-extrabold text-slate-900 text-base tracking-tight">
                 FastHire AI

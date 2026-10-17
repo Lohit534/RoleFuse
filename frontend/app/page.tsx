@@ -220,7 +220,7 @@ export default function LandingPage() {
               {/* Announcement Pill */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#DCE7E9] shadow-xs text-[#075E53] text-xs font-semibold tracking-wide">
                 <span className="h-2 w-2 rounded-full bg-[#087F6E] animate-pulse shrink-0" />
-                <span>2 Free Optimizations — No Credit Card Required</span>
+                <span>FastHire Free ATS Optimization &amp; Free ATS Scanner &bull; 2 Free Scans / Month</span>
               </div>
 
               {/* Main Headline */}
@@ -232,8 +232,7 @@ export default function LandingPage() {
 
               {/* Supporting Copy */}
               <p className="text-base sm:text-lg text-[#526176] max-w-xl leading-[1.68] font-normal">
-                Paste your resume and job description. FasthireAI helps you identify missing keywords,
-                strengthen resume bullet points, and improve alignment with your target role.
+                <strong>FastHire free ATS optimization</strong> and instant <strong>ATS resume scanner</strong>. Test your resume against any job description, identify missing keywords, rewrite bullet points with impact, and generate an ATS-friendly resume guaranteed to pass recruiter screening.
               </p>
 
               {/* CTAs */}

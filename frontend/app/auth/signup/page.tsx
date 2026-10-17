@@ -69,7 +69,7 @@ function SignupFormContent() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 select-none group w-fit transition-transform hover:scale-[1.02]">
-          <img src="/logo.png" alt="FastHire Logo" className="h-8 w-8 rounded-xl object-contain drop-shadow-sm" />
+          <img src="/logo.svg" alt="FastHire AI Logo" className="h-8 w-8 object-contain drop-shadow-sm" />
           <span className="font-extrabold text-xl tracking-tight text-white">
             FastHire
           </span>

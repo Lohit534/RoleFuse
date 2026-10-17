@@ -289,9 +289,9 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               {/* Brand Logo */}
               <Link href="/" className="flex items-center gap-2.5 group select-none">
                 <img
-                  src="/logo.png"
-                  alt="FastHire Logo"
-                  className="h-8 w-8 rounded-xl object-contain drop-shadow-xs group-hover:scale-105 transition-transform"
+                  src="/logo.svg"
+                  alt="FastHire AI Logo"
+                  className="h-8 w-8 object-contain drop-shadow-xs group-hover:scale-105 transition-transform"
                 />
                 <span className="font-heading font-extrabold text-lg tracking-tight text-[#111827]">
                   FastHire AI
