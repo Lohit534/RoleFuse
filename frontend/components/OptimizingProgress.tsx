@@ -5,19 +5,20 @@ import { Check, AlertCircle } from "lucide-react";
 
 const STEPS = [
   { id: 1, label: "Reading your resume" },
-  { id: 2, label: "Parsing target job requirements" },
-  { id: 3, label: "Detecting missing values & metrics" },
-  { id: 4, label: "Rewriting experience with applied metrics" },
+  { id: 2, label: "Parsing the job description" },
+  { id: 3, label: "Finding your strongest stories" },
+  { id: 4, label: "Rewriting your experience section" },
   { id: 5, label: "Aligning to ATS keywords" },
-  { id: 6, label: "Polishing & calculating final ATS score" },
+  { id: 6, label: "Polishing the output" },
+  { id: 7, label: "Almost ready" },
 ];
 
 const FUN_FACTS = [
-  "Recruiters spend about 7 seconds on the first pass of a resume",
-  "Over 75% of resumes are rejected by ATS before a human reads them",
-  "Resumes with metrics are 40% more likely to get callbacks",
-  "Keywords from the job description boost ATS score by up to 60%",
-  "Single-column resumes parse 3x better in ATS systems",
+  "Did you know: recruiters spend about 7 seconds on the first pass of a resume",
+  "Did you know: over 75% of resumes are rejected by ATS before a human reads them",
+  "Did you know: resumes with quantified metrics are 40% more likely to get callbacks",
+  "Did you know: aligning keywords with the job description boosts interview match by 60%",
+  "Did you know: single-column resumes parse 3x more accurately in enterprise ATS systems",
 ];
 
 interface MissingQuestion {
@@ -46,13 +47,12 @@ export default function OptimizingProgress({
   const [steps, setSteps] = useState<
     { id: number; status: "pending" | "running" | "done"; duration?: string }[]
   >(STEPS.map((s) => ({ id: s.id, status: "pending" })));
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(12);
   const [funFact, setFunFact] = useState(FUN_FACTS[0]);
   const [elapsedSec, setElapsedSec] = useState(0);
   const startRef = useRef<number>(Date.now());
 
   // Interactive Q&A state — for missing metrics, CGPA, Company Name, etc.
-  // LinkedIn / GitHub / portfolio URLs are NOT asked here (resolved by regex extractor).
   const [awaitingInput, setAwaitingInput] = useState(false);
   const [missingQuestions, setMissingQuestions] = useState<MissingQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -63,21 +63,23 @@ export default function OptimizingProgress({
   const isMountedRef = useRef(true);
 
   const STEP_RUNNING_PCT: Record<number, number> = {
-    1: 12,
-    2: 25,
-    3: 42,
-    4: 62,
+    1: 15,
+    2: 30,
+    3: 45,
+    4: 65,
     5: 82,
-    6: 94,
+    6: 92,
+    7: 98,
   };
 
   const STEP_DONE_PCT: Record<number, number> = {
-    1: 20,
-    2: 38,
-    3: 55,
-    4: 76,
-    5: 90,
-    6: 100,
+    1: 25,
+    2: 40,
+    3: 58,
+    4: 78,
+    5: 88,
+    6: 96,
+    7: 100,
   };
 
   // Timer, smooth micro-ticker & Fun facts rotation
@@ -88,7 +90,7 @@ export default function OptimizingProgress({
     const factInterval = setInterval(() => {
       factIndex = (factIndex + 1) % FUN_FACTS.length;
       setFunFact(FUN_FACTS[factIndex]);
-    }, 4500);
+    }, 5000);
 
     const timerInterval = setInterval(() => {
       setElapsedSec(Math.floor((Date.now() - startRef.current) / 1000));
@@ -98,10 +100,9 @@ export default function OptimizingProgress({
     const smoothProgressInterval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 98) return prev;
-        // Don't auto-tick past 50% if currently awaiting user input in detection Q&A
         return prev + 1;
       });
-    }, 400);
+    }, 450);
 
     return () => {
       isMountedRef.current = false;
@@ -121,7 +122,7 @@ export default function OptimizingProgress({
             s.id === data.step ? { ...s, status: "running" } : s
           )
         );
-        const target = STEP_RUNNING_PCT[data.step] || Math.round(((data.step - 1) / 6) * 100);
+        const target = STEP_RUNNING_PCT[data.step] || Math.round(((data.step - 1) / 7) * 100);
         setProgress((prev) => Math.max(prev, target));
       }
 
@@ -134,18 +135,31 @@ export default function OptimizingProgress({
           ).toFixed(1) + "s";
 
         setSteps((prev) =>
-          prev.map((s) =>
-            s.id === data.step ? { ...s, status: "done", duration: dur } : s
-          )
+          prev.map((s) => {
+            if (s.id === data.step) {
+              return { ...s, status: "done", duration: dur };
+            }
+            // If step 6 is done and step 7 is pending, start step 7
+            if (data.step === 6 && s.id === 7 && s.status === "pending") {
+              stepStartTimes.current[7] = Date.now();
+              return { ...s, status: "running" };
+            }
+            return s;
+          })
         );
-        const target = STEP_DONE_PCT[data.step] || Math.round((data.step / 6) * 100);
+        const target = STEP_DONE_PCT[data.step] || Math.round((data.step / 7) * 100);
         setProgress((prev) => Math.max(prev, target));
 
         if (data.result) {
+          setSteps((prev) =>
+            prev.map((s) =>
+              s.id === 7 ? { ...s, status: "done", duration: "0.8s" } : s
+            )
+          );
           setProgress(100);
           setTimeout(() => {
             if (isMountedRef.current) onComplete(data.result);
-          }, 80);
+          }, 120);
         }
       }
     }
@@ -312,40 +326,42 @@ export default function OptimizingProgress({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[500px] px-4 animate-in fade-in zoom-in-95 duration-500 w-full max-w-2xl mx-auto">
-      {/* Circular progress ring */}
-      <div className="relative w-32 h-32 mb-6">
-        <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="54" fill="none" stroke="#d1fae5" strokeWidth="8" />
+      {/* Circular progress ring matching user Image 2 */}
+      <div className="relative w-36 h-36 mb-6">
+        <svg className="w-36 h-36 -rotate-90" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#ede9fe" strokeWidth="8" />
           <circle
             cx="60"
             cy="60"
-            r="54"
+            r="52"
             fill="none"
-            stroke="#087F6E"
+            stroke="#7c3aed"
             strokeWidth="8"
             strokeLinecap="round"
-            strokeDasharray={`${2 * Math.PI * 54}`}
-            strokeDashoffset={`${2 * Math.PI * 54 * (1 - progress / 100)}`}
+            strokeDasharray={`${2 * Math.PI * 52}`}
+            strokeDashoffset={`${2 * Math.PI * 52 * (1 - progress / 100)}`}
             className="transition-all duration-300 ease-out"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-black text-slate-900">{progress}%</span>
-          <span className="text-[11px] text-slate-500 font-semibold">{elapsedSec}s elapsed</span>
+          <span className="text-3xl font-black text-slate-900 tracking-tight">{progress}%</span>
+          <span className="text-xs text-slate-500 font-medium mt-0.5">
+            {progress >= 100 ? "complete" : `~${Math.max(1, Math.round((100 - progress) * 0.22))}s left`}
+          </span>
         </div>
       </div>
 
       {/* Title */}
-      <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-1 text-center">
+      <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2 text-center tracking-tight">
         {awaitingInput
           ? "Missing Details Detected"
           : STEPS.find((s) => steps.find((st) => st.id === s.id && st.status === "running"))?.label ??
-            "Polishing final output"}
+            "Parsing the job description"}
       </h2>
-      <p className="text-slate-500 text-xs sm:text-sm mb-6 text-center max-w-md">
+      <p className="text-slate-500 text-xs sm:text-sm mb-7 text-center max-w-md font-normal leading-relaxed">
         {awaitingInput
           ? "Answer each question below to fill in missing values and maximize your ATS score."
-          : "Stay on this tab — our AI is engineering your ATS-optimized resume."}
+          : "Stay on this tab — we'll ask you a couple of things if we need them."}
       </p>
 
       {/* ── INTERACTIVE Q&A PANEL (missing metrics / values only) ── */}
@@ -478,8 +494,8 @@ export default function OptimizingProgress({
         </div>
       ) : null}
 
-      {/* Steps progress list */}
-      <div className="w-full max-w-lg space-y-2">
+      {/* Steps progress checklist matching user Image 2 */}
+      <div className="w-full max-w-lg space-y-2.5">
         {STEPS.map((step) => {
           const s = steps.find((x) => x.id === step.id);
           const status = s?.status ?? "pending";
@@ -489,55 +505,59 @@ export default function OptimizingProgress({
               key={step.id}
               className={`
                 flex items-center justify-between
-                px-5 py-3 rounded-xl
+                px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl
                 transition-all duration-300
                 ${
                   status === "done"
-                    ? "bg-teal-50/70 border border-teal-100 opacity-90"
+                    ? "bg-white border border-slate-200/80 shadow-2xs"
                     : status === "running"
-                      ? "bg-teal-50 border border-teal-200 shadow-xs"
-                      : "bg-transparent opacity-60"
+                      ? "bg-[#faf5ff] border border-[#ddd6fe] shadow-xs"
+                      : "bg-white/60 border border-slate-100 opacity-60"
                 }
               `}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3.5">
                 {status === "done" ? (
-                  <div className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0 text-white">
+                  <div className="w-5 h-5 rounded-full bg-[#10b981] flex items-center justify-center flex-shrink-0 text-white shadow-2xs">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                 ) : status === "running" ? (
-                  <div className="w-5 h-5 rounded-full border-2 border-[#0d6e5a] border-t-transparent animate-spin flex-shrink-0" />
+                  <div className="w-4 h-4 rounded-full border-2 border-[#7c3aed] border-t-transparent animate-spin flex-shrink-0" />
                 ) : (
-                  <div className="w-5 h-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                  <div className="w-4 h-4 rounded-full border border-slate-300 flex-shrink-0" />
                 )}
 
                 <span
-                  className={`text-xs sm:text-sm font-medium ${
+                  className={`text-xs sm:text-sm ${
                     status === "done"
-                      ? "text-slate-700"
+                      ? "text-slate-800 font-semibold"
                       : status === "running"
-                        ? "text-[#0d6e5a] font-bold"
-                        : "text-slate-400"
+                        ? "text-[#6d28d9] font-bold"
+                        : "text-slate-400 font-medium"
                   }`}
                 >
                   {step.label}
                 </span>
               </div>
 
-              {status === "done" && s?.duration && (
-                <span className="text-[11px] text-slate-400 font-medium">{s.duration}</span>
+              {status === "done" && (
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {s?.duration || "2.8s"}
+                </span>
               )}
               {status === "running" && (
-                <span className="text-[11px] text-[#0d6e5a] font-bold">running...</span>
+                <span className="text-xs text-[#7c3aed] font-medium lowercase">
+                  running
+                </span>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Rotating ATS tip */}
-      <p className="mt-6 text-xs text-slate-400 text-center max-w-sm transition-opacity duration-500">
-        Tip: {funFact}
+      {/* Rotating trivia matching user Image 2 */}
+      <p className="mt-8 text-xs text-slate-400 text-center max-w-md font-normal leading-relaxed">
+        {funFact}
       </p>
     </div>
   );

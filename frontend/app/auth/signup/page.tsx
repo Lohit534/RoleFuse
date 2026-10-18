@@ -163,7 +163,7 @@ function SignupFormContent() {
               Create your account
             </h1>
             <p className="text-xs sm:text-sm text-[#526176] font-medium">
-              Join thousands of job seekers optimizing their resumes with FastHire AI.
+              Join thousands of job seekers optimizing their resumes with RoleFuse.
             </p>
           </div>
 

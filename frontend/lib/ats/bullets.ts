@@ -12,7 +12,7 @@
  */
 import { extractActionVerbs } from "./keywords";
 
-export const BULLET_MARKER_REGEX = /^\s*([•\-\*–—+\u2022\u25cf\u2043▸►→▪◦]|\d+[.)])\s*/;
+export const BULLET_MARKER_REGEX = /^\s*([•\-\*–—+o\u2022\u25cf\u2043▸►→▪◦\u2023\u25e6\u2219\u25aa\u25ab\u25a0\u25cb\u25a1\u2713\u2714\u2794\u27a4\u25ba\u25c4·]|\d+[.)]|[a-zA-Z][.)])\s+/;
 
 /** Sections whose bullets ARE scored (work impact). */
 const SCORABLE_SECTIONS = [
@@ -20,6 +20,9 @@ const SCORABLE_SECTIONS = [
   "EMPLOYMENT", "WORK HISTORY", "CAREER HISTORY", "INTERNSHIPS", "INTERNSHIP",
   "INTERNSHIP EXPERIENCE", "RELEVANT EXPERIENCE", "PROJECTS", "PERSONAL PROJECTS",
   "ACADEMIC PROJECTS", "KEY PROJECTS", "PROJECT EXPERIENCE", "TECHNICAL PROJECTS",
+  "SELECTED PROJECTS", "FEATURED PROJECTS", "CLIENT PROJECTS", "FREELANCE",
+  "FREELANCE EXPERIENCE", "CONSULTING", "LEADERSHIP EXPERIENCE", "VOLUNTEER EXPERIENCE",
+  "OPEN SOURCE CONTRIBUTIONS", "RESEARCH EXPERIENCE", "SOFTWARE PROJECTS",
 ];
 
 /** Sections whose items are factual lists and must NEVER need verbs/metrics. */
@@ -82,22 +85,36 @@ function normalizeHeader(line: string): string {
 /** Returns canonical header if line is a section header, else null. */
 export function detectSectionHeader(line: string): { name: string; scorable: boolean } | null {
   const trimmed = line.trim();
-  if (!trimmed || trimmed.length > 50 || BULLET_MARKER_REGEX.test(trimmed)) return null;
+  if (!trimmed || trimmed.length > 65 || BULLET_MARKER_REGEX.test(trimmed)) return null;
   const upper = normalizeHeader(trimmed);
-  const isAllCaps = trimmed === trimmed.toUpperCase();
 
-  const matches = (list: string[]) =>
-    list.find(
-      (h) =>
-        upper === h ||
-        (isAllCaps && (upper.startsWith(h + " ") || upper.startsWith(h + " &") || upper.endsWith(" " + h))),
-    );
+  // Non-scorable checked first so "CERTIFICATIONS", "SKILLS", "EDUCATION" etc. never leak in
+  const isNonScorable = NON_SCORABLE_SECTIONS.some((h) =>
+    upper === h ||
+    upper.startsWith(h + " ") ||
+    upper.startsWith(h + ":") ||
+    upper.startsWith(h + " -") ||
+    upper.startsWith(h + " &") ||
+    upper.endsWith(" " + h) ||
+    upper.includes(" " + h + " ")
+  );
+  if (isNonScorable) return { name: upper, scorable: false };
 
-  // Non-scorable checked first so "CERTIFICATIONS & ACHIEVEMENTS" etc. never leak in
-  const non = matches(NON_SCORABLE_SECTIONS);
-  if (non) return { name: non, scorable: false };
-  const sc = matches(SCORABLE_SECTIONS);
-  if (sc) return { name: sc, scorable: true };
+  // Scorable section check (Experience, Work, Projects, Internships, etc.)
+  const isScorable =
+    SCORABLE_SECTIONS.some((h) =>
+      upper === h ||
+      upper.startsWith(h + " ") ||
+      upper.startsWith(h + ":") ||
+      upper.startsWith(h + " -") ||
+      upper.startsWith(h + " &") ||
+      upper.endsWith(" " + h) ||
+      upper.includes(" " + h + " ")
+    ) ||
+    /\b(EXPERIENCE|WORK HISTORY|PROJECTS?|INTERNSHIPS?|EMPLOYMENT|POSITIONS?|ROLES?|ACCOMPLISHMENTS?|CONTRIBUTIONS?)\b/i.test(upper);
+
+  if (isScorable) return { name: upper, scorable: true };
+
   return null;
 }
 
@@ -125,7 +142,8 @@ export function isContactOrHeaderLine(str: string): boolean {
 
 /**
  * Section-aware extraction of work-impact bullets (Experience, Internships, Projects).
- * Certifications, Languages, Education, Skills, Summary and Contact Info are ALWAYS ignored.
+ * Ensures ALL bullets in resume from top to bottom are evaluated and never missed.
+ * Certifications, Languages, Education, Skills, Summary and Contact Info are excluded.
  */
 export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
   const lines = (resumeText || "").split(/\r?\n/);
@@ -133,7 +151,8 @@ export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
   const hasRecognizableHeaders = lines.some((l) => detectSectionHeader(l.trim()) !== null);
 
   let currentSection = "";
-  let currentScorable = false;
+  // If no recognizable headers, assume scorable from the start so unsectioned resumes aren't dropped
+  let currentScorable = !hasRecognizableHeaders;
   let sawAnyHeader = false;
 
   lines.forEach((line, index) => {
@@ -148,8 +167,10 @@ export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
       return;
     }
 
-    // Never evaluate lines before the first section header (candidate contact block)
-    if (!sawAnyHeader) return;
+    // Never evaluate lines before the first section header if contact block is at top
+    if (hasRecognizableHeaders && !sawAnyHeader) {
+      if (isContactOrHeaderLine(trimmed)) return;
+    }
 
     // Skip all non-scorable sections (Skills, Education, Summary, Certifications, etc.)
     if (hasRecognizableHeaders && !currentScorable) return;
@@ -162,19 +183,17 @@ export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
     if (clean.length < 12) return;
 
     if (isBullet) {
-      results.push({ index, rawLine: line, cleanText: clean, section: currentSection });
+      results.push({ index, rawLine: line, cleanText: clean, section: currentSection || "EXPERIENCE" });
       return;
     }
 
-    // Lines that lost their bullet marker during PDF extraction: only inside scorable
-    // sections, must start with a strong verb, and must not look like a header row or contact details.
+    // Lines that lost their bullet marker during PDF extraction: only inside scorable sections
     if (
-      currentScorable &&
-      clean.length > 25 &&
+      clean.length > 20 &&
       !isContactOrHeaderLine(clean) &&
       looksLikeSentenceBullet(clean)
     ) {
-      results.push({ index, rawLine: line, cleanText: clean, section: currentSection });
+      results.push({ index, rawLine: line, cleanText: clean, section: currentSection || "EXPERIENCE" });
     }
   });
 

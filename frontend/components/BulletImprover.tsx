@@ -200,6 +200,8 @@ export default function BulletImprover({
     );
   }
 
+  const [filterMode, setFilterMode] = useState<"needs-improvement" | "all">("needs-improvement");
+
   const stats = bulletItems.reduce(
     (acc, curr) => {
       const check = checkBullet(curr.line);
@@ -210,34 +212,51 @@ export default function BulletImprover({
     { verbs: 0, metrics: 0 },
   );
 
+  const missingVerbsCount = Math.max(0, bulletItems.length - stats.verbs);
+  const missingMetricsCount = Math.max(0, bulletItems.length - stats.metrics);
+  const bulletsNeedingImprovement = bulletItems.filter(({ line }) => {
+    const c = checkBullet(line);
+    return !c.hasVerb || !c.hasMetric;
+  });
+
+  const displayedBullets = filterMode === "needs-improvement" ? bulletsNeedingImprovement : bulletItems;
+
   return (
     <div className="space-y-6">
-      {/* Overview stats panel */}
+      {/* Overview stats panel — focus on missing items */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-900 text-slate-100 p-4 rounded-2xl border border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-indigo-500/10 rounded-xl flex items-center justify-center border border-indigo-500/20">
-            <TrendingUp className="h-5 w-5 text-indigo-400" />
+          <div className="h-10 w-10 bg-red-500/10 rounded-xl flex items-center justify-center border border-red-500/20">
+            <X className="h-5 w-5 text-red-400" />
           </div>
           <div>
             <div className="text-xs text-slate-400 uppercase tracking-wider font-bold">
               Action Verbs
             </div>
             <div className="text-base font-black text-white">
-              {stats.verbs} / {bulletItems.length} pass
+              {missingVerbsCount > 0 ? (
+                <span className="text-red-400">{missingVerbsCount} Missing</span>
+              ) : (
+                <span className="text-emerald-400">All Passed</span>
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+          <div className="h-10 w-10 bg-amber-500/10 rounded-xl flex items-center justify-center border border-amber-500/20">
+            <AlertCircle className="h-5 w-5 text-amber-400" />
           </div>
           <div>
             <div className="text-xs text-slate-400 uppercase tracking-wider font-bold">
               Metrics
             </div>
             <div className="text-base font-black text-white">
-              {stats.metrics} / {bulletItems.length} pass
+              {missingMetricsCount > 0 ? (
+                <span className="text-amber-400">{missingMetricsCount} Missing</span>
+              ) : (
+                <span className="text-emerald-400">All Passed</span>
+              )}
             </div>
           </div>
         </div>
@@ -245,10 +264,10 @@ export default function BulletImprover({
         {/* Auto-improve usage counter */}
         <div className="flex items-center gap-3">
           <div
-            className={`h-10 w-10 rounded-xl flex items-center justify-center border ${remaining === 0 ? "bg-red-500/10 border-red-500/20" : "bg-violet-500/10 border-violet-500/20"}`}
+            className={`h-10 w-10 rounded-xl flex items-center justify-center border ${remaining === 0 ? "bg-red-500/10 border-red-500/20" : "bg-teal-500/10 border-teal-500/20"}`}
           >
             <Sparkles
-              className={`h-5 w-5 ${remaining === 0 ? "text-red-400" : "text-violet-400"}`}
+              className={`h-5 w-5 ${remaining === 0 ? "text-red-400" : "text-teal-400"}`}
             />
           </div>
           <div>
@@ -266,9 +285,57 @@ export default function BulletImprover({
         </div>
       </div>
 
+      {/* Filter Tabs & Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFilterMode("needs-improvement")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              filterMode === "needs-improvement"
+                ? "bg-[#0d6e5a] text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            Needs Improvement ({bulletsNeedingImprovement.length})
+          </button>
+          <button
+            onClick={() => setFilterMode("all")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              filterMode === "all"
+                ? "bg-[#0d6e5a] text-white shadow-xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            All Bullets ({bulletItems.length})
+          </button>
+        </div>
+        <span className="text-[11px] text-slate-500 font-medium">
+          Showing {displayedBullets.length} of {bulletItems.length} total bullets scanned
+        </span>
+      </div>
+
+      {/* Empty state for filtered list */}
+      {displayedBullets.length === 0 && (
+        <div className="flex flex-col items-center justify-center p-8 border border-emerald-200 bg-emerald-50/50 rounded-2xl min-h-[220px] text-center space-y-2">
+          <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+          <h4 className="font-extrabold text-slate-800 text-sm">
+            All Bullets Have Passed!
+          </h4>
+          <p className="text-xs text-slate-600 max-w-sm leading-relaxed">
+            Every bullet across your work experience and projects already contains strong action verbs and quantified impact.
+          </p>
+          <button
+            onClick={() => setFilterMode("all")}
+            className="text-xs text-[#0d6e5a] font-bold hover:underline pt-2 cursor-pointer"
+          >
+            View all {bulletItems.length} bullets &rarr;
+          </button>
+        </div>
+      )}
+
       {/* List of bullets */}
       <div className="space-y-4">
-        {bulletItems.map(({ line, index, trimmed }) => {
+        {displayedBullets.map(({ line, index, trimmed }) => {
           const { hasVerb, hasMetric } = checkBullet(line);
           const isImproving = loadingMap[index];
           const suggestion = improvements[index];
@@ -282,7 +349,7 @@ export default function BulletImprover({
               <CardContent className="p-5 space-y-4">
                 {/* Bullet Display */}
                 <div className="flex items-start gap-3">
-                  <div className="mt-1 font-bold text-indigo-500 shrink-0 select-none">
+                  <div className="mt-1 font-bold text-[#0d6e5a] shrink-0 select-none">
                     •
                   </div>
                   <p className="text-sm text-slate-800 leading-relaxed font-medium flex-1">
@@ -290,18 +357,10 @@ export default function BulletImprover({
                   </p>
                 </div>
 
-                {/* Score indicators & Action items */}
+                {/* Score indicators & Action items — ONLY MISSING action verbs & metrics are shown */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                   <div className="flex items-center gap-2">
-                    {hasVerb ? (
-                      <Badge
-                        variant="outline"
-                        className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold rounded-md py-0.5"
-                      >
-                        <Check className="h-3 w-3 mr-1 shrink-0 text-emerald-600" />
-                        Action Verb: Pass
-                      </Badge>
-                    ) : (
+                    {!hasVerb && (
                       <Badge
                         variant="outline"
                         className="bg-red-50 text-red-700 border-red-200 text-xs font-semibold rounded-md py-0.5"
@@ -310,15 +369,7 @@ export default function BulletImprover({
                         Action Verb: Missing
                       </Badge>
                     )}
-                    {hasMetric ? (
-                      <Badge
-                        variant="outline"
-                        className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold rounded-md py-0.5"
-                      >
-                        <Check className="h-3 w-3 mr-1 shrink-0 text-emerald-600" />
-                        Metric: Pass
-                      </Badge>
-                    ) : (
+                    {!hasMetric && (
                       <Badge
                         variant="outline"
                         className="bg-amber-50 text-amber-700 border-amber-200 text-xs font-semibold rounded-md py-0.5"
@@ -345,7 +396,7 @@ export default function BulletImprover({
                             })
                       }
                       disabled={isImproving}
-                      className={`font-bold rounded-lg text-sm cursor-pointer ${canImprove ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
+                      className={`font-bold rounded-lg text-sm cursor-pointer ${canImprove ? "bg-[#0d6e5a] hover:bg-[#0b5c4b] text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`}
                     >
                       {isImproving ? (
                         <>
