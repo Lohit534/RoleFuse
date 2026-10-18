@@ -556,16 +556,20 @@ export async function POST(request: NextRequest) {
           combinedInstructions += `\n\n• VERIFIED INTERNSHIP DURATION & PERIOD: "${datesVal}"\n  MANDATORY: You MUST include this verified internship time period/duration directly under the internship/experience title. Format: Month YYYY – Month YYYY (or duration). NEVER drop or omit this date line!`;
         }
         if (techVal) {
-          extraItems.push(`[Verified Project & Internship Technologies: ${techVal}]`);
-          combinedInstructions += `\n\n• VERIFIED INTERNSHIP & PROJECT TECH STACK: "${techVal}"\n  MANDATORY: You MUST integrate these technologies into the TECHNICAL SKILLS section (under appropriate categories) and prominently tag or mention them in the project and internship bullet points!`;
+          const cleanTechVal = techVal
+            .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, "")
+            .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ", ")
+            .trim();
+          extraItems.push(`[Verified Project & Internship Technologies: ${cleanTechVal}]`);
+          combinedInstructions += `\n\n• VERIFIED INTERNSHIP & PROJECT TECH STACK: "${cleanTechVal}"\n  MANDATORY:\n  1. Integrate and weave these technologies into the relevant internship experience and project bullet points.\n  2. Include them in the TECHNICAL SKILLS section under the Developer Tools or Frameworks category without any bullets.\n  3. ABSOLUTE RULE FOR TECHNICAL SKILLS: ZERO BULLET POINTS! Never use bullet points (•) in the skills section. Technical skills must strictly be clean "Category: val1, val2" lines.`;
 
-          // Inject techVal directly into preparedResumeText under skills section if not present
+          // Inject cleanTechVal directly into preparedResumeText under skills section without any bullet point
           const skillsHeaderMatch = preparedResumeText.match(/(?:^|\n)(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS)\n/i);
           if (skillsHeaderMatch && skillsHeaderMatch.index !== undefined) {
             const insertPos = skillsHeaderMatch.index + skillsHeaderMatch[0].length;
             preparedResumeText =
               preparedResumeText.slice(0, insertPos) +
-              `• Technologies & Tools: ${techVal}\n` +
+              `Developer Tools: ${cleanTechVal}\n` +
               preparedResumeText.slice(insertPos);
           }
         }

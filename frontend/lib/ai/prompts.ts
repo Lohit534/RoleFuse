@@ -125,6 +125,11 @@ export function buildOptimizationPrompt(
     "TECHNICAL SKILLS:\n" +
     "  Header: TECHNICAL SKILLS (ALL CAPS)\n" +
     "  CRITICAL: Output exactly ONE single skills section. NEVER output duplicate 'SKILLS' and 'TECHNICAL SKILLS' headers. Set only ONE.\n" +
+    "  ABSOLUTE RULE FOR TECHNICAL SKILLS — ZERO BULLET POINTS:\n" +
+    "  - NEVER use bullet points (•, -, *, etc.) anywhere in the TECHNICAL SKILLS section.\n" +
+    "  - Every skill line MUST strictly be in 'Category: val1, val2, val3' format on a single line.\n" +
+    "  - NEVER output bullet lines like '• Technologies & Tools: ...' or '• Python, React'.\n" +
+    "  - If internship tools/technologies were provided, list them under 'Developer Tools: ...' or 'Frameworks: ...' without bullets, and weave them into the internship experience bullets.\n" +
     "  Organized into clean 'Category: values' lines (each on ONE single line):\n" +
     "    Programming Languages: Java, SQL, JavaScript\n" +
     "    Frameworks: Spring Boot, Spring MVC, Hibernate, JPA\n" +
@@ -234,6 +239,7 @@ export function buildOptimizationPrompt(
     "✓ KEEP all certifications exactly\n" +
     "✓ KEEP all project names exactly\n" +
     "✓ EXACT RESUME CONTENT FIDELITY: Parse, preserve, and reflect every single piece of information from the candidate's original resume exactly as written (all roles, titles, schools, GPAs, dates, projects, skills, and languages). Never drop or omit candidate data.\n" +
+    "✓ DO NOT ADD EXTRA OR UNREQUESTED TEXT: Do NOT invent commentary, explanations, side notes, or fake filler text. Just adjust and optimize the formatting, structure, metrics, and alignment of the candidate's actual qualifications.\n" +
     "✓ NEVER fabricate companies, employers, universities, or degrees\n" +
     "✓ NEVER change employment dates\n" +
     "✓ NEVER remove any section from the original (you may tighten wording to respect the PAGE BUDGET)\n" +
@@ -251,7 +257,8 @@ export function buildOptimizationPrompt(
     "[ ] Name is ALL CAPS on line 1\n" +
     "[ ] Contact line has email | phone | location | URLs separated by | (ALL contact items from original resume preserved)\n" +
     (includeSummary ? "[ ] Professional Summary is a concise 2-3 sentence executive paragraph\n" : "[ ] No artificial professional summary added for fresher (jump straight to Technical Skills and Projects)\n") +
-    "[ ] TECHNICAL SKILLS appears exactly ONCE (zero duplicate 'SKILLS' header or extra divider lines)\n" +
+    "[ ] TECHNICAL SKILLS appears exactly ONCE with ZERO bullet points (•, -, *) anywhere in the skills section\n" +
+    "[ ] No extra or invented commentary text added beyond candidate facts and target JD keywords\n" +
     "[ ] Every experience AND project bullet starts with a strong past-tense verb AND contains a number/metric\n" +
     "[ ] Education contains all candidate stages including SSC (10th) and Intermediate (12th) if in original resume -- zero dropped education entries\n" +
     "[ ] Resume fits the PAGE BUDGET (" + pageBudget.maxPages + " page" + (pageBudget.maxPages > 1 ? "s" : "") + " max)\n" +

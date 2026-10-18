@@ -151,6 +151,15 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
       }
     }
 
+    // Technical Skills: NEVER allow bullets in skills section
+    const isSkills = /TECHNICAL\s*SKILLS|SKILLS|CORE\s*COMPETENCIES|KEY\s*SKILLS/i.test(section) && !header;
+    if (isSkills && line.trim()) {
+      line = line
+        .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
+        .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ', ')
+        .trim();
+    }
+
     // Experience / Internships: Strip fabricated date ranges the user did not specify in original resume
     const isExp = /EXPERIENCE|INTERNSHIP|WORK HISTORY/.test(section) && !header;
     if (isExp && line.trim()) {

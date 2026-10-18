@@ -825,20 +825,36 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
     if (currentSection === 'TECHNICAL SKILLS' || currentSection === 'SKILLS' || currentSection === 'CORE SKILLS' || currentSection === 'SOFT SKILLS' || currentSection === 'SKILLS & COMPETENCIES' || currentSection === 'KEY SKILLS') {
       if (line.includes(':')) {
         const colonIdx = line.indexOf(':');
-        let label = stripMarkdownAsterisks(line.substring(0, colonIdx)).trim();
+        let label = stripMarkdownAsterisks(line.substring(0, colonIdx))
+          .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
+          .replace(/:\s*$/, '')
+          .trim();
         if (/^languages?$/i.test(label)) label = 'Programming Languages';
-        const value = stripMarkdownAsterisks(line.substring(colonIdx + 1).replace(/^[•\-\*–\s\u2022]+/, "")).trim();
+        if (/^(?:technologies\s*&\s*tools|tools\s*&\s*technologies|tools|internship\s*tools)$/i.test(label)) label = 'Developer Tools';
+        let value = stripMarkdownAsterisks(line.substring(colonIdx + 1))
+          .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
+          .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ', ')
+          .replace(/,\s*,/g, ',')
+          .trim();
         if (value) {
           blocks.push({ type: 'skillLine', label: label || 'Technical Skills', value });
         }
       } else {
-        const cleanVal = stripMarkdownAsterisks(line.replace(/^[•\-\*–\s\u2022]+/, "")).trim();
+        const cleanVal = stripMarkdownAsterisks(line)
+          .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
+          .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ', ')
+          .replace(/,\s*,/g, ',')
+          .trim();
         if (cleanVal) {
           // If the next line starts with a colon, merge them
           if (idx + 1 < rawLines.length && rawLines[idx + 1].trim().startsWith(':')) {
-            const nextVal = stripMarkdownAsterisks(rawLines[idx + 1].replace(/^:\s*/, '')).trim();
-            let label = cleanVal;
+            const nextVal = stripMarkdownAsterisks(rawLines[idx + 1].replace(/^:\s*/, ''))
+              .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
+              .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ', ')
+              .trim();
+            let label = cleanVal.replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '').trim();
             if (/^languages?$/i.test(label)) label = 'Programming Languages';
+            if (/^(?:technologies\s*&\s*tools|tools\s*&\s*technologies|tools|internship\s*tools)$/i.test(label)) label = 'Developer Tools';
             blocks.push({ type: 'skillLine', label, value: nextVal });
             idx++; // skip the colon line
           } else {
@@ -1199,6 +1215,10 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       b.degree = cleanEducationText(b.degree);
       b.school = cleanEducationText(b.school);
       if (b.school && b.degree && b.school.toLowerCase() === b.degree.toLowerCase()) b.school = '';
+      if ((!b.degree || b.degree.toLowerCase() === 'degree') && b.school) {
+        b.degree = b.school;
+        b.school = '';
+      }
     }
   }
 
@@ -1333,20 +1353,32 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, scaleOverrid
                   {block.text}
                 </Text>
               );
-            case 'skillLine':
+            case 'skillLine': {
+              const cleanLabel = (block.label || 'Technical Skills')
+                .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
+                .replace(/:\s*$/, '')
+                .trim();
+              const cleanValue = (block.value || '')
+                .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
+                .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ', ')
+                .trim();
+              if (!cleanValue) return null;
               return (
                 <Text key={i} style={styles.skillLine}>
-                  <Text style={styles.skillLabel}>{block.label}: </Text>
-                  <Text style={styles.skillValue}>{block.value}</Text>
+                  <Text style={styles.skillLabel}>{cleanLabel}: </Text>
+                  <Text style={styles.skillValue}>{cleanValue}</Text>
                 </Text>
               );
-            case 'project':
+            }
+            case 'project': {
+              const hasName = Boolean(block.name && block.name.trim());
+              const hasTech = Boolean(block.tech && block.tech.trim());
               return (
                 <View key={i} style={{ marginBottom: 3 }}>
                   <View style={styles.projectTitleRow}>
                     <Text style={styles.projectTitle}>
-                      {block.name}
-                      {block.tech ? <Text style={styles.projectTech}> — {block.tech}</Text> : null}
+                      {hasName ? block.name : "Project"}
+                      {hasTech ? <Text style={styles.projectTech}> — {block.tech}</Text> : null}
                     </Text>
                     {block.dates ? (
                       <Text style={styles.projectDates}>{block.dates}</Text>
@@ -1357,17 +1389,23 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, scaleOverrid
                   ))}
                 </View>
               );
+            }
 
-            case 'job':
+            case 'job': {
+              const hasTitle = Boolean(block.title && block.title.trim());
+              const hasCompany = Boolean(block.company && block.company.trim());
+              const primaryTitle = hasTitle ? block.title : (hasCompany ? block.company : "Experience");
+              const secondaryCompany = (hasTitle && hasCompany) ? block.company : "";
+
               return (
                 <View key={i} style={{ marginBottom: 3 }}>
                   <View style={styles.jobTitleRow}>
-                    <Text style={styles.jobTitle}>{block.title}</Text>
+                    <Text style={styles.jobTitle}>{primaryTitle}</Text>
                     {block.dates ? <Text style={styles.jobDates}>{block.dates}</Text> : null}
                   </View>
-                  {(block.company || block.tech) ? (
+                  {(secondaryCompany || block.tech) ? (
                     <View style={styles.jobSubRow}>
-                      <Text style={styles.jobCompany}>{block.company || ""}</Text>
+                      <Text style={styles.jobCompany}>{secondaryCompany}</Text>
                       {block.tech ? <Text style={styles.jobTech}>{block.tech}</Text> : null}
                     </View>
                   ) : null}
@@ -1376,19 +1414,28 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, scaleOverrid
                   ))}
                 </View>
               );
-            case 'education':
+            }
+            case 'education': {
+              const hasDegree = Boolean(block.degree && block.degree.trim() && block.degree.toLowerCase() !== 'degree');
+              const hasSchool = Boolean(block.school && block.school.trim());
+              const primaryDegree = hasDegree ? block.degree : (hasSchool ? block.school : (block.degree || "Education"));
+              const secondarySchool = (hasDegree && hasSchool) ? block.school : "";
+
               return (
                 <View key={i} style={{ marginBottom: 3 }}>
                   <View style={styles.educationRow}>
-                    <Text style={styles.educationDegree}>{block.degree}</Text>
+                    <Text style={styles.educationDegree}>{primaryDegree}</Text>
                     {block.dates ? <Text style={styles.educationDates}>{block.dates}</Text> : null}
                   </View>
-                  <View style={styles.educationInstitution}>
-                    <Text style={styles.educationSchool}>{block.school}</Text>
-                    {block.gpa ? <Text style={styles.educationGPA}>{block.gpa}</Text> : null}
-                  </View>
+                  {(secondarySchool || block.gpa) ? (
+                    <View style={styles.educationInstitution}>
+                      <Text style={styles.educationSchool}>{secondarySchool}</Text>
+                      {block.gpa ? <Text style={styles.educationGPA}>{block.gpa}</Text> : null}
+                    </View>
+                  ) : null}
                 </View>
               );
+            }
             case 'bullet':
               return <BulletRow key={i} text={block.text} s={styles} />;
             case 'cert': {
