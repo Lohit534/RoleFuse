@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Zap,
   Target,
+  TrendingUp,
   ShieldCheck,
   Download,
   Lock,
@@ -327,31 +328,137 @@ export default function ProductsPage() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative overflow-hidden pt-12 pb-16 md:pt-18 md:pb-22 border-b border-slate-200 bg-white">
-          <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8 text-center space-y-5">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-semibold">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>The Complete RoleFuse Career Platform</span>
+        <section className="relative overflow-hidden pt-12 pb-16 md:pt-16 md:pb-20 border-b border-slate-200 bg-white">
+          <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8 space-y-10">
+            {/* Top Badge & Header */}
+            <div className="text-center space-y-4 max-w-3xl mx-auto">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-semibold">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>The Complete RoleFuse Career Platform</span>
+              </div>
+
+              <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.12]">
+                Every Tool You Need to <br />
+                <span className="text-[#087F6E]">Land More Tech &amp; Corporate Interviews</span>
+              </h1>
+
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-normal">
+                From scoring your existing resume against real ATS algorithms to tailoring keyword-rich
+                bullet points and tracking your applications — explore our full suite of career tools.
+              </p>
             </div>
 
-            <h1 className="font-heading text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.12]">
-              Every Tool You Need to <br />
-              <span className="text-[#087F6E]">Land More Tech &amp; Corporate Interviews</span>
-            </h1>
+            {/* Split Showcase: Content on Left + Reduced Size Image on Right */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center bg-slate-50 border border-slate-200 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xs">
+              {/* Left Column: Useful Information & Features */}
+              <div className="lg:col-span-7 space-y-5 text-left">
+                <div className="space-y-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#087F6E]">
+                    Unified AI Workspace
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
+                    Built for Enterprise Hiring Systems &amp; Recruiter Review
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                    RoleFuse integrates all stages of job application preparation into a single cohesive system. Test, rewrite, format, and track without switching between separate tools.
+                  </p>
+                </div>
 
-            <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
-              From scoring your existing resume against real ATS algorithms to tailoring keyword-rich
-              bullet points and tracking your applications — explore our full suite of career tools.
-            </p>
+                {/* 4 Feature Highlights */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                  <div className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-1 shadow-2xs">
+                    <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                      <Zap className="h-4 w-4 text-[#087F6E] shrink-0" />
+                      <span>Instant ATS Scoring</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Evaluates resume format, section headings, and text layer against 25+ parser rules.
+                    </p>
+                  </div>
 
-            {/* Visual Hero Showcase Banner */}
-            <div className="pt-6 max-w-4xl mx-auto">
-              <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-slate-900">
-                <img
-                  src="/images/products-showcase.jpg"
-                  alt="RoleFuse Product Suite Dashboard"
-                  className="w-full h-auto object-cover select-none"
-                />
+                  <div className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-1 shadow-2xs">
+                    <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                      <Target className="h-4 w-4 text-[#087F6E] shrink-0" />
+                      <span>JD Keyword Matching</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Identifies missing technical and hard skills required by your target job description.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-1 shadow-2xs">
+                    <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                      <TrendingUp className="h-4 w-4 text-[#087F6E] shrink-0" />
+                      <span>Action Bullet Rewriter</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Transforms weak bullets into high-impact XYZ achievements with verifiable metrics.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-1 shadow-2xs">
+                    <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                      <Briefcase className="h-4 w-4 text-[#087F6E] shrink-0" />
+                      <span>Application Tracker</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Drag-and-drop Kanban board to monitor interview stages and never miss a follow-up.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Left Side Action CTAs */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <Link href="/auth/signup">
+                    <Button className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs h-10 px-5 rounded-md shadow-xs">
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                      Try All Tools Free
+                    </Button>
+                  </Link>
+                  <Link href="/ats-checker">
+                    <Button variant="outline" className="bg-white hover:bg-slate-50 text-slate-800 border-slate-300 font-bold text-xs h-10 px-4 rounded-md">
+                      Scan Resume First
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right Column: Reduced Size Image with Professional Frame */}
+              <div className="lg:col-span-5 flex justify-center">
+                <div className="relative rounded-2xl overflow-hidden border border-slate-200/90 shadow-lg bg-slate-900 max-w-[420px] w-full">
+                  <img
+                    src="/images/products-showcase.jpg"
+                    alt="RoleFuse Product Suite Dashboard"
+                    className="w-full h-auto object-cover select-none"
+                  />
+                  <div className="absolute bottom-2.5 right-2.5 bg-slate-900/85 backdrop-blur-xs text-white text-[10px] font-semibold px-2.5 py-1 rounded-md border border-white/10 shadow-xs">
+                    Interactive Platform Preview
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Down (Underneath): Professional 4-Card Metric & Verification Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-1 shadow-2xs">
+                <div className="text-xl sm:text-2xl font-black text-[#087F6E]">92%</div>
+                <div className="text-xs font-bold text-slate-900">Average ATS Pass Rate</div>
+                <div className="text-[10px] text-slate-500">Across 10,000+ optimized scans</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-1 shadow-2xs">
+                <div className="text-xl sm:text-2xl font-black text-[#087F6E]">~20s</div>
+                <div className="text-xs font-bold text-slate-900">Optimization Speed</div>
+                <div className="text-[10px] text-slate-500">Full analysis &amp; LaTeX PDF</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-1 shadow-2xs">
+                <div className="text-xl sm:text-2xl font-black text-[#087F6E]">100%</div>
+                <div className="text-xs font-bold text-slate-900">Privacy Guaranteed</div>
+                <div className="text-[10px] text-slate-500">No candidate data sold or shared</div>
+              </div>
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-1 shadow-2xs">
+                <div className="text-xl sm:text-2xl font-black text-[#087F6E]">4 Top</div>
+                <div className="text-xs font-bold text-slate-900">Enterprise Parsers</div>
+                <div className="text-[10px] text-slate-500">Workday, Taleo, Greenhouse, Lever</div>
               </div>
             </div>
           </div>
@@ -414,7 +521,7 @@ export default function ProductsPage() {
                   <div className="pt-2">
                     <Button
                       onClick={() => handleNavigate(prod.ctaPath, prod.requiresAuth)}
-                      className="w-full h-11 bg-slate-900 hover:bg-[#087F6E] text-white font-bold text-xs rounded-xl shadow-xs transition-all gap-2 cursor-pointer"
+                      className="w-full h-11 bg-slate-900 hover:bg-[#087F6E] text-white font-bold text-xs rounded-md shadow-xs transition-all gap-2 cursor-pointer"
                     >
                       {prod.requiresAuth && !user && <Lock className="h-3.5 w-3.5" />}
                       <span>{prod.ctaText}</span>
@@ -438,14 +545,14 @@ export default function ProductsPage() {
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Button
                 onClick={() => handleNavigate(user ? "/dashboard" : "/auth/signup")}
-                className="h-12 px-7 bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-sm rounded-xl shadow-lg transition-all cursor-pointer w-full sm:w-auto"
+                className="h-12 px-7 bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-sm rounded-md shadow-lg transition-all cursor-pointer w-full sm:w-auto"
               >
                 <span>{user ? "Go to Dashboard" : "Get Started Free"}</span>
               </Button>
               <Button
                 onClick={() => router.push("/ats-checker")}
                 variant="outline"
-                className="h-12 px-6 bg-transparent hover:bg-white/10 text-white border-slate-700 font-bold text-sm rounded-xl transition-all cursor-pointer w-full sm:w-auto"
+                className="h-12 px-6 bg-transparent hover:bg-white/10 text-white border-slate-700 font-bold text-sm rounded-md transition-all cursor-pointer w-full sm:w-auto"
               >
                 <span>Check Your ATS Score</span>
               </Button>

@@ -232,6 +232,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-white text-[#111827] flex flex-col antialiased font-sans relative selection:bg-[#087F6E]/15 selection:text-[#087F6E]">
+        <SiteBackground />
         <Toaster
           position="top-center"
           gutter={8}

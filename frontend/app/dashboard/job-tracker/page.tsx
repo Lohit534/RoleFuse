@@ -321,7 +321,7 @@ export default function JobTrackerPage() {
             </div>
             <Button
               onClick={() => openForm(null)}
-              className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold h-9 text-xs rounded-xl px-4 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold h-9 text-xs rounded-md px-4 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               Add Job

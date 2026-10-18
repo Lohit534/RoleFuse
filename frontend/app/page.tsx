@@ -258,7 +258,7 @@ export default function LandingPage() {
               {/* CTAs */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-1 w-full max-w-md sm:max-w-none">
                 <Link href={user ? "/dashboard" : "/auth/signup"} className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-7 text-[15px] font-semibold flex items-center justify-center gap-2 rounded-xl shadow-xs transition-colors cursor-pointer">
+                  <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-7 text-[15px] font-semibold flex items-center justify-center gap-2 rounded-md shadow-xs transition-colors cursor-pointer">
                     {user ? (
                       <>
                         <Sparkles className="h-4 w-4 text-white" />
@@ -272,7 +272,7 @@ export default function LandingPage() {
 
                 <button
                   onClick={handleTrySample}
-                  className="w-full sm:w-auto h-12 border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-7 text-[15px] font-semibold rounded-xl flex items-center justify-center shadow-xs transition-colors cursor-pointer"
+                  className="w-full sm:w-auto h-12 border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-7 text-[15px] font-semibold rounded-md flex items-center justify-center shadow-xs transition-colors cursor-pointer"
                 >
                   <span>Try Sample Resume</span>
                 </button>
@@ -1153,7 +1153,7 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3.5 pt-3 w-full max-w-md mx-auto sm:max-w-none">
             <Link href={user ? "/dashboard" : "/auth/signup"} className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-8 text-[15px] font-semibold flex items-center justify-center gap-2 rounded-xl shadow-xs transition-colors cursor-pointer">
+              <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-8 text-[15px] font-semibold flex items-center justify-center gap-2 rounded-md shadow-xs transition-colors cursor-pointer">
                 {user ? (
                   <>
                     <Sparkles className="h-4 w-4 text-white" />
@@ -1167,7 +1167,7 @@ export default function LandingPage() {
 
             <button
               onClick={() => setIsDemoModalOpen(true)}
-              className="w-full sm:w-auto h-12 border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-8 text-[15px] font-semibold rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+              className="w-full sm:w-auto h-12 border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-8 text-[15px] font-semibold rounded-md flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
               <Play className="h-4 w-4 text-[#087F6E] fill-[#087F6E]" />
               <span>See a Demo</span>

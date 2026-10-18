@@ -309,7 +309,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
           <button
             type="button"
             onClick={() => setShowShareModal(true)}
-            className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-bold text-xs h-9 px-4 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-bold text-xs h-9 px-4 rounded-md shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <Share2 className="h-3.5 w-3.5 text-slate-500" />
             <span>Share result</span>
@@ -318,7 +318,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
           <button
             type="button"
             onClick={onBack}
-            className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+            className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9 px-4 rounded-md shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Back to History</span>
@@ -388,13 +388,14 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
         <button
           type="button"
           onClick={() => setActiveTab("roadmap")}
-          className={`pb-3 font-semibold transition-all relative whitespace-nowrap cursor-pointer ${
+          className={`pb-3 font-semibold transition-all relative whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
             activeTab === "roadmap"
               ? "text-[#0d6e5a] font-bold"
               : "text-slate-500 hover:text-slate-900"
           }`}
         >
-          Skill roadmap
+          <GraduationCap className="h-4 w-4" />
+          <span>Skill roadmap</span>
           {activeTab === "roadmap" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0d6e5a] rounded-full" />
           )}
@@ -403,13 +404,14 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
         <button
           type="button"
           onClick={() => setActiveTab("cover_letter")}
-          className={`pb-3 font-semibold transition-all relative whitespace-nowrap cursor-pointer ${
+          className={`pb-3 font-semibold transition-all relative whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
             activeTab === "cover_letter"
               ? "text-[#0d6e5a] font-bold"
               : "text-slate-500 hover:text-slate-900"
           }`}
         >
-          Cover letter
+          <FileText className="h-4 w-4" />
+          <span>Cover letter</span>
           {activeTab === "cover_letter" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0d6e5a] rounded-full" />
           )}
@@ -434,7 +436,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                 <button
                   type="button"
                   onClick={handleCopy}
-                  className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-bold text-xs h-9 px-3.5 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-bold text-xs h-9 px-3.5 rounded-md shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-400" />}
                   <span>{copied ? "Copied" : "Copy"}</span>
@@ -444,7 +446,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                   type="button"
                   onClick={() => downloadFile("pdf")}
                   disabled={pdfLoading}
-                  className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-md shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   {pdfLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
                   <span>Download PDF</span>
@@ -459,7 +461,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                   type="button"
                   onClick={() => downloadFile("docx")}
                   disabled={docxLoading}
-                  className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-bold text-xs h-9 px-4 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 font-bold text-xs h-9 px-4 rounded-md shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   {docxLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 text-slate-500" />}
                   <span>DOCX</span>
@@ -979,8 +981,8 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
         <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 flex items-center justify-center text-[#0d6e5a]">
-                <GraduationCap className="h-5 w-5" />
+              <div className="h-9 w-9 rounded-md bg-[#0d6e5a] flex items-center justify-center text-white shadow-xs shrink-0">
+                <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
@@ -1010,7 +1012,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                     key={i}
                     type="button"
                     onClick={() => toggleRoadmapSkill(skill)}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition-all border flex items-center gap-1.5 cursor-pointer ${
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all border flex items-center gap-1.5 cursor-pointer ${
                       isSelected
                         ? "bg-[#0d6e5a] border-[#0d6e5a] text-white font-bold shadow-xs"
                         : "bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300"
@@ -1034,7 +1036,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
             <Button
               onClick={handleGenerateRoadmap}
               disabled={selectedRoadmapSkills.length === 0 || roadmapLoading}
-              className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+              className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-md shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
             >
               {roadmapLoading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
@@ -1064,7 +1066,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                   navigator.clipboard.writeText(roadmapContent);
                   toast.success("Roadmap copied to clipboard!");
                 }}
-                className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs h-8 rounded-lg shadow-xs cursor-pointer"
+                className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer"
               >
                 Copy Roadmap
               </Button>
@@ -1078,8 +1080,8 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
         <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a]">
-                <FileText className="h-5 w-5" />
+              <div className="h-9 w-9 rounded-md bg-[#0d6e5a] flex items-center justify-center text-white shadow-xs shrink-0">
+                <FileText className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h3 className="text-base font-black text-slate-900">Tailored Cover Letter Generator</h3>
@@ -1095,7 +1097,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
           {!coverLetterGenerated && !generatingLetter && (
             <Button
               onClick={handleGenerateCoverLetter}
-              className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-5 rounded-xl shadow-xs transition-colors cursor-pointer"
+              className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-5 rounded-md shadow-xs transition-colors cursor-pointer"
             >
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
               Generate Cover Letter
@@ -1119,7 +1121,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                   navigator.clipboard.writeText(coverLetterGenerated);
                   toast.success("Cover letter copied to clipboard!");
                 }}
-                className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs h-8 rounded-lg shadow-xs cursor-pointer"
+                className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer"
               >
                 Copy Cover Letter
               </Button>

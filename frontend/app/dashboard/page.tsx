@@ -65,6 +65,168 @@ import OptimizingProgress from "@/components/OptimizingProgress";
 import FeedbackToast from "@/components/FeedbackToast";
 import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 
+// Session storage & local storage persistence helpers for active optimization results
+const ACTIVE_KEYS = {
+  RESULT: "fastHire_activeOptimizationResult",
+  BEFORE_SCORE: "fastHire_activeBeforeScore",
+  AFTER_SCORE: "fastHire_activeAfterScore",
+  RESUME_ID: "fastHire_activeResumeId",
+  RESUME_TEXT: "fastHire_activeResumeText",
+  JOB_DESCRIPTION: "fastHire_activeJobDescription",
+  ROADMAP_CONTENT: "fastHire_activeRoadmapContent",
+  COVER_LETTER: "fastHire_activeCoverLetter",
+  TRACKER_ADDED: "fastHire_activeTrackerAdded",
+  USER_ID: "fastHire_activeUserId",
+};
+
+function saveActiveSession(data: {
+  result?: any;
+  beforeScore?: any;
+  afterScore?: any;
+  resumeId?: string;
+  resumeText?: string;
+  jobDescription?: string;
+  roadmapContent?: string | null;
+  coverLetter?: string | null;
+  trackerAdded?: boolean;
+  userId?: string;
+}) {
+  if (typeof window === "undefined") return;
+  try {
+    if (data.result !== undefined && data.result !== null) {
+      const val = JSON.stringify(data.result);
+      sessionStorage.setItem(ACTIVE_KEYS.RESULT, val);
+      localStorage.setItem(ACTIVE_KEYS.RESULT, val);
+    }
+    if (data.beforeScore !== undefined) {
+      if (data.beforeScore) {
+        const val = JSON.stringify(data.beforeScore);
+        sessionStorage.setItem(ACTIVE_KEYS.BEFORE_SCORE, val);
+        localStorage.setItem(ACTIVE_KEYS.BEFORE_SCORE, val);
+      } else {
+        sessionStorage.removeItem(ACTIVE_KEYS.BEFORE_SCORE);
+        localStorage.removeItem(ACTIVE_KEYS.BEFORE_SCORE);
+      }
+    }
+    if (data.afterScore !== undefined) {
+      if (data.afterScore) {
+        const val = JSON.stringify(data.afterScore);
+        sessionStorage.setItem(ACTIVE_KEYS.AFTER_SCORE, val);
+        localStorage.setItem(ACTIVE_KEYS.AFTER_SCORE, val);
+      } else {
+        sessionStorage.removeItem(ACTIVE_KEYS.AFTER_SCORE);
+        localStorage.removeItem(ACTIVE_KEYS.AFTER_SCORE);
+      }
+    }
+    if (data.resumeId !== undefined) {
+      sessionStorage.setItem(ACTIVE_KEYS.RESUME_ID, data.resumeId || "");
+      localStorage.setItem(ACTIVE_KEYS.RESUME_ID, data.resumeId || "");
+    }
+    if (data.resumeText !== undefined) {
+      sessionStorage.setItem(ACTIVE_KEYS.RESUME_TEXT, data.resumeText || "");
+      localStorage.setItem(ACTIVE_KEYS.RESUME_TEXT, data.resumeText || "");
+    }
+    if (data.jobDescription !== undefined) {
+      sessionStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription || "");
+      localStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription || "");
+    }
+    if (data.roadmapContent !== undefined) {
+      if (data.roadmapContent) {
+        sessionStorage.setItem(ACTIVE_KEYS.ROADMAP_CONTENT, data.roadmapContent);
+        localStorage.setItem(ACTIVE_KEYS.ROADMAP_CONTENT, data.roadmapContent);
+      } else {
+        sessionStorage.removeItem(ACTIVE_KEYS.ROADMAP_CONTENT);
+        localStorage.removeItem(ACTIVE_KEYS.ROADMAP_CONTENT);
+      }
+    }
+    if (data.coverLetter !== undefined) {
+      if (data.coverLetter) {
+        sessionStorage.setItem(ACTIVE_KEYS.COVER_LETTER, data.coverLetter);
+        localStorage.setItem(ACTIVE_KEYS.COVER_LETTER, data.coverLetter);
+      } else {
+        sessionStorage.removeItem(ACTIVE_KEYS.COVER_LETTER);
+        localStorage.removeItem(ACTIVE_KEYS.COVER_LETTER);
+      }
+    }
+    if (data.trackerAdded !== undefined) {
+      const val = data.trackerAdded ? "true" : "false";
+      sessionStorage.setItem(ACTIVE_KEYS.TRACKER_ADDED, val);
+      localStorage.setItem(ACTIVE_KEYS.TRACKER_ADDED, val);
+    }
+    if (data.userId) {
+      sessionStorage.setItem(ACTIVE_KEYS.USER_ID, data.userId);
+      localStorage.setItem(ACTIVE_KEYS.USER_ID, data.userId);
+    }
+  } catch (e) {
+    console.error("Failed to save active session:", e);
+  }
+}
+
+function clearActiveSession() {
+  if (typeof window === "undefined") return;
+  Object.values(ACTIVE_KEYS).forEach((key) => {
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+  });
+}
+
+function loadActiveSession() {
+  if (typeof window === "undefined") return null;
+  try {
+    const rawResult =
+      sessionStorage.getItem(ACTIVE_KEYS.RESULT) ||
+      localStorage.getItem(ACTIVE_KEYS.RESULT);
+    if (!rawResult) return null;
+    const result = JSON.parse(rawResult);
+    if (!result || (!result.optimizedText && !result.resume)) return null;
+
+    const rawBefore =
+      sessionStorage.getItem(ACTIVE_KEYS.BEFORE_SCORE) ||
+      localStorage.getItem(ACTIVE_KEYS.BEFORE_SCORE);
+    const rawAfter =
+      sessionStorage.getItem(ACTIVE_KEYS.AFTER_SCORE) ||
+      localStorage.getItem(ACTIVE_KEYS.AFTER_SCORE);
+    const resumeId =
+      sessionStorage.getItem(ACTIVE_KEYS.RESUME_ID) ||
+      localStorage.getItem(ACTIVE_KEYS.RESUME_ID);
+    const resumeText =
+      sessionStorage.getItem(ACTIVE_KEYS.RESUME_TEXT) ||
+      localStorage.getItem(ACTIVE_KEYS.RESUME_TEXT);
+    const jobDescription =
+      sessionStorage.getItem(ACTIVE_KEYS.JOB_DESCRIPTION) ||
+      localStorage.getItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+    const roadmapContent =
+      sessionStorage.getItem(ACTIVE_KEYS.ROADMAP_CONTENT) ||
+      localStorage.getItem(ACTIVE_KEYS.ROADMAP_CONTENT);
+    const coverLetter =
+      sessionStorage.getItem(ACTIVE_KEYS.COVER_LETTER) ||
+      localStorage.getItem(ACTIVE_KEYS.COVER_LETTER);
+    const trackerAdded =
+      sessionStorage.getItem(ACTIVE_KEYS.TRACKER_ADDED) ||
+      localStorage.getItem(ACTIVE_KEYS.TRACKER_ADDED);
+    const activeUserId =
+      sessionStorage.getItem(ACTIVE_KEYS.USER_ID) ||
+      localStorage.getItem(ACTIVE_KEYS.USER_ID);
+
+    return {
+      result,
+      beforeScore: rawBefore ? JSON.parse(rawBefore) : null,
+      afterScore: rawAfter ? JSON.parse(rawAfter) : null,
+      resumeId: resumeId || null,
+      resumeText: resumeText || "",
+      jobDescription: jobDescription || "",
+      roadmapContent: roadmapContent || null,
+      coverLetter: coverLetter || null,
+      trackerAdded: trackerAdded === "true",
+      userId: activeUserId || null,
+    };
+  } catch (e) {
+    console.error("Failed to load active session:", e);
+    clearActiveSession();
+    return null;
+  }
+}
+
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -152,6 +314,7 @@ export default function DashboardPage() {
 
     if (isPendingSample === "true" || hasSampleQuery) {
       sampleLoadedRef.current = true;
+      clearActiveSession();
       setResumeText(sampleResume || SAMPLE_RESUME_TEXT);
       setJobDescription(sampleJD || SAMPLE_JD_TEXT);
       // Clean up sample storage once loaded into state
@@ -166,8 +329,23 @@ export default function DashboardPage() {
         window.history.replaceState({}, "", "/dashboard");
       }
     } else {
-      // Normal refresh or direct navigation: reset store and start clean
-      resetStore();
+      // Check if there is an active optimization result to restore so reloading does not discard it
+      const activeSession = loadActiveSession();
+      if (activeSession) {
+        sampleLoadedRef.current = true;
+        setOptimizeResult(activeSession.result);
+        if (activeSession.beforeScore) setBeforeScore(activeSession.beforeScore);
+        if (activeSession.afterScore) setAfterScore(activeSession.afterScore);
+        if (activeSession.resumeId) setCurrentResumeId(activeSession.resumeId);
+        if (activeSession.resumeText) setResumeText(activeSession.resumeText);
+        if (activeSession.jobDescription) setJobDescription(activeSession.jobDescription);
+        if (activeSession.roadmapContent) setRoadmapContent(activeSession.roadmapContent);
+        if (activeSession.coverLetter) setCoverLetterGenerated(activeSession.coverLetter);
+        if (activeSession.trackerAdded) setTrackerAdded(true);
+      } else {
+        // Normal refresh or direct navigation: reset store and start clean
+        resetStore();
+      }
     }
   }, [resetStore, setResumeText, setJobDescription]);
 
@@ -200,6 +378,19 @@ export default function DashboardPage() {
         }
 
         setUser(data.user);
+        // If restored session belonged to a different user, clear it
+        const savedUserId =
+          (typeof window !== "undefined" &&
+            (sessionStorage.getItem(ACTIVE_KEYS.USER_ID) ||
+              localStorage.getItem(ACTIVE_KEYS.USER_ID))) ||
+          null;
+        if (savedUserId && savedUserId !== data.user.id) {
+          clearActiveSession();
+          resetStore();
+          setOptimizeResult(null);
+          setBeforeScore(null);
+          setAfterScore(null);
+        }
         // Pre-load cached plan to prevent UI flash
         const cachedPlan = localStorage.getItem(
           `fastHire_plan_${data.user.id}`,
@@ -266,6 +457,7 @@ export default function DashboardPage() {
     setOptimizeResult(null);
     setTrackerAdded(false);
     setBulletImprovementsCount(0);
+    clearActiveSession();
 
     // Clear detail view states
     setRoadmapContent(null);
@@ -293,6 +485,18 @@ export default function DashboardPage() {
 
     setOptimizing(false);
     toast.success("AI Optimization Complete!");
+
+    // Save active optimization session so page reload / refresh keeps the result view intact
+    saveActiveSession({
+      result: data,
+      beforeScore: data.scoreBefore || null,
+      afterScore: data.scoreAfter || null,
+      resumeId: targetResumeId || undefined,
+      resumeText: activeOptimizationText || resumeText,
+      jobDescription: jobDescription,
+      trackerAdded: false,
+      userId: user?.id,
+    });
 
     // Small delay before scrolling to results
     setTimeout(() => {
@@ -366,6 +570,7 @@ export default function DashboardPage() {
   };
 
   const handleReset = () => {
+    clearActiveSession();
     resetStore();
     setInstructions("");
     setLengthOption("Auto-detect");
@@ -411,16 +616,25 @@ export default function DashboardPage() {
       setAfterScore(dynamicScore);
 
       // Immediately reflect improved text & dynamic score in local optimizeResult state
-      setOptimizeResult((prev: any) =>
-        prev
+      setOptimizeResult((prev: any) => {
+        const updated = prev
           ? {
               ...prev,
               optimizedText: newText,
               scoreAfter: dynamicScore,
               resumeId: targetId || prev.resumeId,
             }
-          : prev,
-      );
+          : prev;
+        if (updated) {
+          saveActiveSession({
+            result: updated,
+            afterScore: dynamicScore,
+            resumeId: targetId || undefined,
+            userId: user?.id,
+          });
+        }
+        return updated;
+      });
 
       // Persist updated scoreAfter and optimizedText to history DB via PATCH
       if (targetId && dynamicScore?.overall) {
@@ -500,6 +714,10 @@ export default function DashboardPage() {
       JSON.stringify([newJob, ...currentJobs]),
     );
     setTrackerAdded(true);
+    saveActiveSession({
+      trackerAdded: true,
+      userId: user?.id,
+    });
   };
 
   const availableSkills = React.useMemo(() => {
@@ -512,6 +730,8 @@ export default function DashboardPage() {
   }, [optimizeResult, afterScore, jobDescription]);
 
   const handleOptimizeAnother = () => {
+    clearActiveSession();
+    resetStore();
     setOptimizeResult(null);
     setBeforeScore(null);
     setAfterScore(null);
@@ -585,6 +805,10 @@ export default function DashboardPage() {
       await new Promise((resolve) => setTimeout(resolve, 800));
       const content = generateMultiSkillRoadmap(selectedRoadmapSkills);
       setRoadmapContent(content);
+      saveActiveSession({
+        roadmapContent: content,
+        userId: user?.id,
+      });
       toast.success(
         `Generated 90-day roadmap for ${selectedRoadmapSkills.length} selected skill${selectedRoadmapSkills.length > 1 ? "s" : ""}!`,
       );
@@ -638,6 +862,10 @@ export default function DashboardPage() {
 
       const data = await res.json();
       setCoverLetterGenerated(data.coverLetter);
+      saveActiveSession({
+        coverLetter: data.coverLetter,
+        userId: user?.id,
+      });
     } catch (e: any) {
       toast.error(e.message || "Failed to generate cover letter.");
     } finally {
@@ -716,7 +944,7 @@ export default function DashboardPage() {
               <Button
                 onClick={handleOptimizeAnother}
                 size="sm"
-                className="bg-[#0d6e5a] hover:bg-[#075E53] text-white text-xs font-bold h-9 rounded-xl px-4 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                className="bg-[#0d6e5a] hover:bg-[#075E53] text-white text-xs font-bold h-9 rounded-md px-4 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 <span>Optimize Another Resume</span>
@@ -732,7 +960,7 @@ export default function DashboardPage() {
                   }
                 }}
                 size="sm"
-                className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-xl px-4 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-md px-4 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <Briefcase className="h-3.5 w-3.5 text-[#0d6e5a]" />
                 <span>{trackerAdded ? "View in Job Tracker" : "Add to Job Tracker"}</span>
@@ -741,7 +969,7 @@ export default function DashboardPage() {
               <Link href="/dashboard/history">
                 <Button
                   size="sm"
-                  className="bg-[#111827] hover:bg-slate-800 text-white text-xs font-semibold h-9 rounded-xl px-4 shadow-xs"
+                  className="bg-[#111827] hover:bg-slate-800 text-white text-xs font-semibold h-9 rounded-md px-4 shadow-xs"
                 >
                   <History className="h-3.5 w-3.5 mr-1.5" />
                   Back to History
@@ -774,41 +1002,6 @@ export default function DashboardPage() {
         {hasResults && optimizeResult ? (
           /* RESULTS WORKSPACE ROW */
           <div ref={resultsRef} className="space-y-6">
-            {/* Top Tracker Banner Message */}
-            {!trackerAdded && (
-              <div className="bg-gradient-to-r from-[#0d6e5a]/5 via-white to-transparent border border-[#0d6e5a]/10 rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 select-none">
-                <div className="flex items-center gap-2.5 sm:gap-3">
-                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-[#087F6E] flex items-center justify-center shrink-0 shadow-xs">
-                    <Briefcase className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900">
-                      Add to your tracker?
-                    </h4>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      <strong>
-                        {optimizeResult.company || "General Application"}
-                      </strong>{" "}
-                      &mdash; {optimizeResult.jobTitle || "Optimized Resume"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-                  <Button
-                    onClick={handleAddToTracker}
-                    className="bg-[#0d6e5a] hover:bg-[#0a5a49] text-white font-bold text-[10px] h-8 rounded-lg px-4"
-                  >
-                    Yes, add it
-                  </Button>
-                  <button
-                    onClick={() => setTrackerAdded(true)}
-                    className="p-1 text-slate-400 hover:text-slate-700 rounded transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* ATS Optimization Complete banner — no reset button */}
             <div className="bg-white border border-slate-200 p-4 sm:p-5 rounded-xl flex items-center gap-3 select-none shadow-sm">
@@ -940,8 +1133,8 @@ export default function DashboardPage() {
                 <div className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 flex items-center justify-center text-[#0d6e5a]">
-                        <GraduationCap className="h-5 w-5" />
+                      <div className="h-9 w-9 rounded-md bg-[#0d6e5a] flex items-center justify-center text-white shadow-xs shrink-0">
+                        <GraduationCap className="h-5 w-5 text-white" />
                       </div>
                       <div>
                         <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
@@ -978,7 +1171,7 @@ export default function DashboardPage() {
                             key={i}
                             type="button"
                             onClick={() => toggleRoadmapSkill(skill)}
-                            className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition-all border flex items-center gap-1.5 cursor-pointer ${
+                            className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all border flex items-center gap-1.5 cursor-pointer ${
                               isSelected
                                 ? "bg-[#0d6e5a] border-[#0d6e5a] text-white font-bold shadow-xs"
                                 : "bg-white border-slate-200 text-slate-800 hover:text-slate-950 hover:border-slate-300"
@@ -1002,7 +1195,7 @@ export default function DashboardPage() {
                     <Button
                       onClick={handleGenerateRoadmap}
                       disabled={selectedRoadmapSkills.length === 0 || roadmapLoading}
-                      className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+                      className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-md shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
                     >
                       {roadmapLoading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
@@ -1032,7 +1225,7 @@ export default function DashboardPage() {
                           navigator.clipboard.writeText(roadmapContent);
                           toast.success("Roadmap copied to clipboard!");
                         }}
-                        className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-lg shadow-xs cursor-pointer font-bold"
+                        className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer font-bold"
                       >
                         Copy Roadmap
                       </Button>
@@ -1046,8 +1239,8 @@ export default function DashboardPage() {
                 <div className="space-y-6">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a]">
-                        <FileText className="h-5 w-5" />
+                      <div className="h-9 w-9 rounded-md bg-[#0d6e5a] flex items-center justify-center text-white shadow-xs shrink-0">
+                        <FileText className="h-5 w-5 text-white" />
                       </div>
                       <div>
                         <h3 className="text-base font-black text-slate-900">Tailored Cover Letter Generator</h3>
@@ -1065,7 +1258,7 @@ export default function DashboardPage() {
                   {!coverLetterGenerated && !generatingLetter && (
                     <Button
                       onClick={handleGenerateCoverLetter}
-                      className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-5 rounded-xl shadow-xs transition-colors cursor-pointer"
+                      className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-5 rounded-md shadow-xs transition-colors cursor-pointer"
                     >
                       <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                       Generate Cover Letter
@@ -1089,7 +1282,7 @@ export default function DashboardPage() {
                           navigator.clipboard.writeText(coverLetterGenerated);
                           toast.success("Cover letter copied to clipboard!");
                         }}
-                        className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-lg shadow-xs cursor-pointer font-bold"
+                        className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer font-bold"
                       >
                         Copy Cover Letter
                       </Button>
@@ -1207,7 +1400,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleOptimize}
                 disabled={optimizing || isPrechecking}
-                className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#075E53] active:scale-98 text-white px-12 py-3.5 text-sm sm:text-base font-bold flex items-center justify-center gap-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#075E53] active:scale-98 text-white px-12 py-3.5 text-sm sm:text-base font-bold flex items-center justify-center gap-2.5 rounded-md shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 {optimizing ? (
                   <>

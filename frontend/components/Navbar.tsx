@@ -446,7 +446,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                           <Link href="/resume-builder" onClick={() => setActiveMenu(null)}>
                             <button
                               type="button"
-                              className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-4 rounded-xl transition-all cursor-pointer shadow-xs"
+                              className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-4 rounded-md transition-all cursor-pointer shadow-xs"
                             >
                               Resume Builder
                             </button>
@@ -801,7 +801,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                           <Link href="/resources" onClick={() => setActiveMenu(null)}>
                             <button
                               type="button"
-                              className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-5 rounded-xl transition-all cursor-pointer shadow-xs"
+                              className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-5 rounded-md transition-all cursor-pointer shadow-xs"
                             >
                               Explore All Resources
                             </button>
@@ -855,7 +855,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                   {!isDashboardSubpage && (
                     <Link
                       href="/dashboard"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs transition-all shadow-xs"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs transition-all shadow-xs"
                     >
                       <Sparkles className="h-3.5 w-3.5 text-white" />
                       <span>Dashboard</span>
@@ -1177,7 +1177,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                       Sign In
                     </Link>
                     <Link href="/auth/signup">
-                      <button className="bg-[#087F6E] hover:bg-[#065F53] text-white text-[14px] font-semibold px-4.5 py-2 rounded-xl transition-all shadow-xs hover:shadow cursor-pointer">
+                      <button className="bg-[#087F6E] hover:bg-[#065F53] text-white text-[14px] font-semibold px-4.5 py-2 rounded-md transition-all shadow-xs hover:shadow cursor-pointer">
                         Get Started Free
                       </button>
                     </Link>
