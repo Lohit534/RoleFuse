@@ -1165,7 +1165,10 @@ export default function DashboardPage() {
                     <Loader2 className="h-4 w-4 animate-spin" /> Analyzing Resume &amp; Missing Metrics...
                   </>
                 ) : (
-                  <span>Optimize My Resume</span>
+                  <>
+                    <Sparkles className="h-4.5 w-4.5 text-white" />
+                    <span>Optimize My Resume</span>
+                  </>
                 )}
               </button>
             </div>

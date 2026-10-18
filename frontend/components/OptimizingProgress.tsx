@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { Check } from "lucide-react";
+import { Check, Sparkles, ArrowRight } from "lucide-react";
 
 const STEPS = [
   { id: 1, label: "Reading your resume" },
@@ -366,9 +366,9 @@ export default function OptimizingProgress({
   if (awaitingInput && missingQuestions.length > 0 && currentQ) {
     return (
       <div className="w-full max-w-lg mx-auto bg-white rounded-3xl p-6 sm:p-9 shadow-2xl border border-slate-100 select-none animate-in fade-in zoom-in-95 duration-200">
-        {/* Top Icon Badge matching Image 2 circular pill */}
+        {/* Top Icon Badge matching Gemini sparkly type */}
         <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#0d6e5a] mx-auto mb-5 shadow-2xs">
-          <Check className="w-6 h-6 stroke-[2.5]" />
+          <Sparkles className="w-6 h-6 stroke-[2]" />
         </div>
 
         {/* Headline */}
@@ -452,9 +452,15 @@ export default function OptimizingProgress({
               }
             }}
             disabled={isApplying}
-            className="w-full sm:flex-1 h-12 rounded-xl bg-[#0d6e5a] hover:bg-[#087F6E] active:scale-95 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="w-full sm:flex-1 h-12 rounded-xl bg-[#0d6e5a] hover:bg-[#075E53] active:scale-95 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
-            <span>{isLast ? "Finish & Optimize" : "Save & Next"}</span>
+            <span className="flex items-center gap-1.5">
+              {isLast ? "Finish & Optimize ✨" : (
+                <>
+                  Save &amp; Next <ArrowRight className="w-4 h-4 ml-0.5" />
+                </>
+              )}
+            </span>
           </button>
 
           <button
