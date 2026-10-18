@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { Check, AlertCircle } from "lucide-react";
+import { Check } from "lucide-react";
 
 const STEPS = [
   { id: 1, label: "Reading your resume" },
@@ -37,6 +37,27 @@ interface OptimizingProgressProps {
   instructions?: string;
 }
 
+// Stage floors & ceilings for strictly accurate step-anchored loading
+const STEP_FLOORS: Record<number, number> = {
+  1: 8,
+  2: 20,
+  3: 36,
+  4: 52,
+  5: 82,
+  6: 92,
+  7: 98,
+};
+
+const STEP_CEILINGS: Record<number, number> = {
+  1: 18,
+  2: 34,
+  3: 48,
+  4: 80,
+  5: 89,
+  6: 96,
+  7: 99,
+};
+
 export default function OptimizingProgress({
   onComplete,
   onError,
@@ -47,13 +68,13 @@ export default function OptimizingProgress({
   const [steps, setSteps] = useState<
     { id: number; status: "pending" | "running" | "done"; duration?: string }[]
   >(STEPS.map((s) => ({ id: s.id, status: "pending" })));
-  const [progress, setProgress] = useState(12);
+  const [progress, setProgress] = useState(8);
   const [funFact, setFunFact] = useState(FUN_FACTS[0]);
-  const [elapsedSec, setElapsedSec] = useState(0);
   const startRef = useRef<number>(Date.now());
 
-  // Interactive Q&A state — for missing metrics, CGPA, Company Name, etc.
+  // Interactive Q&A state (for missing metrics, values, etc.)
   const [awaitingInput, setAwaitingInput] = useState(false);
+  const awaitingInputRef = useRef(false);
   const [missingQuestions, setMissingQuestions] = useState<MissingQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
@@ -61,28 +82,9 @@ export default function OptimizingProgress({
 
   const stepStartTimes = useRef<Record<number, number>>({});
   const isMountedRef = useRef(true);
+  const currentStepRef = useRef<number>(1);
 
-  const STEP_RUNNING_PCT: Record<number, number> = {
-    1: 15,
-    2: 30,
-    3: 45,
-    4: 65,
-    5: 82,
-    6: 92,
-    7: 98,
-  };
-
-  const STEP_DONE_PCT: Record<number, number> = {
-    1: 25,
-    2: 40,
-    3: 58,
-    4: 78,
-    5: 88,
-    6: 96,
-    7: 100,
-  };
-
-  // Timer, smooth micro-ticker & Fun facts rotation
+  // Micro-ticker calibrated to active step ceiling — never races ahead
   useEffect(() => {
     isMountedRef.current = true;
     startRef.current = Date.now();
@@ -92,38 +94,38 @@ export default function OptimizingProgress({
       setFunFact(FUN_FACTS[factIndex]);
     }, 5000);
 
-    const timerInterval = setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - startRef.current) / 1000));
-    }, 1000);
-
-    // Micro-ticker: smoothly advances progress between stream events without jerking
     const smoothProgressInterval = setInterval(() => {
+      if (awaitingInputRef.current) return;
+      const activeStep = currentStepRef.current;
+      const ceiling = STEP_CEILINGS[activeStep] ?? 98;
       setProgress((prev) => {
-        if (prev >= 98) return prev;
-        return prev + 1;
+        if (prev < ceiling) {
+          return prev + 1;
+        }
+        return prev;
       });
-    }, 450);
+    }, 600);
 
     return () => {
       isMountedRef.current = false;
       clearInterval(factInterval);
-      clearInterval(timerInterval);
       clearInterval(smoothProgressInterval);
     };
   }, []);
 
-  // Process SSE stream events (strictly monotonic — progress never goes backwards)
+  // Process SSE stream events (strictly monotonic, step-bounded)
   const processStreamChunk = (data: any) => {
     if (data.step && data.step >= 1) {
       if (data.status === "running") {
+        currentStepRef.current = data.step;
         stepStartTimes.current[data.step] = Date.now();
         setSteps((prev) =>
           prev.map((s) =>
             s.id === data.step ? { ...s, status: "running" } : s
           )
         );
-        const target = STEP_RUNNING_PCT[data.step] || Math.round(((data.step - 1) / 7) * 100);
-        setProgress((prev) => Math.max(prev, target));
+        const floor = STEP_FLOORS[data.step] || Math.round(((data.step - 1) / 7) * 100);
+        setProgress((prev) => Math.max(prev, floor));
       }
 
       if (data.status === "done") {
@@ -134,12 +136,14 @@ export default function OptimizingProgress({
             1000
           ).toFixed(1) + "s";
 
+        const nextStep = Math.min(7, data.step + 1);
+        currentStepRef.current = nextStep;
+
         setSteps((prev) =>
           prev.map((s) => {
             if (s.id === data.step) {
               return { ...s, status: "done", duration: dur };
             }
-            // If step 6 is done and step 7 is pending, start step 7
             if (data.step === 6 && s.id === 7 && s.status === "pending") {
               stepStartTimes.current[7] = Date.now();
               return { ...s, status: "running" };
@@ -147,10 +151,12 @@ export default function OptimizingProgress({
             return s;
           })
         );
-        const target = STEP_DONE_PCT[data.step] || Math.round((data.step / 7) * 100);
-        setProgress((prev) => Math.max(prev, target));
+
+        const nextFloor = STEP_FLOORS[nextStep] || 98;
+        setProgress((prev) => Math.max(prev, nextFloor));
 
         if (data.result) {
+          currentStepRef.current = 7;
           setSteps((prev) =>
             prev.map((s) =>
               s.id === 7 ? { ...s, status: "done", duration: "0.8s" } : s
@@ -159,25 +165,23 @@ export default function OptimizingProgress({
           setProgress(100);
           setTimeout(() => {
             if (isMountedRef.current) onComplete(data.result);
-          }, 120);
+          }, 350);
         }
       }
     }
   };
 
-  // ── PHASE 1: Detection pass (no skipDetection) ──────────────────────────────
-  // The backend will ask about missing metrics, CGPA, Company Name, etc.
-  // LinkedIn / GitHub / portfolio are filtered OUT by the backend (regex-extracted).
+  // ── PHASE 1: Detection pass ───────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
     const startPipeline = async () => {
-      // Step 1: initialize pipeline immediately
+      currentStepRef.current = 1;
       stepStartTimes.current[1] = Date.now();
       setSteps((prev) =>
         prev.map((s) => (s.id === 1 ? { ...s, status: "running" } : s))
       );
-      setProgress(10);
+      setProgress(STEP_FLOORS[1]);
 
       try {
         const res = await fetch("/api/optimize", {
@@ -187,8 +191,6 @@ export default function OptimizingProgress({
             resumeText,
             jobDescription,
             instructions,
-            // No skipDetection — let backend detect missing metrics/values.
-            // LinkedIn / GitHub / portfolio are filtered on the backend.
           }),
         });
 
@@ -219,10 +221,11 @@ export default function OptimizingProgress({
                 return;
               }
 
-              // Missing metrics / values detected — show Q&A (NOT for LinkedIn/GitHub)
+              // Missing metrics / values detected — show Q&A
               if (data.needsInput && Array.isArray(data.questions) && data.questions.length > 0) {
                 setMissingQuestions(data.questions);
                 setCurrentQuestionIndex(0);
+                awaitingInputRef.current = true;
                 setAwaitingInput(true);
                 return;
               }
@@ -248,6 +251,7 @@ export default function OptimizingProgress({
   // ── PHASE 2: Optimization with collected answers ─────────────────────────────
   const proceedToOptimization = async (collectedAnswers: Record<string, string>) => {
     setIsApplying(true);
+    awaitingInputRef.current = false;
     setAwaitingInput(false);
 
     // Mark step 3 done
@@ -257,11 +261,12 @@ export default function OptimizingProgress({
     );
 
     // Mark step 4 running immediately
+    currentStepRef.current = 4;
     stepStartTimes.current[4] = Date.now();
     setSteps((prev) =>
       prev.map((s) => (s.id === 4 ? { ...s, status: "running" } : s))
     );
-    setProgress((prev) => Math.max(prev, 60));
+    setProgress((prev) => Math.max(prev, STEP_FLOORS[4]));
 
     try {
       const res = await fetch("/api/optimize", {
@@ -325,25 +330,32 @@ export default function OptimizingProgress({
   const isLast = currentQuestionIndex === missingQuestions.length - 1;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[500px] px-4 animate-in fade-in zoom-in-95 duration-500 w-full max-w-2xl mx-auto">
-      {/* Circular progress ring matching user Image 2 */}
-      <div className="relative w-36 h-36 mb-6">
+    <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto select-none">
+      {/* Circular progress ring in Teal (#0d6e5a) with light teal track (#ccfbf1) */}
+      <div className="relative w-36 h-36 mb-6 flex-shrink-0">
         <svg className="w-36 h-36 -rotate-90" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="52" fill="none" stroke="#ede9fe" strokeWidth="8" />
           <circle
             cx="60"
             cy="60"
             r="52"
             fill="none"
-            stroke="#7c3aed"
+            stroke="#ccfbf1"
+            strokeWidth="8"
+          />
+          <circle
+            cx="60"
+            cy="60"
+            r="52"
+            fill="none"
+            stroke="#0d6e5a"
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={`${2 * Math.PI * 52}`}
             strokeDashoffset={`${2 * Math.PI * 52 * (1 - progress / 100)}`}
-            className="transition-all duration-300 ease-out"
+            className="transition-all duration-500 ease-out"
           />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
           <span className="text-3xl font-black text-slate-900 tracking-tight">{progress}%</span>
           <span className="text-xs text-slate-500 font-medium mt-0.5">
             {progress >= 100 ? "complete" : `~${Math.max(1, Math.round((100 - progress) * 0.22))}s left`}
@@ -351,23 +363,24 @@ export default function OptimizingProgress({
         </div>
       </div>
 
-      {/* Title */}
-      <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2 text-center tracking-tight">
-        {awaitingInput
-          ? "Missing Details Detected"
-          : STEPS.find((s) => steps.find((st) => st.id === s.id && st.status === "running"))?.label ??
-            "Parsing the job description"}
-      </h2>
-      <p className="text-slate-500 text-xs sm:text-sm mb-7 text-center max-w-md font-normal leading-relaxed">
-        {awaitingInput
-          ? "Answer each question below to fill in missing values and maximize your ATS score."
-          : "Stay on this tab — we'll ask you a couple of things if we need them."}
-      </p>
+      {/* Fixed-height Header slot so text length never causes vertical shifting */}
+      <div className="h-16 flex flex-col items-center justify-center text-center w-full max-w-md px-2 select-none mb-4">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight line-clamp-1">
+          {awaitingInput
+            ? "Missing Details Detected"
+            : STEPS.find((s) => steps.find((st) => st.id === s.id && st.status === "running"))?.label ??
+              "Polishing the output"}
+        </h2>
+        <p className="text-slate-500 text-xs sm:text-sm mt-1 font-normal line-clamp-2">
+          {awaitingInput
+            ? "Answer each question below to fill in missing values and maximize your ATS score."
+            : "Stay on this tab — we're fine-tuning your keywords and impact metrics."}
+        </p>
+      </div>
 
-      {/* ── INTERACTIVE Q&A PANEL (missing metrics / values only) ── */}
+      {/* ── INTERACTIVE Q&A PANEL (shown during awaitingInput) ── */}
       {awaitingInput && missingQuestions.length > 0 && currentQ ? (
-        <div className="w-full bg-white border border-teal-200/90 shadow-xl rounded-2xl p-5 sm:p-7 space-y-5 mb-6 animate-in fade-in slide-in-from-bottom-3 duration-300">
-          {/* Header Bar */}
+        <div className="w-full bg-white border border-teal-200/90 shadow-xl rounded-2xl p-5 sm:p-6 space-y-4 mb-2 animate-in fade-in zoom-in-95 duration-200">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-[#0d6e5a] text-[10px] font-bold uppercase tracking-wider">
@@ -377,7 +390,6 @@ export default function OptimizingProgress({
                 Question {currentQuestionIndex + 1} of {missingQuestions.length}
               </span>
             </div>
-            {/* Step indicator pills */}
             <div className="flex items-center gap-1">
               {missingQuestions.map((_, i) => (
                 <div
@@ -386,7 +398,7 @@ export default function OptimizingProgress({
                     i === currentQuestionIndex
                       ? "w-6 bg-[#0d6e5a]"
                       : i < currentQuestionIndex
-                      ? "w-2.5 bg-emerald-400"
+                      ? "w-2.5 bg-teal-400"
                       : "w-2.5 bg-slate-200"
                   }`}
                 />
@@ -394,7 +406,6 @@ export default function OptimizingProgress({
             </div>
           </div>
 
-          {/* Current Question */}
           <div className="space-y-3">
             <div className="text-xs font-bold text-[#0d6e5a] uppercase tracking-wider">
               {currentQ.field}
@@ -444,7 +455,6 @@ export default function OptimizingProgress({
             </p>
           </div>
 
-          {/* Action buttons */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
             <div className="flex items-center gap-2 w-full sm:w-auto">
               {currentQuestionIndex > 0 && (
@@ -466,7 +476,7 @@ export default function OptimizingProgress({
                   }
                 }}
                 disabled={isApplying}
-                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0d6e5a] hover:bg-[#0f766e] active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-[#0d6e5a] hover:bg-[#087F6E] active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 <span>{isLast ? "Finish & Optimize Resume ✨" : "Next Question →"}</span>
               </button>
@@ -492,73 +502,76 @@ export default function OptimizingProgress({
             </div>
           </div>
         </div>
-      ) : null}
+      ) : (
+        /* Steps checklist — strictly fixed row heights (h-[52px]) to prevent layout jumping */
+        <div className="w-full max-w-lg space-y-2.5 flex-shrink-0">
+          {STEPS.map((step) => {
+            const s = steps.find((x) => x.id === step.id);
+            const status = s?.status ?? "pending";
 
-      {/* Steps progress checklist matching user Image 2 */}
-      <div className="w-full max-w-lg space-y-2.5">
-        {STEPS.map((step) => {
-          const s = steps.find((x) => x.id === step.id);
-          const status = s?.status ?? "pending";
-
-          return (
-            <div
-              key={step.id}
-              className={`
-                flex items-center justify-between
-                px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl
-                transition-all duration-300
-                ${
-                  status === "done"
-                    ? "bg-white border border-slate-200/80 shadow-2xs"
-                    : status === "running"
-                      ? "bg-[#faf5ff] border border-[#ddd6fe] shadow-xs"
-                      : "bg-white/60 border border-slate-100 opacity-60"
-                }
-              `}
-            >
-              <div className="flex items-center gap-3.5">
-                {status === "done" ? (
-                  <div className="w-5 h-5 rounded-full bg-[#10b981] flex items-center justify-center flex-shrink-0 text-white shadow-2xs">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  </div>
-                ) : status === "running" ? (
-                  <div className="w-4 h-4 rounded-full border-2 border-[#7c3aed] border-t-transparent animate-spin flex-shrink-0" />
-                ) : (
-                  <div className="w-4 h-4 rounded-full border border-slate-300 flex-shrink-0" />
-                )}
-
-                <span
-                  className={`text-xs sm:text-sm ${
+            return (
+              <div
+                key={step.id}
+                className={`
+                  h-[52px] flex items-center justify-between
+                  px-4 sm:px-5 rounded-2xl
+                  transition-colors duration-200
+                  ${
                     status === "done"
-                      ? "text-slate-800 font-semibold"
+                      ? "bg-white border border-slate-200/80 shadow-2xs"
                       : status === "running"
-                        ? "text-[#6d28d9] font-bold"
-                        : "text-slate-400 font-medium"
-                  }`}
-                >
-                  {step.label}
-                </span>
+                        ? "bg-teal-50/70 border border-teal-200/90 shadow-xs"
+                        : "bg-white/60 border border-slate-100 opacity-60"
+                  }
+                `}
+              >
+                <div className="flex items-center gap-3.5">
+                  {status === "done" ? (
+                    <div className="w-5 h-5 rounded-full bg-[#0d6e5a] flex items-center justify-center flex-shrink-0 text-white shadow-2xs">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                  ) : status === "running" ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-[#0d6e5a] border-t-transparent animate-spin flex-shrink-0" />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full border border-slate-300 flex-shrink-0" />
+                  )}
+
+                  <span
+                    className={`text-xs sm:text-sm ${
+                      status === "done"
+                        ? "text-slate-800 font-semibold"
+                        : status === "running"
+                          ? "text-[#0d6e5a] font-bold"
+                          : "text-slate-400 font-medium"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+
+                {status === "done" ? (
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    {s?.duration || "2.1s"}
+                  </span>
+                ) : status === "running" ? (
+                  <span className="text-xs text-[#0d6e5a] font-semibold lowercase">
+                    running
+                  </span>
+                ) : (
+                  <span className="w-8" />
+                )}
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              {status === "done" && (
-                <span className="text-[11px] text-slate-400 font-medium">
-                  {s?.duration || "2.8s"}
-                </span>
-              )}
-              {status === "running" && (
-                <span className="text-xs text-[#7c3aed] font-medium lowercase">
-                  running
-                </span>
-              )}
-            </div>
-          );
-        })}
+      {/* Rotating trivia with fixed height container so it never shifts layout */}
+      <div className="h-10 flex items-center justify-center text-center mt-6 w-full max-w-md px-2 select-none">
+        <p className="text-xs text-slate-400 font-normal leading-relaxed line-clamp-2">
+          {funFact}
+        </p>
       </div>
-
-      {/* Rotating trivia matching user Image 2 */}
-      <p className="mt-8 text-xs text-slate-400 text-center max-w-md font-normal leading-relaxed">
-        {funFact}
-      </p>
     </div>
   );
 }

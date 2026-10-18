@@ -696,8 +696,8 @@ export default function DashboardPage() {
 
         {/* ── LOADING OVERLAY ─────────────────────────────────────── */}
         {optimizing && (
-          <div className="fixed inset-0 bg-white/95 z-50 flex flex-col items-center justify-center p-6 select-none animate-in fade-in duration-300 overflow-y-auto">
-            <div className="max-w-[600px] w-full mx-auto space-y-8 pb-12 mt-12">
+          <div className="fixed inset-0 bg-white/98 z-50 flex items-center justify-center p-4 select-none overflow-y-auto">
+            <div className="w-full max-w-[560px] mx-auto py-6">
               <OptimizingProgress
                 onComplete={handleOptimizationComplete}
                 onError={(err) => {
