@@ -11,6 +11,7 @@ import { ResumeRecord, CreditInfo, isOwnerEmail } from "@/types";
 import { logger } from "@/lib/logger";
 import { generateSkillRoadmap, generateMultiSkillRoadmap } from "@/lib/roadmap-generator";
 import { extractTechTerms, extractKeywords } from "@/lib/ats/keywords";
+import { extractScorableBullets } from "@/lib/ats/bullets";
 import { parseResumeIntoBlocks, toSectionTitle, splitCertText, isRoleOrTitle } from "@/lib/export/pdf-document";
 import { saveAs } from "file-saver";
 
@@ -143,6 +144,27 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
   const optLines = (resume.optimizedText || "").split("\n").map(l => l.trim());
   const bulletLinesCount = optLines.filter(l => /^[•\-*\u2022▸►→]/.test(l) || (l.length > 25 && l.length < 280 && !l.includes(":") && !/^[A-Z\s]{4,}$/.test(l))).length;
   const rewrittenBullets = Math.max(bulletLinesCount > 0 ? Math.min(bulletLinesCount, 8) : 6, 1);
+
+  // Extract scorable bullets from original and optimized text for Before/After comparison
+  const originalBullets = React.useMemo(() => {
+    const scorable = extractScorableBullets(resume.originalText || "").map(b => b.cleanText);
+    if (scorable.length > 0) return scorable;
+    return (resume.originalText || "")
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => /^[•\-\*–—+o\u2022\u25cf\u2043▸►→]\s*/.test(l))
+      .map(l => l.replace(/^[•\-\*–—+o\u2022\u25cf\u2043▸►→]\s*/, "").trim());
+  }, [resume.originalText]);
+
+  const optimizedBullets = React.useMemo(() => {
+    const scorable = extractScorableBullets(resume.optimizedText || "").map(b => b.cleanText);
+    if (scorable.length > 0) return scorable;
+    return (resume.optimizedText || "")
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => /^[•\-\*–—+o\u2022\u25cf\u2043▸►→]\s*/.test(l))
+      .map(l => l.replace(/^[•\-\*–—+o\u2022\u25cf\u2043▸►→]\s*/, "").trim());
+  }, [resume.optimizedText]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(resume.optimizedText || "");
@@ -820,6 +842,64 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                 <span>Enforced single-column layout, line breaks, and density rules for 100% ATS parser accuracy.</span>
               </li>
             </ul>
+          </div>
+
+          {/* Rewritten Bullet Points (Before: Red, After: Green) */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div>
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                  Rewritten Bullet Points (Before &amp; After)
+                </span>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  Direct line-by-line comparison of weak original bullets transformed into quantified achievements
+                </p>
+              </div>
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                {Math.max(originalBullets.length, optimizedBullets.length)} bullets compared
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {Array.from({ length: Math.max(originalBullets.length, optimizedBullets.length) }).map((_, idx) => {
+                const before = originalBullets[idx];
+                const after = optimizedBullets[idx];
+                if (!before && !after) return null;
+
+                return (
+                  <div
+                    key={idx}
+                    className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-3 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                      <span>Bullet Point #{idx + 1}</span>
+                    </div>
+
+                    {/* BEFORE - RED */}
+                    {before && (
+                      <div className="bg-red-50/80 border border-red-200 rounded-xl p-3 sm:p-3.5 text-xs leading-relaxed text-red-950 space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-red-700">
+                          <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
+                          Before (Original Bullet)
+                        </div>
+                        <p className="font-normal font-sans text-red-900">&ldquo;{before}&rdquo;</p>
+                      </div>
+                    )}
+
+                    {/* AFTER - GREEN */}
+                    {after && (
+                      <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 sm:p-3.5 text-xs leading-relaxed text-emerald-950 space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                          After (Optimized with Action Verbs &amp; Metrics)
+                        </div>
+                        <p className="font-semibold font-sans text-emerald-900">&ldquo;{after}&rdquo;</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

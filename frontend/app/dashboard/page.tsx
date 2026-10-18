@@ -12,6 +12,7 @@ import {
   generateSkillRoadmap,
   generateMultiSkillRoadmap,
 } from "@/lib/roadmap-generator";
+import { extractTechTerms } from "@/lib/ats/keywords";
 import ResumeViewer from "@/components/ResumeViewer";
 import BulletImprover from "@/components/BulletImprover";
 import { hasQuantifiedMetric } from "@/lib/ats/scorer";
@@ -119,6 +120,7 @@ export default function DashboardPage() {
   const [showRoadmapAccordion, setShowRoadmapAccordion] = useState(false);
   const [showCoverLetterAccordion, setShowCoverLetterAccordion] =
     useState(false);
+  const [resultsSubTab, setResultsSubTab] = useState<"roadmap" | "cover_letter">("roadmap");
   // Removed isAILoading state
   const [isSavedResumesOpen, setIsSavedResumesOpen] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -500,6 +502,27 @@ export default function DashboardPage() {
     setTrackerAdded(true);
   };
 
+  const availableSkills = React.useMemo(() => {
+    return Array.from(new Set([
+      ...(optimizeResult?.keywordsAdded || []),
+      ...(afterScore?.missingKeywords || []),
+      ...extractTechTerms(jobDescription || ""),
+      ...extractTechTerms(optimizeResult?.optimizedText || "")
+    ])).filter(s => s && s.length > 1 && !/^(resume|summary|skills|experience|education|project|teamwork|development|software|engineer|manager|developer|analyst|overview|responsibilities)$/i.test(s)).slice(0, 16);
+  }, [optimizeResult, afterScore, jobDescription]);
+
+  const handleOptimizeAnother = () => {
+    setOptimizeResult(null);
+    setBeforeScore(null);
+    setAfterScore(null);
+    setInstructions("");
+    setSelectedRoadmapSkills([]);
+    setRoadmapContent(null);
+    setCoverLetterGenerated(null);
+    setTrackerAdded(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const toggleRoadmapSkill = (skill: string) => {
     if (selectedRoadmapSkills.includes(skill)) {
       setSelectedRoadmapSkills(
@@ -689,11 +712,36 @@ export default function DashboardPage() {
               )}
             </div>
             {/* Actions */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+              <Button
+                onClick={handleOptimizeAnother}
+                size="sm"
+                className="bg-[#0d6e5a] hover:bg-[#075E53] text-white text-xs font-bold h-9 rounded-xl px-4 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>Optimize Another Resume</span>
+              </Button>
+
+              <Button
+                onClick={() => {
+                  if (trackerAdded) {
+                    router.push("/dashboard/job-tracker");
+                  } else {
+                    handleAddToTracker();
+                    toast.success("Added to your Job Tracker!");
+                  }
+                }}
+                size="sm"
+                className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-xl px-4 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Briefcase className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                <span>{trackerAdded ? "View in Job Tracker" : "Add to Job Tracker"}</span>
+              </Button>
+
               <Link href="/dashboard/history">
                 <Button
                   size="sm"
-                  className="bg-[#111827] hover:bg-slate-800 text-white text-xs font-semibold h-9 rounded-xl px-4"
+                  className="bg-[#111827] hover:bg-slate-800 text-white text-xs font-semibold h-9 rounded-xl px-4 shadow-xs"
                 >
                   <History className="h-3.5 w-3.5 mr-1.5" />
                   Back to History
@@ -856,150 +904,200 @@ export default function DashboardPage() {
               </ScrollFadeIn>
             </div>
 
-            {/* FULL-WIDTH: Quantified Metrics & Missing Metrics Breakdown (wide on desktop) */}
-            {afterScore && (
-              <div className="w-full bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm space-y-4 select-none">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-[#0d6e5a]" />
-                    <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                      Metrics &amp; Quantification
-                    </h4>
-                  </div>
-                  <span className="self-start sm:self-auto text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    {afterScore.metricCoveragePercent ?? 0}% Quantified
-                  </span>
-                </div>
+            {/* ─── SKILL ROADMAP & COVER LETTER (Matching History Style) ─── */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+              {/* Tabs Bar */}
+              <div className="flex items-center gap-6 border-b border-slate-200 pb-px">
+                <button
+                  type="button"
+                  onClick={() => setResultsSubTab("roadmap")}
+                  className={`flex items-center gap-2 py-3 px-1 text-xs font-bold transition-all relative border-b-2 cursor-pointer ${
+                    resultsSubTab === "roadmap"
+                      ? "border-[#0d6e5a] text-[#0d6e5a]"
+                      : "border-transparent text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <GraduationCap className="h-4 w-4" />
+                  <span>Skills Learning Roadmap</span>
+                </button>
 
-                {/* Metric Coverage bar */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[11px] text-slate-500 font-medium">
-                    <span>Metric Impact Coverage</span>
-                    <span>
-                      {afterScore.quantifiedCount !== undefined && afterScore.totalBulletsCount !== undefined
-                        ? `${afterScore.quantifiedCount} of ${afterScore.totalBulletsCount} bullets with metrics`
-                        : "Dynamically evaluated"}
+                <button
+                  type="button"
+                  onClick={() => setResultsSubTab("cover_letter")}
+                  className={`flex items-center gap-2 py-3 px-1 text-xs font-bold transition-all relative border-b-2 cursor-pointer ${
+                    resultsSubTab === "cover_letter"
+                      ? "border-[#0d6e5a] text-[#0d6e5a]"
+                      : "border-transparent text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Tailored Cover Letter</span>
+                </button>
+              </div>
+
+              {/* ─── TAB 1: SKILL LEARNING ROADMAP ─── */}
+              {resultsSubTab === "roadmap" && (
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-[#0d6e5a]/10 border border-[#0d6e5a]/20 flex items-center justify-center text-[#0d6e5a]">
+                        <GraduationCap className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                          Skills Learning Roadmap
+                          {userPlan === "free" && (
+                            <span className="bg-[#0d6e5a] text-[9px] text-white px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                              PRO
+                            </span>
+                          )}
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Select up to 3 skills to build a complete 90-day learning curriculum
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-[#0d6e5a] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
+                      {selectedRoadmapSkills.length}/3 Selected
                     </span>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.min(100, afterScore.metricCoveragePercent ?? 0)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
 
-                {/* Highlighted bullets — same list & rules as the Bullet Improver below */}
-                {afterScore.missingMetrics && afterScore.missingMetrics.length > 0 ? (
-                  <div className="bg-amber-50/70 border border-amber-200/80 rounded-xl p-3 sm:p-4 space-y-2.5">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800">
-                      <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                      <span>Bullets Needing Improvement ({afterScore.missingMetrics.length})</span>
-                    </div>
-                    <p className="text-[11px] text-amber-700 leading-relaxed font-normal">
-                      The following bullet{afterScore.missingMetrics.length > 1 ? "s are" : " is"} missing a strong action verb and/or a measurable number. Use the <strong>Bullet Improver</strong> below — every rewrite is guaranteed to pass both checks:
-                    </p>
-                    <ul className="grid grid-cols-1 lg:grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-1">
-                      {afterScore.missingMetrics.map((bullet: string, i: number) => {
-                        const verbOk = hasStrongActionVerb(bullet);
-                        const metricOk = hasQuantifiedMetric(bullet);
+                  {/* Skill Chips */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Choose up to 3 target skills:
+                    </span>
+                    <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto pr-1">
+                      {(availableSkills.length > 0
+                        ? availableSkills
+                        : ["Machine Learning", "Generative AI", "Python", "SQL", "Docker"]
+                      ).map((skill, i) => {
+                        const isSelected = selectedRoadmapSkills.includes(skill);
                         return (
-                          <li
+                          <button
                             key={i}
-                            className="text-[11px] text-slate-700 bg-white/90 border border-amber-200/60 p-2.5 rounded-lg font-medium leading-snug border-l-2 border-l-amber-500 space-y-1.5"
+                            type="button"
+                            onClick={() => toggleRoadmapSkill(skill)}
+                            className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition-all border flex items-center gap-1.5 cursor-pointer ${
+                              isSelected
+                                ? "bg-[#0d6e5a] border-[#0d6e5a] text-white font-bold shadow-xs"
+                                : "bg-white border-slate-200 text-slate-800 hover:text-slate-950 hover:border-slate-300"
+                            }`}
                           >
-                            <span className="italic block">&ldquo;{bullet}&rdquo;</span>
-                            <span className="flex flex-wrap gap-1 not-italic">
-                              {!verbOk && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
-                                  Missing action verb
-                                </span>
-                              )}
-                              {!metricOk && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
-                                  Missing metric
-                                </span>
-                              )}
-                            </span>
-                          </li>
+                            {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                            {skill}
+                          </button>
                         );
                       })}
-                    </ul>
+                    </div>
                   </div>
-                ) : (
-                  <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 flex items-center gap-2 text-xs font-bold text-emerald-800">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>All bullet points feature measurable metrics &amp; action verbs!</span>
-                  </div>
-                )}
-              </div>
-            )}
 
-            {/* BELOW PDF PREVIEW: Full-width AI Optimization Summary & Tools Box */}
-            {optimizeResult?.summary && (
-              <Card className="border-slate-200 bg-white shadow-sm rounded-xl overflow-hidden mb-6 w-full select-none">
-                <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-[#0d6e5a]" />
-                    <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                      AI Optimization Summary
-                    </h3>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-100 p-3.5 sm:p-5 rounded-xl">
-                    <p className="text-xs text-slate-600 leading-relaxed font-semibold">
-                      {optimizeResult.summary}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Interactive Bullet Point Reviewer / Improver (Below Columns) */}
-            <Card className="border-slate-200 bg-white shadow-sm rounded-xl overflow-hidden mt-6">
-              <CardContent className="p-6 space-y-4 text-slate-800">
-                <div className="flex items-center justify-between select-none">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-[#0d6e5a]" />
-                    <h3
-                      className={`text-sm font-extrabold ${userPlan === "free" ? "text-slate-600" : "text-slate-900"}`}
+                  {/* Action Row */}
+                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
+                    <span className="text-xs text-slate-500">
+                      {selectedRoadmapSkills.length === 0
+                        ? "Click 1 to 3 skills above to build your roadmap."
+                        : `Selected: ${selectedRoadmapSkills.join(", ")}`}
+                    </span>
+                    <Button
+                      onClick={handleGenerateRoadmap}
+                      disabled={selectedRoadmapSkills.length === 0 || roadmapLoading}
+                      className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
                     >
-                      Interactive Bullet Point Improver
-                    </h3>
+                      {roadmapLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                      )}
+                      Generate Complete Roadmap ({selectedRoadmapSkills.length}/3)
+                    </Button>
                   </div>
-                  {userPlan === "free" && (
-                    <Badge className="bg-[#0d6e5a]/10 border-[#0d6e5a]/20 text-[#0d6e5a] text-[10px] font-bold select-none px-2 py-0.5">
-                      Pro Feature
-                    </Badge>
+
+                  {/* Loading state */}
+                  {roadmapLoading && (
+                    <div className="flex items-center gap-2.5 text-xs text-slate-600 py-8 justify-center bg-slate-50 border border-slate-200 rounded-xl">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#0d6e5a]" />
+                      <span>Synthesizing tailored 90-day curriculum for {selectedRoadmapSkills.join(", ")}...</span>
+                    </div>
+                  )}
+
+                  {/* Generated roadmap output */}
+                  {roadmapContent && (
+                    <div className="space-y-3">
+                      <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl text-xs text-slate-900 leading-relaxed font-sans shadow-xs select-text">
+                        <pre className="whitespace-pre-wrap font-sans text-slate-900 select-text">{roadmapContent}</pre>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          navigator.clipboard.writeText(roadmapContent);
+                          toast.success("Roadmap copied to clipboard!");
+                        }}
+                        className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-lg shadow-xs cursor-pointer font-bold"
+                      >
+                        Copy Roadmap
+                      </Button>
+                    </div>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 leading-relaxed font-semibold select-none">
-                  Scan and optimize individual bullet points on your original
-                  resume text. We identify missing action verbs and metrics.
-                </p>
-                <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl">
-                  <BulletImprover
-                    resumeText={optimizeResult.optimizedText}
-                    jobDescription={jobDescription}
-                    userId={user?.id || ""}
-                    userPlan={userPlan}
-                    onChange={(newText, wasImproved) => {
-                      // Update the optimizedText in result so the viewer shows the new text
-                      setOptimizeResult((prev: any) =>
-                        prev ? { ...prev, optimizedText: newText } : prev,
-                      );
-                      let newCount = bulletImprovementsCount;
-                      if (wasImproved) {
-                        newCount += 1;
-                        setBulletImprovementsCount(newCount);
-                      }
-                      handleReScoreBefore(newText, newCount);
-                    }}
-                  />
+              )}
+
+              {/* ─── TAB 2: TAILORED COVER LETTER ─── */}
+              {resultsSubTab === "cover_letter" && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a]">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-slate-900">Tailored Cover Letter Generator</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Generate a personalized cover letter aligned with this job specification
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                    FastHire uses your optimized resume highlights and target job description to draft an executive-level cover letter.
+                  </p>
+
+                  {!coverLetterGenerated && !generatingLetter && (
+                    <Button
+                      onClick={handleGenerateCoverLetter}
+                      className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-5 rounded-xl shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                      Generate Cover Letter
+                    </Button>
+                  )}
+
+                  {generatingLetter && (
+                    <div className="flex items-center gap-2.5 text-xs text-slate-600 py-8 justify-center bg-slate-50 border border-slate-200 rounded-xl">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#0d6e5a]" />
+                      <span>Drafting tailored cover letter...</span>
+                    </div>
+                  )}
+
+                  {coverLetterGenerated && (
+                    <div className="space-y-3 select-text">
+                      <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl text-xs text-slate-900 leading-relaxed font-serif shadow-xs select-text">
+                        <pre className="whitespace-pre-wrap font-serif text-slate-900 select-text">{coverLetterGenerated}</pre>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          navigator.clipboard.writeText(coverLetterGenerated);
+                          toast.success("Cover letter copied to clipboard!");
+                        }}
+                        className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-lg shadow-xs cursor-pointer font-bold"
+                      >
+                        Copy Cover Letter
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
           </div>
         ) : (
           /* ── INPUT WORKSPACE ──────────────────────────────────── */
