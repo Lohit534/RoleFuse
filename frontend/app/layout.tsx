@@ -232,8 +232,39 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-white text-[#111827] flex flex-col antialiased font-sans relative selection:bg-[#087F6E]/15 selection:text-[#087F6E]">
-        <SiteBackground />
-        <Toaster position="top-center" toastOptions={{ duration: 4000 }} />
+        <Toaster
+          position="top-center"
+          gutter={8}
+          toastOptions={{
+            duration: 3500,
+            style: {
+              background: "#0f172a",
+              color: "#f8fafc",
+              padding: "11px 18px",
+              borderRadius: "14px",
+              fontSize: "13.5px",
+              fontWeight: "500",
+              letterSpacing: "-0.01em",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              boxShadow: "0 14px 34px -4px rgba(0, 0, 0, 0.3), 0 4px 12px -2px rgba(0, 0, 0, 0.15)",
+              maxWidth: "440px",
+              lineHeight: "1.45",
+            },
+            success: {
+              iconTheme: {
+                primary: "#12C2A4",
+                secondary: "#0f172a",
+              },
+            },
+            error: {
+              iconTheme: {
+                primary: "#f43f5e",
+                secondary: "#0f172a",
+              },
+              duration: 4500,
+            },
+          }}
+        />
         <div className="flex flex-col min-h-screen flex-1 relative z-0">
           <main className="flex-1 flex flex-col">
             {children}

@@ -198,12 +198,6 @@ export default function DashboardPage() {
         }
 
         setUser(data.user);
-        // Feedback popup notification for this login session (shows once, if dismissed won't show on refresh, shows again on new login)
-        const lastLoginId = data.user.last_sign_in_at || data.user.id;
-        const dismissedLogin = sessionStorage.getItem("fastHire_feedback_dismissed_login");
-        if (dismissedLogin !== lastLoginId) {
-          setShowOneTimeFeedback(true);
-        }
         // Pre-load cached plan to prevent UI flash
         const cachedPlan = localStorage.getItem(
           `fastHire_plan_${data.user.id}`,
@@ -319,16 +313,21 @@ export default function DashboardPage() {
       return;
     }
 
+    const hasAvailableCredits =
+      (userCredits?.paidCredits && userCredits.paidCredits > 0) ||
+      (userCredits?.freeRemaining && userCredits.freeRemaining > 0);
+
     if (
+      !hasAvailableCredits &&
       userPlan === "free" &&
       userCredits &&
-      (userCredits.freeRemaining <= 0 || userCredits.freeUsed >= 2)
+      (userCredits.freeRemaining <= 0)
     ) {
       useUpgradeModalStore.getState().openModal({
-        badge: "DOWNLOAD BLOCKED",
-        title: "Your 2 free optimizations are used up",
+        badge: "UPGRADE REQUIRED",
+        title: "Free Optimizations Used Up",
         description:
-          "Your optimized resume is saved and stays in your history. Free includes the ATS score and live preview; downloading is on a paid plan.",
+          "You have used your free optimizations. Upgrade to Premium Pro (20 optimizations) or Pro Max (90 optimizations) to continue.",
       });
       return;
     }
@@ -649,50 +648,6 @@ export default function DashboardPage() {
       />
 
       <main className="relative flex-1 mx-auto max-w-[1280px] w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-8">
-        {/* One-Time Feedback Notification (Only on Optimize page for logged in user) */}
-        {showOneTimeFeedback && (
-          <div className="w-full flex justify-center mb-6 select-none animate-in slide-in-from-top duration-300">
-            <div className="w-full max-w-[640px] bg-white text-[#111827] border border-[#DCE7E9] rounded-2xl py-2 px-4 shadow-sm flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-7 w-7 rounded-full bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0">
-                  <Bell className="h-4 w-4" />
-                </div>
-                <p className="text-xs sm:text-sm text-[#526176] font-medium truncate sm:whitespace-normal">
-                  <strong className="font-bold text-[#111827]">We'd love your feedback!</strong> Share your thoughts or report issues.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => {
-                    if (user) {
-                      const lastLoginId = user.last_sign_in_at || user.id;
-                      sessionStorage.setItem("fastHire_feedback_dismissed_login", lastLoginId);
-                    }
-                    setIsFeedbackOpen(true);
-                    window.dispatchEvent(new CustomEvent("open-feedback-toast"));
-                    setShowOneTimeFeedback(false);
-                  }}
-                  className="bg-[#087F6E] hover:bg-[#075E53] text-white text-xs font-semibold px-3 py-1 rounded-xl transition-all cursor-pointer"
-                >
-                  Feedback
-                </button>
-                <button
-                  onClick={() => {
-                    if (user) {
-                      const lastLoginId = user.last_sign_in_at || user.id;
-                      sessionStorage.setItem("fastHire_feedback_dismissed_login", lastLoginId);
-                    }
-                    setShowOneTimeFeedback(false);
-                  }}
-                  className="h-6 w-6 flex items-center justify-center text-[#526176] hover:text-[#111827] rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
-                  title="Dismiss notification"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── LOADING OVERLAY ─────────────────────────────────────── */}
         {optimizing && (

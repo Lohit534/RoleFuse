@@ -339,20 +339,14 @@ export async function POST(request: NextRequest) {
 
         isUnlimited = isOwner;
 
-        // STRICT QUOTA ENFORCEMENT
+        // Check if user has available credits (either paid credits > 0 or remaining free credits)
         if (!isUnlimited) {
-          const isProMax = paidCredits >= 90;
-          const isProPlan = paidCredits > 0 || isFirst50;
-          const allowedLimit = isProMax ? PRO_MAX_CREDITS_PER_MONTH : (isProPlan ? PRO_CREDITS_PER_MONTH : FREE_CREDITS_PER_MONTH);
+          const hasPaidCredits = paidCredits > 0;
+          const freeAllowance = isFirst50 ? 15 : FREE_CREDITS_PER_MONTH;
+          const hasFreeCredits = freeUsed < freeAllowance;
 
-          if (freeUsed >= allowedLimit) {
-            if (isProMax) {
-              throw new Error(`Monthly quota of ${PRO_MAX_CREDITS_PER_MONTH} optimizations reached for Pro Max plan. Please wait for your monthly cycle reset.`);
-            } else if (isProPlan) {
-              throw new Error(`Monthly quota of ${PRO_CREDITS_PER_MONTH} optimizations reached for Pro plan. Please upgrade to Pro Max for 90 optimizations/month or wait for your monthly cycle reset.`);
-            } else {
-              throw new Error(`Monthly limit of ${FREE_CREDITS_PER_MONTH} optimizations reached for Free plan. Please upgrade to Premium Pro (20 optimizations) or Pro Max (90 optimizations) to continue.`);
-            }
+          if (!hasPaidCredits && !hasFreeCredits) {
+            throw new Error(`Monthly limit of ${FREE_CREDITS_PER_MONTH} free optimizations reached. Please upgrade to Premium Pro (20 credits) or Pro Max (90 credits) to continue.`);
           }
         }
       }

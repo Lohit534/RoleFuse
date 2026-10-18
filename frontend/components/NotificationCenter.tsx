@@ -392,57 +392,8 @@ export function MonthlyNotificationModal({
       }
     }
 
-    // 2. Check if already dismissed monthly upgrade popup for this month
-    try {
-      const seen = localStorage.getItem(monthlyStorageKey);
-      if (seen) return;
-    } catch {
-      return;
-    }
-
-    // 3. For Premiere Pro (Premium) users: Monthly once upgrade to Pro Max (best features)
-    if (planId === "premium") {
-      setModalDismissKey(monthlyStorageKey);
-      setModalData({
-        badge: "MONTHLY PRO MAX UPGRADE",
-        title: "Upgrade to Best Features - Pro Max Tier",
-        description: "Unlock RoleFuse's best features this month! Upgrade from Premium Pro to Pro Max for unlimited ATS resume optimizations, priority export speed, and executive Harvard templates.",
-        actionText: "Upgrade to Best Features",
-        actionHref: "/dashboard/pricing",
-        isExpiring: false,
-        features: [
-          "Unlimited AI resume optimizations each month",
-          "Highest ATS keyword & recruiter ranking power",
-          "Priority DOCX & PDF generation with executive templates",
-          "Dedicated cover letter & career roadmap generator",
-        ],
-      });
-      setShowModal(true);
-      return;
-    }
-
-    // 4. For Free plan users: Monthly once upgrade to Pro (best features)
-    if (!isPaid) {
-      setModalDismissKey(monthlyStorageKey);
-      setModalData({
-        badge: "MONTHLY PRO HIGHLIGHT",
-        title: "Upgrade to Best Features - RoleFuse Pro",
-        description: "Supercharge your job applications this month! Upgrade to access RoleFuse's best features: 20 monthly AI resume optimizations, full PDF and Word DOCX downloads, tailored cover letters, and custom career skill roadmaps.",
-        actionText: "Upgrade to Best Features",
-        actionHref: "/dashboard/pricing",
-        isExpiring: false,
-        features: [
-          "20 AI optimizations every month",
-          "Download Harvard & Modern ATS PDF & DOCX formats",
-          "AI Cover Letters & tailored 90-day Skill Roadmaps",
-          "Instant bullet improvement & scoring analysis",
-        ],
-      });
-      setShowModal(true);
-      return;
-    }
-
-    // Pro Max users with healthy plan: no upgrade popup
+    // Unsolicited auto-marketing popups disabled as requested by user.
+    // Users can access upgrade options cleanly from Pricing page or Notification center.
   }, [credits, userEmail]);
 
   const handleClose = () => {
