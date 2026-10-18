@@ -1259,7 +1259,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <Sparkles className="h-5 w-5" />
+            <Zap className="h-5 w-5" />
             <span className="text-[10px] font-bold">Optimize</span>
           </Link>
           <Link

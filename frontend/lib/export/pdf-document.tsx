@@ -903,8 +903,10 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
         } else {
           const lowerLine = line.toLowerCase();
           const TITLE_KEYWORDS = ['developer', 'engineer', 'manager', 'lead', 'architect', 'consultant', 'analyst', 'designer', 'intern', 'specialist', 'associate', 'head', 'director', 'officer'];
-          // Whole-word match only ("intern" must not match "internal")
-          const looksLikeJobHeader = line.includes('|') || line.includes('—') || line.includes('–') || TITLE_KEYWORDS.some(kw => new RegExp(`\\b${kw}s?\\b`).test(lowerLine)) || lastJobIdx === -1;
+          const isActionSentence = /\b(developed|built|designed|implemented|created|engineered|spearheaded|managed|optimized|automated|accelerated|increased|reduced|improved|conducted|resolved|led|trained|achieved|maintained|deployed|shipped|orchestrated)\b/i.test(lowerLine);
+          const hasDateHere = /\b(?:19|20)\d{2}\b/.test(line) || /\bpresent|current\b/i.test(lowerLine);
+          const hasExplicitJobTitle = TITLE_KEYWORDS.some(kw => new RegExp(`\\b${kw}s?\\b`).test(lowerLine));
+          const looksLikeJobHeader = lastJobIdx === -1 || ((hasExplicitJobTitle || line.includes('|')) && hasDateHere && !isActionSentence);
 
           if (looksLikeJobHeader) {
             const parts = line.split(/\s*(?:[|—–]|\s{3,}|\s+-\s+)\s*/);
@@ -1040,7 +1042,7 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       continue;
     }
 
-    // Education block
+    // Education block (Accurate degree, school, dates, and GPA separation)
     if (currentSection === 'EDUCATION' || currentSection === 'ACADEMIC BACKGROUND' || currentSection === 'QUALIFICATIONS' || currentSection === 'ACADEMICS') {
       const lowerLine = line.toLowerCase();
       const DEGREE_KEYWORDS = [
@@ -1050,7 +1052,7 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
         'secondary', 'hsc', 'cbse', 'board', 'high school', '10th', '12th', 'senior secondary',
         'higher secondary', 'intermediate', 'ssc', 'plus two', '+2'
       ];
-      
+
       let lastEdu: EducationBlock | undefined;
       for (let i = blocks.length - 1; i >= 0; i--) {
         if (blocks[i].type === 'education') {
@@ -1059,99 +1061,112 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
         }
       }
 
-      const gpaRegex = /(GPA|CGPA|%)\s*:?\s*([\d\.\%]+)/i;
-      const gpaMatch = line.match(gpaRegex);
+      const gpaPattern = /(?:CGPA|GPA|Percentage|Grade)\s*[:\-]?\s*[\d\.]+(?:\s*\/\s*[\d\.]+)?%?|\b\d{1,2}(?:\.\d{1,2})?\s*\/\s*10\b|\b\d{1,2}(?:\.\d{1,2})?\s*CGPA\b|\b\d{2}(?:\.\d{1,2})?%/i;
+      const dateRangePattern = /\b(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\b(?:\s*[\-\u2013\u2014]\s*(?:(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\b|Present|Current))?/i;
 
-      const pipeIdx = line.indexOf(' | ');
-      const hasPipeWithDate = pipeIdx !== -1 && /\b20\d{2}\b/.test(line.substring(pipeIdx));
+      // Handle pipe-separated education line:
+      // e.g. "B.Tech in Computer Science | XYZ Institute of Technology | 2020 – 2024 | CGPA: 8.5/10"
+      const pipeParts = line.split(/\s*\|\s*/).map(p => stripMarkdownAsterisks(p).trim()).filter(Boolean);
 
-      const dateRangeRegex = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d{2})\b[\s\-\u2013]+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d{2}|Present)\b/i;
-      const singleDateRegex = /\b(20\d{2})\b/;
-      
-      let cleanText = stripMarkdownAsterisks(line);
-      let dates = "";
-      let gpa = "";
+      if (pipeParts.length >= 2) {
+        let extractedDegree = "";
+        let extractedSchool = "";
+        let extractedDates = "";
+        let extractedGpa = "";
+        const remainingSegments: string[] = [];
 
-      if (gpaMatch) {
-        gpa = gpaMatch[0];
-        cleanText = cleanText.replace(gpaMatch[0], "").trim();
-      }
+        for (const seg of pipeParts) {
+          const gMatch = seg.match(gpaPattern);
+          if (gMatch && !extractedGpa) {
+            extractedGpa = gMatch[0].trim();
+            const restOfSeg = seg.replace(gMatch[0], "").trim();
+            if (restOfSeg) remainingSegments.push(restOfSeg);
+            continue;
+          }
 
-      if (hasPipeWithDate) {
-        dates = stripMarkdownAsterisks(line.substring(pipeIdx + 3).trim());
-        cleanText = stripMarkdownAsterisks(line.substring(0, pipeIdx).trim());
-      } else {
-        const dateMatch = line.match(dateRangeRegex);
-        if (dateMatch) {
-          dates = dateMatch[0];
-          cleanText = cleanText.replace(dateMatch[0], "").trim();
-        } else {
-          const singleMatch = line.match(singleDateRegex);
-          if (singleMatch && (line.includes('-') || line.includes('\u2013') || line.toLowerCase().includes('present'))) {
-            const approxDateMatch = line.match(/(\b(20\d{2})\b.*?(\b(20\d{2})\b|Present))/i);
-            if (approxDateMatch) {
-              dates = approxDateMatch[0];
-              cleanText = cleanText.replace(approxDateMatch[0], "").trim();
-            }
-          } else if (singleMatch) {
-            dates = singleMatch[0];
-            cleanText = cleanText.replace(singleMatch[0], "").trim();
+          const dMatch = seg.match(dateRangePattern);
+          if (dMatch && !extractedDates) {
+            extractedDates = dMatch[0].trim();
+            const restOfSeg = seg.replace(dMatch[0], "").trim();
+            if (restOfSeg) remainingSegments.push(restOfSeg);
+            continue;
+          }
+
+          remainingSegments.push(seg);
+        }
+
+        for (const seg of remainingSegments) {
+          const segLower = seg.toLowerCase();
+          const isDegree = DEGREE_KEYWORDS.some(kw => segLower.includes(kw)) || segLower.startsWith('b.') || segLower.startsWith('m.');
+          if (isDegree && !extractedDegree) {
+            extractedDegree = seg;
+          } else if (!extractedSchool) {
+            extractedSchool = seg;
+          } else if (!extractedDegree) {
+            extractedDegree = seg;
           }
         }
-      }
-      
-      cleanText = stripMarkdownAsterisks(cleanText.replace(/^[\s\|\-\u2013\u2014\:]+|[\s\|\-\u2013\u2014\:]+$/g, ""));
 
-      const containsDegreeKeyword = DEGREE_KEYWORDS.some(kw => lowerLine.includes(kw)) || lowerLine.startsWith('b.') || lowerLine.startsWith('m.');
-      const isSchoolName = (lowerLine.includes('school') ||
-                            lowerLine.includes('college') ||
-                            lowerLine.includes('university') ||
-                            lowerLine.includes('institute') ||
-                            lowerLine.includes('academy')) &&
-                           !containsDegreeKeyword;
-
-      const isNewEntry = !isSchoolName && (
-        (containsDegreeKeyword && (!lastEdu || lastEdu.degree.toLowerCase() !== cleanText.toLowerCase())) || 
-        !lastEdu || 
-        hasPipeWithDate || 
-        (lastEdu && lastEdu.school !== "" && containsDegreeKeyword)
-      );
-      
-      if (isNewEntry) {
-        let degreeName = cleanText || "Degree";
-        let schoolName = "";
-        if (cleanText.includes(" | ")) {
-          const parts = cleanText.split(" | ").map(p => p.trim());
-          degreeName = parts[0];
-          schoolName = parts.slice(1).join(", ");
-        }
-        blocks.push({
-          type: 'education',
-          degree: degreeName,
-          school: schoolName,
-          dates: dates,
-          gpa: gpa
-        });
-      } else {
-        if (lastEdu) {
-          if (!lastEdu.school) {
-            lastEdu.school = cleanText;
-          } else if (!lastEdu.gpa && gpa) {
-            lastEdu.gpa = gpa;
-          } else if (!lastEdu.dates && dates) {
-            lastEdu.dates = dates;
-          }
-          if (dates && !lastEdu.dates) lastEdu.dates = dates;
-          if (gpa && !lastEdu.gpa) lastEdu.gpa = gpa;
-        } else {
+        if (extractedDegree || extractedSchool) {
           blocks.push({
             type: 'education',
-            degree: cleanText || "Degree",
-            school: "",
-            dates: dates,
-            gpa: gpa
+            degree: extractedDegree || "Degree",
+            school: extractedSchool || "",
+            dates: extractedDates || "",
+            gpa: extractedGpa || ""
           });
+          continue;
         }
+      }
+
+      // Handle multi-line education format:
+      let lineText = stripMarkdownAsterisks(line);
+      let extractedDates = "";
+      let extractedGpa = "";
+
+      const gMatch = lineText.match(gpaPattern);
+      if (gMatch) {
+        extractedGpa = gMatch[0].trim();
+        lineText = lineText.replace(gMatch[0], "").trim();
+      }
+
+      const dMatch = lineText.match(dateRangePattern);
+      if (dMatch) {
+        extractedDates = dMatch[0].trim();
+        lineText = lineText.replace(dMatch[0], "").trim();
+      }
+
+      lineText = lineText.replace(/^[\s\|\-\u2013\u2014\:]+|[\s\|\-\u2013\u2014\:]+$/g, "").trim();
+
+      const containsDegree = DEGREE_KEYWORDS.some(kw => lowerLine.includes(kw)) || lowerLine.startsWith('b.') || lowerLine.startsWith('m.');
+      const isSchool = (lowerLine.includes('school') ||
+                        lowerLine.includes('college') ||
+                        lowerLine.includes('university') ||
+                        lowerLine.includes('institute') ||
+                        lowerLine.includes('academy')) && !containsDegree;
+
+      if (containsDegree || !lastEdu || (lastEdu && lastEdu.school && containsDegree)) {
+        blocks.push({
+          type: 'education',
+          degree: lineText || "Degree",
+          school: "",
+          dates: extractedDates || "",
+          gpa: extractedGpa || ""
+        });
+      } else if (lastEdu) {
+        if (!lastEdu.school && (isSchool || lineText)) {
+          lastEdu.school = lineText;
+        }
+        if (extractedDates && !lastEdu.dates) lastEdu.dates = extractedDates;
+        if (extractedGpa && !lastEdu.gpa) lastEdu.gpa = extractedGpa;
+      } else {
+        blocks.push({
+          type: 'education',
+          degree: lineText || "Degree",
+          school: "",
+          dates: extractedDates || "",
+          gpa: extractedGpa || ""
+        });
       }
       continue;
     }

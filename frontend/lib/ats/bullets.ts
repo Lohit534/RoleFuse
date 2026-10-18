@@ -14,7 +14,7 @@ import { extractActionVerbs } from "./keywords";
 
 export const BULLET_MARKER_REGEX = /^\s*([•\-\*–—+o\u2022\u25cf\u2043▸►→▪◦\u2023\u25e6\u2219\u25aa\u25ab\u25a0\u25cb\u25a1\u2713\u2714\u2794\u27a4\u25ba\u25c4·]|\d+[.)]|[a-zA-Z][.)])\s+/;
 
-/** Sections whose bullets ARE scored (work impact). */
+/** Sections whose bullets ARE scored (work impact, projects, achievements). */
 const SCORABLE_SECTIONS = [
   "PROFESSIONAL EXPERIENCE", "WORK EXPERIENCE", "EXPERIENCE", "EMPLOYMENT HISTORY",
   "EMPLOYMENT", "WORK HISTORY", "CAREER HISTORY", "INTERNSHIPS", "INTERNSHIP",
@@ -23,13 +23,13 @@ const SCORABLE_SECTIONS = [
   "SELECTED PROJECTS", "FEATURED PROJECTS", "CLIENT PROJECTS", "FREELANCE",
   "FREELANCE EXPERIENCE", "CONSULTING", "LEADERSHIP EXPERIENCE", "VOLUNTEER EXPERIENCE",
   "OPEN SOURCE CONTRIBUTIONS", "RESEARCH EXPERIENCE", "SOFTWARE PROJECTS",
+  "ACHIEVEMENTS", "KEY ACHIEVEMENTS", "AWARDS", "HONORS", "HONOURS",
 ];
 
-/** Sections whose items are factual lists and must NEVER need verbs/metrics. */
+/** Sections whose items are factual credentials/lists and must NEVER need verbs/metrics. */
 const NON_SCORABLE_SECTIONS = [
   "CERTIFICATIONS", "CERTIFICATION", "CERTIFICATES", "LICENSES", "COURSES", "COURSEWORK",
-  "RELEVANT COURSEWORK", "ACHIEVEMENTS", "KEY ACHIEVEMENTS", "AWARDS", "HONORS",
-  "HONOURS", "EDUCATION", "ACADEMIC BACKGROUND", "ACADEMICS", "QUALIFICATIONS",
+  "RELEVANT COURSEWORK", "EDUCATION", "ACADEMIC BACKGROUND", "ACADEMICS", "QUALIFICATIONS",
   "LANGUAGES", "LANGUAGES KNOWN", "LANGUAGES SPOKEN", "TECHNICAL SKILLS", "SKILLS",
   "CORE SKILLS", "KEY SKILLS", "SOFT SKILLS", "CORE COMPETENCIES", "TOOLS",
   "PROFESSIONAL SUMMARY", "SUMMARY", "OBJECTIVE", "CAREER OBJECTIVE", "PROFILE",
@@ -175,8 +175,10 @@ export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
     // Skip all non-scorable sections (Skills, Education, Summary, Certifications, etc.)
     if (hasRecognizableHeaders && !currentScorable) return;
 
-    // Contact details must NEVER be evaluated as work bullets
+    // Contact details, inline languages, or certification credentials must NEVER be evaluated as work bullets
     if (isContactOrHeaderLine(trimmed)) return;
+    if (/^(?:languages?\s*[:\-]|english|telugu|hindi|spanish|french|german)\b/i.test(trimmed)) return;
+    if (/^(?:certifications?\s*[:\-]|certified\s*in\b|license\s*[:\-])/i.test(trimmed)) return;
 
     const isBullet = BULLET_MARKER_REGEX.test(line);
     const clean = cleanBulletText(trimmed);

@@ -236,16 +236,16 @@ export default function LandingPage() {
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-wrap items-center gap-3.5 pt-1">
-                <Link href="/auth/signup">
-                  <button className="bg-[#087F6E] hover:bg-[#075E53] text-white px-7 py-3.5 text-[15px] font-semibold flex items-center justify-center rounded-xl shadow-xs transition-colors cursor-pointer">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-1 w-full max-w-md sm:max-w-none">
+                <Link href="/auth/signup" className="w-full sm:w-auto">
+                  <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-7 text-[15px] font-semibold flex items-center justify-center rounded-xl shadow-xs transition-colors cursor-pointer">
                     <span>Get Started Free</span>
                   </button>
                 </Link>
 
                 <button
                   onClick={handleTrySample}
-                  className="border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-7 py-3.5 text-[15px] font-semibold rounded-xl flex items-center justify-center shadow-xs transition-colors cursor-pointer"
+                  className="w-full sm:w-auto h-12 border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-7 text-[15px] font-semibold rounded-xl flex items-center justify-center shadow-xs transition-colors cursor-pointer"
                 >
                   <span>Try Sample Resume</span>
                 </button>
@@ -436,8 +436,8 @@ export default function LandingPage() {
 
                 {/* Overlapping Bottom Highlight Pill (Reference Panel 1) */}
                 <div className="mt-3.5 flex items-center justify-center">
-                  <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-white border border-[#DCE7E9] rounded-full shadow-xs text-xs font-semibold text-[#111827]">
-                    <Sparkles className="h-3.5 w-3.5 text-[#087F6E]" />
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-[#DCE7E9] rounded-full shadow-xs text-xs font-semibold text-[#111827]">
+                    <span className="h-2 w-2 rounded-full bg-[#087F6E] shrink-0" />
                     <span>Your resume could be 2x stronger with AI-powered suggestions</span>
                   </div>
                 </div>
@@ -730,10 +730,10 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <Link href="/resume-builder">
-                    <button className="bg-[#087F6E] hover:bg-[#075E53] text-white px-7 py-3.5 text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer">
-                      Build ATS Resume Free
+                <div className="pt-2 w-full sm:w-auto">
+                  <Link href="/resume-builder" className="w-full sm:w-auto block sm:inline-block">
+                    <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-7 text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center">
+                      <span>Build ATS Resume Free</span>
                     </button>
                   </Link>
                 </div>
@@ -797,10 +797,10 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="pt-2">
-                  <Link href="/ats-checker">
-                    <button className="bg-[#087F6E] hover:bg-[#075E53] text-white px-7 py-3.5 text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer">
-                      Scan Your Resume Free
+                <div className="pt-2 w-full sm:w-auto">
+                  <Link href="/ats-checker" className="w-full sm:w-auto block sm:inline-block">
+                    <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-7 text-sm font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center justify-center">
+                      <span>Scan Your Resume Free</span>
                     </button>
                   </Link>
                 </div>
@@ -1111,7 +1111,7 @@ export default function LandingPage() {
       <ScrollFadeIn className="py-20 md:py-28 bg-transparent">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#DCE7E9] text-[#075E53] text-xs font-semibold shadow-xs">
-            <Sparkles className="h-3.5 w-3.5 text-[#087F6E]" />
+            <span className="h-2 w-2 rounded-full bg-[#087F6E] shrink-0" />
             <span>Free Forever Tier • No Credit Card Required</span>
           </div>
 
@@ -1124,17 +1124,16 @@ export default function LandingPage() {
             2 free resume optimizations every month. Start right now in your browser.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-3.5 pt-3">
-            <Link href="/auth/signup">
-              <button className="bg-[#087F6E] hover:bg-[#075E53] text-white px-8 py-3.5 text-[15px] font-semibold flex items-center gap-2 rounded-xl shadow-xs transition-colors cursor-pointer">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3.5 pt-3 w-full max-w-md mx-auto sm:max-w-none">
+            <Link href="/auth/signup" className="w-full sm:w-auto">
+              <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-8 text-[15px] font-semibold flex items-center justify-center rounded-xl shadow-xs transition-colors cursor-pointer">
                 <span>Start For Free</span>
-                <ArrowRight className="h-4 w-4" />
               </button>
             </Link>
 
             <button
               onClick={() => setIsDemoModalOpen(true)}
-              className="border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-8 py-3.5 text-[15px] font-semibold rounded-xl flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              className="w-full sm:w-auto h-12 border border-[#DCE7E9] bg-white hover:bg-[#F5FAFA] text-[#111827] px-8 text-[15px] font-semibold rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
               <Play className="h-4 w-4 text-[#087F6E] fill-[#087F6E]" />
               <span>See a Demo</span>

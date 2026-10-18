@@ -845,10 +845,10 @@ export default function DashboardPage() {
                         size={76}
                       />
                       <div className="flex flex-col items-center gap-1 shrink-0 select-none">
-                        <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
-                          <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-pulse" />
+                        <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a]">
+                          <span className="text-[10px] font-black text-[#0d6e5a]">VS</span>
                         </div>
-                        <span className="text-[9px] sm:text-[10px] font-black text-emerald-600">
+                        <span className="text-[9px] sm:text-[10px] font-black text-[#0d6e5a]">
                           +{delta} pts
                         </span>
                       </div>
@@ -1154,23 +1154,18 @@ export default function DashboardPage() {
               <button
                 onClick={handleOptimize}
                 disabled={optimizing || isPrechecking}
-                className="bg-[#087F6E] hover:bg-[#075E53] text-white px-12 py-3.5 text-sm font-bold flex items-center gap-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#075E53] active:scale-98 text-white px-12 py-3.5 text-sm sm:text-base font-bold flex items-center justify-center gap-2.5 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 {optimizing ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Optimizing
-                    Resume...
+                    <Loader2 className="h-4 w-4 animate-spin" /> Optimizing Resume...
                   </>
                 ) : isPrechecking ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Analyzing
-                    Resume & Missing Metrics...
+                    <Loader2 className="h-4 w-4 animate-spin" /> Analyzing Resume &amp; Missing Metrics...
                   </>
                 ) : (
-                  <>
-                    <Sparkles className="h-4.5 w-4.5" /> Optimize My Resume
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </>
+                  <span>Optimize My Resume</span>
                 )}
               </button>
             </div>
