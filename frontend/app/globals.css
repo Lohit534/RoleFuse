@@ -397,3 +397,17 @@ input:focus, textarea:focus {
     transform: translateY(-10px) rotate(18deg);
   }
 }
+
+/* Floating animation for auth page brand logo */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1.5deg);
+  }
+}
+
+.animate-float-slow {
+  animation: floatSlow 4.5s ease-in-out infinite;
+}

@@ -155,6 +155,23 @@ export default function LandingPage() {
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const { setResumeText, setJobDescription } = useResumeStore();
   const [barReady, setBarReady] = useState(false);
+  const [user, setUser] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed?.user) return parsed.user;
+            }
+          }
+        }
+      } catch {}
+    }
+    return null;
+  });
 
   const [checkingAuth, setCheckingAuth] = useState<boolean>(false);
 
@@ -167,7 +184,10 @@ export default function LandingPage() {
 
     async function checkLoggedIn() {
       try {
-        await supabase.auth.getSession();
+        const { data } = await supabase.auth.getSession();
+        if (isMounted && data?.session?.user) {
+          setUser(data.session.user);
+        }
       } catch (e) {}
 
       if (isMounted) {
@@ -237,9 +257,16 @@ export default function LandingPage() {
 
               {/* CTAs */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-1 w-full max-w-md sm:max-w-none">
-                <Link href="/auth/signup" className="w-full sm:w-auto">
-                  <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-7 text-[15px] font-semibold flex items-center justify-center rounded-xl shadow-xs transition-colors cursor-pointer">
-                    <span>Get Started Free</span>
+                <Link href={user ? "/dashboard" : "/auth/signup"} className="w-full sm:w-auto">
+                  <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-7 text-[15px] font-semibold flex items-center justify-center gap-2 rounded-xl shadow-xs transition-colors cursor-pointer">
+                    {user ? (
+                      <>
+                        <Sparkles className="h-4 w-4 text-white" />
+                        <span>Go to Dashboard</span>
+                      </>
+                    ) : (
+                      <span>Get Started Free</span>
+                    )}
                   </button>
                 </Link>
 
@@ -1125,9 +1152,16 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3.5 pt-3 w-full max-w-md mx-auto sm:max-w-none">
-            <Link href="/auth/signup" className="w-full sm:w-auto">
-              <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-8 text-[15px] font-semibold flex items-center justify-center rounded-xl shadow-xs transition-colors cursor-pointer">
-                <span>Start For Free</span>
+            <Link href={user ? "/dashboard" : "/auth/signup"} className="w-full sm:w-auto">
+              <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-8 text-[15px] font-semibold flex items-center justify-center gap-2 rounded-xl shadow-xs transition-colors cursor-pointer">
+                {user ? (
+                  <>
+                    <Sparkles className="h-4 w-4 text-white" />
+                    <span>Go to Dashboard</span>
+                  </>
+                ) : (
+                  <span>Start For Free</span>
+                )}
               </button>
             </Link>
 

@@ -233,6 +233,7 @@ export function buildOptimizationPrompt(
     "✓ KEEP all URLs and links exactly\n" +
     "✓ KEEP all certifications exactly\n" +
     "✓ KEEP all project names exactly\n" +
+    "✓ EXACT RESUME CONTENT FIDELITY: Parse, preserve, and reflect every single piece of information from the candidate's original resume exactly as written (all roles, titles, schools, GPAs, dates, projects, skills, and languages). Never drop or omit candidate data.\n" +
     "✓ NEVER fabricate companies, employers, universities, or degrees\n" +
     "✓ NEVER change employment dates\n" +
     "✓ NEVER remove any section from the original (you may tighten wording to respect the PAGE BUDGET)\n" +
@@ -265,11 +266,11 @@ export function buildOptimizationPrompt(
     sep + "\n" +
     "JOB DESCRIPTION:\n" +
     sep + "\n" +
-    jobDescription.slice(0, 5000) + "\n\n" +
+    jobDescription.slice(0, 6000) + "\n\n" +
     sep + "\n" +
     "ORIGINAL RESUME:\n" +
     sep + "\n" +
-    resumeText.slice(0, 5000) + "\n\n" +
+    resumeText.slice(0, 10000) + "\n\n" +
     sep + "\n" +
     "OUTPUT FORMAT\n" +
     sep + "\n" +

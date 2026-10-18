@@ -75,7 +75,7 @@ export const FREE_CREDITS_PER_MONTH = 2;
 export const PRO_CREDITS_PER_MONTH = 20;
 export const PRO_MAX_CREDITS_PER_MONTH = 90;
 export const MAX_RESUME_CHARS = 8000;
-export const MAX_JD_CHARS = 5000;
+export const MAX_JD_CHARS = 6000;
 export const MIN_RESUME_CHARS = 100;
 export const MIN_JD_CHARS = 50;
 

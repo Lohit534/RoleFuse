@@ -25,14 +25,21 @@ function customPageRender(pageData: any) {
     let lastY = -1;
     let pageText = "";
     for (const item of items) {
-      if (!item.str || !item.str.trim()) continue;
+      let str = item.str || "";
+      if (!str.trim()) continue;
+      // Normalize symbol/font bullets to standard •
+      str = str.replace(/[\uF000-\uF8FF\u25A0\u25AA\u25CF\u25CB\u2023\u2043]/g, "•");
       const currentY = item.transform ? Math.round(item.transform[5]) : 0;
       if (lastY !== -1 && Math.abs(currentY - lastY) > 4) {
-        pageText += "\n";
+        if (Math.abs(currentY - lastY) > 14) {
+          pageText += "\n\n";
+        } else {
+          pageText += "\n";
+        }
       } else if (pageText.length > 0 && !pageText.endsWith("\n") && !pageText.endsWith(" ")) {
         pageText += " ";
       }
-      pageText += item.str;
+      pageText += str;
       lastY = currentY;
     }
     return pageText;
@@ -118,11 +125,17 @@ export async function POST(request: NextRequest) {
               let lastY = -1;
               let pageText = "";
               for (const item of items) {
-                const str = item.str || "";
+                let str = item.str || "";
                 if (!str.trim()) continue;
+                // Normalize symbol/font bullets to standard •
+                str = str.replace(/[\uF000-\uF8FF\u25A0\u25AA\u25CF\u25CB\u2023\u2043]/g, "•");
                 const y = item.transform ? Math.round(item.transform[5]) : 0;
                 if (lastY !== -1 && Math.abs(y - lastY) > 4) {
-                  pageText += "\n";
+                  if (Math.abs(y - lastY) > 14) {
+                    pageText += "\n\n";
+                  } else {
+                    pageText += "\n";
+                  }
                 } else if (pageText && !pageText.endsWith("\n") && !pageText.endsWith(" ")) {
                   pageText += " ";
                 }

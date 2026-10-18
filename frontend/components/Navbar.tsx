@@ -61,7 +61,23 @@ interface NavbarProps {
 export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed?.user) return parsed.user as User;
+            }
+          }
+        }
+      } catch {}
+    }
+    return null;
+  });
   const [credits, setCredits] = useState<CreditInfo | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -839,9 +855,9 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                   {!isDashboardSubpage && (
                     <Link
                       href="/dashboard"
-                      className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-[#087F6E] font-bold text-xs hover:bg-teal-100 transition-all shadow-2xs"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs transition-all shadow-xs"
                     >
-                      <Sparkles className="h-3.5 w-3.5 text-[#087F6E]" />
+                      <Sparkles className="h-3.5 w-3.5 text-white" />
                       <span>Dashboard</span>
                     </Link>
                   )}

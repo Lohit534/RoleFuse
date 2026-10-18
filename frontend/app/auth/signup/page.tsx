@@ -4,16 +4,11 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import {
   Loader2,
   AlertCircle,
-  Briefcase,
   Check,
-  ShieldCheck,
-  Lock,
   Sparkles,
-  ArrowLeft
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -58,112 +53,103 @@ function SignupFormContent() {
   };
 
   return (
-    <div className="min-h-screen flex bg-transparent text-[#111827] font-sans">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white text-[#111827] font-sans">
       
-      {/* LEFT PANE: Branding Showroom (Desktop Only) */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 bg-gradient-to-br from-[#087F6E] to-[#075E53] relative overflow-hidden">
-        {/* Tech Grid Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:32px_32px] -z-10 pointer-events-none" />
-        {/* Subtle background glow */}
-        <div className="absolute top-1/4 left-1/4 h-[300px] w-[300px] rounded-full bg-white/5 blur-[100px] -z-10" />
+      {/* LEFT PANE: Light Brand Showroom with Soft Ambient Background */}
+      <div className="hidden lg:flex flex-col justify-between w-[52%] p-12 xl:p-16 bg-[#F8FCFB] relative overflow-hidden border-r border-[#DCE7E9]">
+        {/* Subtle soft circular ambient background shapes */}
+        <div className="absolute -top-24 -left-24 w-[480px] h-[480px] rounded-full bg-gradient-to-br from-[#E5F8F5] to-transparent opacity-70 blur-2xl pointer-events-none" />
+        <div className="absolute bottom-10 right-0 w-[420px] h-[420px] rounded-full bg-gradient-to-tl from-[#D4F3EF]/60 to-transparent opacity-60 blur-3xl pointer-events-none" />
 
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 select-none group w-fit transition-transform hover:scale-[1.02]">
-          <img src="/logo.svg" alt="RoleFuse Logo" className="h-5 w-5 object-contain" />
-          <span className="font-extrabold text-[20px] leading-none tracking-tight text-white">
-            RoleFuse
-          </span>
-        </Link>
+        {/* Top Brand Header */}
+        <div className="relative z-10">
+          <Link href="/" className="inline-flex items-center gap-3 select-none group w-fit transition-transform hover:scale-[1.02]">
+            <img src="/logo.svg" alt="RoleFuse Logo" className="h-8 w-8 object-contain" />
+            <span className="font-extrabold text-[24px] tracking-tight text-[#111827]">
+              RoleFuse
+            </span>
+          </Link>
+        </div>
 
-        {/* Headline content */}
-        <div className="space-y-6 max-w-lg my-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-green-100 text-xs font-semibold">
-            <Sparkles className="h-3.5 w-3.5 text-green-200" />
-            <span>AI-Powered Resume Optimization</span>
-          </div>
+        {/* Middle Showcase: New Logo with slightly moving / floating animation */}
+        <div className="relative z-10 my-auto py-10 flex flex-col items-center justify-center">
+          <div className="relative flex items-center justify-center">
+            {/* Soft radial glow */}
+            <div className="absolute w-56 h-56 rounded-full bg-[#087F6E]/12 blur-2xl pointer-events-none" />
 
-          <h2 className="text-4xl font-black tracking-tight leading-tight text-white">
-            Land more interviews starting today.
-          </h2>
-          <p className="text-sm text-green-100 font-medium leading-relaxed">
-            Tailored, ATS-optimised resumes in under 30 seconds — 2 free optimizations every month.
-          </p>
-
-          <div className="space-y-4 pt-4 font-semibold text-xs text-green-50">
-            <div className="flex items-center gap-3">
-              <span className="h-5 w-5 bg-white/15 border border-white/20 text-white rounded-md flex items-center justify-center shrink-0">
-                <Check className="h-3 w-3" />
-              </span>
-              <span>ATS keyword matching for every job description</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="h-5 w-5 bg-white/15 border border-white/20 text-white rounded-md flex items-center justify-center shrink-0">
-                <Check className="h-3 w-3" />
-              </span>
-              <span>Stronger bullet points with measurable impact</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="h-5 w-5 bg-white/15 border border-white/20 text-white rounded-md flex items-center justify-center shrink-0">
-                <Check className="h-3 w-3" />
-              </span>
-              <span>Instant PDF &amp; DOCX export, ready to send</span>
+            {/* Slightly moving floating emblem */}
+            <div className="animate-float-slow transition-transform">
+              <div className="w-36 h-36 xl:w-44 xl:h-44 rounded-3xl bg-white shadow-xl shadow-teal-900/10 border border-teal-100/90 p-7 flex items-center justify-center relative">
+                <img
+                  src="/logo.svg"
+                  alt="RoleFuse Emblem"
+                  className="w-full h-full object-contain filter drop-shadow-sm"
+                />
+                {/* Sparkle badge */}
+                <span className="absolute -top-2.5 -right-2.5 bg-white border border-teal-200 text-teal-600 rounded-full p-1.5 shadow-xs">
+                  <Sparkles className="w-4 h-4 text-[#087F6E]" />
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ATS Scorecard preview */}
-        <div className="max-w-[340px] bg-white/10 border border-white/20 p-5 rounded-xl space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] text-green-100 font-bold uppercase tracking-wider">ATS Score</span>
-            <span className="text-xs text-green-200 font-bold">+57 pts after RoleFuse</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex-1 bg-red-500/20 border border-red-300/30 text-red-100 p-3 text-center rounded-xl">
-              <div className="text-2xl font-black">34</div>
-              <div className="text-[10px] uppercase font-bold text-green-100 mt-0.5">Before</div>
+        {/* Lower Section: Headline + Features List */}
+        <div className="relative z-10 space-y-5 max-w-lg">
+          <h2 className="text-3xl xl:text-[38px] font-black tracking-tight leading-[1.15] text-[#111827]">
+            One tap, then <span className="text-[#087F6E]">27 seconds</span> to your score
+          </h2>
+          <p className="text-sm xl:text-[15px] text-[#526176] font-normal leading-relaxed">
+            No password to invent or forget. 2 free resume optimizations every month, no card.
+          </p>
+
+          {/* Feature Bullet List */}
+          <div className="space-y-2.5 pt-2 text-[13px] font-medium text-[#111827]">
+            <div className="flex items-center gap-2.5">
+              <Check className="h-4 w-4 text-[#087F6E] stroke-[2.5] shrink-0" />
+              <span>ATS keyword matching for any job</span>
             </div>
-            <span className="text-white/60 font-black text-lg">&rarr;</span>
-            <div className="flex-1 bg-green-500/20 border border-green-300/30 text-white p-3 text-center rounded-xl">
-              <div className="text-2xl font-black">91</div>
-              <div className="text-[10px] uppercase font-bold text-green-100 mt-0.5">After</div>
+            <div className="flex items-center gap-2.5">
+              <Check className="h-4 w-4 text-[#087F6E] stroke-[2.5] shrink-0" />
+              <span>Stronger bullet points with real impact</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <Check className="h-4 w-4 text-[#087F6E] stroke-[2.5] shrink-0" />
+              <span>Before &amp; after score — see the improvement</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <Check className="h-4 w-4 text-[#087F6E] stroke-[2.5] shrink-0" />
+              <span>PDF &amp; DOCX download, ready to send</span>
             </div>
           </div>
-          <div className="h-2 w-full rounded-full overflow-hidden bg-white/10">
-            <div className="h-full w-[91%] rounded-full" style={{ background: "linear-gradient(90deg, #ef4444 0%, #eab308 50%, #22c55e 100%)" }} />
-          </div>
+
+          <p className="text-[11px] text-[#526176]/70 pt-2 font-normal">
+            Your data is never sold. Resume content is used only to generate your tailored resume.
+          </p>
         </div>
       </div>
 
-      {/* RIGHT PANE: Interactive Google Signup Block */}
-      <div className="flex flex-col justify-between w-full lg:w-1/2 p-8 md:p-12 min-h-screen relative overflow-hidden bg-transparent">
-        {/* Top bar */}
-        <div className="flex justify-between items-center w-full gap-4">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#526176] hover:text-[#111827] transition-colors group py-1.5 px-2.5 -ml-2.5 rounded-lg hover:bg-[#E5F8F5]/60"
-          >
-            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5 text-[#087F6E]" />
-            <span>Back to home</span>
+      {/* RIGHT PANE: Clean Centered Card Form */}
+      <div className="flex flex-col justify-between w-full lg:w-[48%] p-8 sm:p-12 min-h-screen bg-white">
+        {/* Mobile Brand Bar */}
+        <div className="flex lg:hidden justify-between items-center w-full mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 select-none">
+            <img src="/logo.svg" alt="RoleFuse" className="h-6 w-6 object-contain" />
+            <span className="font-extrabold text-lg text-[#111827]">RoleFuse</span>
           </Link>
-          <p className="text-xs text-[#526176] shrink-0">
-            Already have an account?{" "}
-            <Link
-              href={searchParams.get("sample") === "true" ? "/auth/login?sample=true" : "/auth/login"}
-              className="font-bold text-[#087F6E] hover:underline"
-            >
-              Sign In
-            </Link>
-          </p>
+          <Link href="/" className="text-xs font-semibold text-[#526176] hover:text-[#111827]">
+            ← Back to home
+          </Link>
         </div>
 
-        {/* Center Card */}
-        <div className="w-full max-w-[420px] mx-auto my-auto p-8 rounded-2xl bg-white border border-[#DCE7E9] shadow-sm space-y-6">
-          <div className="space-y-1.5 text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111827]">
+        {/* Centered Auth Box */}
+        <div className="w-full max-w-[420px] mx-auto my-auto space-y-7">
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl sm:text-[36px] font-extrabold tracking-tight text-[#111827]">
               Create your account
             </h1>
-            <p className="text-xs sm:text-sm text-[#526176] font-medium">
-              Join thousands of job seekers optimizing their resumes with RoleFuse.
+            <p className="text-sm text-[#526176] font-normal">
+              Sign up to start improving your resume.
             </p>
           </div>
 
@@ -175,77 +161,84 @@ function SignupFormContent() {
             </div>
           )}
 
-          {/* Google Sign Up Button */}
-          <div className="space-y-3 pt-2">
-            <Button
+          {/* Card with Google Button */}
+          <div className="bg-white border border-[#DCE7E9] rounded-2xl p-6 sm:p-8 shadow-xs space-y-5">
+            <button
               type="button"
               onClick={handleGoogleSignup}
               disabled={loading}
-              className="w-full bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-200 hover:border-slate-300 text-slate-800 font-bold h-12 flex items-center justify-center gap-3.5 rounded-xl shadow-xs hover:shadow-sm transition-all text-sm group cursor-pointer"
+              className="w-full h-12 bg-white hover:bg-slate-50 active:bg-slate-100 border border-slate-200 hover:border-slate-300 text-slate-800 font-bold text-sm flex items-center justify-center gap-3 rounded-xl shadow-xs hover:shadow-sm transition-all cursor-pointer disabled:opacity-60"
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-[#0d6e5a]" />
+                  <Loader2 className="h-4 w-4 animate-spin text-[#087F6E]" />
                   <span>Connecting to Google...</span>
                 </>
               ) : (
                 <>
-                  <div className="h-7 w-7 rounded-lg bg-white border border-slate-200/90 flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform">
-                    <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                    </svg>
-                  </div>
-                  <span className="font-bold text-slate-800 tracking-tight">Sign up with Google</span>
+                  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                  </svg>
+                  <span>Continue with Google</span>
                 </>
               )}
-            </Button>
-          </div>
+            </button>
 
-          {/* Security & Verification Guarantees */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-2.5">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-              <ShieldCheck className="h-4 w-4 text-[#0d6e5a] shrink-0" />
-              <span>Verified Google Accounts Only</span>
-            </div>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
-              We exclusively use Google OAuth 2.0 to ensure 100% verified, authentic profiles. No passwords to remember or lose.
-            </p>
-            <div className="flex items-center gap-4 pt-1 text-[11px] font-semibold text-slate-500 border-t border-slate-200/60">
-              <span className="flex items-center gap-1.5">
-                <Lock className="h-3 w-3 text-slate-400" />
-                256-bit SSL Encrypted
+            {/* free • no card needed divider */}
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-100" />
+              </div>
+              <span className="relative bg-white px-3 text-[11px] text-[#526176] font-medium tracking-wide">
+                free • no card needed
               </span>
-              <span>•</span>
-              <span>Zero Spam Guarantee</span>
             </div>
           </div>
 
-          {/* Checklist */}
-          <div className="space-y-2 pt-1 text-xs font-medium text-slate-600">
+          {/* Trust Checkmarks below card */}
+          <div className="space-y-2 text-xs text-[#526176] font-medium pl-1">
             <div className="flex items-center gap-2">
-              <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-              <span>2 free AI resume optimizations every month</span>
+              <Check className="h-3.5 w-3.5 text-[#087F6E] stroke-[2.5] shrink-0" />
+              <span>We never sell your data or post anything</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-              <span>Interactive step-by-step resume builder</span>
+              <Check className="h-3.5 w-3.5 text-[#087F6E] stroke-[2.5] shrink-0" />
+              <span>Delete everything from Account, any time</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-              <span>Instant ATS keyword scoring &amp; recommendations</span>
-            </div>
+          </div>
+
+          {/* Legal terms & privacy note */}
+          <div className="text-[11px] text-[#526176] leading-relaxed text-center sm:text-left pt-1">
+            By signing up you agree to our{" "}
+            <Link href="/terms" className="text-[#087F6E] hover:underline font-semibold">Terms</Link>{" "}
+            &amp;{" "}
+            <Link href="/privacy" className="text-[#087F6E] hover:underline font-semibold">Privacy Policy</Link>.{" "}
+            Anonymized resume data may be used to improve RoleFuse&apos;s AI. You can opt out in Data Preferences.
+          </div>
+
+          {/* Back to home */}
+          <div className="text-center pt-2">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#526176] hover:text-[#087F6E] transition-colors"
+            >
+              <span>← Back to home</span>
+            </Link>
           </div>
         </div>
 
-        {/* Footer info */}
-        <div className="text-center text-[11px] text-slate-400 select-none">
-          By signing up, you agree to our{" "}
-          <Link href="/terms" className="underline hover:text-slate-600">Terms of Service</Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="underline hover:text-slate-600">Privacy Policy</Link>.
+        {/* Bottom switch link between Login and Signup */}
+        <div className="text-center text-xs text-[#526176] pt-6">
+          Already have an account?{" "}
+          <Link
+            href={searchParams.get("sample") === "true" ? "/auth/login?sample=true" : "/auth/login"}
+            className="text-[#087F6E] font-bold hover:underline"
+          >
+            Sign in
+          </Link>
         </div>
       </div>
     </div>
@@ -255,8 +248,8 @@ function SignupFormContent() {
 export default function SignupPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#0d6e5a]" />
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FCFB]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#087F6E]" />
       </div>
     }>
       <SignupFormContent />

@@ -21,7 +21,7 @@ export default function JobDescriptionInput({
   const [activeTab, setActiveTab] = useState<"paste" | "url">("paste");
   const wordCount = countWords(value);
   const charCount = (value || "").length;
-  const isOverLimit = charCount > 5000;
+  const isOverLimit = charCount > 6000;
 
   const [url, setUrl] = useState("");
   const [fetching, setFetching] = useState(false);
@@ -198,7 +198,7 @@ export default function JobDescriptionInput({
         <div className="flex items-center gap-2 p-2.5 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
           <span>
-            Warning: {charCount} characters — exceeds 5000 char limit and may be truncated.
+            Warning: {charCount} characters — exceeds 6000 char limit and may be truncated.
           </span>
         </div>
       )}
