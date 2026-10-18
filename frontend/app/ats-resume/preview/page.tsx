@@ -21,9 +21,6 @@ import {
   ShieldCheck,
   Eye,
   Layers,
-  Copy,
-  Printer,
-  FileText,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -58,7 +55,7 @@ function TemplatePreviewContent() {
   }, []);
 
   const template = getTemplateById(activeTemplateId);
-  const { candidate, styleVariant, atsScore, name, tagline } = template;
+  const { candidate, layoutType, atsScore, name, tagline, hasPhoto, photoUrl } = template;
   const isSerif = template.fontFamily === "serif";
 
   // Handle switching template
@@ -260,216 +257,574 @@ function TemplatePreviewContent() {
             </div>
           </div>
 
-          {/* Full-Size Document Showcase Centerpiece */}
+          {/* Full-Size Document Showcase Centerpiece (Increased Size) */}
           <div className="flex justify-center">
-            <div className="w-full max-w-[840px] bg-slate-100/60 p-4 sm:p-8 rounded-2xl border border-slate-200 shadow-inner flex justify-center">
-              {/* The Actual A4 Sheet Preview (Increased Size) */}
-              <div
-                id="resume-document-sheet"
-                className="w-full max-w-[800px] min-h-[1050px] bg-white text-slate-900 shadow-2xl border border-slate-300 p-8 sm:p-14 rounded-xs selection:bg-[#087F6E]/15"
-                style={{
-                  fontFamily: isSerif
-                    ? 'Times-Roman, "Times New Roman", Times, Georgia, serif'
-                    : 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                }}
-              >
-                {/* 1. Header: Full Name, Role Title & Contact Information */}
-                <header
-                  className={`space-y-1.5 pb-4 ${
-                    styleVariant === "executive" ? "text-center" : "text-left"
-                  }`}
-                >
-                  <h2
-                    className={`font-black text-slate-950 tracking-tight leading-tight ${
-                      styleVariant === "tech"
-                        ? "text-2xl sm:text-3xl uppercase tracking-wider"
-                        : styleVariant === "finance"
-                        ? "text-2xl sm:text-3xl tracking-wide"
-                        : styleVariant === "executive"
-                        ? "text-2xl sm:text-3xl tracking-widest uppercase font-serif"
-                        : "text-2xl sm:text-3xl font-extrabold"
-                    }`}
-                  >
-                    {candidate.fullName}
-                  </h2>
-
-                  <div className="text-xs sm:text-sm font-bold text-[#087F6E]">
-                    {candidate.title}
-                  </div>
-
-                  <div
-                    className={`text-xs text-slate-600 flex flex-wrap gap-x-2.5 gap-y-1 pt-0.5 ${
-                      styleVariant === "executive" ? "justify-center" : "justify-start"
-                    }`}
-                  >
-                    <span>{candidate.location}</span>
-                    <span>•</span>
-                    <span>{candidate.phone}</span>
-                    <span>•</span>
-                    <span className="font-medium text-slate-800">{candidate.email}</span>
-                    <span>•</span>
-                    <span>{candidate.linkedin}</span>
-                    {candidate.website && (
-                      <>
-                        <span>•</span>
-                        <span className="text-[#087F6E]">{candidate.website}</span>
-                      </>
-                    )}
-                  </div>
-                </header>
-
-                {/* Primary Section Divider */}
+            <div className="w-full max-w-[860px] bg-slate-100/70 p-4 sm:p-8 rounded-2xl border border-slate-200 shadow-inner flex justify-center">
+              {/* ─────────────────────────────────────────────────────────────
+                  TEMPLATE 1: Classic Academic / Data Analyst (Image 1 Style)
+                  ───────────────────────────────────────────────────────────── */}
+              {layoutType === "image1-academic" && (
                 <div
-                  className={`w-full mb-5 ${
-                    styleVariant === "tech"
-                      ? "h-[2px] bg-slate-950"
-                      : styleVariant === "finance"
-                      ? "h-[1.5px] bg-[#087F6E]"
-                      : styleVariant === "executive"
-                      ? "h-[1.5px] bg-slate-800"
-                      : "h-[1px] bg-slate-300"
-                  }`}
-                />
+                  id="resume-document-sheet"
+                  className="w-full max-w-[800px] min-h-[1050px] bg-white text-slate-900 shadow-2xl border border-slate-300 p-8 sm:p-14 rounded-xs selection:bg-[#087F6E]/15 text-[12px] sm:text-[13px] leading-relaxed space-y-4"
+                  style={{ fontFamily: 'Times-Roman, "Times New Roman", Times, Georgia, serif' }}
+                >
+                  {/* Centered LaTeX Style Header */}
+                  <header className="text-center space-y-1 pb-2">
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-widest text-black uppercase">
+                      {candidate.fullName}
+                    </h2>
+                    <div className="text-xs text-slate-700">
+                      {candidate.location} — {candidate.phone} — {candidate.email}
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      LinkedIn — GitHub
+                    </div>
+                  </header>
 
-                {/* 2. Professional Summary Section */}
-                <section className="space-y-2 mb-6">
-                  <h3
-                    className={`text-xs sm:text-sm font-black uppercase text-slate-950 tracking-wider pb-1 border-b ${
-                      styleVariant === "tech"
-                        ? "border-slate-900"
-                        : "border-slate-200"
-                    }`}
-                  >
-                    {styleVariant === "tech"
-                      ? "PROFESSIONAL PROFILE"
-                      : "PROFESSIONAL SUMMARY"}
-                  </h3>
-                  <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed text-justify">
-                    {candidate.summary}
-                  </p>
-                </section>
+                  {/* Professional Summary */}
+                  <section className="space-y-1.5">
+                    <h3 className="font-bold text-sm sm:text-base text-black">
+                      Professional Summary
+                    </h3>
+                    <p className="text-slate-700 leading-relaxed text-justify">
+                      {candidate.summary}
+                    </p>
+                  </section>
 
-                {/* 3. Core Competencies / Technical Skills Section */}
-                <section className="space-y-2 mb-6">
-                  <h3
-                    className={`text-xs sm:text-sm font-black uppercase text-slate-950 tracking-wider pb-1 border-b ${
-                      styleVariant === "tech"
-                        ? "border-slate-900"
-                        : "border-slate-200"
-                    }`}
-                  >
-                    {styleVariant === "tech"
-                      ? "TECHNICAL EXPERTISE"
-                      : "CORE COMPETENCIES"}
-                  </h3>
-                  <div className="space-y-1.5 text-xs sm:text-[13px] text-slate-700">
-                    {candidate.skills.map((skillGroup, idx) => (
-                      <div key={idx} className="leading-snug">
-                        <span className="font-bold text-slate-900">
-                          {skillGroup.label}:{" "}
-                        </span>
-                        <span>{skillGroup.items}</span>
+                  {/* Technical Skills with Horizontal Rule */}
+                  <section className="space-y-1.5">
+                    <h3 className="font-bold text-sm sm:text-base text-black border-b border-black pb-0.5">
+                      Technical Skills
+                    </h3>
+                    <div className="space-y-1 text-slate-800">
+                      {candidate.skills.map((skill, idx) => (
+                        <div key={idx} className="leading-snug">
+                          <span className="font-bold text-black">{skill.label}: </span>
+                          <span>{skill.items}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Projects with Horizontal Rule */}
+                  <section className="space-y-2.5">
+                    <h3 className="font-bold text-sm sm:text-base text-black border-b border-black pb-0.5">
+                      Projects
+                    </h3>
+                    {candidate.projects?.map((proj, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between items-baseline font-bold text-black text-sm">
+                          <span>{proj.title}</span>
+                          {proj.tech && (
+                            <span className="italic font-normal text-xs text-slate-600">
+                              {proj.tech}
+                            </span>
+                          )}
+                        </div>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-700">
+                          {proj.bullets.map((bullet, bIdx) => (
+                            <li key={bIdx} className="pl-1">
+                              {bullet}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     ))}
-                  </div>
-                </section>
+                  </section>
 
-                {/* 4. Professional Work Experience Section */}
-                <section className="space-y-4 mb-6">
-                  <h3
-                    className={`text-xs sm:text-sm font-black uppercase text-slate-950 tracking-wider pb-1 border-b ${
-                      styleVariant === "tech"
-                        ? "border-slate-900"
-                        : "border-slate-200"
-                    }`}
-                  >
-                    PROFESSIONAL EXPERIENCE
-                  </h3>
-
-                  {candidate.experience.map((exp, expIdx) => (
-                    <div key={expIdx} className="space-y-1.5">
-                      {/* Job Header: Role & Dates */}
-                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between text-xs sm:text-[13px] gap-1">
-                        <span className="font-bold text-slate-950 text-sm sm:text-base">
-                          {exp.role}
-                        </span>
-                        <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
-                          {exp.dates}
-                        </span>
+                  {/* Internship */}
+                  <section className="space-y-2">
+                    <h3 className="font-bold text-sm sm:text-base text-black border-b border-black pb-0.5">
+                      Internship
+                    </h3>
+                    {candidate.experience.map((exp, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="font-bold text-black text-sm">
+                          {exp.role} — <span className="font-semibold text-slate-800">{exp.company}</span>
+                        </div>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-700">
+                          {exp.bullets.map((bullet, bIdx) => (
+                            <li key={bIdx} className="pl-1">
+                              {bullet}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
+                    ))}
+                  </section>
 
-                      {/* Company & Location */}
-                      <div className="text-xs font-semibold text-[#087F6E]">
-                        {exp.company} — {exp.location}
+                  {/* Education */}
+                  <section className="space-y-2">
+                    <h3 className="font-bold text-sm sm:text-base text-black border-b border-black pb-0.5">
+                      Education
+                    </h3>
+                    {candidate.education.map((edu, idx) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="flex justify-between font-bold text-black">
+                          <span>{edu.degree}</span>
+                          <span className="font-semibold text-slate-700">{edu.dates}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-700">
+                          <span>{edu.school}</span>
+                          {edu.score && <span className="font-bold text-black">{edu.score}</span>}
+                        </div>
                       </div>
+                    ))}
+                  </section>
 
-                      {/* Accomplishment Bullet Points */}
-                      <ul className="space-y-1.5 pt-1 text-xs sm:text-[12.5px] text-slate-700 pl-4 list-disc leading-relaxed text-justify">
-                        {exp.bullets.map((bullet, bIdx) => (
-                          <li key={bIdx} className="pl-1">
-                            {bullet}
+                  {/* Certifications */}
+                  {candidate.certifications && (
+                    <section className="space-y-1.5">
+                      <h3 className="font-bold text-sm sm:text-base text-black border-b border-black pb-0.5">
+                        Certifications
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-0.5 text-slate-700">
+                        {candidate.certifications.map((cert, idx) => (
+                          <li key={idx} className="pl-1">
+                            {cert}
                           </li>
                         ))}
                       </ul>
-                    </div>
-                  ))}
-                </section>
+                    </section>
+                  )}
 
-                {/* 5. Education Section */}
-                <section className="space-y-2 mb-6">
-                  <h3
-                    className={`text-xs sm:text-sm font-black uppercase text-slate-950 tracking-wider pb-1 border-b ${
-                      styleVariant === "tech"
-                        ? "border-slate-900"
-                        : "border-slate-200"
-                    }`}
-                  >
-                    EDUCATION
-                  </h3>
-                  {candidate.education.map((edu, eduIdx) => (
-                    <div key={eduIdx} className="space-y-0.5">
-                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between text-xs sm:text-[13px]">
-                        <span className="font-bold text-slate-950">
-                          {edu.degree}
-                        </span>
-                        <span className="text-xs text-slate-500 font-semibold">
-                          {edu.dates}
-                        </span>
+                  {/* Languages */}
+                  {candidate.languages && (
+                    <section className="space-y-1">
+                      <h3 className="font-bold text-sm sm:text-base text-black border-b border-black pb-0.5">
+                        Languages
+                      </h3>
+                      <div className="text-slate-700">
+                        {candidate.languages.join(", ")}
                       </div>
-                      <div className="text-xs text-slate-600 flex justify-between">
-                        <span>
-                          {edu.school} — {edu.location}
-                        </span>
-                        {edu.honors && (
-                          <span className="italic font-medium text-slate-700">
-                            {edu.honors}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </section>
+                    </section>
+                  )}
+                </div>
+              )}
 
-                {/* 6. Certifications Section */}
-                <section className="space-y-2">
-                  <h3
-                    className={`text-xs sm:text-sm font-black uppercase text-slate-950 tracking-wider pb-1 border-b ${
-                      styleVariant === "tech"
-                        ? "border-slate-900"
-                        : "border-slate-200"
-                    }`}
-                  >
-                    CERTIFICATIONS &amp; CREDENTIALS
-                  </h3>
-                  <ul className="space-y-1 text-xs sm:text-[12.5px] text-slate-700 pl-4 list-disc">
-                    {candidate.certifications.map((cert, cIdx) => (
-                      <li key={cIdx} className="pl-1 font-medium">
-                        {cert}
-                      </li>
+              {/* ─────────────────────────────────────────────────────────────
+                  TEMPLATE 2: Modern Java Backend Developer (Image 2 Style)
+                  ───────────────────────────────────────────────────────────── */}
+              {layoutType === "image2-backend" && (
+                <div
+                  id="resume-document-sheet"
+                  className="w-full max-w-[800px] min-h-[1050px] bg-white text-slate-900 shadow-2xl border border-slate-300 p-8 sm:p-14 rounded-xs selection:bg-[#087F6E]/15 text-[12px] sm:text-[13px] leading-relaxed space-y-4"
+                  style={{ fontFamily: 'Times-Roman, "Times New Roman", Times, Georgia, serif' }}
+                >
+                  {/* Header */}
+                  <header className="text-center space-y-1 pb-2">
+                    <h2 className="text-2xl sm:text-4xl font-normal tracking-widest text-slate-900 uppercase">
+                      {candidate.fullName}
+                    </h2>
+                    <div className="text-sm font-bold text-slate-800">
+                      {candidate.title}
+                    </div>
+                    <div className="text-xs text-slate-600 flex flex-wrap justify-center items-center gap-x-2 gap-y-1 pt-1">
+                      <span>📞 {candidate.phone}</span>
+                      <span>✉ {candidate.email}</span>
+                      <span>💼 {candidate.linkedin}</span>
+                      <span>💻 {candidate.github}</span>
+                      {candidate.portfolio && <span>🌐 {candidate.portfolio}</span>}
+                    </div>
+                  </header>
+
+                  {/* Summary */}
+                  <section className="space-y-1">
+                    <h3 className="font-bold text-sm sm:text-base text-slate-900">
+                      Summary
+                    </h3>
+                    <p className="text-slate-700 leading-relaxed text-justify">
+                      {candidate.summary}
+                    </p>
+                  </section>
+
+                  {/* Skills with Horizontal Rule */}
+                  <section className="space-y-1.5">
+                    <h3 className="font-bold text-sm sm:text-base text-slate-900 border-b border-slate-700 pb-0.5">
+                      Skills
+                    </h3>
+                    <div className="space-y-1 text-slate-800">
+                      {candidate.skills.map((skill, idx) => (
+                        <div key={idx} className="leading-snug">
+                          <span className="font-bold text-slate-900">{skill.label}: </span>
+                          <span>{skill.items}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Experience with Horizontal Rule */}
+                  <section className="space-y-3">
+                    <h3 className="font-bold text-sm sm:text-base text-slate-900 border-b border-slate-700 pb-0.5">
+                      Experience
+                    </h3>
+                    {candidate.experience.map((exp, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between items-baseline font-bold text-slate-950 text-sm">
+                          <span>{exp.role}</span>
+                          <span className="font-bold text-slate-900 text-xs sm:text-sm">{exp.dates}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-700 italic text-xs sm:text-sm">
+                          <span>{exp.company}</span>
+                          <span>{exp.tech}</span>
+                        </div>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-700 pt-0.5">
+                          {exp.bullets.map((bullet, bIdx) => (
+                            <li key={bIdx} className="pl-1">
+                              {bullet}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
-                  </ul>
-                </section>
-              </div>
+                  </section>
+
+                  {/* Projects with Horizontal Rule */}
+                  <section className="space-y-3">
+                    <h3 className="font-bold text-sm sm:text-base text-slate-900 border-b border-slate-700 pb-0.5">
+                      Projects
+                    </h3>
+                    {candidate.projects?.map((proj, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between items-baseline font-bold text-slate-950 text-sm">
+                          <span>
+                            {proj.title}
+                            {proj.tech && <span className="font-normal text-slate-700"> — {proj.tech}</span>}
+                          </span>
+                          {proj.year && <span className="font-bold text-slate-900 text-xs sm:text-sm">{proj.year}</span>}
+                        </div>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-700 pt-0.5">
+                          {proj.bullets.map((bullet, bIdx) => (
+                            <li key={bIdx} className="pl-1">
+                              {bullet}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </section>
+
+                  {/* Awards & Certifications */}
+                  {candidate.certifications && (
+                    <section className="space-y-1.5">
+                      <h3 className="font-bold text-sm sm:text-base text-slate-900 border-b border-slate-700 pb-0.5">
+                        Awards &amp; Certifications
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-1 text-slate-700">
+                        {candidate.certifications.map((cert, idx) => (
+                          <li key={idx} className="pl-1">
+                            {cert}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+
+                  {/* Education */}
+                  <section className="space-y-1">
+                    <h3 className="font-bold text-sm sm:text-base text-slate-900 border-b border-slate-700 pb-0.5">
+                      Education
+                    </h3>
+                    {candidate.education.map((edu, idx) => (
+                      <div key={idx} className="flex justify-between font-bold text-slate-900">
+                        <span>{edu.degree} — {edu.school}</span>
+                        <span>{edu.dates}</span>
+                      </div>
+                    ))}
+                  </section>
+                </div>
+              )}
+
+              {/* ─────────────────────────────────────────────────────────────
+                  TEMPLATE 3: High-Contrast Tech ATS (Image 3 Style)
+                  ───────────────────────────────────────────────────────────── */}
+              {layoutType === "image3-boldtech" && (
+                <div
+                  id="resume-document-sheet"
+                  className="w-full max-w-[800px] min-h-[1050px] bg-white text-slate-900 shadow-2xl border-2 border-slate-950 p-8 sm:p-14 rounded-xs selection:bg-[#087F6E]/15 text-[12px] sm:text-[13px] leading-relaxed space-y-4"
+                  style={{ fontFamily: 'Times-Roman, "Times New Roman", Times, Georgia, serif' }}
+                >
+                  {/* Header */}
+                  <header className="text-center space-y-1 pb-2 border-b-2 border-black">
+                    <h2 className="text-2xl sm:text-4xl font-black tracking-widest text-black uppercase">
+                      {candidate.fullName}
+                    </h2>
+                    <div className="text-xs text-slate-800">
+                      {candidate.location} — {candidate.phone} — {candidate.email}
+                    </div>
+                    <div className="text-xs text-slate-600">
+                      LinkedIn — GitHub
+                    </div>
+                  </header>
+
+                  {/* Career Objective */}
+                  <section className="space-y-1">
+                    <h3 className="font-black text-sm sm:text-base text-black uppercase">
+                      Career Objective:
+                    </h3>
+                    <p className="text-slate-800 leading-relaxed text-justify">
+                      {candidate.summary}
+                    </p>
+                  </section>
+
+                  {/* Technical Skills with Thick Rule */}
+                  <section className="space-y-1.5">
+                    <h3 className="font-black text-sm sm:text-base text-black uppercase border-b-2 border-black pb-0.5">
+                      Technical Skills
+                    </h3>
+                    <div className="space-y-1 text-slate-900">
+                      {candidate.skills.map((skill, idx) => (
+                        <div key={idx} className="leading-snug">
+                          <span className="font-bold text-black">{skill.label}: </span>
+                          <span>{skill.items}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Projects with Thick Rule */}
+                  <section className="space-y-2.5">
+                    <h3 className="font-black text-sm sm:text-base text-black uppercase border-b-2 border-black pb-0.5">
+                      Projects
+                    </h3>
+                    {candidate.projects?.map((proj, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex justify-between items-baseline font-bold text-black text-sm">
+                          <span>{proj.title}</span>
+                          {proj.tech && (
+                            <span className="italic font-normal text-xs text-slate-700">
+                              {proj.tech}
+                            </span>
+                          )}
+                        </div>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-800">
+                          {proj.bullets.map((bullet, bIdx) => (
+                            <li key={bIdx} className="pl-1">
+                              {bullet}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </section>
+
+                  {/* Internship */}
+                  <section className="space-y-2">
+                    <h3 className="font-black text-sm sm:text-base text-black uppercase border-b-2 border-black pb-0.5">
+                      Internship
+                    </h3>
+                    {candidate.experience.map((exp, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <div className="font-bold text-black text-sm">
+                          {exp.role} — <span className="font-semibold text-slate-800">{exp.company}</span>
+                        </div>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-800">
+                          {exp.bullets.map((bullet, bIdx) => (
+                            <li key={bIdx} className="pl-1">
+                              {bullet}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </section>
+
+                  {/* Education */}
+                  <section className="space-y-1.5">
+                    <h3 className="font-black text-sm sm:text-base text-black uppercase border-b-2 border-black pb-0.5">
+                      Education
+                    </h3>
+                    {candidate.education.map((edu, idx) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="flex justify-between font-bold text-black">
+                          <span>{edu.degree}</span>
+                          <span className="font-semibold">{edu.dates}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-700">
+                          <span>{edu.school}</span>
+                          {edu.score && <span className="font-bold text-black">{edu.score}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </section>
+
+                  {/* Certifications */}
+                  {candidate.certifications && (
+                    <section className="space-y-1">
+                      <h3 className="font-black text-sm sm:text-base text-black uppercase border-b-2 border-black pb-0.5">
+                        Certifications
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-0.5 text-slate-800">
+                        {candidate.certifications.map((cert, idx) => (
+                          <li key={idx} className="pl-1">
+                            {cert}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+
+                  {/* Achievements */}
+                  {candidate.achievements && (
+                    <section className="space-y-1">
+                      <h3 className="font-black text-sm sm:text-base text-black uppercase border-b-2 border-black pb-0.5">
+                        Achievements
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-0.5 text-slate-800">
+                        {candidate.achievements.map((ach, idx) => (
+                          <li key={idx} className="pl-1">
+                            {ach}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+
+                  {/* Languages */}
+                  {candidate.languages && (
+                    <section className="space-y-1">
+                      <h3 className="font-black text-sm sm:text-base text-black uppercase border-b-2 border-black pb-0.5">
+                        Languages
+                      </h3>
+                      <div className="text-slate-800">
+                        {candidate.languages.join(", ")}
+                      </div>
+                    </section>
+                  )}
+                </div>
+              )}
+
+              {/* ─────────────────────────────────────────────────────────────
+                  TEMPLATE 4: Modern Executive with Photo Avatar (Photo Header)
+                  ───────────────────────────────────────────────────────────── */}
+              {layoutType === "image4-photo" && (
+                <div
+                  id="resume-document-sheet"
+                  className="w-full max-w-[800px] min-h-[1050px] bg-white text-slate-900 shadow-2xl border border-slate-300 p-8 sm:p-14 rounded-xs selection:bg-[#087F6E]/15 text-[12px] sm:text-[13px] leading-relaxed space-y-5"
+                  style={{ fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
+                >
+                  {/* Photo Header */}
+                  <header className="flex flex-col sm:flex-row items-center sm:items-start gap-5 pb-5 border-b-2 border-teal-500">
+                    <div className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-2xl overflow-hidden border-2 border-[#087F6E] shadow-md shrink-0 bg-slate-100">
+                      <img
+                        src={photoUrl || "/avatars/user-1.jpg"}
+                        alt={candidate.fullName}
+                        className="w-full h-full object-cover select-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5 text-center sm:text-left flex-1 min-w-0">
+                      <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
+                        {candidate.fullName}
+                      </h2>
+                      <div className="text-sm sm:text-base font-bold text-[#087F6E]">
+                        {candidate.title}
+                      </div>
+                      <div className="text-xs text-slate-600 flex flex-wrap justify-center sm:justify-start gap-x-3 gap-y-1 pt-1">
+                        <span>📍 {candidate.location}</span>
+                        <span>📞 {candidate.phone}</span>
+                        <span>✉ {candidate.email}</span>
+                        <span>💼 {candidate.linkedin}</span>
+                        {candidate.portfolio && <span>🌐 {candidate.portfolio}</span>}
+                      </div>
+                    </div>
+                  </header>
+
+                  {/* Executive Profile */}
+                  <section className="space-y-1.5">
+                    <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#087F6E]" />
+                      Executive Profile
+                    </h3>
+                    <p className="text-slate-700 leading-relaxed text-justify">
+                      {candidate.summary}
+                    </p>
+                  </section>
+
+                  {/* Core Competencies */}
+                  <section className="space-y-2">
+                    <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#087F6E]" />
+                      Core Competencies
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {candidate.skills.map((skill, idx) => (
+                        <div key={idx} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                          <span className="font-bold text-slate-900 block mb-0.5">{skill.label}</span>
+                          <span className="text-slate-600 text-[11.5px]">{skill.items}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Professional Experience */}
+                  <section className="space-y-3.5">
+                    <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#087F6E]" />
+                      Professional Experience
+                    </h3>
+                    {candidate.experience.map((exp, idx) => (
+                      <div key={idx} className="space-y-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between text-xs sm:text-sm gap-1">
+                          <span className="font-bold text-slate-950 text-sm sm:text-base">
+                            {exp.role}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">
+                            {exp.dates}
+                          </span>
+                        </div>
+                        <div className="text-xs font-semibold text-[#087F6E]">
+                          {exp.company} — {exp.location}
+                        </div>
+                        <ul className="list-disc pl-5 space-y-1 text-slate-700 pt-0.5">
+                          {exp.bullets.map((bullet, bIdx) => (
+                            <li key={bIdx} className="pl-1">
+                              {bullet}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </section>
+
+                  {/* Education */}
+                  <section className="space-y-2">
+                    <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#087F6E]" />
+                      Education
+                    </h3>
+                    {candidate.education.map((edu, idx) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="flex justify-between font-bold text-slate-900 text-xs sm:text-sm">
+                          <span>{edu.degree}</span>
+                          <span className="font-semibold text-slate-500">{edu.dates}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600 text-xs">
+                          <span>{edu.school}</span>
+                          {edu.score && <span className="font-semibold text-slate-800">{edu.score}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </section>
+
+                  {/* Certifications */}
+                  {candidate.certifications && (
+                    <section className="space-y-1.5">
+                      <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-[#087F6E]" />
+                        Certifications &amp; Credentials
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-1 text-slate-700 text-xs">
+                        {candidate.certifications.map((cert, idx) => (
+                          <li key={idx} className="pl-1">
+                            {cert}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
