@@ -283,7 +283,7 @@ export default function DashboardPage() {
   const [showRoadmapAccordion, setShowRoadmapAccordion] = useState(false);
   const [showCoverLetterAccordion, setShowCoverLetterAccordion] =
     useState(false);
-  const [resultsSubTab, setResultsSubTab] = useState<"roadmap" | "cover_letter">("roadmap");
+  const [resultsSubTab, setResultsSubTab] = useState<"roadmap" | "bullets" | "cover_letter">("roadmap");
   // Removed isAILoading state
   const [isSavedResumesOpen, setIsSavedResumesOpen] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -341,7 +341,7 @@ export default function DashboardPage() {
         window.history.replaceState({}, "", "/dashboard");
       }
     } else {
-      // Check if there is an active optimization result to restore so reloading does not discard it
+      // Restore active optimization result if present, without overwriting user's active typed text
       const activeSession = loadActiveSession();
       if (activeSession) {
         sampleLoadedRef.current = true;
@@ -349,17 +349,14 @@ export default function DashboardPage() {
         if (activeSession.beforeScore) setBeforeScore(activeSession.beforeScore);
         if (activeSession.afterScore) setAfterScore(activeSession.afterScore);
         if (activeSession.resumeId) setCurrentResumeId(activeSession.resumeId);
-        if (activeSession.resumeText) setResumeText(activeSession.resumeText);
-        if (activeSession.jobDescription) setJobDescription(activeSession.jobDescription);
+        if (!resumeText && activeSession.resumeText) setResumeText(activeSession.resumeText);
+        if (!jobDescription && activeSession.jobDescription) setJobDescription(activeSession.jobDescription);
         if (activeSession.roadmapContent) setRoadmapContent(activeSession.roadmapContent);
         if (activeSession.coverLetter) setCoverLetterGenerated(activeSession.coverLetter);
         if (activeSession.trackerAdded) setTrackerAdded(true);
-      } else {
-        // Normal refresh or direct navigation: reset store and start clean
-        resetStore();
       }
     }
-  }, [resetStore, setResumeText, setJobDescription]);
+  }, [setResumeText, setJobDescription]);
 
   useEffect(() => {
     async function checkAuth() {
@@ -900,16 +897,6 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans">
-      {/* Bullet Enrichment Modal */}
-      {showBulletModal && (
-        <BulletEnrichmentModal
-          isOpen={showBulletModal}
-          bullets={weakBullets}
-          onClose={handleBulletEnrichmentCancel}
-          onSubmit={handleBulletEnrichmentSubmit}
-        />
-      )}
-
       <Navbar refreshKey={refreshKey} />
 
       <main className="relative flex-1 mx-auto max-w-[1280px] w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-8">
@@ -1120,7 +1107,7 @@ export default function DashboardPage() {
                   onClick={() => setResultsSubTab("roadmap")}
                   className={`flex items-center gap-2 py-3 px-1 text-xs font-bold transition-all relative border-b-2 cursor-pointer ${
                     resultsSubTab === "roadmap"
-                      ? "border-[#0d6e5a] text-[#0d6e5a]"
+                      ? "border-[#087F6E] text-[#087F6E]"
                       : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
                 >
@@ -1130,10 +1117,23 @@ export default function DashboardPage() {
 
                 <button
                   type="button"
+                  onClick={() => setResultsSubTab("bullets")}
+                  className={`flex items-center gap-2 py-3 px-1 text-xs font-bold transition-all relative border-b-2 cursor-pointer ${
+                    resultsSubTab === "bullets"
+                      ? "border-[#087F6E] text-[#087F6E]"
+                      : "border-transparent text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  <span>Interactive Bullet Improver</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setResultsSubTab("cover_letter")}
                   className={`flex items-center gap-2 py-3 px-1 text-xs font-bold transition-all relative border-b-2 cursor-pointer ${
                     resultsSubTab === "cover_letter"
-                      ? "border-[#0d6e5a] text-[#0d6e5a]"
+                      ? "border-[#087F6E] text-[#087F6E]"
                       : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
                 >
@@ -1248,7 +1248,46 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* ─── TAB 2: TAILORED COVER LETTER ─── */}
+              {/* ─── TAB 2: INTERACTIVE BULLET IMPROVER ─── */}
+              {resultsSubTab === "bullets" && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-md bg-[#087F6E] flex items-center justify-center text-white shadow-xs shrink-0">
+                        <TrendingUp className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-slate-900">Interactive Bullet Point Improver</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Scan and optimize individual bullet points on your resume text. We identify missing action verbs and metrics.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 sm:p-5">
+                    <BulletImprover
+                      resumeText={optimizeResult?.optimizedText || resumeText}
+                      jobDescription={jobDescription}
+                      userId={user?.id || ""}
+                      userPlan={userPlan}
+                      onChange={(newText, wasImproved) => {
+                        setOptimizeResult((prev: any) =>
+                          prev ? { ...prev, optimizedText: newText } : prev,
+                        );
+                        let newCount = bulletImprovementsCount;
+                        if (wasImproved) {
+                          newCount += 1;
+                          setBulletImprovementsCount(newCount);
+                        }
+                        handleReScoreBefore(newText, newCount);
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ─── TAB 3: TAILORED COVER LETTER ─── */}
               {resultsSubTab === "cover_letter" && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">

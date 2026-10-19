@@ -454,12 +454,8 @@ export async function POST(request: NextRequest) {
       // Limit to top 4 high-priority questions so the user gets quick answers and fast results
       const finalQuestions = filteredList.slice(0, 4);
 
-      if (finalQuestions.length > 0) {
-        logger.info(`[optimize] Fast detection identified ${finalQuestions.length} missing/placeholder fields. Returning needsInput immediately.`);
-        await writer.write(encoder.encode(`data: ${JSON.stringify({ needsInput: true, questions: finalQuestions })}\n\n`));
-        await writer.close();
-        return;
-      }
+      // Proceed directly with optimization without modal interruption
+      logger.info(`[optimize] Proceeding directly to full ATS optimization without interruption.`);
     }
 
     // ── TASK 2: Second AI call — replace all placeholders with user answers first ──

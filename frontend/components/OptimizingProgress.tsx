@@ -229,13 +229,9 @@ export default function OptimizingProgress({
                 return;
               }
 
-              // Missing metrics / details detected -> show Question Box styled like Image 2
-              if (data.needsInput && Array.isArray(data.questions) && data.questions.length > 0) {
-                setMissingQuestions(data.questions);
-                setCurrentQuestionIndex(0);
-                awaitingInputRef.current = true;
-                setAwaitingInput(true);
-                return;
+              if (data.needsInput) {
+                // Do not interrupt with modal, proceed directly with optimization
+                continue;
               }
 
               if (data.step) {
@@ -484,10 +480,10 @@ export default function OptimizingProgress({
     );
   }
 
-  // ── RENDER STATIC PROGRESS PAGE (MATCHING USER SCREENSHOT) ──
+  // ── RENDER STATIC PROGRESS PAGE (ROLEFUSE TEAL / EMERALD BRAND THEME) ──
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto select-none">
-      {/* Circular progress ring with lavender track and indigo arc matching user screenshot */}
+      {/* Circular progress ring with brand teal/emerald track and active arc */}
       <div className="relative w-36 h-36 mb-6 flex-shrink-0">
         <svg className="w-36 h-36 -rotate-90" viewBox="0 0 120 120">
           <circle
@@ -495,7 +491,7 @@ export default function OptimizingProgress({
             cy="60"
             r="52"
             fill="none"
-            stroke="#ede9fe"
+            stroke="#E5F8F5"
             strokeWidth="8"
           />
           <circle
@@ -503,7 +499,7 @@ export default function OptimizingProgress({
             cy="60"
             r="52"
             fill="none"
-            stroke="#6366f1"
+            stroke="#087F6E"
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={`${2 * Math.PI * 52}`}
@@ -512,8 +508,8 @@ export default function OptimizingProgress({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
-          <span className="text-3xl font-bold text-slate-900 tracking-tight">{Math.round(progress)}%</span>
-          <span className="text-xs text-slate-400 font-medium mt-0.5">
+          <span className="text-3xl font-black text-slate-900 tracking-tight">{Math.round(progress)}%</span>
+          <span className="text-xs text-[#087F6E] font-semibold mt-0.5">
             {progress >= 100 ? "complete" : `~${Math.max(1, Math.round((100 - progress) * 0.22))}s left`}
           </span>
         </div>
@@ -521,15 +517,15 @@ export default function OptimizingProgress({
 
       {/* Header slot */}
       <div className="h-16 flex flex-col items-center justify-center text-center w-full max-w-md px-2 select-none mb-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight line-clamp-1">
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight line-clamp-1">
           {STEPS.find((s) => s.id === currentStepId)?.label ?? "Parsing the job description"}
         </h2>
-        <p className="text-slate-400 text-xs sm:text-sm mt-1 font-normal line-clamp-2">
-          Stay on this tab — we'll ask you a couple of things if we need them.
+        <p className="text-slate-500 text-xs sm:text-sm mt-1 font-normal line-clamp-2">
+          Stay on this tab — aligning keywords and optimizing formatting for ATS.
         </p>
       </div>
 
-      {/* Steps checklist — strictly fixed row heights (h-[52px]) to prevent layout jumping */}
+      {/* Steps checklist — strictly fixed row heights (h-[52px]) */}
       <div className="w-full max-w-lg space-y-2.5 flex-shrink-0">
         {STEPS.map((step) => {
           const s = steps.find((x) => x.id === step.id);
@@ -546,19 +542,19 @@ export default function OptimizingProgress({
                   status === "done"
                     ? "bg-[#ecfdf5] border border-[#d1fae5] shadow-xs"
                     : status === "running"
-                    ? "bg-[#f5f3ff] border border-[#ede9fe] shadow-xs"
+                    ? "bg-[#E5F8F5] border border-[#D4F3EF] shadow-xs"
                     : "bg-white/60 border border-slate-100 opacity-60"
                 }
               `}
             >
               <div className="flex items-center gap-3.5">
                 {status === "done" ? (
-                  <div className="w-5 h-5 rounded-full bg-[#10b981] flex items-center justify-center flex-shrink-0 text-white shadow-2xs">
+                  <div className="w-5 h-5 rounded-full bg-[#087F6E] flex items-center justify-center flex-shrink-0 text-white shadow-2xs">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                 ) : status === "running" ? (
                   <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
-                    <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-[#087F6E] border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : (
                   <div className="w-4 h-4 rounded-full border border-slate-300 flex-shrink-0" />
@@ -567,9 +563,9 @@ export default function OptimizingProgress({
                 <span
                   className={`text-xs sm:text-sm ${
                     status === "done"
-                      ? "text-slate-800 font-medium"
+                      ? "text-slate-800 font-semibold"
                       : status === "running"
-                      ? "text-indigo-600 font-medium"
+                      ? "text-[#087F6E] font-bold"
                       : "text-slate-400 font-medium"
                   }`}
                 >
@@ -578,11 +574,11 @@ export default function OptimizingProgress({
               </div>
 
               {status === "done" ? (
-                <span className="text-[11px] text-slate-400 font-normal">
+                <span className="text-[11px] text-[#087F6E] font-medium">
                   {s?.duration || "Done"}
                 </span>
               ) : status === "running" ? (
-                <span className="text-[11px] text-indigo-500 font-normal">
+                <span className="text-[11px] text-[#087F6E] font-semibold">
                   running
                 </span>
               ) : (
