@@ -241,7 +241,7 @@ export default function ChatGptResumePage() {
               </p>
             </div>
 
-            {/* FastHire In-Article CTA Box */}
+            {/* RoleFuse In-Article CTA Box */}
             <div className="bg-teal-50/60 border border-teal-200 rounded-2xl p-5 space-y-3">
               <div className="font-heading font-extrabold text-sm sm:text-base text-slate-900">
                 Build your best resume yet

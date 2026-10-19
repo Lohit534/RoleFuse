@@ -189,7 +189,7 @@ export default function GstInvoiceModal({
 
         {/* Modal Actions Bottom (Hidden on Print) */}
         <div className="px-4 sm:px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between print:hidden">
-          <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium">support@fasthire.ai</span>
+          <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium">support@rolefuse.ai</span>
           <div className="flex gap-2">
             <Button
               variant="outline"

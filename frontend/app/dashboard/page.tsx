@@ -12,7 +12,7 @@ import {
   generateSkillRoadmap,
   generateMultiSkillRoadmap,
 } from "@/lib/roadmap-generator";
-import { extractTechTerms } from "@/lib/ats/keywords";
+import { extractTechTerms, isTechnicalKeyword } from "@/lib/ats/keywords";
 import ResumeViewer from "@/components/ResumeViewer";
 import BulletImprover from "@/components/BulletImprover";
 import { hasQuantifiedMetric } from "@/lib/ats/scorer";
@@ -52,7 +52,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Bell,
-  Edit3,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
@@ -296,7 +296,7 @@ export default function DashboardPage() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const sampleLoadedRef = useRef(false);
 
-  const [viewMode, setViewMode] = useState<"result" | "editor">("result");
+  const [viewMode, setViewMode] = useState<"result" | "editor">("editor");
 
   useEffect(() => {
     const handleOpenEditor = () => {
@@ -739,7 +739,9 @@ export default function DashboardPage() {
       ...(afterScore?.missingKeywords || []),
       ...extractTechTerms(jobDescription || ""),
       ...extractTechTerms(optimizeResult?.optimizedText || "")
-    ])).filter(s => s && s.length > 1 && !/^(resume|summary|skills|experience|education|project|teamwork|development|software|engineer|manager|developer|analyst|overview|responsibilities)$/i.test(s)).slice(0, 16);
+    ]))
+      .filter((s) => s && s.length > 1 && isTechnicalKeyword(s))
+      .slice(0, 16);
   }, [optimizeResult, afterScore, jobDescription]);
 
   const handleOptimizeAnother = () => {
@@ -753,6 +755,7 @@ export default function DashboardPage() {
     setRoadmapContent(null);
     setCoverLetterGenerated(null);
     setTrackerAdded(false);
+    setViewMode("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -950,29 +953,8 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
-            {/* Actions — responsive on mobile */}
+            {/* Actions — responsive on mobile: old clean layout with + Job Tracker, Start Over, History */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
-              <Button
-                onClick={() => {
-                  setViewMode("editor");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                size="sm"
-                className="flex-1 sm:flex-none bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-md px-3.5 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <Edit3 className="h-3.5 w-3.5 text-[#0d6e5a]" />
-                <span>Edit &amp; Re-optimize</span>
-              </Button>
-
-              <Button
-                onClick={handleOptimizeAnother}
-                size="sm"
-                className="flex-1 sm:flex-none bg-[#0d6e5a] hover:bg-[#075E53] text-white text-xs font-bold h-9 rounded-md px-3.5 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span>New Resume</span>
-              </Button>
-
               <Button
                 onClick={() => {
                   if (trackerAdded) {
@@ -986,7 +968,16 @@ export default function DashboardPage() {
                 className="flex-1 sm:flex-none bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-md px-3.5 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Briefcase className="h-3.5 w-3.5 text-[#0d6e5a]" />
-                <span>{trackerAdded ? "In Tracker" : "Add Tracker"}</span>
+                <span>{trackerAdded ? "In Tracker" : "+ Job Tracker"}</span>
+              </Button>
+
+              <Button
+                onClick={handleOptimizeAnother}
+                size="sm"
+                className="flex-1 sm:flex-none bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-md px-3.5 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+                <span>Start Over</span>
               </Button>
 
               <Link href="/dashboard/history" className="flex-1 sm:flex-none">
@@ -1003,31 +994,6 @@ export default function DashboardPage() {
         ) : (
           /* Header Title Block */
           <div className="text-center space-y-3 mb-8 select-none">
-            {optimizeResult && (
-              <div className="max-w-2xl mx-auto mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-2.5 text-left">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                  <div>
-                    <span className="text-xs sm:text-sm font-bold text-emerald-950">
-                      Latest Optimization Score: {afterScore?.overall ?? 0}%
-                    </span>
-                    <p className="text-[11px] text-emerald-800 font-medium">
-                      You can modify inputs below and re-optimize, or return to your results.
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setViewMode("result");
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold h-8 px-4 rounded-md shadow-xs cursor-pointer shrink-0"
-                >
-                  View Latest Results →
-                </Button>
-              </div>
-            )}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#111827] tracking-tight leading-[1.15]">
               Improve Your Resume{" "}
               <span className="bg-gradient-to-r from-[#087F6E] via-[#075E53] to-[#087F6E] bg-clip-text text-transparent">
@@ -1300,7 +1266,7 @@ export default function DashboardPage() {
                   </div>
 
                   <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                    FastHire uses your optimized resume highlights and target job description to draft an executive-level cover letter.
+                    RoleFuse uses your optimized resume highlights and target job description to draft an executive-level cover letter.
                   </p>
 
                   {!coverLetterGenerated && !generatingLetter && (

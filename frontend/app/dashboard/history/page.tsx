@@ -743,7 +743,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      `Took my resume from ${resume.scoreBefore}% to ${resume.scoreAfter}% ATS match with FastHire — took under a minute: https://fasthire-ai.vercel.app`
+                      `Took my resume from ${resume.scoreBefore}% to ${resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.vercel.app`
                     );
                     toast.success("Share text copied to clipboard!");
                   }}
@@ -1091,7 +1091,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
           </div>
 
           <p className="text-xs text-slate-600 leading-relaxed font-medium">
-            FastHire uses your optimized resume highlights and the target job description to draft an executive-level cover letter.
+            RoleFuse uses your optimized resume highlights and the target job description to draft an executive-level cover letter.
           </p>
 
           {!coverLetterGenerated && !generatingLetter && (
@@ -1152,7 +1152,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
             </div>
 
             <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 font-sans">
-              &ldquo;Took my resume from {resume.scoreBefore}% to {resume.scoreAfter}% ATS match with FastHire — took under a minute: https://fasthire-ai.vercel.app&rdquo;
+              &ldquo;Took my resume from {resume.scoreBefore}% to {resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.vercel.app&rdquo;
             </div>
 
             <div className="grid grid-cols-3 gap-2.5 pt-2">
@@ -1180,7 +1180,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                 type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    `Took my resume from ${resume.scoreBefore}% to ${resume.scoreAfter}% ATS match with FastHire — took under a minute: https://fasthire-ai.vercel.app`
+                    `Took my resume from ${resume.scoreBefore}% to ${resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.vercel.app`
                   );
                   toast.success("Share text copied to clipboard!");
                   setShowShareModal(false);

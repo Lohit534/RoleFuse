@@ -69,7 +69,7 @@ export default function BestFreeResumeBuildersPage() {
 
         {/* Content Section */}
         <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-10">
-          {/* Core FastHire Capabilities */}
+          {/* Core RoleFuse Capabilities */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
             <h2 className="font-heading font-extrabold text-xl text-slate-900">
               Why Job Seekers Choose RoleFuse

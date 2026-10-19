@@ -657,7 +657,7 @@ export function AuthSkeleton() {
  * Fallback & default exports
  */
 export function PageMotionLoader({
-  title = "Loading FastHire Workspace...",
+  title = "Loading RoleFuse Workspace...",
   subtitle = "Preparing ATS scoring engine and optimization models...",
 }: {
   title?: string;

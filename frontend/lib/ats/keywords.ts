@@ -189,6 +189,41 @@ function cleanWord(w: string): string {
   return cleaned;
 }
 
+const ALL_TECH_LOWER = new Set<string>([
+  ...TECH_TERMS.map((t) => t.toLowerCase()),
+  ...PHRASE_TERMS.map((p) => p.toLowerCase()),
+]);
+
+export function isTechnicalKeyword(term: string): boolean {
+  if (!term || typeof term !== "string") return false;
+  const clean = term.trim().toLowerCase().replace(/^[•\-\*\s]+/, "").replace(/[,\.]*$/, "");
+  if (!clean || clean.length < 2) return false;
+  if (STOP_WORDS.has(clean) || HR_FILLER_WORDS.has(clean)) return false;
+
+  // Direct set match
+  if (ALL_TECH_LOWER.has(clean) || TECH_MAP.has(clean)) return true;
+  if (PHRASE_TERMS.some((p) => p.toLowerCase() === clean)) return true;
+
+  // Check singular/plural variants (e.g. Microservices -> microservice, APIs -> api, Pipelines -> pipeline)
+  const singular = clean.replace(/s$/, "");
+  if (ALL_TECH_LOWER.has(singular) || TECH_MAP.has(singular)) return true;
+
+  // Well-known tech aliases and abbreviations
+  const TECH_ALIASES: Record<string, boolean> = {
+    "k8s": true, "postgres": true, "reactjs": true, "nextjs": true, "nodejs": true,
+    "vuejs": true, "angularjs": true, "restful api": true, "rest api": true, "rest apis": true,
+    "microservices": true, "ci/cd": true, "cicd": true, "devops": true,
+    "ml": true, "ai": true, "nlp": true, "llm": true, "llms": true, "genai": true,
+    "rag": true, "nosql": true, "sql": true, "bi": true, "sre": true, "qa": true,
+    "tdd": true, "bdd": true, "oop": true, "api": true, "apis": true,
+    "etl": true, "aws lambda": true, "docker container": true, "docker containers": true
+  };
+
+  if (TECH_ALIASES[clean] || TECH_ALIASES[singular]) return true;
+
+  return false;
+}
+
 export function extractKeywords(text: string): Set<string> {
   const keywords = new Set<string>();
   if (!text) return keywords;
@@ -197,7 +232,7 @@ export function extractKeywords(text: string): Set<string> {
   const textTechTerms = extractTechTerms(text);
   for (const tech of textTechTerms) keywords.add(tech);
 
-  // 2. Extract line-by-line / clause-by-clause to prevent cross-clause nonsense bigrams
+  // 2. Extract line-by-line / clause-by-clause, keeping strictly technical terms
   const clauses = text.split(/[\r\n,;•\-\*\u2022▸►→|]+/);
   for (const clause of clauses) {
     const rawTokens = clause
@@ -205,12 +240,10 @@ export function extractKeywords(text: string): Set<string> {
       .map(cleanWord)
       .filter((w) => w.length > 2 && !STOP_WORDS.has(w) && !HR_FILLER_WORDS.has(w) && !/^\d+$/.test(w));
 
-    // Single words
+    // Single words - only add recognized technical terms
     for (const word of rawTokens) {
       if (TECH_MAP.has(word)) {
         keywords.add(TECH_MAP.get(word)!);
-      } else {
-        keywords.add(word);
       }
     }
 
@@ -221,8 +254,8 @@ export function extractKeywords(text: string): Set<string> {
       const bigram = `${w1} ${w2}`;
       if (TECH_MAP.has(bigram)) {
         keywords.add(TECH_MAP.get(bigram)!);
-      } else if (PHRASE_TERMS.some(p => p.toLowerCase() === bigram)) {
-        keywords.add(bigram);
+      } else if (PHRASE_TERMS.some((p) => p.toLowerCase() === bigram)) {
+        keywords.add(bigram.replace(/\b\w/g, (c) => c.toUpperCase()));
       }
     }
   }

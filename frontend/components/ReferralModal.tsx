@@ -27,7 +27,7 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
     bonusCredits: number;
   }>({
     referralCode: "REF-WAITING",
-    referralLink: "https://fasthireai.vercel.app/auth/signup?ref=...",
+    referralLink: "https://rolefuse.vercel.app/auth/signup?ref=...",
     totalReferrals: 0,
     bonusCredits: 0,
   });

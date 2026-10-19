@@ -28,10 +28,10 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.vercel.app"),
   title: {
-    default: "RoleFuse — #1 Free AI ATS Resume Optimizer & ATS Scanner",
+    default: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",
     template: "%s | RoleFuse — AI Resume Optimization",
   },
-  description: "RoleFuse is the #1 free AI ATS resume optimization platform and free ATS resume scanner. Match missing keywords against any job description, optimize formatting for Workday, Taleo, & Greenhouse, and score 90+ on recruiter ATS filters in under 30 seconds.",
+  description: "RoleFuse is the leading free AI ATS resume optimization platform and free ATS resume scanner. Match missing keywords against any job description, optimize formatting for Workday, Taleo, & Greenhouse, and score 90+ on recruiter ATS filters in under 30 seconds.",
   keywords: [
     "rolefuse",
     "rolefuse ai",
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "RoleFuse — #1 Free AI ATS Resume Optimizer & ATS Scanner",
+    title: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",
     description: "Score 90+ on recruiter ATS filters in 30 seconds. Scan against any job description, uncover missing keywords, and build recruiter-ready resumes 100% free.",
     url: process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.vercel.app",
     siteName: "RoleFuse",
@@ -74,7 +74,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "RoleFuse — #1 Free AI ATS Resume Optimizer & ATS Scanner",
+    title: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",
     description: "Scan against any job description, uncover missing keywords, and score 90+ on ATS filters in 30 seconds. 100% free.",
     images: ["/logo.png"],
   },
@@ -91,11 +91,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/logo.svg", type: "image/svg+xml" },
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico", sizes: "48x48" },
       { url: "/icon.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: "/favicon.ico",
+    shortcut: "/logo.svg",
     apple: [
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }
     ],
@@ -178,7 +179,7 @@ const structuredData = {
           "name": "What is RoleFuse?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "RoleFuse is the #1 free AI-powered ATS resume optimization and scanner platform that scans your resume against any target job description, detects missing keywords, and boosts your score to 90+ in under 30 seconds."
+            "text": "RoleFuse is the leading free AI-powered ATS resume optimization and scanner platform that scans your resume against any target job description, detects missing keywords, and boosts your score to 90+ in under 30 seconds."
           }
         },
         {

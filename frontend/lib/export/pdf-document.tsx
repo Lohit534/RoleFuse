@@ -530,7 +530,7 @@ export function getCleanExportFilename(text: string, ext = ".pdf", jobTitle?: st
     candidateName = "Resume";
   }
 
-  candidateName = candidateName.replace(/_?optimized/gi, "").replace(/_?fasthire/gi, "").trim();
+  candidateName = candidateName.replace(/_?optimized/gi, "").replace(/_?fasthire/gi, "").replace(/_?rolefuse/gi, "").trim();
   if (!candidateName) candidateName = "Resume";
 
   if (!candidateName.toUpperCase().includes("RESUME")) {

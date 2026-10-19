@@ -105,7 +105,7 @@ export function DataPreferencesModal({ isOpen, onClose }: DataPreferencesModalPr
             Data preferences
           </h2>
           <p className="text-sm text-slate-500 font-normal">
-            Control how your data is used to improve FastHire.
+            Control how your data is used to improve RoleFuse.
           </p>
         </div>
 
@@ -113,7 +113,7 @@ export function DataPreferencesModal({ isOpen, onClose }: DataPreferencesModalPr
         <div className="border border-slate-200/90 rounded-2xl p-5 flex items-start justify-between gap-4 bg-white hover:border-slate-300 transition-colors">
           <div className="space-y-1 select-none flex-1">
             <h3 className="text-sm font-bold text-slate-900">
-              Help improve FastHire's AI
+              Help improve RoleFuse's AI
             </h3>
             <p className="text-xs text-slate-500 leading-relaxed">
               Share anonymized resume &amp; job data for model training. Never sold, never attached to your name.
@@ -124,7 +124,7 @@ export function DataPreferencesModal({ isOpen, onClose }: DataPreferencesModalPr
               {[
                 "All names, emails & phone numbers stripped before storage",
                 "Never sold to third parties or recruiters",
-                "Used only to improve FastHire's keyword matching accuracy",
+                "Used only to improve RoleFuse's keyword matching accuracy",
                 "You can withdraw consent at any time — takes effect immediately",
               ].map((line) => (
                 <li key={line} className="flex items-start gap-1.5 text-[11px] text-slate-500 font-medium">
@@ -165,7 +165,7 @@ export function DataPreferencesModal({ isOpen, onClose }: DataPreferencesModalPr
             className={`h-2 w-2 rounded-full shrink-0 ${enabled ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`}
           />
           {enabled
-            ? "Your anonymized data helps train FastHire's AI. Thank you!"
+            ? "Your anonymized data helps train RoleFuse's AI. Thank you!"
             : "You have opted out. Your data will not be used for training."}
         </div>
 

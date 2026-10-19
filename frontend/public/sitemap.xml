@@ -1,51 +1,129 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://fasthireai.vercel.app/</loc>
-    <lastmod>2026-07-27</lastmod>
+    <loc>https://rolefuse.vercel.app/</loc>
+    <lastmod>2026-10-19</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://fasthireai.vercel.app/auth/login</loc>
-    <lastmod>2026-07-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://fasthireai.vercel.app/auth/signup</loc>
-    <lastmod>2026-07-27</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://fasthireai.vercel.app/dashboard</loc>
-    <lastmod>2026-07-27</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://rolefuse.vercel.app/ats-checker</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://fasthireai.vercel.app/dashboard/resumes</loc>
-    <lastmod>2026-07-27</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://rolefuse.vercel.app/ats-resume</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://fasthireai.vercel.app/dashboard/pricing</loc>
-    <lastmod>2026-07-27</lastmod>
+    <loc>https://rolefuse.vercel.app/ats-optimizer</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resume-builder</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/products</loc>
+    <lastmod>2026-10-19</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://fasthireai.vercel.app/history</loc>
-    <lastmod>2026-07-27</lastmod>
+    <loc>https://rolefuse.vercel.app/dashboard/pricing</loc>
+    <lastmod>2026-10-19</lastmod>
     <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resources</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resources/ats-formatting-mistakes</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://fasthireai.vercel.app/job-tracker</loc>
-    <lastmod>2026-07-27</lastmod>
-    <changefreq>weekly</changefreq>
+    <loc>https://rolefuse.vercel.app/resources/best-free-resume-builders</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resources/best-resume-fonts</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resources/how-ats-works</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resources/resume-keywords</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resources/tailor-resume</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resources/convert-resume-ats</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resources/chatgpt-resume</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/resources/blog</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/auth/login</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/auth/signup</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/privacy</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://rolefuse.vercel.app/terms</loc>
+    <lastmod>2026-10-19</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
 </urlset>

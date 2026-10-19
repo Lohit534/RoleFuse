@@ -83,6 +83,74 @@ export default function OptimizingProgress({
   const currentStepRef = useRef<number>(1);
   const backendResultRef = useRef<any>(null);
   const backendStepDoneRef = useRef<Record<number, boolean>>({});
+  const stepTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const finishOptimization = (result: any) => {
+    setProgress(100);
+    setSteps((prev) =>
+      prev.map((s) => ({
+        ...s,
+        status: "done",
+        duration: s.duration || (s.id === 7 ? "1.6s" : "2.0s"),
+      }))
+    );
+    setTimeout(() => {
+      if (isMountedRef.current) onComplete(result);
+    }, 500);
+  };
+
+  const advanceToNext = (fromStep: number) => {
+    if (!isMountedRef.current || awaitingInputRef.current) return;
+
+    const next = fromStep + 1;
+    if (next > 7) {
+      // Step 7 has now completed running!
+      if (backendResultRef.current) {
+        finishOptimization(backendResultRef.current);
+      } else {
+        // Wait on Step 7 in running state until backend arrives
+        const interval = setInterval(() => {
+          if (!isMountedRef.current) {
+            clearInterval(interval);
+            return;
+          }
+          if (backendResultRef.current) {
+            clearInterval(interval);
+            finishOptimization(backendResultRef.current);
+          }
+        }, 300);
+      }
+      return;
+    }
+
+    // Mark previous step done with realistic display duration
+    const durationStr = fromStep === 1 ? "2.8s" : `${(1.6 + fromStep * 0.2).toFixed(1)}s`;
+    setSteps((prev) =>
+      prev.map((s) => {
+        if (s.id === fromStep) return { ...s, status: "done", duration: durationStr };
+        if (s.id === next) return { ...s, status: "running" };
+        return s;
+      })
+    );
+
+    currentStepRef.current = next;
+    setCurrentStepId(next);
+
+    // Pacing: ensure each step is displayed nicely
+    // Step 7 ("Almost ready") is given 2.1s so the user clearly sees it running
+    const stepDelays: Record<number, number> = {
+      2: 2200,
+      3: 2000,
+      4: 2200,
+      5: 2000,
+      6: 1900,
+      7: 2100,
+    };
+    const delay = stepDelays[next] || 2000;
+    stepTimerRef.current = setTimeout(() => {
+      advanceToNext(next);
+    }, delay);
+  };
 
   // 1. Continuous smooth loading: smooth micro-ticker & fun facts rotation
   useEffect(() => {
@@ -105,61 +173,16 @@ export default function OptimizingProgress({
       });
     }, 380);
 
+    // Start Step 1 running, then advance to Step 2
+    stepTimerRef.current = setTimeout(() => {
+      advanceToNext(1);
+    }, 2200);
+
     return () => {
       isMountedRef.current = false;
       clearInterval(factInterval);
       clearInterval(smoothProgressInterval);
-    };
-  }, []);
-
-  // 2. Continuous Step Progression: Paces each step smoothly so no step is ever skipped
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-
-    const advanceToNext = (fromStep: number) => {
-      if (!isMountedRef.current || awaitingInputRef.current) return;
-
-      const next = fromStep + 1;
-      if (next > 7) {
-        if (backendResultRef.current) {
-          setProgress(100);
-          setSteps((prev) =>
-            prev.map((s) => ({ ...s, status: "done", duration: s.duration || "2.1s" }))
-          );
-          setTimeout(() => {
-            if (isMountedRef.current) onComplete(backendResultRef.current);
-          }, 400);
-        }
-        return;
-      }
-
-      // Mark fromStep as done with realistic display duration
-      const durationStr = `${(1.5 + (fromStep * 0.3)).toFixed(1)}s`;
-      setSteps((prev) =>
-        prev.map((s) => {
-          if (s.id === fromStep) return { ...s, status: "done", duration: durationStr };
-          if (s.id === next) return { ...s, status: "running" };
-          return s;
-        })
-      );
-
-      currentStepRef.current = next;
-      setCurrentStepId(next);
-
-      // Pacing for step progression
-      const delay = next === 4 ? 2600 : next === 5 ? 2400 : 2000;
-      timer = setTimeout(() => {
-        advanceToNext(next);
-      }, delay);
-    };
-
-    // Start Step 1 running, then advance to Step 2
-    timer = setTimeout(() => {
-      advanceToNext(1);
-    }, 2000);
-
-    return () => {
-      clearTimeout(timer);
+      if (stepTimerRef.current) clearTimeout(stepTimerRef.current);
     };
   }, []);
 
@@ -223,15 +246,11 @@ export default function OptimizingProgress({
 
               if (data.result) {
                 backendResultRef.current = data.result;
-                // If UI has already reached step 7, complete immediately
+                // If UI has already reached step 7, complete smoothly after step 7 runs
                 if (currentStepRef.current >= 7) {
-                  setProgress(100);
-                  setSteps((prev) =>
-                    prev.map((s) => ({ ...s, status: "done", duration: s.duration || "2.1s" }))
-                  );
                   setTimeout(() => {
-                    if (isMountedRef.current) onComplete(data.result);
-                  }, 400);
+                    if (isMountedRef.current) finishOptimization(data.result);
+                  }, 1500);
                 }
               }
             } catch (e) {
@@ -257,17 +276,22 @@ export default function OptimizingProgress({
     awaitingInputRef.current = false;
     setAwaitingInput(false);
 
-    // Smoothly resume at Step 4
+    // Smoothly resume step progression at Step 4
     setSteps((prev) =>
       prev.map((s) => {
         if (s.id <= 3) return { ...s, status: "done", duration: s.duration || "2.2s" };
         if (s.id === 4) return { ...s, status: "running" };
-        return s;
+        return { ...s, status: "pending" };
       })
     );
     currentStepRef.current = 4;
     setCurrentStepId(4);
     setProgress(52);
+
+    if (stepTimerRef.current) clearTimeout(stepTimerRef.current);
+    stepTimerRef.current = setTimeout(() => {
+      advanceToNext(4);
+    }, 2200);
 
     try {
       const res = await fetch("/api/optimize", {
@@ -315,13 +339,11 @@ export default function OptimizingProgress({
 
             if (data.result) {
               backendResultRef.current = data.result;
-              setProgress(100);
-              setSteps((prev) =>
-                prev.map((s) => ({ ...s, status: "done", duration: s.duration || "2.1s" }))
-              );
-              setTimeout(() => {
-                if (isMountedRef.current) onComplete(data.result);
-              }, 400);
+              if (currentStepRef.current >= 7) {
+                setTimeout(() => {
+                  if (isMountedRef.current) finishOptimization(data.result);
+                }, 1500);
+              }
             }
           } catch (e) {
             // Ignore incomplete chunks
@@ -462,10 +484,10 @@ export default function OptimizingProgress({
     );
   }
 
-  // ── RENDER STATIC PROGRESS PAGE (MATCHING USER IMAGE 1) ──
+  // ── RENDER STATIC PROGRESS PAGE (MATCHING USER SCREENSHOT) ──
   return (
     <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto select-none">
-      {/* Circular progress ring in Teal (#0d6e5a) with light teal track (#ccfbf1) */}
+      {/* Circular progress ring with lavender track and indigo arc matching user screenshot */}
       <div className="relative w-36 h-36 mb-6 flex-shrink-0">
         <svg className="w-36 h-36 -rotate-90" viewBox="0 0 120 120">
           <circle
@@ -473,7 +495,7 @@ export default function OptimizingProgress({
             cy="60"
             r="52"
             fill="none"
-            stroke="#ccfbf1"
+            stroke="#ede9fe"
             strokeWidth="8"
           />
           <circle
@@ -481,7 +503,7 @@ export default function OptimizingProgress({
             cy="60"
             r="52"
             fill="none"
-            stroke="#0d6e5a"
+            stroke="#6366f1"
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={`${2 * Math.PI * 52}`}
@@ -490,19 +512,19 @@ export default function OptimizingProgress({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
-          <span className="text-3xl font-black text-slate-900 tracking-tight">{progress}%</span>
-          <span className="text-xs text-slate-500 font-medium mt-0.5">
+          <span className="text-3xl font-bold text-slate-900 tracking-tight">{Math.round(progress)}%</span>
+          <span className="text-xs text-slate-400 font-medium mt-0.5">
             {progress >= 100 ? "complete" : `~${Math.max(1, Math.round((100 - progress) * 0.22))}s left`}
           </span>
         </div>
       </div>
 
-      {/* Fixed-height Header slot so text length never causes vertical shifting */}
+      {/* Header slot */}
       <div className="h-16 flex flex-col items-center justify-center text-center w-full max-w-md px-2 select-none mb-4">
-        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight line-clamp-1">
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight line-clamp-1">
           {STEPS.find((s) => s.id === currentStepId)?.label ?? "Parsing the job description"}
         </h2>
-        <p className="text-slate-500 text-xs sm:text-sm mt-1 font-normal line-clamp-2">
+        <p className="text-slate-400 text-xs sm:text-sm mt-1 font-normal line-clamp-2">
           Stay on this tab — we'll ask you a couple of things if we need them.
         </p>
       </div>
@@ -512,7 +534,6 @@ export default function OptimizingProgress({
         {STEPS.map((step) => {
           const s = steps.find((x) => x.id === step.id);
           const status = s?.status ?? "pending";
-          const isDoneOrActive = status === "done" || status === "running";
 
           return (
             <div
@@ -522,16 +543,22 @@ export default function OptimizingProgress({
                 px-4 sm:px-5 rounded-2xl
                 transition-all duration-300
                 ${
-                  isDoneOrActive
-                    ? "bg-emerald-50/90 border border-emerald-200/90 shadow-xs"
-                    : "bg-white/70 border border-slate-100 opacity-60"
+                  status === "done"
+                    ? "bg-[#ecfdf5] border border-[#d1fae5] shadow-xs"
+                    : status === "running"
+                    ? "bg-[#f5f3ff] border border-[#ede9fe] shadow-xs"
+                    : "bg-white/60 border border-slate-100 opacity-60"
                 }
               `}
             >
               <div className="flex items-center gap-3.5">
-                {isDoneOrActive ? (
-                  <div className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0 text-white shadow-2xs">
+                {status === "done" ? (
+                  <div className="w-5 h-5 rounded-full bg-[#10b981] flex items-center justify-center flex-shrink-0 text-white shadow-2xs">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  </div>
+                ) : status === "running" ? (
+                  <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
+                    <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : (
                   <div className="w-4 h-4 rounded-full border border-slate-300 flex-shrink-0" />
@@ -539,8 +566,10 @@ export default function OptimizingProgress({
 
                 <span
                   className={`text-xs sm:text-sm ${
-                    isDoneOrActive
-                      ? "text-emerald-950 font-semibold"
+                    status === "done"
+                      ? "text-slate-800 font-medium"
+                      : status === "running"
+                      ? "text-indigo-600 font-medium"
                       : "text-slate-400 font-medium"
                   }`}
                 >
@@ -549,12 +578,12 @@ export default function OptimizingProgress({
               </div>
 
               {status === "done" ? (
-                <span className="text-[11px] text-emerald-700/80 font-medium">
+                <span className="text-[11px] text-slate-400 font-normal">
                   {s?.duration || "Done"}
                 </span>
-              ) : isDoneOrActive ? (
-                <span className="text-[11px] text-emerald-600 font-medium">
-                  In progress
+              ) : status === "running" ? (
+                <span className="text-[11px] text-indigo-500 font-normal">
+                  running
                 </span>
               ) : (
                 <span className="w-8" />
@@ -564,7 +593,7 @@ export default function OptimizingProgress({
         })}
       </div>
 
-      {/* Rotating trivia with fixed height container so it never shifts layout */}
+      {/* Rotating trivia */}
       <div className="h-10 flex items-center justify-center text-center mt-6 w-full max-w-md px-2 select-none">
         <p className="text-xs text-slate-400 font-normal leading-relaxed line-clamp-2">
           {funFact}

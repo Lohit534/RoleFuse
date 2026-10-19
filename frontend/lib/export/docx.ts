@@ -50,7 +50,7 @@ export async function generateDOCXFromLines(resumeText: string, watermarked = fa
           alignment: AlignmentType.CENTER,
           children: [
             new TextRun({
-              text: "FASTHIRE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)",
+              text: "ROLEFUSE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)",
               font: "Times New Roman",
               size: 20,
               bold: true,
@@ -293,7 +293,7 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
       children.push(
         new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [run("FASTHIRE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)", { bold: true, color: "CC0000", size: hp(10) })],
+          children: [run("ROLEFUSE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)", { bold: true, color: "CC0000", size: hp(10) })],
           spacing: { after: 120 },
         }),
       );

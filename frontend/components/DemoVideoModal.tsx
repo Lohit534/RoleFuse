@@ -150,7 +150,7 @@ export function DemoVideoModal({ isOpen, onClose }: DemoVideoModalProps) {
             </div>
             <div className="min-w-0">
               <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                FastHire AI Product Demo 🎬
+                RoleFuse AI Product Demo 🎬
               </h3>
             </div>
           </div>
@@ -214,7 +214,7 @@ export function DemoVideoModal({ isOpen, onClose }: DemoVideoModalProps) {
               allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
               allowFullScreen
               referrerPolicy="no-referrer-when-downgrade"
-              title="FastHire AI Product Demo"
+              title="RoleFuse AI Product Demo"
             />
           ) : videoSource.url && !videoError ? (
             /* Direct MP4/WebM HTML5 Video */

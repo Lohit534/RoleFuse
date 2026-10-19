@@ -85,7 +85,7 @@ export function buildOptimizationPrompt(
   sectionOrderStr += "\n";
 
   return (
-    "You are FastHire's elite ATS resume optimization engine.\n" +
+    "You are RoleFuse's elite ATS resume optimization engine.\n" +
     "Your sole job: produce a maximally ATS-optimized resume that preserves the candidate's facts\n" +
     "while injecting every target keyword and rewriting every bullet for measurable impact.\n\n" +
     sep + "\n" +

@@ -3,6 +3,7 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Check, Star } from "lucide-react";
+import { isTechnicalKeyword } from "@/lib/ats/keywords";
 
 interface KeywordBadgesProps {
   added: string[];
@@ -21,7 +22,7 @@ export default function KeywordBadges({ added, found }: KeywordBadgesProps) {
     badgeHeaderIcon: React.ReactNode,
     countClass: string
   ) => {
-    const keywords = rawKeywords || [];
+    const keywords = (rawKeywords || []).filter(isTechnicalKeyword);
     if (keywords.length === 0) {
       return (
         <div className="space-y-2">

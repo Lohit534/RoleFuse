@@ -104,7 +104,7 @@ export default function AtsOptimizerPage() {
               What Changes When You Optimize for a <span className="text-[#087F6E]">Specific Job?</span>
             </h1>
             <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto">
-              See how FastHire AI scans a target job description, discovers every missing technical requirement, and rewrites your resume experience with powerful metrics and action verbs in 30 seconds.
+              See how RoleFuse AI scans a target job description, discovers every missing technical requirement, and rewrites your resume experience with powerful metrics and action verbs in 30 seconds.
             </p>
 
             <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3.5">
@@ -180,11 +180,11 @@ export default function AtsOptimizerPage() {
                   </div>
                 </div>
 
-                {/* FastHire AI Optimized */}
+                {/* RoleFuse AI Optimized */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-[#087F6E] font-bold text-xs uppercase tracking-wider">
                     <CheckCircle2 className="h-4 w-4" />
-                    <span>FastHire AI Targeted Bullets</span>
+                    <span>RoleFuse AI Targeted Bullets</span>
                   </div>
                   <div className="space-y-2.5">
                     {currentCase.after.map((bullet, i) => (
