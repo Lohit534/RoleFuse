@@ -829,6 +829,11 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                         <Link
                           key={link.label}
                           href={link.href}
+                          onClick={() => {
+                            if (link.href === "/dashboard" && typeof window !== "undefined") {
+                              window.dispatchEvent(new CustomEvent("open-optimize-editor"));
+                            }
+                          }}
                           className={`relative flex items-center h-full px-3 text-sm font-semibold transition-colors select-none ${
                             isActive
                               ? "text-[#111827] font-bold"
@@ -1271,6 +1276,11 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
         <div className="sm:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-200 flex items-center justify-around px-2 py-3 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
           <Link
             href="/dashboard"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("open-optimize-editor"));
+              }
+            }}
             className={`flex flex-col items-center gap-1 transition-colors ${
               pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
             }`}

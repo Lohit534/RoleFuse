@@ -174,11 +174,11 @@ export default function ResourcesPage() {
 
               {/* Right Column: Reduced Size Image with Professional Frame */}
               <div className="lg:col-span-5 flex justify-center">
-                <div className="relative rounded-2xl overflow-hidden border border-slate-200/90 shadow-lg bg-white max-w-[400px] w-full">
+                <div className="relative rounded-2xl overflow-hidden border border-slate-200/90 shadow-md bg-white max-w-[350px] w-full">
                   <img
                     src="/images/resources-guide.jpg"
                     alt="RoleFuse Career Growth & ATS Optimization Advice"
-                    className="w-full h-auto object-cover select-none"
+                    className="w-full max-h-[250px] object-cover select-none"
                   />
                   <div className="absolute bottom-2.5 right-2.5 bg-slate-900/85 backdrop-blur-xs text-white text-[10px] font-semibold px-2.5 py-1 rounded-md border border-white/10 shadow-xs">
                     Editorial Career Guides

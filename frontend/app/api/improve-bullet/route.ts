@@ -223,29 +223,43 @@ Output MUST be a valid JSON object only (do NOT include markdown fences, leading
 
     // Single bullet point optimization prompt
     const bulletPrompt = `
-You are an elite technical resume editor. Your task is to rewrite a single resume bullet point to make it concise, highly impactful, accurate, and ATS-optimized.
+You are an elite technical resume editor specializing in ATS optimization and recruiter-targeted writing. Your task is to rewrite ONE resume bullet point into a high-impact, concise, ATS-optimized statement.
 
 Input Bullet Point: "${bullet}"
-Target Job Description: "${jd.slice(0, 2000)}"
+Target Job Description: "${jd.slice(0, 2500)}"
 
-CRITICAL ACCURACY & LENGTH RULES:
-1. Output EXACTLY ONE concise sentence (14 to 20 words max). NEVER write multiple sentences, paragraphs, or extra text.
-2. Structure: [Strong Past-Tense Action Verb] + [Candidate's Specific Task/Tool] + [Realistic Quantified Metric/Outcome].
-   The FIRST WORD MUST be one of these action verbs: ${RECOMMENDED_VERBS.join(", ")}.
-   Never start with an adverb ("Successfully"), a noun, an adjective, "I", or a gerund ("Developing").
-   Bad: "Worked on backend."  Good: "Developed 12+ REST APIs using Spring Boot."
-   Bad: "Optimized queries."  Good: "Optimized MySQL queries reducing API response time by nearly 30%."
-3. Retain the candidate's core task faithfully. Do NOT invent unmentioned technologies or long corporate filler phrases.
-4. If missing, weave in an accurate, realistic metric (e.g., "improving throughput by 35%", "supporting 15k+ active users", "reducing build time by 40%", "cutting error rates by 25%").
-5. Return ONLY a single rewritten bullet sentence inside the JSON.
+CRITICAL RULES — FOLLOW ALL OF THESE:
+1. Output EXACTLY ONE sentence (15 to 22 words). Never write multiple sentences, paragraphs, or explanations.
+2. Structure: [Strong Past-Tense Action Verb] + [Specific Task/Technology] + [Realistic Quantified Impact].
+   - First word MUST be a strong past-tense action verb from this list: ${RECOMMENDED_VERBS.join(", ")}.
+   - NEVER start with: adverbs ("Successfully"), nouns, adjectives, gerunds ("Developing"), or "I".
+   - NEVER wrap the sentence in quotation marks or bullet characters.
+3. Quantified metric is MANDATORY. Use realistic, topic-appropriate numbers:
+   - Performance: 30-50% improvement, 2x faster, reduced from Xs to Ys
+   - Scale: 5,000+ users, 1M+ records, 20k+ daily requests
+   - Code/Testing: 80+ issues fixed, 90% coverage, 15+ endpoints
+   - Team/Delivery: team of 4-8, 2 weeks early, 3 sprints
+   - Cost: ₹2L/month savings, 30% compute cost reduction
+4. Keep the candidate's CORE task. Do NOT invent unmentioned technologies or fabricate unrealistic metrics.
+5. Weave in JD-matching keywords naturally where contextually appropriate.
 
-Output MUST be a valid JSON object only:
+Examples:
+Bad: "Worked on backend APIs."  
+Good: "Engineered 18+ RESTful APIs using Spring Boot, reducing average response latency by 35% under peak load."
+
+Bad: "Optimized queries."  
+Good: "Optimized MySQL query execution plans, cutting average response time by 42% for a 500K+ record database."
+
+Bad: "Developed UI components."  
+Good: "Developed 20+ reusable React components, improving Lighthouse performance score from 62 to 94 across 8 pages."
+
+Output ONLY this JSON (no markdown fences, no extra text):
 {
-  "improvedBullet": "Engineered RESTful microservices with Node.js and Redis, reducing p99 latency by 35% for 20k+ daily users.",
+  "improvedBullet": "Engineered 18+ RESTful APIs using Spring Boot, reducing average response latency by 35% under peak load.",
   "actionVerbUsed": "Engineered",
-  "metricsAdded": "35% latency reduction, 20k+ daily users",
-  "keywordsInjected": ["Node.js", "Redis"],
-  "explanation": "Added quantifiable performance metrics and concise impact."
+  "metricsAdded": "35% latency reduction, 18+ APIs",
+  "keywordsInjected": ["Spring Boot", "RESTful APIs"],
+  "explanation": "Replaced vague phrase with specific API count, technology, and measurable latency improvement."
 }
 `;
 

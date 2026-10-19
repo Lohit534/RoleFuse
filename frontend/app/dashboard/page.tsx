@@ -52,6 +52,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Bell,
+  Edit3,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
@@ -295,6 +296,17 @@ export default function DashboardPage() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const sampleLoadedRef = useRef(false);
 
+  const [viewMode, setViewMode] = useState<"result" | "editor">("result");
+
+  useEffect(() => {
+    const handleOpenEditor = () => {
+      setViewMode("editor");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener("open-optimize-editor", handleOpenEditor);
+    return () => window.removeEventListener("open-optimize-editor", handleOpenEditor);
+  }, []);
+
   useEffect(() => {
     if (sampleLoadedRef.current) return;
 
@@ -469,6 +481,7 @@ export default function DashboardPage() {
 
   const handleOptimizationComplete = (data: any) => {
     setOptimizeResult(data);
+    setViewMode("result");
 
     // Store resumeId so subsequent bullet improvements can patch the history record
     const targetResumeId = data?.resumeId || data?.id;
@@ -878,6 +891,7 @@ export default function DashboardPage() {
   }
 
   const hasResults = !optimizing && (optimizeResult || beforeScore);
+  const showResults = hasResults && optimizeResult && viewMode === "result";
   const delta =
     afterScore && beforeScore ? afterScore.overall - beforeScore.overall : 0;
 
@@ -893,10 +907,7 @@ export default function DashboardPage() {
         />
       )}
 
-      <Navbar
-        refreshKey={refreshKey}
-        hideNav={!!(hasResults && optimizeResult)}
-      />
+      <Navbar refreshKey={refreshKey} />
 
       <main className="relative flex-1 mx-auto max-w-[1280px] w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-8">
 
@@ -918,12 +929,12 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Clean result page header — shown instead of nav when results exist */}
-        {hasResults && optimizeResult ? (
-          <div className="mb-6 flex items-center justify-between select-none">
+        {/* Results header or editor title block */}
+        {showResults ? (
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 select-none">
             {/* Score improvement headline */}
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-black text-[#111827] tracking-tight">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#111827] tracking-tight">
                 Score improved{" "}
                 <span className="text-[#526176]">
                   {beforeScore?.overall ?? 0}%
@@ -939,15 +950,27 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
-            {/* Actions */}
-            <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+            {/* Actions — responsive on mobile */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+              <Button
+                onClick={() => {
+                  setViewMode("editor");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                size="sm"
+                className="flex-1 sm:flex-none bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-md px-3.5 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Edit3 className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                <span>Edit &amp; Re-optimize</span>
+              </Button>
+
               <Button
                 onClick={handleOptimizeAnother}
                 size="sm"
-                className="bg-[#0d6e5a] hover:bg-[#075E53] text-white text-xs font-bold h-9 rounded-md px-4 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                className="flex-1 sm:flex-none bg-[#0d6e5a] hover:bg-[#075E53] text-white text-xs font-bold h-9 rounded-md px-3.5 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                <span>Optimize Another Resume</span>
+                <span>New Resume</span>
               </Button>
 
               <Button
@@ -960,26 +983,51 @@ export default function DashboardPage() {
                   }
                 }}
                 size="sm"
-                className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-md px-4 shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                className="flex-1 sm:flex-none bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-md px-3.5 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Briefcase className="h-3.5 w-3.5 text-[#0d6e5a]" />
-                <span>{trackerAdded ? "View in Job Tracker" : "Add to Job Tracker"}</span>
+                <span>{trackerAdded ? "In Tracker" : "Add Tracker"}</span>
               </Button>
 
-              <Link href="/dashboard/history">
+              <Link href="/dashboard/history" className="flex-1 sm:flex-none">
                 <Button
                   size="sm"
-                  className="bg-[#111827] hover:bg-slate-800 text-white text-xs font-semibold h-9 rounded-md px-4 shadow-xs"
+                  className="w-full bg-[#111827] hover:bg-slate-800 text-white text-xs font-semibold h-9 rounded-md px-3.5 shadow-xs"
                 >
                   <History className="h-3.5 w-3.5 mr-1.5" />
-                  Back to History
+                  History
                 </Button>
               </Link>
             </div>
           </div>
         ) : (
           /* Header Title Block */
-          <div className="text-center space-y-3 mb-10 select-none">
+          <div className="text-center space-y-3 mb-8 select-none">
+            {optimizeResult && (
+              <div className="max-w-2xl mx-auto mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2.5 text-left">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="text-xs sm:text-sm font-bold text-emerald-950">
+                      Latest Optimization Score: {afterScore?.overall ?? 0}%
+                    </span>
+                    <p className="text-[11px] text-emerald-800 font-medium">
+                      You can modify inputs below and re-optimize, or return to your results.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setViewMode("result");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold h-8 px-4 rounded-md shadow-xs cursor-pointer shrink-0"
+                >
+                  View Latest Results →
+                </Button>
+              </div>
+            )}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#111827] tracking-tight leading-[1.15]">
               Improve Your Resume{" "}
               <span className="bg-gradient-to-r from-[#087F6E] via-[#075E53] to-[#087F6E] bg-clip-text text-transparent">
@@ -999,7 +1047,7 @@ export default function DashboardPage() {
         )}
 
         {/* WORKSPACE CONTENT SECTION */}
-        {hasResults && optimizeResult ? (
+        {showResults ? (
           /* RESULTS WORKSPACE ROW */
           <div ref={resultsRef} className="space-y-6">
 

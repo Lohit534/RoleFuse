@@ -193,27 +193,34 @@ export function buildOptimizationPrompt(
     sep + "\n" +
     "STEP 3 — BULLET REWRITING (Experience and Projects ONLY)\n" +
     sep + "\n\n" +
-    "Formula: [Strong Verb] + [What] + [Tool/Method] + [Quantified Result]\n\n" +
+    "Formula: [Strong Verb] + [Specific Task / Technology] + [Quantified Result with Scale or Percentage]\n\n" +
     "CRITICAL: Apply this formula ONLY to Professional Experience and Projects sections. NEVER apply this to Languages, Education, or Certifications. Leave those sections purely factual and unchanged.\n\n" +
+    "MANDATORY BULLET STANDARDS:\n" +
+    "- Every bullet MUST start with a strong past-tense action verb (no gerunds, no adverbs, no I/We)\n" +
+    "- Every bullet MUST include a specific quantified outcome (%, count, scale, speed, cost)\n" +
+    "- Bullets should be concise: 15-25 words per bullet — never write paragraphs\n" +
+    "- Use diverse verbs — never repeat the same verb more than twice across the resume\n\n" +
     "Transform examples:\n" +
-    "WEAK: 'Worked on backend' → 'Engineered RESTful APIs with Node.js and Express, handling 25k+ daily requests and reducing p95 latency by 35%'\n" +
-    "WEAK: 'Did data analysis' → 'Analyzed 500,000+ data records using Python and Pandas, improving reporting accuracy by 28%'\n" +
-    "WEAK: 'Used Docker' → 'Containerized 12 microservices with Docker and Kubernetes on AWS, cutting deployment turnaround by 45%'\n\n" +
-    "40 POWERFUL ACTION VERBS (use these to start EVERY bullet point):\n" +
+    "WEAK: 'Worked on backend' → 'Engineered 18+ RESTful APIs with Node.js, handling 25k+ daily requests and reducing p95 latency by 35%'\n" +
+    "WEAK: 'Did data analysis' → 'Analyzed 500,000+ records using Python and Pandas, improving reporting accuracy by 28% and cutting ETL time by 45%'\n" +
+    "WEAK: 'Used Docker' → 'Containerized 12 microservices with Docker and Kubernetes on AWS, cutting deployment time by 45% and achieving 99.9% uptime'\n" +
+    "WEAK: 'Built UI screens' → 'Developed 20+ reusable React components, reducing code duplication by 40% and improving Lighthouse score from 62 to 91'\n" +
+    "WEAK: 'Fixed bugs' → 'Resolved 80+ production bugs and regression issues, raising test coverage from 58% to 92% using Jest and CI/CD'\n\n" +
+    "50 POWERFUL ACTION VERBS (use these to start EVERY bullet point):\n" +
     "Developed, Designed, Built, Implemented, Engineered, Optimized, Automated, Integrated, Improved, Reduced,\n" +
     "Created, Configured, Deployed, Refactored, Migrated, Enhanced, Accelerated, Streamlined, Maintained,\n" +
     "Secured, Validated, Tested, Documented, Analyzed, Solved, Led, Delivered, Collaborated, Architected,\n" +
     "Monitored, Debugged, Scaled, Generated, Processed, Queried, Visualized, Researched, Evaluated, Simplified,\n" +
-    "Modernized.\n\n" +
-    "Transform examples:\n" +
-    "WEAK: 'Worked on backend' → 'Developed 12+ REST APIs using Spring Boot, reducing API response time by 30% through query optimization.'\n" +
-    "WEAK: 'Optimized queries' → 'Optimized MySQL queries reducing average API response latency by nearly 30% under heavy load.'\n" +
-    "WEAK: 'Did authentication' → 'Implemented JWT authentication and role-based access control, securing 20+ endpoints validated with Postman.'\n\n" +
+    "Modernized, Orchestrated, Containerized, Trained, Provisioned, Hardened, Benchmarked, Transformed, Restructured.\n\n" +
     "Quantification rules:\n" +
     "- Weave verified user-provided numbers and metrics wherever available\n" +
-    "- If a metric is implied by context, state the realistic outcome with measurable impact (%, scale, throughput, speed)\n" +
-    "- Ensure every bullet reads as a strong, accomplished accomplishment\n" +
-    "- NEVER use generic corporate filler words\n\n" +
+    "- Performance bullets → 30-50% improvement, 2x faster, Xs to Ys latency\n" +
+    "- Scale bullets → 5k-100k users, 1M+ records, 20k+ API calls/day\n" +
+    "- Testing bullets → 80+ bugs fixed, 60%→90% test coverage\n" +
+    "- Team bullets → team of 4-8, 2 weeks ahead of schedule, 3 sprints\n" +
+    "- Cost bullets → ₹2L/month savings, 30% infra cost reduction\n" +
+    "- NEVER use vague terms without numbers: 'significantly', 'greatly', 'multiple', 'various'\n" +
+    "- Ensure every bullet reads as a strong, accomplished achievement\n\n" +
     sep + "\n" +
     "STEP 4 — SUMMARY REWRITE\n" +
     sep + "\n\n" +

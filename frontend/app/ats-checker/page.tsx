@@ -127,12 +127,12 @@ export default function AtsCheckerPage() {
             </p>
 
             {/* Visual ATS Audit Report Preview */}
-            <div className="pt-6 max-w-4xl mx-auto">
-              <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-white">
+            <div className="pt-6 max-w-[360px] mx-auto">
+              <div className="relative rounded-2xl overflow-hidden border border-slate-200/90 shadow-md bg-white">
                 <img
                   src="/images/ats-scanner-audit.jpg"
                   alt="Real-time ATS Resume Scanner Audit Report"
-                  className="w-full h-auto object-cover select-none"
+                  className="w-full max-h-[250px] object-cover select-none"
                 />
               </div>
             </div>

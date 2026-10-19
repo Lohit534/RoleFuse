@@ -11,7 +11,6 @@ export const maxDuration = 30; // Quick pre-check, should take < 10s
 function findWeakBulletsLocally(
   resumeText: string,
 ): Array<{ id: string; originalBullet: string; question: string; hint: string }> {
-  const lines = (resumeText || "").split(/\r?\n/);
   const results: Array<{
     id: string;
     originalBullet: string;
@@ -23,31 +22,43 @@ function findWeakBulletsLocally(
   // Certifications, Languages, Education or Skills entries.
   for (const item of extractScorableBullets(resumeText)) {
     const clean = item.cleanText;
-    if (clean.length < 15 || clean.length > 250) continue;
+    if (clean.length < 15 || clean.length > 280) continue;
 
     // Check if bullet lacks measurable metrics
     if (!hasQuantifiedMetric(clean)) {
-      let q = "What was the measurable outcome, scale, or percentage improvement achieved?";
+      let q = "What was the measurable outcome, scale, or percentage improvement achieved from this task?";
       let h = "e.g., Improved efficiency by 35%, handled 10,000+ daily users, reduced latency by 40ms";
 
-      if (/performance|speed|latency|load|fast|optimi/i.test(clean)) {
-        q = "By what percentage or time did performance, speed, or latency improve?";
-        h = "e.g., Reduced response latency by 45%, cut page load time from 3s to 800ms";
-      } else if (/user|client|customer|traffic|visitor/i.test(clean)) {
+      if (/performance|speed|latency|load time|fast|optimi|throughput|benchmark/i.test(clean)) {
+        q = "By what exact percentage or time unit did performance, speed, or latency improve?";
+        h = "e.g., Reduced p95 response latency by 45%, cut page load time from 3s to 800ms, boosted throughput by 2x";
+      } else if (/user|client|customer|traffic|visitor|request|session/i.test(clean)) {
         q = "Approximately how many users, customers, or daily requests were handled?";
-        h = "e.g., Scaled to 50k+ active users, handled 1M+ API calls daily";
-      } else if (/test|bug|fix|issue|defect|error|coverage/i.test(clean)) {
-        q = "How many issues/bugs did you resolve, or what test coverage % was reached?";
-        h = "e.g., Resolved 80+ critical bugs, raised unit test coverage from 60% to 92%";
-      } else if (/database|data|query|pipeline|etl|storage|cache/i.test(clean)) {
+        h = "e.g., Scaled to 50k+ active users, handled 1M+ API calls daily, served 5,000 concurrent sessions";
+      } else if (/test|bug|fix|issue|defect|error|coverage|regression|qa/i.test(clean)) {
+        q = "How many issues or bugs did you fix, or what test coverage percentage was reached?";
+        h = "e.g., Resolved 80+ critical bugs, raised unit test coverage from 60% to 92%, fixed 15+ production regressions";
+      } else if (/database|data|query|pipeline|etl|storage|cache|table|index|migration/i.test(clean)) {
         q = "What was the data volume processed, or by how much was query execution time reduced?";
-        h = "e.g., Processed 2TB+ daily data, reduced query execution time by 60%";
-      } else if (/api|service|backend|microservice|endpoint/i.test(clean)) {
-        q = "How many endpoints did you develop, and what throughput or uptime was achieved?";
-        h = "e.g., Built 25+ microservice endpoints, maintained 99.9% service uptime";
-      } else if (/lead|managed|team|coordinate|collaborate/i.test(clean)) {
-        q = "What was the size of the team, or what deadline/milestone did you achieve?";
-        h = "e.g., Mentored a team of 4 engineers, delivered project 2 weeks ahead of schedule";
+        h = "e.g., Processed 2TB+ daily data, reduced query time by 60%, migrated 500K+ records with zero downtime";
+      } else if (/api|service|backend|microservice|endpoint|rest|graphql|webhook/i.test(clean)) {
+        q = "How many APIs or endpoints did you build, and what throughput or uptime was maintained?";
+        h = "e.g., Built 25+ REST endpoints, maintained 99.9% uptime, reduced API response time by 30%";
+      } else if (/lead|managed|team|coordinate|collab|mentor|supervise|review/i.test(clean)) {
+        q = "What was the team size, and what specific milestone or deadline was achieved?";
+        h = "e.g., Led a team of 5 engineers, delivered feature 2 weeks early, mentored 3 junior developers";
+      } else if (/deploy|ci\/cd|docker|kubernetes|automat|pipeline|jenkins|github action|release/i.test(clean)) {
+        q = "By how much did the deployment or release pipeline speed improve?";
+        h = "e.g., Reduced deployment time by 45%, achieved 3x faster release cycles, cut CI build time from 20 to 7 min";
+      } else if (/cost|budget|saving|revenue|money|\$|₹|spend|opex|capex/i.test(clean)) {
+        q = "What was the exact cost saving, revenue increase, or budget impact achieved?";
+        h = "e.g., Reduced cloud infrastructure costs by ₹2L/month, saved $15K in annual compute spend";
+      } else if (/model|\bml\b|machine learning|\bai\b|nlp|accuracy|precision|recall|loss/i.test(clean)) {
+        q = "What accuracy, precision, or performance metric improvement did the AI/ML model achieve?";
+        h = "e.g., Improved model accuracy by 18%, reduced prediction error by 12%, trained on 500K+ labeled samples";
+      } else if (/ui|frontend|interface|screen|component|page|dashboard|design/i.test(clean)) {
+        q = "How many screens or components were built, or what performance improvement was measured?";
+        h = "e.g., Built 15+ reusable React components, reduced LCP from 4s to 1.2s, increased Lighthouse score by 30pts";
       }
 
       results.push({

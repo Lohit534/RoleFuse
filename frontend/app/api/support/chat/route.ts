@@ -387,7 +387,8 @@ export async function POST(request: NextRequest) {
     };
 
     const SYSTEM_PROMPT = `
-You are the RoleFuse AI Support Assistant. Your tone is professional, helpful, and concise.
+You are the RoleFuse AI Support Assistant. Your tone is professional, helpful, polite, and articulate.
+You must provide complete, meaningful, and self-contained answers to the user's questions. Never cut off or stop mid-sentence.
 You must answer questions based on the following platform rules. NEVER invent pricing or policies.
 
 1. Safety & Security:
@@ -422,8 +423,9 @@ You must answer questions based on the following platform rules. NEVER invent pr
 - Users can create an Admin Support Ticket right here in the widget. Admins reply in 1-2 business days.
 
 IMPORTANT RULES FOR YOU:
+- Always give a full, meaningful, and complete answer. Do not cut off mid-sentence.
 - Format cleanly. NEVER use asterisks (**) or markdown formatting. Use standard dashes (-) or plain text bullets.
-- Do not repeat yourself endlessly. If the user says "hello", just greet them back.
+- Do not repeat yourself endlessly. If the user says "hello", just greet them warmly and offer help.
 - Keep answers strictly relevant to the user's latest question while respecting chat history.
 `;
 
@@ -435,7 +437,7 @@ IMPORTANT RULES FOR YOU:
     }
     systemPrompt += `\nUser: ${trimmedQuestion}\nAssistant:`;
 
-    // 2. Try Primary Groq LPU (0.4s response) if GROQ_API_KEY is present
+    // 2. Try Primary Groq LPU (fast response) if GROQ_API_KEY is present
     const groqKey = (process.env.GROQ_API_KEY || "").replace(/^["']|["']$/g, "").trim();
     if (groqKey) {
       try {
@@ -449,9 +451,9 @@ IMPORTANT RULES FOR YOU:
             model: "llama-3.3-70b-versatile",
             messages: [{ role: "user", content: systemPrompt }],
             temperature: 0.2,
-            max_tokens: 350
+            max_tokens: 1200
           }),
-          signal: AbortSignal.timeout(3000)
+          signal: AbortSignal.timeout(8000)
         });
 
         if (groqRes.ok) {
@@ -476,7 +478,7 @@ IMPORTANT RULES FOR YOU:
       }
     }
 
-    // 3. High-Speed Gemini Fallback / Primary (1.0s response)
+    // 3. High-Speed Gemini Fallback / Primary (complete response)
     const geminiKey = (process.env.GEMINI_API_KEY || "").replace(/^["']|["']$/g, "").trim();
     if (geminiKey) {
       const { GoogleGenerativeAI } = await import("@google/generative-ai");
@@ -488,14 +490,14 @@ IMPORTANT RULES FOR YOU:
             model: modelName,
             generationConfig: {
               temperature: 0.2,
-              maxOutputTokens: 350
+              maxOutputTokens: 1200
             }
           });
 
-          // Timeout promise to guarantee rapid response
+          // Timeout promise to guarantee complete response without early abort
           const genPromise = model.generateContent(systemPrompt);
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Timeout")), 4000)
+            setTimeout(() => reject(new Error("Timeout")), 9000)
           );
 
           const result: any = await Promise.race([genPromise, timeoutPromise]);

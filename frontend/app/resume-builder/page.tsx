@@ -117,12 +117,12 @@ export default function ResumeBuilderPage() {
             </p>
 
             {/* Visual Resume Builder Workspace Preview */}
-            <div className="pt-6 max-w-4xl mx-auto">
-              <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-white">
+            <div className="pt-6 max-w-[360px] mx-auto">
+              <div className="relative rounded-2xl overflow-hidden border border-slate-200/90 shadow-md bg-white">
                 <img
                   src="/images/resume-builder-workspace.jpg"
                   alt="Live ATS Resume Builder Workspace"
-                  className="w-full h-auto object-cover select-none"
+                  className="w-full max-h-[250px] object-cover select-none"
                 />
               </div>
             </div>

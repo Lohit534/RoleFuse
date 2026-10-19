@@ -768,7 +768,7 @@ export default function LandingPage() {
 
               {/* Visual Showcase Column */}
               <div className="lg:col-span-6 flex justify-center">
-                <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-gradient-to-br from-emerald-50/40 via-white to-teal-50/30 p-4 sm:p-6 w-full max-w-[540px]">
+                <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-gradient-to-br from-emerald-50/40 via-white to-teal-50/30 p-4 sm:p-5 w-full max-w-[420px]">
                   <img
                     src="/images/resume-builder-feature.png"
                     alt="RoleFuse Resume Builder Format Preview"
@@ -784,7 +784,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
               {/* Visual Showcase Column (Left on desktop) */}
               <div className="lg:col-span-6 order-2 lg:order-1 flex justify-center">
-                <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-gradient-to-br from-teal-50/40 via-white to-slate-50 p-4 sm:p-6 w-full max-w-[540px]">
+                <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 shadow-xl bg-gradient-to-br from-teal-50/40 via-white to-slate-50 p-4 sm:p-5 w-full max-w-[420px]">
                   <img
                     src="/images/beat-the-bots.png"
                     alt="Beat the Bots ATS Resume Inspection Tips"
