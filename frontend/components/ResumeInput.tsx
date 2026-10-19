@@ -236,7 +236,19 @@ export default function ResumeInput({
 
           <div className="flex items-center justify-between mt-2 text-[11px] text-[#526176]">
             <span>{charCount} characters</span>
-            <span className="font-mono">{wordCount} words</span>
+            <div className="flex items-center gap-3">
+              {value && value.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onChange("")}
+                  className="text-xs text-rose-500 hover:text-rose-700 font-semibold cursor-pointer flex items-center gap-1 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  Clear
+                </button>
+              )}
+              <span className="font-mono">{wordCount} words</span>
+            </div>
           </div>
         </div>
       )}

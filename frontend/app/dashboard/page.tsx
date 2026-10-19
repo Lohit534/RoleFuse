@@ -349,8 +349,6 @@ export default function DashboardPage() {
         if (activeSession.beforeScore) setBeforeScore(activeSession.beforeScore);
         if (activeSession.afterScore) setAfterScore(activeSession.afterScore);
         if (activeSession.resumeId) setCurrentResumeId(activeSession.resumeId);
-        if (!resumeText && activeSession.resumeText) setResumeText(activeSession.resumeText);
-        if (!jobDescription && activeSession.jobDescription) setJobDescription(activeSession.jobDescription);
         if (activeSession.roadmapContent) setRoadmapContent(activeSession.roadmapContent);
         if (activeSession.coverLetter) setCoverLetterGenerated(activeSession.coverLetter);
         if (activeSession.trackerAdded) setTrackerAdded(true);
