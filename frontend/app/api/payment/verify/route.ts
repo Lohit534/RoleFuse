@@ -18,14 +18,14 @@ const PLAN_CREDITS: Record<string, number> = {
 
 // Plan → INR amount mapping (monthly)
 const PLAN_AMOUNT_MONTHLY: Record<string, number> = {
-  premium: 99,
-  promax:  199,
+  premium: 104,
+  promax:  209,
 };
 
 // Plan → INR amount mapping (yearly)
 const PLAN_AMOUNT_YEARLY: Record<string, number> = {
-  premium: 999,
-  promax:  1999,
+  premium: 1247,
+  promax:  2507,
 };
 
 export async function POST(request: NextRequest) {

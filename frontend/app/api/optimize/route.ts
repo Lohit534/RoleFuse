@@ -454,8 +454,13 @@ export async function POST(request: NextRequest) {
       // Limit to top 4 high-priority questions so the user gets quick answers and fast results
       const finalQuestions = filteredList.slice(0, 4);
 
-      // Proceed directly with optimization without modal interruption
-      logger.info(`[optimize] Proceeding directly to full ATS optimization without interruption.`);
+      if (finalQuestions.length > 0) {
+        // Emit needsInput SSE — frontend will show Q&A card and then re-call with skipDetection+userAnswers
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ needsInput: true, questions: finalQuestions })}\n\n`));
+        await writer.close();
+        return; // Close stream — frontend will start Phase 2 with answers
+      }
+      logger.info(`[optimize] No missing questions detected — proceeding directly to full ATS optimization.`);
     }
 
     // ── TASK 2: Second AI call — replace all placeholders with user answers first ──

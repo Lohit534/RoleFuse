@@ -229,9 +229,15 @@ export default function OptimizingProgress({
                 return;
               }
 
-              if (data.needsInput) {
-                // Do not interrupt with modal, proceed directly with optimization
-                continue;
+              if (data.needsInput && Array.isArray(data.questions) && data.questions.length > 0) {
+                // Pause step animation and show the missing-details Q&A card
+                if (stepTimerRef.current) clearTimeout(stepTimerRef.current);
+                awaitingInputRef.current = true;
+                setAwaitingInput(true);
+                setMissingQuestions(data.questions);
+                setCurrentQuestionIndex(0);
+                setUserAnswers({});
+                return; // stop reading this stream — proceedToOptimization will start a new one
               }
 
               if (data.step) {

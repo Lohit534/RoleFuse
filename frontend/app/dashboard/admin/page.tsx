@@ -172,7 +172,7 @@ export default function UnifiedAdminDashboard() {
       const pDate = p.createdAt ? new Date(p.createdAt) : now;
       const key = pDate.toISOString().slice(0, 7);
       const prev = monthMap.get(key) || { revenue: 0, orders: 0 };
-      const amt = Number(p.amount) || (p.planId === "promax" ? 199 : 99);
+      const amt = Number(p.amount) || (p.planId === "promax" ? (p.billingCycle === "yearly" ? 2507 : 209) : (p.billingCycle === "yearly" ? 1247 : 104));
       monthMap.set(key, {
         revenue: prev.revenue + amt,
         orders: prev.orders + 1,

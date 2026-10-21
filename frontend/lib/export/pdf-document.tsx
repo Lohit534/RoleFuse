@@ -394,15 +394,32 @@ export function toSmallCapsRuns(name: string): { text: string; big: boolean }[] 
 }
 
 /**
- * Certification / award line => bold title + regular remainder.
- * "Oracle Certified Professional: Java SE Developer – Oracle (2025): Validated..." =>
- *   { title: "Oracle Certified Professional: Java SE Developer", rest: " – Oracle (2025): Validated..." }
+ * Certification / award line => bold title + regular issuing company/remainder.
+ * Cleans out long descriptive paragraphs to keep bullets simple, concise, and focused on:
+ * • Certification Name – Provided Company Name (Year)
  */
 export function splitCertText(text: string): { title: string; rest: string } {
-  const clean = stripMarkdownAsterisks(text || '').replace(/^[•\-\*–\s\u2022]+/, '').trim();
+  let clean = stripMarkdownAsterisks(text || '').replace(/^[•\-\*–\s\u2022]+/, '').trim();
+  if (!clean) return { title: '', rest: '' };
+
+  // Strip unwanted trailing verbose descriptive sentences/paragraphs added by AI
+  clean = clean.replace(/:\s*(?:Demonstrated|Covered|Learned|Acquired|Hands-on|Focusing|Validating|Gained|In-depth|Proven|Comprehensive|Built|Applied|Mastered|Specialized|Engineered|Trained|Focused).+$/i, '');
+  clean = clean.replace(/\s+[–—\-]\s*(?:Demonstrated|Covered|Learned|Acquired|Hands-on|Focusing|Validating|Gained|In-depth|Proven|Comprehensive|Built|Applied|Mastered|Specialized|Engineered|Trained|Focused).+$/i, '');
+
+  // Match: "Cert Name – Org Name (Year)" or "Cert Name | Org Name" or "Cert Name by/from Org"
+  const sepMatch = clean.match(/^(.+?)\s*(?:[–—]|\||\s-\s|\bby\b|\bfrom\b)\s*([^–—\-|]+(?:\s*\(\d{4}\))?.*)$/i);
+  if (sepMatch && sepMatch[1].trim().length >= 3 && sepMatch[1].trim().length <= 90) {
+    const title = sepMatch[1].trim();
+    let rest = sepMatch[2].trim();
+    rest = ' – ' + rest.replace(/^[–—\-|]\s*/, '').trim();
+    return { title, rest };
+  }
+
+  // Fallback: match standard hyphen/dash/year
   const m = clean.match(/^(.{3,90}?)(\s[–—-]\s.*|\s\(\d{4}\).*)$/);
   if (m) return { title: m[1].trim(), rest: ' ' + m[2].trim() };
-  return { title: '', rest: clean };
+
+  return { title: clean, rest: '' };
 }
 
 /** Collapse runs of spacers and drop spacers directly after headers (prevents ballooning length). */
@@ -1080,18 +1097,28 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       const gpaPattern = /(?:CGPA|GPA|Percentage|Grade)\s*[:\-]?\s*[\d\.]+(?:\s*\/\s*[\d\.]+)?%?|\b\d{1,2}(?:\.\d{1,2})?\s*\/\s*10\b|\b\d{1,2}(?:\.\d{1,2})?\s*CGPA\b|\b\d{2}(?:\.\d{1,2})?%/i;
       const dateRangePattern = /\b(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\b(?:\s*[\-\u2013\u2014]\s*(?:(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\b|Present|Current))?/i;
 
-      // Handle pipe-separated education line:
-      // e.g. "B.Tech in Computer Science | XYZ Institute of Technology | 2020 – 2024 | CGPA: 8.5/10"
-      const pipeParts = line.split(/\s*\|\s*/).map(p => stripMarkdownAsterisks(p).trim()).filter(Boolean);
+      // Handle multi-part education line:
+      // Supports pipe " | ", comma ", ", or dash " - " / " – "
+      let segParts = line.split(/\s*\|\s*/).map(p => stripMarkdownAsterisks(p).trim()).filter(Boolean);
+      if (segParts.length < 2) {
+        const altParts = line.split(/\s*,\s*|\s+[–—]\s+|\s+-\s+/).map(p => stripMarkdownAsterisks(p).trim()).filter(Boolean);
+        if (altParts.length >= 2) {
+          const hasDeg = altParts.some(p => DEGREE_KEYWORDS.some(kw => p.toLowerCase().includes(kw)));
+          const hasOther = altParts.some(p => dateRangePattern.test(p) || gpaPattern.test(p) || /college|university|institute|academy|school|vidyalaya|board/i.test(p));
+          if (hasDeg && hasOther) {
+            segParts = altParts;
+          }
+        }
+      }
 
-      if (pipeParts.length >= 2) {
+      if (segParts.length >= 2) {
         let extractedDegree = "";
         let extractedSchool = "";
         let extractedDates = "";
         let extractedGpa = "";
         const remainingSegments: string[] = [];
 
-        for (const seg of pipeParts) {
+        for (const seg of segParts) {
           const gMatch = seg.match(gpaPattern);
           if (gMatch && !extractedGpa) {
             extractedGpa = gMatch[0].trim();
@@ -1114,8 +1141,11 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
         for (const seg of remainingSegments) {
           const segLower = seg.toLowerCase();
           const isDegree = DEGREE_KEYWORDS.some(kw => segLower.includes(kw)) || segLower.startsWith('b.') || segLower.startsWith('m.');
+          const isSchool = /college|university|institute|academy|school|vidyalaya|board/i.test(segLower);
           if (isDegree && !extractedDegree) {
             extractedDegree = seg;
+          } else if (isSchool && !extractedSchool) {
+            extractedSchool = seg;
           } else if (!extractedSchool) {
             extractedSchool = seg;
           } else if (!extractedDegree) {
@@ -1218,6 +1248,34 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       if ((!b.degree || b.degree.toLowerCase() === 'degree') && b.school) {
         b.degree = b.school;
         b.school = '';
+      }
+
+      // If school is empty and degree contains comma/dash, split them into degree and institution
+      if (!b.school && b.degree) {
+        const sepMatch = b.degree.match(/^(.+?)\s*(?:,\s*|\s+[–—\-]\s+|\s+from\s+|\s+at\s+)(.+)$/i);
+        if (sepMatch) {
+          const p1 = sepMatch[1].trim();
+          const p2 = sepMatch[2].trim();
+          const isP1School = /college|university|institute|academy|school|vidyalaya|board/i.test(p1);
+          if (isP1School) {
+            b.school = p1;
+            b.degree = p2;
+          } else {
+            b.degree = p1;
+            b.school = p2;
+          }
+        }
+      }
+
+      // If degree contains institution name and school contains degree name, swap them to guarantee correct hierarchy
+      if (b.degree && b.school) {
+        const isDegreeSchool = /college|university|institute|academy|school|vidyalaya|board/i.test(b.degree);
+        const isSchoolDegree = /b\.tech|btech|bachelor|master|m\.tech|mtech|b\.e|b\.s|bca|mca|diploma|intermediate|10th|12th|ssc|degree|class/i.test(b.school);
+        if (isDegreeSchool && isSchoolDegree) {
+          const tmp = b.degree;
+          b.degree = b.school;
+          b.school = tmp;
+        }
       }
     }
   }
@@ -1416,10 +1474,29 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, scaleOverrid
               );
             }
             case 'education': {
-              const hasDegree = Boolean(block.degree && block.degree.trim() && block.degree.toLowerCase() !== 'degree');
-              const hasSchool = Boolean(block.school && block.school.trim());
-              const primaryDegree = hasDegree ? block.degree : (hasSchool ? block.school : (block.degree || "Education"));
-              const secondarySchool = (hasDegree && hasSchool) ? block.school : "";
+              let primaryDegree = (block.degree && block.degree.trim() && block.degree.toLowerCase() !== 'degree')
+                ? block.degree.trim()
+                : (block.school?.trim() || block.degree || "Education");
+              let secondarySchool = (block.degree && block.school && block.degree.toLowerCase() !== 'degree')
+                ? block.school.trim()
+                : "";
+
+              // If secondarySchool is empty and primaryDegree has degree + institution joined
+              if (!secondarySchool && primaryDegree) {
+                const sepMatch = primaryDegree.match(/^(.+?)\s*(?:,\s*|\s+[–—\-]\s+|\s+from\s+|\s+at\s+)(.+)$/i);
+                if (sepMatch) {
+                  const p1 = sepMatch[1].trim();
+                  const p2 = sepMatch[2].trim();
+                  const isP1School = /college|university|institute|academy|school|vidyalaya|board/i.test(p1);
+                  if (isP1School) {
+                    primaryDegree = p2;
+                    secondarySchool = p1;
+                  } else {
+                    primaryDegree = p1;
+                    secondarySchool = p2;
+                  }
+                }
+              }
 
               return (
                 <View key={i} style={{ marginBottom: 3 }}>

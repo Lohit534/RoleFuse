@@ -453,7 +453,7 @@ export default function PricingPage() {
               setIsCheckoutOpen(false);
 
               // Set rich success confirmation details
-              const calculatedAmount = selectedPlan.id === "premium" ? (billingCycle === "monthly" ? 104 : 174) : (billingCycle === "monthly" ? 209 : 349);
+              const calculatedAmount = selectedPlan.id === "premium" ? (billingCycle === "monthly" ? 104 : 1247) : (billingCycle === "monthly" ? 209 : 2507);
               setSuccessDetails({
                 planName: selectedPlan.name,
                 planId: selectedPlan.id,
@@ -512,7 +512,7 @@ export default function PricingPage() {
 
           setIsCheckoutOpen(false);
 
-          const calculatedAmount = selectedPlan.id === "premium" ? (billingCycle === "monthly" ? 104 : 174) : (billingCycle === "monthly" ? 209 : 349);
+          const calculatedAmount = selectedPlan.id === "premium" ? (billingCycle === "monthly" ? 104 : 1247) : (billingCycle === "monthly" ? 209 : 2507);
           setSuccessDetails({
             planName: selectedPlan.name,
             planId: selectedPlan.id,
@@ -853,7 +853,7 @@ export default function PricingPage() {
                   </>
                 ) : (
                   <>
-                    Proceed to Pay ₹{selectedPlan.id === "premium" ? (billingCycle === "monthly" ? "104" : "174") : (billingCycle === "monthly" ? "209" : "349")}
+                    Proceed to Pay ₹{selectedPlan.id === "premium" ? (billingCycle === "monthly" ? "104" : "1,247") : (billingCycle === "monthly" ? "209" : "2,507")}
                   </>
                 )}
               </Button>

@@ -164,7 +164,8 @@ export function buildOptimizationPrompt(
     "CERTIFICATIONS & ACHIEVEMENTS:\n" +
     "  Header: CERTIFICATIONS & ACHIEVEMENTS (ALL CAPS)\n" +
     "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section. Do NOT create two separate sections.\n" +
-    "  Format: • Item Details (e.g. • AWS Certified Solutions Architect - Amazon Web Services, or • 1st Place at National Hackathon)\n" +
+    "  Format: • Certification Name – Issuing Company/Provider Name (e.g. • AWS Certified Solutions Architect – Amazon Web Services, or • Meta Front-End Developer Professional Certificate – Coursera, or • Oracle Certified Professional: Java SE Developer – Oracle)\n" +
+    "  SIMPLE BULLET STANDARD: Keep certifications clean and simple — just the Certification Name and Provided Company / Platform Name. DO NOT generate wordy explanations, paragraphs, or extra sentences.\n" +
     "  CRITICAL RULE FOR YEARS: NEVER invent, guess, or add a year or date to a certification or achievement if candidate did NOT mention a year in their original resume! ONLY set the year if explicitly in the original resume.\n\n" +
     (hasOriginalLanguages
       ? "LANGUAGES:\n" +

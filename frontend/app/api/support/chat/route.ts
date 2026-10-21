@@ -180,10 +180,9 @@ export const runtime = "nodejs";
 export const maxDuration = 15;
 
 const FAST_MODELS = [
-  "gemini-flash-latest",
-  "gemini-3.8-flash",
-  "gemini-flash-lite-latest",
-  "gemini-3.5-flash-lite",
+  "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
+  "gemini-1.0-pro",
 ];
 
 export async function POST(request: NextRequest) {
