@@ -500,7 +500,6 @@ export default function DashboardPage() {
     setPendingPlaceholders([]);
 
     setOptimizing(false);
-    toast.success("AI Optimization Complete!");
 
     // Save active optimization session so page reload / refresh keeps the result view intact
     saveActiveSession({
@@ -911,8 +910,8 @@ export default function DashboardPage() {
 
         {/* ── LOADING OVERLAY ─────────────────────────────────────── */}
         {optimizing && (
-          <div className="fixed inset-0 bg-white/98 z-50 flex items-center justify-center p-4 select-none overflow-y-auto">
-            <div className="w-full max-w-[560px] mx-auto py-6">
+          <div className="fixed inset-0 bg-white/98 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 select-none overflow-y-auto min-h-screen">
+            <div className="w-full max-w-[560px] mx-auto py-4 sm:py-6 my-auto">
               <OptimizingProgress
                 onComplete={handleOptimizationComplete}
                 onError={(err) => {

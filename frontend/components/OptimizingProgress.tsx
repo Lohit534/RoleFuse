@@ -370,44 +370,44 @@ export default function OptimizingProgress({
   // ── RENDER AI QUESTION BOX (STRICTLY STYLED MATCHING IMAGE 2 CARD MODAL) ──
   if (awaitingInput && missingQuestions.length > 0 && currentQ) {
     return (
-      <div className="w-full max-w-lg mx-auto bg-white rounded-3xl p-6 sm:p-9 shadow-2xl border border-slate-100 select-none animate-in fade-in zoom-in-95 duration-200">
+      <div className="w-full max-w-lg mx-auto bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl border border-slate-100 select-none animate-in fade-in zoom-in-95 duration-200">
         {/* Top Icon Badge matching Gemini sparkly type */}
-        <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#0d6e5a] mx-auto mb-5 shadow-2xs">
-          <Sparkles className="w-6 h-6 stroke-[2]" />
+        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#0d6e5a] mx-auto mb-3 sm:mb-5 shadow-2xs">
+          <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2]" />
         </div>
 
         {/* Headline */}
-        <h2 className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight text-center mb-2 leading-tight">
+        <h2 className="text-xl sm:text-[28px] font-black text-slate-900 tracking-tight text-center mb-1.5 sm:mb-2 leading-tight">
           Missing Details Detected
         </h2>
 
         {/* Clean explanatory description */}
-        <p className="text-slate-500 text-xs sm:text-sm font-normal text-center mb-6 leading-relaxed max-w-sm mx-auto">
+        <p className="text-slate-500 text-xs sm:text-sm font-normal text-center mb-4 sm:mb-6 leading-relaxed max-w-sm mx-auto">
           We found a few missing values in your resume. Answering them helps tailor your resume and maximize your ATS match score.
         </p>
 
         {/* Question & Target Context Box */}
-        <div className="bg-slate-50/90 border border-slate-200/80 rounded-2xl p-4 sm:p-5 mb-5 text-left">
+        <div className="bg-slate-50/90 border border-slate-200/80 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 mb-4 sm:mb-5 text-left">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 text-[#0d6e5a] border border-teal-200">
               {currentQ.section || "DETAILS"}
             </span>
-            <span className="text-xs text-slate-400 font-semibold">
+            <span className="text-[11px] sm:text-xs text-slate-400 font-semibold">
               Question {currentQuestionIndex + 1} of {missingQuestions.length}
             </span>
           </div>
 
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+          <div className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
             {currentQ.field}
           </div>
 
-          <div className="text-base sm:text-lg font-bold text-slate-900 mb-2 leading-snug">
+          <div className="text-sm sm:text-lg font-bold text-slate-900 mb-1.5 sm:mb-2 leading-snug">
             {currentQ.question}
           </div>
 
           {currentQ.originalBullet && (
-            <div className="text-xs text-slate-700 italic bg-white border border-slate-200 rounded-xl p-3 mt-2">
-              <span className="font-bold text-slate-400 block mb-1 uppercase tracking-wider text-[9px] not-italic">
+            <div className="text-[11px] sm:text-xs text-slate-700 italic bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2.5 sm:p-3 mt-2">
+              <span className="font-bold text-slate-400 block mb-0.5 sm:mb-1 uppercase tracking-wider text-[9px] not-italic">
                 Target Resume Bullet:
               </span>
               "{currentQ.originalBullet}"
@@ -416,7 +416,7 @@ export default function OptimizingProgress({
         </div>
 
         {/* Input Field */}
-        <div className="mb-6 text-left">
+        <div className="mb-4 sm:mb-6 text-left">
           <input
             autoFocus
             type="text"
@@ -438,15 +438,15 @@ export default function OptimizingProgress({
               }
             }}
             placeholder={currentQ.hint || `Type your answer for ${currentQ.field}...`}
-            className="w-full h-12 px-4 text-sm bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0d6e5a] focus:border-transparent transition-all shadow-xs"
+            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 text-xs sm:text-sm bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0d6e5a] focus:border-transparent transition-all shadow-xs"
           />
-          <p className="text-[11px] text-slate-400 mt-1.5 ml-1">
-            Press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">Enter ↵</kbd> to save and proceed.
+          <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1.5 ml-1">
+            Press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[9px] sm:text-[10px] font-mono">Enter ↵</kbd> to save and proceed.
           </p>
         </div>
 
         {/* Dual Action Buttons matching Image 2 Layout */}
-        <div className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={() => {
@@ -457,7 +457,7 @@ export default function OptimizingProgress({
               }
             }}
             disabled={isApplying}
-            className="w-full sm:flex-1 h-12 rounded-xl bg-[#0d6e5a] hover:bg-[#075E53] active:scale-95 text-white text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="w-full sm:flex-1 h-11 sm:h-12 rounded-xl bg-[#0d6e5a] hover:bg-[#075E53] active:scale-95 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
             <span className="flex items-center gap-1.5">
               {isLast ? "Finish & Optimize ✨" : (
@@ -477,7 +477,7 @@ export default function OptimizingProgress({
                 handleApplyAnswers(true);
               }
             }}
-            className="w-full sm:flex-1 h-12 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold flex items-center justify-center transition-all cursor-pointer"
+            className="w-full sm:flex-1 h-11 sm:h-12 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center justify-center transition-all cursor-pointer"
           >
             <span>{isLast ? "Skip All & Optimize" : "Skip this question"}</span>
           </button>
@@ -488,10 +488,10 @@ export default function OptimizingProgress({
 
   // ── RENDER STATIC PROGRESS PAGE (ROLEFUSE TEAL / EMERALD BRAND THEME) ──
   return (
-    <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto select-none">
+    <div className="flex flex-col items-center justify-center w-full max-w-lg mx-auto select-none px-3 sm:px-0">
       {/* Circular progress ring with brand teal/emerald track and active arc */}
-      <div className="relative w-36 h-36 mb-6 flex-shrink-0">
-        <svg className="w-36 h-36 -rotate-90" viewBox="0 0 120 120">
+      <div className="relative w-28 h-28 sm:w-36 sm:h-36 mb-3 sm:mb-6 flex-shrink-0">
+        <svg className="w-28 h-28 sm:w-36 sm:h-36 -rotate-90" viewBox="0 0 120 120">
           <circle
             cx="60"
             cy="60"
@@ -514,25 +514,25 @@ export default function OptimizingProgress({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
-          <span className="text-3xl font-black text-slate-900 tracking-tight">{Math.round(progress)}%</span>
-          <span className="text-xs text-[#087F6E] font-semibold mt-0.5">
+          <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{Math.round(progress)}%</span>
+          <span className="text-[10px] sm:text-xs text-[#087F6E] font-semibold mt-0.5">
             {progress >= 100 ? "complete" : `~${Math.max(1, Math.round((100 - progress) * 0.22))}s left`}
           </span>
         </div>
       </div>
 
       {/* Header slot */}
-      <div className="h-16 flex flex-col items-center justify-center text-center w-full max-w-md px-2 select-none mb-4">
-        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight line-clamp-1">
+      <div className="min-h-[48px] sm:min-h-[60px] flex flex-col items-center justify-center text-center w-full max-w-md px-2 select-none mb-3 sm:mb-4">
+        <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight line-clamp-1">
           {STEPS.find((s) => s.id === currentStepId)?.label ?? "Parsing the job description"}
         </h2>
-        <p className="text-slate-500 text-xs sm:text-sm mt-1 font-normal line-clamp-2">
+        <p className="text-slate-500 text-[11px] sm:text-sm mt-0.5 sm:mt-1 font-normal line-clamp-2">
           Stay on this tab — aligning keywords and optimizing formatting for ATS.
         </p>
       </div>
 
-      {/* Steps checklist — strictly fixed row heights (h-[52px]) */}
-      <div className="w-full max-w-lg space-y-2.5 flex-shrink-0">
+      {/* Steps checklist — cleanly responsive rows */}
+      <div className="w-full max-w-lg space-y-2 sm:space-y-2.5 flex-shrink-0">
         {STEPS.map((step) => {
           const s = steps.find((x) => x.id === step.id);
           const status = s?.status ?? "pending";
@@ -541,8 +541,8 @@ export default function OptimizingProgress({
             <div
               key={step.id}
               className={`
-                h-[52px] flex items-center justify-between
-                px-4 sm:px-5 rounded-2xl
+                h-[46px] sm:h-[52px] flex items-center justify-between
+                px-3 sm:px-5 rounded-xl sm:rounded-2xl
                 transition-all duration-300
                 ${
                   status === "done"
@@ -553,7 +553,7 @@ export default function OptimizingProgress({
                 }
               `}
             >
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 pr-2">
                 {status === "done" ? (
                   <div className="w-5 h-5 rounded-full bg-[#087F6E] flex items-center justify-center flex-shrink-0 text-white shadow-2xs">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -567,7 +567,7 @@ export default function OptimizingProgress({
                 )}
 
                 <span
-                  className={`text-xs sm:text-sm ${
+                  className={`text-xs sm:text-sm truncate ${
                     status === "done"
                       ? "text-slate-800 font-semibold"
                       : status === "running"
@@ -580,15 +580,15 @@ export default function OptimizingProgress({
               </div>
 
               {status === "done" ? (
-                <span className="text-[11px] text-[#087F6E] font-medium">
+                <span className="text-[10px] sm:text-[11px] text-[#087F6E] font-medium shrink-0 ml-2">
                   {s?.duration || "Done"}
                 </span>
               ) : status === "running" ? (
-                <span className="text-[11px] text-[#087F6E] font-semibold">
+                <span className="text-[10px] sm:text-[11px] text-[#087F6E] font-semibold shrink-0 ml-2">
                   running
                 </span>
               ) : (
-                <span className="w-8" />
+                <span className="w-6 sm:w-8 shrink-0" />
               )}
             </div>
           );
@@ -596,8 +596,8 @@ export default function OptimizingProgress({
       </div>
 
       {/* Rotating trivia */}
-      <div className="h-10 flex items-center justify-center text-center mt-6 w-full max-w-md px-2 select-none">
-        <p className="text-xs text-slate-400 font-normal leading-relaxed line-clamp-2">
+      <div className="min-h-[36px] flex items-center justify-center text-center mt-4 sm:mt-6 w-full max-w-md px-2 select-none">
+        <p className="text-[11px] sm:text-xs text-slate-400 font-normal leading-relaxed line-clamp-2">
           {funFact}
         </p>
       </div>

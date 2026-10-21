@@ -395,12 +395,23 @@ export function toSmallCapsRuns(name: string): { text: string; big: boolean }[] 
 
 /**
  * Certification / award line => bold title + regular issuing company/remainder.
- * Cleans out long descriptive paragraphs to keep bullets simple, concise, and focused on:
- * • Certification Name – Provided Company Name (Year)
+ * Simple certifications: "• Title – Provider (Year)" -> bold title, normal provider.
+ * Achievements / sentences (e.g. "Solved 150+ LeetCode problems", "Winner of Hackathon"):
+ * Return empty title so the entire achievement is rendered in regular Times-Roman font (NOT bold).
  */
 export function splitCertText(text: string): { title: string; rest: string } {
   let clean = stripMarkdownAsterisks(text || '').replace(/^[•\-\*–\s\u2022]+/, '').trim();
   if (!clean) return { title: '', rest: '' };
+
+  // Detect achievement bullets:
+  // Starts with an action verb, metric/count, or is a long sentence bullet
+  const isAchievement =
+    /^(?:solved|won|ranked|secured|awarded|built|developed|engineered|spearheaded|achieved|completed|published|selected|scored|earned|received|participated|finalist|winner|top|1st|2nd|3rd)\b/i.test(clean) ||
+    /^\d+\+?\s+(?:problems?|challenges?|questions?|algorithms?|projects?)\b/i.test(clean);
+
+  if (isAchievement) {
+    return { title: '', rest: clean };
+  }
 
   // Strip unwanted trailing verbose descriptive sentences/paragraphs added by AI
   clean = clean.replace(/:\s*(?:Demonstrated|Covered|Learned|Acquired|Hands-on|Focusing|Validating|Gained|In-depth|Proven|Comprehensive|Built|Applied|Mastered|Specialized|Engineered|Trained|Focused).+$/i, '');
@@ -408,7 +419,7 @@ export function splitCertText(text: string): { title: string; rest: string } {
 
   // Match: "Cert Name – Org Name (Year)" or "Cert Name | Org Name" or "Cert Name by/from Org"
   const sepMatch = clean.match(/^(.+?)\s*(?:[–—]|\||\s-\s|\bby\b|\bfrom\b)\s*([^–—\-|]+(?:\s*\(\d{4}\))?.*)$/i);
-  if (sepMatch && sepMatch[1].trim().length >= 3 && sepMatch[1].trim().length <= 90) {
+  if (sepMatch && sepMatch[1].trim().length >= 2 && sepMatch[1].trim().length <= 90) {
     const title = sepMatch[1].trim();
     let rest = sepMatch[2].trim();
     rest = ' – ' + rest.replace(/^[–—\-|]\s*/, '').trim();
@@ -416,10 +427,12 @@ export function splitCertText(text: string): { title: string; rest: string } {
   }
 
   // Fallback: match standard hyphen/dash/year
-  const m = clean.match(/^(.{3,90}?)(\s[–—-]\s.*|\s\(\d{4}\).*)$/);
+  const m = clean.match(/^(.{2,90}?)(\s[–—-]\s.*|\s\(\d{4}\).*)$/);
   if (m) return { title: m[1].trim(), rest: ' ' + m[2].trim() };
 
-  return { title: clean, rest: '' };
+  // If no clear provider separator exists, do NOT bold the whole line!
+  // Return regular text so achievements and plain bullets remain unbolded.
+  return { title: '', rest: clean };
 }
 
 /** Collapse runs of spacers and drop spacers directly after headers (prevents ballooning length). */
@@ -434,7 +447,7 @@ function compactBlocks(blocks: ParsedResumeBlock[]): ParsedResumeBlock[] {
   return out;
 }
 
-const EDU_PLACEHOLDER = /^(?:university name|institution name|college name|school name|city,?\s*country|location|n\/a|\[[^\]]*\]|_+)$/i;
+const EDU_PLACEHOLDER = /^(?:university name|institution name|college name|school name|city,?\s*country|location|n\/a|\[[^\]]*\]|_+(?:_+)?|graduated|graduation|batch|year|passed\s*out|passing\s*year|completion|expected)\s*[:\-]?$/i;
 
 /** Removes placeholder / duplicated comma segments from education text. */
 function cleanEducationText(value: string): string {
@@ -751,7 +764,9 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       (!hasAnySection && !isSection && !isRoleOrTitle(line) && line.length < 80);
 
     if (!hasAnySection && !isContactLine && !isSection) {
-      // Omit standalone job title / subtitle line below candidate name
+      if (isRoleOrTitle(line) && !blocks.some(b => b.type === 'subtitle')) {
+        blocks.push({ type: 'subtitle', text: line });
+      }
       continue;
     }
 
@@ -765,30 +780,88 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
         if (!txt) return;
         // Strictly filter out job names / roles in contact details
         if (isRoleOrTitle(txt)) return;
-        
+
+        // 1. Check markdown link format: [Label](url)
+        const mdMatch = txt.match(/\[([^\]]+)\]\(([^)]+)\)/);
+        if (mdMatch) {
+          const rawLabel = mdMatch[1].trim();
+          const rawUrl = mdMatch[2].trim();
+          const cleanLink = cleanUrl(rawUrl);
+          const lowerUrl = cleanLink.toLowerCase();
+          const lowerLabel = rawLabel.toLowerCase();
+
+          let display = rawLabel;
+          if (lowerUrl.includes('linkedin.com') || lowerLabel.includes('linkedin')) {
+            const handleMatch = cleanLink.match(/linkedin\.com\/in\/([a-zA-Z0-9_\-\.%]+)/i);
+            display = handleMatch ? `linkedin.com/in/${handleMatch[1]}` : (lowerLabel === 'linkedin' || lowerLabel === 'linkedin profile' ? 'LinkedIn' : rawLabel);
+          } else if (lowerUrl.includes('github.com') || lowerLabel.includes('github')) {
+            const handleMatch = cleanLink.match(/github\.com\/([a-zA-Z0-9_\-\.%]+)/i);
+            display = handleMatch ? `github.com/${handleMatch[1]}` : (lowerLabel === 'github' || lowerLabel === 'github profile' ? 'GitHub' : rawLabel);
+          }
+          segments.push({ text: display, url: cleanLink, isLink: true });
+          return;
+        }
+
+        // 2. LinkedIn profile link / handle / label
+        if (txt.toLowerCase().includes('linkedin')) {
+          const matchedProfile = txt.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_\-\.%]+\/?/i)
+            || txt.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/[a-zA-Z0-9_\-\.%]+\/?/i);
+          if (matchedProfile) {
+            const fullUrl = cleanUrl(matchedProfile[0]);
+            const handle = fullUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '').replace(/\/$/, '');
+            const display = handle ? `linkedin.com/in/${handle}` : 'LinkedIn';
+            segments.push({ text: display, url: fullUrl, isLink: true });
+          } else {
+            const candidate = txt.replace(/^(?:linkedin profile|linkedin)\s*[:\-]?\s*/i, '').trim();
+            const targetUrl = candidate.includes('.') ? cleanUrl(candidate) : 'https://linkedin.com';
+            segments.push({ text: 'LinkedIn', url: targetUrl, isLink: true });
+          }
+          return;
+        }
+
+        // 3. GitHub profile link / handle / label
+        if (txt.toLowerCase().includes('github')) {
+          const matchedProfile = txt.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_\-\.%]+(?:\/[a-zA-Z0-9_\-\.%]+)?\/?/i);
+          if (matchedProfile) {
+            const fullUrl = cleanUrl(matchedProfile[0]);
+            const handle = fullUrl.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/$/, '');
+            const display = handle ? `github.com/${handle}` : 'GitHub';
+            segments.push({ text: display, url: fullUrl, isLink: true });
+          } else {
+            const candidate = txt.replace(/^(?:github profile|github)\s*[:\-]?\s*/i, '').trim();
+            const targetUrl = candidate.includes('.') ? cleanUrl(candidate) : 'https://github.com';
+            segments.push({ text: 'GitHub', url: targetUrl, isLink: true });
+          }
+          return;
+        }
+
+        // 4. Email address
         const emailMatch = txt.match(EMAIL_REGEX);
-        const urlMatch = txt.match(URL_REGEX);
-        
         if (emailMatch) {
-          segments.push({ text: txt, isLink: false });
-        } else if (urlMatch) {
-          segments.push({ text: txt, url: cleanUrl(urlMatch[0]), isLink: true });
-        } else if (txt.toLowerCase().includes('linkedin.com') || txt.toLowerCase().includes('github.com')) {
-          const matchedProfile = txt.match(/(?:https?:\/\/)?(?:www\.)?(?:linkedin\.com\/in\/[\w\-\.%]+\/?|github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/?)/i);
-          const rawUrl = matchedProfile ? matchedProfile[0] : txt.replace(/^(?:linkedin|github)\s*[:\-]?\s*/i, '');
-          const clean = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
-          segments.push({ text: txt, url: cleanUrl(clean), isLink: true });
-        } else if (txt.toLowerCase().includes('linkedin') || txt.toLowerCase().includes('github')) {
-          const implicitUrl = txt.toLowerCase().includes('linkedin') 
-            ? 'https://linkedin.com' 
-            : 'https://github.com';
-          segments.push({ text: txt, url: implicitUrl, isLink: true });
-        } else if (/\+?\d[\d\s\-\(\)]{7,}/.test(txt)) {
-          segments.push({ text: txt, isLink: false });
-        } else {
-          // If plain text looks like a job title, do NOT add to contact line
-          if (!isRoleOrTitle(txt)) {
-            segments.push({ text: txt, isLink: false });
+          segments.push({ text: emailMatch[0].trim(), isLink: false });
+          return;
+        }
+
+        // 5. Generic URL / Portfolio
+        const urlMatch = txt.match(URL_REGEX);
+        if (urlMatch) {
+          const cleanLink = cleanUrl(urlMatch[0]);
+          const display = cleanLink.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+          segments.push({ text: display, url: cleanLink, isLink: true });
+          return;
+        }
+
+        // 6. Phone number
+        if (/\+?\d[\d\s\-\(\)]{7,}/.test(txt) && !/[a-zA-Z]{3,}/.test(txt)) {
+          segments.push({ text: txt.replace(/^(?:phone|mobile|tel|cell)\s*[:\-]?\s*/i, '').trim(), isLink: false });
+          return;
+        }
+
+        // 7. Location or other clean contact segment
+        if (!isRoleOrTitle(txt)) {
+          const cleanOther = txt.replace(/^(?:location|address)\s*[:\-]?\s*/i, '').trim();
+          if (cleanOther) {
+            segments.push({ text: cleanOther, isLink: false });
           }
         }
       });
@@ -1029,11 +1102,12 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       if (!isBullet) {
         let lineClean = line;
         let dates = "";
-        const dateMatch = lineClean.match(/\s+(\b20\d{2}\b.*?|\b\d{4}\b)$/);
+        const dateMatch = lineClean.match(/\s*(?:\|\s*)?(\b20\d{2}\b.*?|\b\d{4}\b)$/);
         if (dateMatch) {
           dates = dateMatch[1].trim();
           lineClean = lineClean.substring(0, lineClean.length - dateMatch[0].length).trim();
         }
+        lineClean = lineClean.replace(/[\s|–—\-]+$/, '').trim();
 
         const parts = lineClean.split(/\s*(?:[|—–]|\s+-\s+)\s*/);
         const name = stripMarkdownAsterisks(parts[0] || "Project");
@@ -1081,10 +1155,13 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       const DEGREE_KEYWORDS = [
         'b.tech', 'btech', 'b.e.', 'be', 'b.s.', 'bs', 'b.sc', 'bsc', 'bca', 'b.com', 'bcom', 'bachelor',
         'm.tech', 'mtech', 'm.s.', 'ms', 'm.sc', 'msc', 'mca', 'master', 'mba', 'ph.d', 'phd',
-        'class xii', 'class x', 'class 12', 'class 10', 'diploma', 'matriculation', 'secondary school',
-        'secondary', 'hsc', 'cbse', 'board', 'high school', '10th', '12th', 'senior secondary',
-        'higher secondary', 'intermediate', 'ssc', 'plus two', '+2'
+        'class xii', 'class x', 'class 12', 'class 10', 'diploma', 'matriculation', 'secondary school certificate',
+        'secondary', 'hsc', 'cbse', 'board', '10th', '12th', 'senior secondary',
+        'higher secondary', 'intermediate', 'ssc', 'plus two', '+2', 'high school diploma'
       ];
+
+      const STREAM_PATTERN = /^(?:mpc|bipc|mec|cec|hec|pcm|pcmb|science|commerce|arts)$/i;
+      const DATE_LABEL_PATTERN = /^(?:graduated|graduation|batch|year|passed\s*out|passing\s*year|completion|expected|tenure)\s*[:\-]?$/i;
 
       let lastEdu: EducationBlock | undefined;
       for (let i = blocks.length - 1; i >= 0; i--) {
@@ -1123,7 +1200,7 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
           if (gMatch && !extractedGpa) {
             extractedGpa = gMatch[0].trim();
             const restOfSeg = seg.replace(gMatch[0], "").trim();
-            if (restOfSeg) remainingSegments.push(restOfSeg);
+            if (restOfSeg && !DATE_LABEL_PATTERN.test(restOfSeg)) remainingSegments.push(restOfSeg);
             continue;
           }
 
@@ -1131,15 +1208,22 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
           if (dMatch && !extractedDates) {
             extractedDates = dMatch[0].trim();
             const restOfSeg = seg.replace(dMatch[0], "").trim();
-            if (restOfSeg) remainingSegments.push(restOfSeg);
+            if (restOfSeg && !DATE_LABEL_PATTERN.test(restOfSeg)) remainingSegments.push(restOfSeg);
             continue;
           }
 
-          remainingSegments.push(seg);
+          if (!DATE_LABEL_PATTERN.test(seg)) {
+            remainingSegments.push(seg);
+          }
         }
 
         for (const seg of remainingSegments) {
           const segLower = seg.toLowerCase();
+          if (STREAM_PATTERN.test(segLower)) {
+            // Stream / Specialization belongs with the Degree
+            extractedDegree = extractedDegree ? `${extractedDegree} (${seg.toUpperCase()})` : seg.toUpperCase();
+            continue;
+          }
           const isDegree = DEGREE_KEYWORDS.some(kw => segLower.includes(kw)) || segLower.startsWith('b.') || segLower.startsWith('m.');
           const isSchool = /college|university|institute|academy|school|vidyalaya|board/i.test(segLower);
           if (isDegree && !extractedDegree) {
@@ -1151,6 +1235,12 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
           } else if (!extractedDegree) {
             extractedDegree = seg;
           }
+        }
+
+        // If this multi-part line had a degree but no school, and previous block had no school, or vice-versa:
+        if (extractedDegree && !extractedSchool && lastEdu && !lastEdu.school && !extractedDates && !extractedGpa) {
+          lastEdu.school = extractedDegree;
+          continue;
         }
 
         if (extractedDegree || extractedSchool) {
@@ -1182,14 +1272,36 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
         lineText = lineText.replace(dMatch[0], "").trim();
       }
 
+      // Strip date labels like "Graduated:", "Batch:", "Passing Year:"
+      lineText = lineText.replace(/\b(?:graduated|graduation|batch|year|passed\s*out|passing\s*year|completion|expected)\s*[:\-]?\s*/gi, "").trim();
       lineText = lineText.replace(/^[\s\|\-\u2013\u2014\:]+|[\s\|\-\u2013\u2014\:]+$/g, "").trim();
+
+      // If line is just a stream name (MPC, BiPC, Science), append it to the degree of the active block
+      if (STREAM_PATTERN.test(lineText)) {
+        if (lastEdu) {
+          lastEdu.degree = `${lastEdu.degree} (${lineText.toUpperCase()})`;
+          if (extractedDates && !lastEdu.dates) lastEdu.dates = extractedDates;
+          if (extractedGpa && !lastEdu.gpa) lastEdu.gpa = extractedGpa;
+        }
+        continue;
+      }
+
+      // If line is empty or was just a date label, attach extracted dates/gpa to lastEdu
+      if (!lineText || DATE_LABEL_PATTERN.test(lineText)) {
+        if (lastEdu) {
+          if (extractedDates && !lastEdu.dates) lastEdu.dates = extractedDates;
+          if (extractedGpa && !lastEdu.gpa) lastEdu.gpa = extractedGpa;
+        }
+        continue;
+      }
 
       const containsDegree = DEGREE_KEYWORDS.some(kw => lowerLine.includes(kw)) || lowerLine.startsWith('b.') || lowerLine.startsWith('m.');
       const isSchool = (lowerLine.includes('school') ||
                         lowerLine.includes('college') ||
                         lowerLine.includes('university') ||
                         lowerLine.includes('institute') ||
-                        lowerLine.includes('academy')) && !containsDegree;
+                        lowerLine.includes('academy') ||
+                        lowerLine.includes('vidyalaya')) && !containsDegree;
 
       if (containsDegree || !lastEdu || (lastEdu && lastEdu.school && containsDegree)) {
         blocks.push({
@@ -1200,7 +1312,7 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
           gpa: extractedGpa || ""
         });
       } else if (lastEdu) {
-        if (!lastEdu.school && (isSchool || lineText)) {
+        if (!lastEdu.school && (isSchool || !containsDegree)) {
           lastEdu.school = lineText;
         }
         if (extractedDates && !lastEdu.dates) lastEdu.dates = extractedDates;
@@ -1220,7 +1332,18 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
     if (currentSection === 'CERTIFICATIONS' || currentSection === 'ACHIEVEMENTS' || currentSection === 'AWARDS' ||
         currentSection === 'CERTIFICATIONS & ACHIEVEMENTS' || currentSection === 'HONORS' || currentSection === 'CERTIFICATES') {
       const cleanCertLine = stripMarkdownAsterisks(line.replace(/^[•\-\*–\s\u2022]+/, ''));
-      if (cleanCertLine) blocks.push({ type: 'cert', text: cleanCertLine });
+      if (cleanCertLine) {
+        const isAchievementLine =
+          /^(?:solved|won|ranked|secured|awarded|built|developed|engineered|spearheaded|achieved|completed|published|selected|scored|earned|received|participated|finalist|winner|top|1st|2nd|3rd)\b/i.test(cleanCertLine) ||
+          /^\d+\+?\s+(?:problems?|challenges?|questions?|algorithms?|projects?)\b/i.test(cleanCertLine) ||
+          (cleanCertLine.split(' ').length > 10 && !/[–—|]|\sby\s|\sfrom\s/i.test(cleanCertLine));
+
+        if (isAchievementLine) {
+          blocks.push({ type: 'bullet', text: cleanCertLine });
+        } else {
+          blocks.push({ type: 'cert', text: cleanCertLine });
+        }
+      }
       continue;
     }
 
@@ -1280,9 +1403,27 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
     }
   }
 
-  // Retain all genuine education entries (B.Tech, Intermediate, SSC / 10th Class)
+  // Merge adjacent education entries where entry 1 has degree with no school, and entry 2 is purely the school
+  const mergedBlocks: ParsedResumeBlock[] = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const curr = blocks[i];
+    if (curr.type === 'education') {
+      const prev = mergedBlocks[mergedBlocks.length - 1];
+      if (prev && prev.type === 'education' && !prev.school) {
+        const isCurrSchool = /college|university|institute|academy|school|vidyalaya|board/i.test(curr.degree);
+        const isCurrDegree = /b\.tech|btech|bachelor|master|m\.tech|mtech|b\.e|b\.s|bca|mca|diploma|intermediate|10th|12th|ssc|degree|class/i.test(curr.degree);
+        if (isCurrSchool && !isCurrDegree) {
+          prev.school = curr.degree;
+          if (curr.gpa && !prev.gpa) prev.gpa = curr.gpa;
+          if (curr.dates && !prev.dates) prev.dates = curr.dates;
+          continue; // merged cleanly!
+        }
+      }
+    }
+    mergedBlocks.push(curr);
+  }
 
-  return compactBlocks(swapEducationAndSkillsIfNeeded(blocks, isFresherResume(text)));
+  return compactBlocks(swapEducationAndSkillsIfNeeded(mergedBlocks, isFresherResume(text)));
 }
 
 interface BulletRowProps {
@@ -1364,7 +1505,7 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, scaleOverrid
                 </Text>
               );
             case 'subtitle':
-              return null;
+              return <Text key={i} style={styles.subtitle}>{block.text}</Text>;
             case 'contact': {
               const cleanSegments = block.segments.filter(seg => !isRoleOrTitle(seg.text));
               if (cleanSegments.length === 0) return null;
@@ -1378,9 +1519,16 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, scaleOverrid
                     else if (lower.includes('linkedin')) iconType = 'linkedin';
                     else if (lower.includes('github')) iconType = 'github';
 
-                    let displayLabel = seg.text.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+                    let displayLabel = seg.text
+                      .replace(/^https?:\/\/(www\.)?/i, '')
+                      .replace(/^(?:linkedin profile|github profile|portfolio|linkedin|github|email|phone|mobile|tel|cell|location|address)\s*[:\-]?\s*/i, '')
+                      .replace(/\/$/, '')
+                      .trim();
                     if (displayLabel.startsWith('mailto:')) displayLabel = displayLabel.replace('mailto:', '');
                     if (displayLabel.startsWith('tel:')) displayLabel = displayLabel.replace('tel:', '');
+                    if (!displayLabel) {
+                      displayLabel = iconType === 'linkedin' ? 'LinkedIn' : (iconType === 'github' ? 'GitHub' : (seg.url || 'Link'));
+                    }
 
                     return (
                       <View key={sIdx} style={styles.contactItem}>

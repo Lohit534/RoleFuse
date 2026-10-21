@@ -107,9 +107,25 @@ export async function POST(request: NextRequest) {
           const numPages = pdfDoc.numPages;
           const pageTexts: string[] = [];
 
+          const extractedLinks = new Set<string>();
+
           for (let i = 1; i <= numPages; i++) {
             try {
               const page = await pdfDoc.getPage(i);
+
+              // Extract annotations (especially LinkedIn, GitHub, and portfolio URLs)
+              try {
+                const annotations = await page.getAnnotations();
+                for (const annot of (annotations || [])) {
+                  if (annot && (annot.subtype === "Link" || annot.type === "Link") && annot.url) {
+                    const u = String(annot.url).trim();
+                    if (/linkedin\.com|github\.com|https?:\/\//i.test(u)) {
+                      extractedLinks.add(u);
+                    }
+                  }
+                }
+              } catch (_annotErr) {}
+
               const content = await page.getTextContent({ includeMarkedContent: false } as any);
               const items = content.items as any[];
 
@@ -146,10 +162,32 @@ export async function POST(request: NextRequest) {
             } catch (_pageErr) {}
           }
 
-          const pdfjsText = pageTexts.join("\n\n");
+          let pdfjsText = pageTexts.join("\n\n");
+
+          // Inject any missing LinkedIn / GitHub links discovered in PDF annotations
+          if (extractedLinks.size > 0 && pdfjsText.trim().length > 50) {
+            extractedLinks.forEach((linkUrl) => {
+              if (!pdfjsText.includes(linkUrl)) {
+                if (/linkedin\.com/i.test(linkUrl)) {
+                  if (/\blinkedin\b/i.test(pdfjsText) && !/linkedin\.com/i.test(pdfjsText)) {
+                    pdfjsText = pdfjsText.replace(/\blinkedin\b/i, `LinkedIn: ${linkUrl}`);
+                  } else {
+                    pdfjsText = `${linkUrl}\n` + pdfjsText;
+                  }
+                } else if (/github\.com/i.test(linkUrl)) {
+                  if (/\bgithub\b/i.test(pdfjsText) && !/github\.com/i.test(pdfjsText)) {
+                    pdfjsText = pdfjsText.replace(/\bgithub\b/i, `GitHub: ${linkUrl}`);
+                  } else {
+                    pdfjsText = `${linkUrl}\n` + pdfjsText;
+                  }
+                }
+              }
+            });
+          }
+
           if (pdfjsText.trim().length > 50) {
             extractedText = pdfjsText;
-            logger.info(`[parse-pdf] Stage 1 (pdfjs-dist) extracted ${extractedText.length} chars from ${numPages} pages`);
+            logger.info(`[parse-pdf] Stage 1 (pdfjs-dist) extracted ${extractedText.length} chars from ${numPages} pages (with ${extractedLinks.size} links)`);
           }
         }
       } catch (pdfjsErr: any) {
@@ -219,8 +257,27 @@ export async function POST(request: NextRequest) {
     } else {
       // DOCX / DOC
       try {
-        const data = await mammoth.extractRawText({ buffer });
-        extractedText = data.value || "";
+        const [rawResult, htmlResult] = await Promise.all([
+          mammoth.extractRawText({ buffer }).catch(() => ({ value: "" })),
+          mammoth.convertToHtml({ buffer }).catch(() => ({ value: "" })),
+        ]);
+        extractedText = rawResult.value || "";
+        const html = htmlResult.value || "";
+        const hrefMatches = html.match(/href=["']([^"']+)["']/gi);
+        if (hrefMatches) {
+          for (const m of hrefMatches) {
+            const u = m.replace(/^href=["']/i, "").replace(/["']$/, "").trim();
+            if (/linkedin\.com|github\.com/i.test(u) && !extractedText.includes(u)) {
+              if (/linkedin/i.test(u) && /\blinkedin\b/i.test(extractedText)) {
+                extractedText = extractedText.replace(/\blinkedin\b/i, `LinkedIn: ${u}`);
+              } else if (/github/i.test(u) && /\bgithub\b/i.test(extractedText)) {
+                extractedText = extractedText.replace(/\bgithub\b/i, `GitHub: ${u}`);
+              } else {
+                extractedText = `${u}\n` + extractedText;
+              }
+            }
+          }
+        }
       } catch (docxErr: any) {
         logger.warn("[parse-pdf] mammoth failed:", docxErr.message);
       }

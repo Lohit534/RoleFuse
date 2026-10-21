@@ -247,7 +247,6 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
     }
     useResumeStore.getState().reset();
     setIsDropdownOpen(false);
-    toast.success("Signed out successfully.");
     router.push("/");
     router.refresh();
   };

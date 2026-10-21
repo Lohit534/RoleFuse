@@ -127,6 +127,33 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
     });
   }
 
+  // 2b. Project Completion Year Detection
+  const hasProjectYear = projSectionText ? /\b(?:19|20)\d{2}\b/.test(projSectionText) : false;
+  if (hasProjects && !hasProjectYear) {
+    questions.push({
+      id: "project_year",
+      category: "year_date",
+      title: "Project Completion Year(s)",
+      question: "Which year(s) did you build or complete your key project(s)? (e.g., 2025, 2024)",
+      hint: "e.g., Distributed Task Scheduling Engine (2025), API Gateway (2024)",
+    });
+  }
+
+  // 2c. Certification Provider & Year Detection
+  const hasCerts = /(?:CERTIFICATIONS?|ACHIEVEMENTS?|AWARDS?)\b/i.test(upperText);
+  const certMatch = text.match(/(?:CERTIFICATIONS?|ACHIEVEMENTS?|AWARDS?)[\s\S]*?(?=(?:EDUCATION|EXPERIENCE|PROJECTS?|SKILLS|LANGUAGES?|$))/i);
+  const certSectionText = certMatch ? certMatch[0] : "";
+  const hasCertYearOrOrg = certSectionText ? (/\b(?:19|20)\d{2}\b/.test(certSectionText) || /[–—\-]\s*[A-Z]/i.test(certSectionText)) : false;
+  if (hasCerts && !hasCertYearOrOrg) {
+    questions.push({
+      id: "certification_year",
+      category: "year_date",
+      title: "Certification Issuing Provider & Year",
+      question: "What is the issuing organization and year for your certification(s)?",
+      hint: "e.g., Oracle (2025), HackerRank (2024), AWS (2023)",
+    });
+  }
+
   // 3. SSC (10th) School Education Detection
   const hasEducation =
     upperText.includes("EDUCATION") ||

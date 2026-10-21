@@ -243,8 +243,8 @@ export default function BillingPage() {
             </div>
           </div>
 
-          <Link href="/dashboard/pricing">
-            <Button className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs h-9 rounded-xl px-4 shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer">
+          <Link href="/dashboard/pricing" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs h-9 rounded-xl px-4 shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
               <Sparkles className="h-3.5 w-3.5" />
               {activePlan === "free" ? "Upgrade to Pro" : "View All Plans"}
               <ArrowUpRight className="h-3.5 w-3.5" />
@@ -331,13 +331,13 @@ export default function BillingPage() {
           <div className="lg:col-span-7 space-y-6">
             
             <Card className="border border-[#DCE7E9] bg-white shadow-xs rounded-2xl overflow-hidden">
-              <CardContent className="p-6 sm:p-7 space-y-6">
+              <CardContent className="p-4 sm:p-7 space-y-5 sm:space-y-6">
                 
                 {/* Plan Title & Price Banner */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#F5FAFA] border border-[#DCE7E9] p-5 rounded-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 bg-[#F5FAFA] border border-[#DCE7E9] p-4 sm:p-5 rounded-xl">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-black text-[#111827]">{planDisplayName}</h3>
+                      <h3 className="text-base sm:text-lg font-black text-[#111827]">{planDisplayName}</h3>
                     </div>
                     <p className="text-xs text-[#526176]">
                       {activePlan === "free" 
@@ -352,13 +352,13 @@ export default function BillingPage() {
                 </div>
 
                 {/* Quota Progress Bar with Clear Numbers */}
-                <div className="space-y-3 bg-[#F5FAFA] border border-[#DCE7E9] p-5 rounded-xl">
+                <div className="space-y-3 bg-[#F5FAFA] border border-[#DCE7E9] p-4 sm:p-5 rounded-xl">
                   <div className="flex justify-between items-center text-xs font-bold">
                     <span className="text-[#111827] flex items-center gap-1.5">
                       <Zap className="h-3.5 w-3.5 text-[#087F6E]" />
                       Monthly Optimization Quota
                     </span>
-                    <span className="text-[#111827] font-mono">
+                    <span className="text-[#111827] font-mono text-[11px] sm:text-xs">
                       {used} / {isUnlimited ? "∞ (Unlimited)" : `${totalLimit} Resumes`}
                     </span>
                   </div>
@@ -379,7 +379,7 @@ export default function BillingPage() {
                 {/* Plan Features Checklist */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Features Included In Your Plan</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
                     {[
                       { text: "AI ATS Resume Optimization", included: true },
                       { text: "Bullet Point Metric Improver", included: true },
@@ -412,12 +412,12 @@ export default function BillingPage() {
                 </div>
 
                 {/* Action Footer */}
-                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-200">
-                  <span className="text-[11px] text-slate-500">
+                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-slate-200">
+                  <span className="text-[11px] text-slate-500 text-center sm:text-left">
                     {activePlan === "free" ? "Upgrade anytime to unlock 20 monthly optimizations or 90 with Pro Max." : "Need to upgrade or switch plans?"}
                   </span>
-                  <Link href="/dashboard/pricing">
-                    <Button className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 rounded-xl px-5 shadow-sm transition-colors">
+                  <Link href="/dashboard/pricing" className="w-full sm:w-auto">
+                    <Button className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 rounded-xl px-5 shadow-sm transition-colors cursor-pointer">
                       {activePlan === "free" ? "Upgrade Plan" : "Change Plan"}
                     </Button>
                   </Link>
@@ -432,17 +432,17 @@ export default function BillingPage() {
           <div className="lg:col-span-5 space-y-6">
             
             <Card className="border-[#DCE7E9] bg-white shadow-xs rounded-2xl overflow-hidden flex flex-col">
-              <div className="p-6 border-b border-[#DCE7E9] flex items-center justify-between">
+              <div className="p-4 sm:p-6 border-b border-[#DCE7E9] flex items-center justify-between">
                 <div className="space-y-0.5">
                   <h3 className="text-base sm:text-lg font-black text-[#111827]">Invoice &amp; Receipts</h3>
                   <p className="text-xs text-[#526176]">Download official GST-compliant tax invoices.</p>
                 </div>
-                <Receipt className="h-5 w-5 text-[#087F6E]" />
+                <Receipt className="h-5 w-5 text-[#087F6E] shrink-0" />
               </div>
 
-              <div className="p-6 space-y-3 min-h-[260px] flex flex-col justify-start">
+              <div className="p-3.5 sm:p-6 space-y-2.5 sm:space-y-3 min-h-[220px] sm:min-h-[260px] flex flex-col justify-start">
                 {invoices.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center py-10 text-[#526176] space-y-2 select-none">
+                  <div className="flex-1 flex flex-col items-center justify-center text-center py-8 sm:py-10 text-[#526176] space-y-2 select-none">
                     <FileText className="h-9 w-9 text-slate-300" />
                     <span className="text-sm font-bold text-[#111827]">No Invoices Yet</span>
                     <p className="text-xs text-[#526176] max-w-xs">
@@ -454,29 +454,29 @@ export default function BillingPage() {
                     <div
                       key={inv.id}
                       onClick={() => handlePrintReceipt(inv)}
-                      className="bg-white border border-[#DCE7E9] hover:border-[#087F6E]/40 p-4 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all shadow-xs"
+                      className="bg-white border border-[#DCE7E9] hover:border-[#087F6E]/40 p-3 sm:p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 cursor-pointer transition-all shadow-xs"
                     >
                       <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-[#111827] truncate">
+                          <span className="text-xs sm:text-sm font-semibold text-[#111827] truncate">
                             {inv.description}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-[#526176] font-mono">
+                        <div className="flex items-center gap-2 text-[11px] sm:text-xs text-[#526176] font-mono">
                           <span>{inv.date}</span>
                           <span>&bull;</span>
                           <span className="text-[#075E53] font-semibold uppercase">{inv.status}</span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-sm font-bold text-[#111827]">{inv.amount}</span>
+                      <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
+                        <span className="text-xs sm:text-sm font-bold text-[#111827]">{inv.amount}</span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handlePrintReceipt(inv);
                           }}
-                          className="h-8 px-3 rounded-lg bg-white hover:bg-[#F5FAFA] border border-[#DCE7E9] hover:border-[#087F6E] text-[#111827] hover:text-[#087F6E] transition-all flex items-center gap-1.5 text-xs font-semibold shadow-xs cursor-pointer"
+                          className="h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg bg-white hover:bg-[#F5FAFA] border border-[#DCE7E9] hover:border-[#087F6E] text-[#111827] hover:text-[#087F6E] transition-all flex items-center gap-1.5 text-xs font-semibold shadow-xs cursor-pointer"
                           title="Download GST Invoice PDF"
                         >
                           <Download className="h-3.5 w-3.5 text-[#087F6E]" />
@@ -488,14 +488,14 @@ export default function BillingPage() {
                 )}
               </div>
 
-              <div className="p-4 bg-[#F5FAFA] border-t border-[#DCE7E9] flex items-center gap-2.5 text-xs text-[#526176] select-none">
+              <div className="p-3.5 sm:p-4 bg-[#F5FAFA] border-t border-[#DCE7E9] flex items-center gap-2.5 text-[11px] sm:text-xs text-[#526176] select-none">
                 <ShieldCheck className="h-4 w-4 text-[#087F6E] shrink-0" />
                 <span>256-bit SSL secured payments &amp; 5% GST tax invoice receipts.</span>
               </div>
             </Card>
 
             {/* Quick Support Card */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-4.5 flex items-center justify-between gap-3 shadow-sm">
+            <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
               <div className="space-y-0.5">
                 <h4 className="text-xs font-bold text-slate-900">Need Billing Help?</h4>
                 <p className="text-[10px] text-slate-500">Questions about payments, plans, or custom invoices?</p>
@@ -504,7 +504,7 @@ export default function BillingPage() {
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent("open-support-chatbot", { detail: { mode: "admin" } }));
                 }}
-                className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white text-[10px] font-bold h-8 rounded-lg px-3.5 transition-all cursor-pointer shrink-0"
+                className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#094d3f] text-white text-[10px] font-bold h-8 rounded-lg px-3.5 transition-all cursor-pointer shrink-0"
               >
                 Contact Us
               </button>
@@ -515,7 +515,7 @@ export default function BillingPage() {
         </ScrollFadeIn>
 
         {/* Clear Billing FAQ Section */}
-        <ScrollFadeIn className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
+        <ScrollFadeIn className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 space-y-4 shadow-sm">
           <div className="flex items-center gap-2">
             <HelpCircle className="h-4 w-4 text-[#0d6e5a]" />
             <h3 className="text-sm font-extrabold text-slate-900">Frequently Asked Billing Questions</h3>

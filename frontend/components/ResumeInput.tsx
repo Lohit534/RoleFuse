@@ -73,7 +73,6 @@ export default function ResumeInput({
         const data = await res.json();
         if (data.text) {
           onChange(data.text);
-          toast.success(`Parsed successfully: ${file.name}`);
           setActiveTab("paste");
         } else {
           throw new Error("No readable text found in file. Please paste your text below.");

@@ -121,7 +121,6 @@ export default function BulletImprover({
         localStorage.setItem(storageKey, (totalUsed + 1).toString());
       }
       setUsedThisSession((n) => n + 1);
-      toast.success("Bullet optimized!");
     } catch (err: any) {
       toast.error(err.message || "Could not improve bullet.");
     } finally {
@@ -173,7 +172,6 @@ export default function BulletImprover({
       delete next[bulletIdx];
       return next;
     });
-    toast.success("Applied to resume! ATS score updated.");
   };
 
   // 5. Dismiss improvements card

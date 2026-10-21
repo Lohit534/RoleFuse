@@ -778,8 +778,8 @@ export default function PricingPage() {
 
       {/* SECURE MOCK BILLING CHECKOUT DIALOG */}
       {isCheckoutOpen && selectedPlan && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="max-w-md w-full bg-white border border-slate-200 p-4 sm:p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
 
             {/* Header info */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">

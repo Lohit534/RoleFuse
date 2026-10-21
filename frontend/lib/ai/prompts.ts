@@ -129,7 +129,7 @@ export function buildOptimizationPrompt(
     "  - NEVER use bullet points (•, -, *, etc.) anywhere in the TECHNICAL SKILLS section.\n" +
     "  - Every skill line MUST strictly be in 'Category: val1, val2, val3' format on a single line.\n" +
     "  - NEVER output bullet lines like '• Technologies & Tools: ...' or '• Python, React'.\n" +
-    "  - If internship tools/technologies were provided, list them under 'Developer Tools: ...' or 'Frameworks: ...' without bullets, and weave them into the internship experience bullets.\n" +
+    "  - Keep Technical Skills focused on core candidate competencies. Do NOT dump internship-specific stacks exclusively here; internship tools belong directly on the internship entry.\n" +
     "  Organized into clean 'Category: values' lines (each on ONE single line):\n" +
     "    Programming Languages: Java, SQL, JavaScript\n" +
     "    Frameworks: Spring Boot, Spring MVC, Hibernate, JPA\n" +
@@ -141,15 +141,15 @@ export function buildOptimizationPrompt(
     "PROFESSIONAL EXPERIENCE & INTERNSHIPS:\n" +
     "  Header: PROFESSIONAL EXPERIENCE (ALL CAPS)\n" +
     "  For each role / internship:\n" +
-    "    Line 1: Role Title | Company Name | Tech Stack\n" +
-    "    Line 2 (IF DATES EXIST IN RESUME OR USER-VERIFIED ANSWERS): Month YYYY - Month YYYY (or Duration / Present)\n" +
-    "    Lines 3+: • Strong bullet (one per line)\n" +
-    "    CRITICAL FOR INTERNSHIP DATES: If the user provided verified internship duration/period in their answers or original resume, you MUST include it on Line 2! However, NEVER invent or guess fake years/dates if neither the resume nor the user provided them.\n" +
+    "    Line 1: Role / Internship Title | Month YYYY – Month YYYY (or Duration / Present)\n" +
+    "    Line 2: Company Name | Technologies & Frameworks (e.g. Company Name | Java, Spring Boot, MySQL)\n" +
+    "    Lines 3+: 2-4 strong action-verb bullet points\n" +
+    "    CRITICAL FOR INTERNSHIPS: When the candidate provides technologies and frameworks used in an internship, place them on Line 2 alongside Company Name ('Company Name | Tech Stack') so they render on the right in italics. NEVER dump internship technologies into Technical Skills.\n" +
     "  Every bullet MUST begin with a powerful past-tense action verb and quantify impact.\n\n" +
     "PROJECTS:\n" +
     "  Header: PROJECTS (ALL CAPS)\n" +
     "  For each project:\n" +
-    "    Line 1: Project Name — Tech Stack (do NOT invent or append fake years/dates if candidate did not mention them!)\n" +
+    "    Line 1: Project Name — Tech Stack | Year (e.g. Distributed Task Scheduling Engine — Java, Spring Boot, Redis, MySQL | 2025)\n" +
     "    Lines 2+: 2-4 impact-oriented bullets describing contributions, architectures, and outcomes.\n\n" +
     "EDUCATION:\n" +
     "  Header: EDUCATION (ALL CAPS)\n" +
@@ -159,12 +159,17 @@ export function buildOptimizationPrompt(
     "  - SSC / 10th / Class X / Secondary School Certificate / Matriculation (MANDATORY if present in resume or provided in user answers)\n" +
     "  NEVER DELETE, DROP, OR OMIT SSC OR INTERMEDIATE! Retain all candidate schooling and degree records.\n" +
     "  For each entry:\n" +
-    "    Line 1: Degree / Qualification Name | Graduated: YYYY (or Month YYYY - Month YYYY)\n" +
-    "    Line 2: Institution / School Name | Board / Stream | CGPA / Percentage (only if available)\n\n" +
+    "    Line 1: Degree / Qualification Name | YYYY (or Month YYYY - Month YYYY)\n" +
+    "    Line 2: Institution / School Name | CGPA: X.X (or Stream / Percentage)\n" +
+    "    CRITICAL EDUCATION RULES:\n" +
+    "    - NEVER output words like 'Graduated:', 'Passing Year:', 'Batch:' before dates. Just output the year or date range directly (e.g. '2026' or '2020 - 2022').\n" +
+    "    - If Intermediate / High School has a stream (like MPC, BiPC, Science, Commerce), attach it directly to the degree on Line 1: 'Intermediate (MPC) | 2020 - 2022'.\n" +
+    "    - Never output stream names or 'Graduated:' as a standalone line.\n\n" +
     "CERTIFICATIONS & ACHIEVEMENTS:\n" +
     "  Header: CERTIFICATIONS & ACHIEVEMENTS (ALL CAPS)\n" +
     "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section. Do NOT create two separate sections.\n" +
-    "  Format: • Certification Name – Issuing Company/Provider Name (e.g. • AWS Certified Solutions Architect – Amazon Web Services, or • Meta Front-End Developer Professional Certificate – Coursera, or • Oracle Certified Professional: Java SE Developer – Oracle)\n" +
+    "  CERTIFICATIONS format: • Certification Name – Issuing Provider (e.g. • Infosys Springboard – Python Foundations, • CodeTantra – Python Programming Certification)\n" +
+    "  ACHIEVEMENTS format: • Descriptive accomplishment sentence (e.g. • Solved 150+ Data Structures and Algorithms problems on LeetCode, • Solved 30+ Python algorithmic challenges on HackerRank)\n" +
     "  SIMPLE BULLET STANDARD: Keep certifications clean and simple — just the Certification Name and Provided Company / Platform Name. DO NOT generate wordy explanations, paragraphs, or extra sentences.\n" +
     "  CRITICAL RULE FOR YEARS: NEVER invent, guess, or add a year or date to a certification or achievement if candidate did NOT mention a year in their original resume! ONLY set the year if explicitly in the original resume.\n\n" +
     (hasOriginalLanguages

@@ -250,9 +250,8 @@ export default function RootLayout({
               fontWeight: "500",
               letterSpacing: "-0.01em",
               border: "1px solid rgba(255, 255, 255, 0.12)",
-              boxShadow: "0 14px 34px -4px rgba(0, 0, 0, 0.3), 0 4px 12px -2px rgba(0, 0, 0, 0.15)",
-              maxWidth: "440px",
-              lineHeight: "1.45",
+              maxWidth: "min(440px, 92vw)",
+              width: "auto",
             },
             success: {
               iconTheme: {

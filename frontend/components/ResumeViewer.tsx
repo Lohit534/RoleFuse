@@ -142,7 +142,6 @@ export default function ResumeViewer({
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      toast.success("PDF Downloaded successfully! 📄");
     } catch (err: any) {
       toast.error(err.message || "Failed to download PDF.");
     } finally {
@@ -179,7 +178,6 @@ export default function ResumeViewer({
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      toast.success("DOCX Downloaded successfully! 📝");
     } catch (err: any) {
       toast.error(err.message || "Failed to download DOCX.");
     } finally {

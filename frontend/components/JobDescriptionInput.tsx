@@ -66,7 +66,6 @@ export default function JobDescriptionInput({
 
       onChange(text.slice(0, 6000));
       setFetchSuccess(true);
-      toast.success("Job description fetched successfully!");
       setActiveTab("paste");
       setTimeout(() => setFetchSuccess(false), 3000);
     } catch (err: any) {

@@ -61,7 +61,6 @@ export default function HistoryCard({ resume, userPlan = "free", onSelect }: His
 
       const blob = await response.blob();
       saveAs(blob, `${resume.jobTitle?.replace(/\s+/g, "-") || "resume"}-optimized.pdf`);
-      toast.success("PDF downloaded successfully!");
     } catch (error: any) {
       toast.error(error.message || "Failed to download PDF.");
     } finally {
