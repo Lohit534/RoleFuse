@@ -8,10 +8,6 @@ import Navbar from "@/components/Navbar";
 import ResumeInput from "@/components/ResumeInput";
 import JobDescriptionInput from "@/components/JobDescriptionInput";
 import KeywordBadges from "@/components/KeywordBadges";
-import {
-  generateSkillRoadmap,
-  generateMultiSkillRoadmap,
-} from "@/lib/roadmap-generator";
 import { extractTechTerms, isTechnicalKeyword } from "@/lib/ats/keywords";
 import ResumeViewer from "@/components/ResumeViewer";
 import BulletImprover from "@/components/BulletImprover";
@@ -822,8 +818,16 @@ export default function DashboardPage() {
     setRoadmapLoading(true);
     setRoadmapContent(null);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const content = generateMultiSkillRoadmap(selectedRoadmapSkills);
+      const res = await fetch("/api/skill-roadmap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skills: selectedRoadmapSkills }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to generate roadmap.");
+      }
+      const content: string = data.roadmap;
       setRoadmapContent(content);
       saveActiveSession({
         roadmapContent: content,
@@ -832,8 +836,8 @@ export default function DashboardPage() {
       toast.success(
         `Generated 90-day roadmap for ${selectedRoadmapSkills.length} selected skill${selectedRoadmapSkills.length > 1 ? "s" : ""}!`,
       );
-    } catch (e) {
-      toast.error("Failed to generate learning roadmap.");
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to generate learning roadmap.");
     } finally {
       setRoadmapLoading(false);
     }
