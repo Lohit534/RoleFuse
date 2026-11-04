@@ -102,8 +102,15 @@ export default function JobTrackerPage() {
           try {
             const parsed = JSON.parse(storedJobs);
             if (Array.isArray(parsed)) {
-              setJobs(parsed);
-              if (parsed.length > 0) {
+              // Sanitize any empty/corrupt placeholder entries
+              const valid = parsed.filter(
+                (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
+              );
+              setJobs(valid);
+              if (valid.length !== parsed.length) {
+                localStorage.setItem(`fastHire_jobs_${user.id}`, JSON.stringify(valid));
+              }
+              if (valid.length > 0) {
                 setAuthLoading(false);
               }
             }
@@ -143,6 +150,9 @@ export default function JobTrackerPage() {
     if (!userId) return;
     localStorage.setItem(`fastHire_jobs_${userId}`, JSON.stringify(newJobs));
     setJobs(newJobs);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("fastHire_jobs_updated"));
+    }
   };
 
   // Instant 1-click status update (No floppy dragging)

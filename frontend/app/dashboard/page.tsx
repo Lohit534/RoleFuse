@@ -518,11 +518,19 @@ export default function DashboardPage() {
           if (storedJobsStr) {
             const parsed = JSON.parse(storedJobsStr);
             if (Array.isArray(parsed)) {
-              const savedCount = parsed.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
-              const appliedCount = parsed.filter((j: any) => j.status === "applied").length;
-              const interviewCount = parsed.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
-              const offerCount = parsed.filter((j: any) => j.status === "offered" || j.status === "offer").length;
-              const upcoming = parsed.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
+              // Sanitize: remove blank/empty placeholder jobs (no company AND no title)
+              const validJobs = parsed.filter(
+                (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
+              );
+              // Persist cleaned list if entries were removed
+              if (validJobs.length !== parsed.length) {
+                localStorage.setItem(`fastHire_jobs_${data.user.id}`, JSON.stringify(validJobs));
+              }
+              const savedCount = validJobs.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
+              const appliedCount = validJobs.filter((j: any) => j.status === "applied").length;
+              const interviewCount = validJobs.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
+              const offerCount = validJobs.filter((j: any) => j.status === "offered" || j.status === "offer").length;
+              const upcoming = validJobs.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
               setJobTrackerStats({
                 saved: savedCount,
                 applied: appliedCount,
@@ -606,6 +614,61 @@ export default function DashboardPage() {
     }
     checkAuth();
   }, [router]);
+
+  // Live listener to keep Job Tracker counts on dashboard updated in real-time
+  useEffect(() => {
+    if (!user?.id) return;
+    const syncStats = () => {
+      try {
+        const storedJobsStr = localStorage.getItem(`fastHire_jobs_${user.id}`);
+        if (storedJobsStr) {
+          const parsed = JSON.parse(storedJobsStr);
+          if (Array.isArray(parsed)) {
+            const validJobs = parsed.filter(
+              (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
+            );
+            const savedCount = validJobs.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
+            const appliedCount = validJobs.filter((j: any) => j.status === "applied").length;
+            const interviewCount = validJobs.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
+            const offerCount = validJobs.filter((j: any) => j.status === "offered" || j.status === "offer").length;
+            const upcoming = validJobs.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
+            setJobTrackerStats({
+              saved: savedCount,
+              applied: appliedCount,
+              interview: interviewCount,
+              offer: offerCount,
+              nextInterview: upcoming ? upcoming.date : null,
+            });
+            return;
+          }
+        }
+        setJobTrackerStats({
+          saved: 0,
+          applied: 0,
+          interview: 0,
+          offer: 0,
+          nextInterview: null,
+        });
+      } catch (e) {
+        setJobTrackerStats({
+          saved: 0,
+          applied: 0,
+          interview: 0,
+          offer: 0,
+          nextInterview: null,
+        });
+      }
+    };
+
+    window.addEventListener("focus", syncStats);
+    window.addEventListener("storage", syncStats);
+    window.addEventListener("fastHire_jobs_updated", syncStats);
+    return () => {
+      window.removeEventListener("focus", syncStats);
+      window.removeEventListener("storage", syncStats);
+      window.removeEventListener("fastHire_jobs_updated", syncStats);
+    };
+  }, [user?.id]);
 
   const runAIAutoImprove = async (
     targetResumeText = resumeText,
