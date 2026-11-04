@@ -109,7 +109,10 @@ export default function OptimizingProgress({
         finishOptimization(backendResultRef.current);
       } else {
         // Wait on Step 7 in running state until backend arrives
+        // Safety: bail out after 15s max so the UI never hangs forever
+        let waited = 0;
         const interval = setInterval(() => {
+          waited += 300;
           if (!isMountedRef.current) {
             clearInterval(interval);
             return;
@@ -117,6 +120,13 @@ export default function OptimizingProgress({
           if (backendResultRef.current) {
             clearInterval(interval);
             finishOptimization(backendResultRef.current);
+            return;
+          }
+          if (waited >= 15000) {
+            clearInterval(interval);
+            if (isMountedRef.current && onError) {
+              onError("Optimization timed out. Please try again.");
+            }
           }
         }, 300);
       }
@@ -189,12 +199,23 @@ export default function OptimizingProgress({
   // ── PHASE 1: Detection pass ───────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    const abortCtrl = new AbortController();
+    // Hard 28s timeout — surface error clearly instead of hanging forever
+    const hardTimeout = setTimeout(() => {
+      if (!backendResultRef.current && !awaitingInputRef.current) {
+        abortCtrl.abort();
+        if (isMountedRef.current && onError) {
+          onError("Optimization is taking too long. Please try again.");
+        }
+      }
+    }, 28000);
 
     const startPipeline = async () => {
       try {
         const res = await fetch("/api/optimize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: abortCtrl.signal,
           body: JSON.stringify({
             resumeText,
             jobDescription,
@@ -225,11 +246,13 @@ export default function OptimizingProgress({
               const data = JSON.parse(line.slice(jsonStart));
 
               if (data.error) {
+                clearTimeout(hardTimeout);
                 if (onError) onError(data.error);
                 return;
               }
 
               if (data.needsInput && Array.isArray(data.questions) && data.questions.length > 0) {
+                clearTimeout(hardTimeout);
                 // Pause step animation and show the missing-details Q&A card
                 if (stepTimerRef.current) clearTimeout(stepTimerRef.current);
                 awaitingInputRef.current = true;
@@ -247,6 +270,7 @@ export default function OptimizingProgress({
               }
 
               if (data.result) {
+                clearTimeout(hardTimeout);
                 backendResultRef.current = data.result;
                 // If UI has already reached step 7, complete smoothly after step 7 runs
                 if (currentStepRef.current >= 7) {
@@ -261,6 +285,8 @@ export default function OptimizingProgress({
           }
         }
       } catch (err: any) {
+        clearTimeout(hardTimeout);
+        if (err?.name === "AbortError") return; // already handled by hardTimeout
         if (onError) onError(err?.message || "Failed to start optimization.");
       }
     };
@@ -269,6 +295,8 @@ export default function OptimizingProgress({
 
     return () => {
       cancelled = true;
+      clearTimeout(hardTimeout);
+      abortCtrl.abort();
     };
   }, [resumeText, jobDescription]);
 
@@ -295,10 +323,21 @@ export default function OptimizingProgress({
       advanceToNext(4);
     }, 2200);
 
+    const abortCtrl2 = new AbortController();
+    const hardTimeout2 = setTimeout(() => {
+      if (!backendResultRef.current) {
+        abortCtrl2.abort();
+        if (isMountedRef.current && onError) {
+          onError("Optimization is taking too long. Please try again.");
+        }
+      }
+    }, 28000);
+
     try {
       const res = await fetch("/api/optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: abortCtrl2.signal,
         body: JSON.stringify({
           resumeText,
           jobDescription,
@@ -331,6 +370,7 @@ export default function OptimizingProgress({
             const data = JSON.parse(line.slice(jsonStart));
 
             if (data.error) {
+              clearTimeout(hardTimeout2);
               if (onError) onError(data.error);
               return;
             }
@@ -340,6 +380,7 @@ export default function OptimizingProgress({
             }
 
             if (data.result) {
+              clearTimeout(hardTimeout2);
               backendResultRef.current = data.result;
               if (currentStepRef.current >= 7) {
                 setTimeout(() => {
@@ -353,8 +394,11 @@ export default function OptimizingProgress({
         }
       }
     } catch (err: any) {
+      clearTimeout(hardTimeout2);
+      if (err?.name === "AbortError") return; // already handled by hardTimeout2
       if (onError) onError(err?.message || "Failed to complete resume optimization.");
     } finally {
+      clearTimeout(hardTimeout2);
       setIsApplying(false);
     }
   };
