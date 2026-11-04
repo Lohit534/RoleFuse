@@ -39,10 +39,14 @@ function LoginFormContent() {
       const isSample = searchParams.get("sample") === "true" || localStorage.getItem("fastHire_pendingSample") === "true";
       const nextPath = isSample ? "/dashboard?sample=true" : "/dashboard";
 
+      const origin = typeof window !== "undefined"
+        ? window.location.origin.replace("0.0.0.0", "localhost").replace("https://localhost", "http://localhost")
+        : "";
+
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
         },
       });
 
