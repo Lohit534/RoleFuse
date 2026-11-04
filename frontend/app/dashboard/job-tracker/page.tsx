@@ -51,10 +51,10 @@ interface MiniResume {
 }
 
 const COLUMNS: { id: Job["status"]; label: string; color: string; border: string; dot: string }[] = [
-  { id: "wishlist", label: "Wishlist", color: "bg-indigo-50 text-indigo-700", border: "border-indigo-200", dot: "bg-indigo-500" },
-  { id: "applied", label: "Applied", color: "bg-blue-50 text-blue-700", border: "border-blue-200", dot: "bg-blue-500" },
+  { id: "wishlist", label: "Wishlist", color: "bg-slate-100 text-slate-700", border: "border-slate-200", dot: "bg-slate-400" },
+  { id: "applied", label: "Applied", color: "bg-teal-50 text-[#087F6E]", border: "border-teal-200", dot: "bg-[#087F6E]" },
   { id: "interviewing", label: "Interviewing", color: "bg-amber-50 text-amber-700", border: "border-amber-200", dot: "bg-amber-500" },
-  { id: "offered", label: "Offered", color: "bg-emerald-50 text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
+  { id: "offered", label: "Offered", color: "bg-emerald-50 text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-600" },
   { id: "rejected", label: "Rejected", color: "bg-rose-50 text-rose-700", border: "border-rose-200", dot: "bg-rose-500" }
 ];
 
@@ -81,9 +81,6 @@ export default function JobTrackerPage() {
   const [formNotes, setFormNotes] = useState("");
   const [formResumeId, setFormResumeId] = useState("");
   const [formStatus, setFormStatus] = useState<Job["status"]>("wishlist");
-
-  // Dragging reference
-  const [draggedJobId, setDraggedJobId] = useState<string | null>(null);
 
   // 1. Session check & resumes load
   useEffect(() => {
@@ -148,30 +145,18 @@ export default function JobTrackerPage() {
     setJobs(newJobs);
   };
 
-  // Drag & Drop Handlers
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    setDraggedJobId(id);
-    e.dataTransfer.setData("text/plain", id);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent, status: Job["status"]) => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData("text/plain") || draggedJobId;
-    if (!id) return;
-
+  // Instant 1-click status update (No floppy dragging)
+  const handleStatusChange = (id: string, newStatus: Job["status"]) => {
     const updatedJobs = jobs.map((job) => {
       if (job.id === id) {
-        return { ...job, status };
+        return { ...job, status: newStatus };
       }
       return job;
     });
 
     saveJobsToLocalStorage(updatedJobs);
-    setDraggedJobId(null);
+    const targetCol = COLUMNS.find((c) => c.id === newStatus);
+    toast.success(`Job moved to ${targetCol?.label || newStatus}`);
   };
 
   // Form open for new or edit
@@ -369,22 +354,17 @@ export default function JobTrackerPage() {
           </Card>
         </div>
 
-        {/* Kanban Board Container */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4 items-stretch min-h-[500px] overflow-x-auto pb-4">
+        {/* Kanban Board Container (Resume Box Style - No Floppy Drag Cards) */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-3.5 items-start min-h-[500px] overflow-x-auto pb-4">
           {COLUMNS.map((col) => {
             const colJobs = filteredJobs.filter((j) => j.status === col.id);
             return (
               <div
                 key={col.id}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, col.id)}
-                className={`flex flex-col bg-slate-50 border border-slate-200/90 rounded-2xl p-3 min-w-[210px] transition-colors ${
-                  draggedJobId ? "hover:bg-slate-100/70" : ""
-                }`}
+                className="flex flex-col bg-slate-50/70 border border-slate-200/80 rounded-2xl p-2.5 min-w-[210px] space-y-2.5"
               >
-                
                 {/* Column header title */}
-                <div className="flex items-center justify-between mb-3.5 px-1 select-none">
+                <div className="flex items-center justify-between px-1 select-none">
                   <div className="flex items-center gap-1.5">
                     <span className={`w-2 h-2 rounded-full ${col.dot}`} />
                     <span className="font-bold text-xs text-[#111827]">{col.label}</span>
@@ -394,116 +374,117 @@ export default function JobTrackerPage() {
                   </Badge>
                 </div>
 
-                {/* Cards listing */}
-                <div className="flex-1 flex flex-col gap-3 min-h-[350px]">
+                {/* Resume-style Perfect Boxes */}
+                <div className="flex flex-col gap-2.5">
                   {colJobs.length === 0 ? (
-                    <div className="flex-1 border border-dashed border-[#DCE7E9] rounded-xl flex items-center justify-center p-4 text-center select-none bg-white/50">
-                      <span className="text-[10px] text-[#526176] font-medium italic">Drop cards here</span>
+                    <div className="py-8 text-center text-[10px] text-slate-400 font-medium">
+                      No jobs in this stage
                     </div>
                   ) : (
                     colJobs.map((job) => {
-                      const associatedResume = resumes.find(r => r.id === job.resumeId);
+                      const associatedResume = resumes.find((r) => r.id === job.resumeId);
                       return (
-                        <div
+                        <Card
                           key={job.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, job.id)}
-                          className="group relative bg-white hover:bg-slate-50/80 border border-slate-200 hover:border-slate-300 rounded-xl p-3.5 transition-all shadow-xs cursor-grab active:cursor-grabbing space-y-2.5"
+                          className="group relative border border-[#DCE7E9] bg-white hover:border-[#087F6E]/50 hover:shadow-md transition-all duration-200 rounded-2xl shadow-xs flex flex-col justify-between overflow-hidden"
                         >
-                          {/* Card header */}
-                          <div className="space-y-0.5">
-                            <div className="flex justify-between items-start gap-2">
-                              <h4 className="font-bold text-xs text-slate-900 truncate max-w-[80%]">
-                                {job.title}
-                              </h4>
-                              {job.url && (
-                                <a 
-                                  href={job.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  onClick={(e) => e.stopPropagation()} 
-                                  className="text-slate-400 hover:text-slate-800 transition-colors"
+                          <CardContent className="p-3.5 flex flex-col justify-between space-y-2.5">
+                            {/* Card header */}
+                            <div className="space-y-0.5">
+                              <div className="flex justify-between items-start gap-1.5">
+                                <h4
+                                  className="font-bold text-xs text-[#111827] truncate max-w-[85%]"
+                                  title={job.title}
                                 >
-                                  <ExternalLink className="h-3 w-3" />
-                                </a>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-slate-500 font-semibold truncate">
-                              {job.company}
-                            </p>
-                          </div>
-
-                          {/* Details Row */}
-                          <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                            {job.salary && (
-                              <div className="flex items-center gap-1 text-[9px] text-slate-600 font-semibold">
-                                <DollarSign className="h-3 w-3 text-emerald-600" />
-                                <span>{job.salary}</span>
+                                  {job.title}
+                                </h4>
+                                {job.url && (
+                                  <a
+                                    href={job.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-slate-400 hover:text-[#087F6E] transition-colors shrink-0"
+                                    title="Open Job Listing"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
                               </div>
-                            )}
-                            <div className="flex items-center gap-1 text-[9px] text-slate-400 font-semibold">
-                              <Calendar className="h-3 w-3 text-slate-400" />
-                              <span>{job.date}</span>
+                              <p
+                                className="text-[11px] font-semibold text-[#087F6E] truncate"
+                                title={job.company}
+                              >
+                                {job.company}
+                              </p>
                             </div>
-                            {associatedResume && (
-                              <div className="flex items-center gap-1 text-[9px] text-slate-700 font-semibold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded max-w-full truncate">
-                                <FileText className="h-3 w-3 text-slate-500 shrink-0" />
-                                <span className="truncate">{associatedResume.jobTitle || "Custom Resume"}</span>
+
+                            {/* Details Row */}
+                            <div className="space-y-1 pt-1.5 border-t border-slate-100">
+                              {job.salary && (
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-700 font-semibold">
+                                  <DollarSign className="h-3 w-3 text-[#087F6E] shrink-0" />
+                                  <span className="truncate">{job.salary}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+                                <Calendar className="h-3 w-3 text-slate-400 shrink-0" />
+                                <span>{job.date}</span>
                               </div>
-                            )}
-                          </div>
-
-                          {/* Quick change actions & triggers */}
-                          <div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-1.5">
-                            
-                            {/* Card control arrows */}
-                            <div className="flex items-center gap-0.5">
-                              {col.id !== "wishlist" && (
-                                <button
-                                  onClick={() => moveCardStep(job.id, job.status, "prev")}
-                                  className="h-5 w-5 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-800 transition-colors text-[9px]"
-                                  title="Move Left"
-                                >
-                                  ←
-                                </button>
-                              )}
-                              {col.id !== "rejected" && (
-                                <button
-                                  onClick={() => moveCardStep(job.id, job.status, "next")}
-                                  className="h-5 w-5 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-800 transition-colors text-[9px]"
-                                  title="Move Right"
-                                >
-                                  →
-                                </button>
+                              {associatedResume && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200/60 px-2 py-0.5 rounded-md truncate">
+                                  <FileText className="h-3 w-3 text-[#087F6E] shrink-0" />
+                                  <span className="truncate">
+                                    {associatedResume.jobTitle || "Custom Resume"}
+                                  </span>
+                                </div>
                               )}
                             </div>
 
-                            {/* Editing / Removing buttons */}
-                            <div className="flex items-center gap-1">
-                              <button
+                            {/* 1-Click Fast Stage Selector */}
+                            <div className="flex items-center justify-between gap-1 pt-1.5 border-t border-slate-100">
+                              <span className="text-[9px] font-bold uppercase text-[#526176] tracking-wider">
+                                Stage
+                              </span>
+                              <select
+                                value={job.status}
+                                onChange={(e) =>
+                                  handleStatusChange(job.id, e.target.value as Job["status"])
+                                }
+                                className="h-6 text-[10px] font-bold rounded-md border border-[#DCE7E9] bg-slate-50/80 px-1.5 text-[#111827] hover:border-[#087F6E] focus:outline-none focus:ring-1 focus:ring-[#087F6E] cursor-pointer transition-colors"
+                              >
+                                <option value="wishlist">Wishlist</option>
+                                <option value="applied">Applied</option>
+                                <option value="interviewing">Interviewing</option>
+                                <option value="offered">Offered</option>
+                                <option value="rejected">Rejected</option>
+                              </select>
+                            </div>
+
+                            {/* Action Buttons (Matching Resume Boxes in My Resumes) */}
+                            <div className="flex gap-1.5 items-center pt-2 border-t border-[#DCE7E9]">
+                              <Button
                                 onClick={() => openForm(job)}
-                                className="h-5.5 w-5.5 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
-                                title="Edit Job Details"
+                                variant="ghost"
+                                className="flex-1 bg-[#F5FAFA] hover:bg-[#087F6E] text-[#111827] hover:text-white border border-[#DCE7E9] rounded-xl h-7 text-[10px] font-bold gap-1 transition-colors cursor-pointer"
                               >
                                 <Edit className="h-3 w-3" />
-                              </button>
-                              <button
+                                Edit
+                              </Button>
+                              <Button
                                 onClick={() => handleDeleteJob(job.id)}
-                                className="h-5.5 w-5.5 rounded hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
+                                variant="ghost"
+                                className="h-7 w-7 p-0 rounded-xl hover:bg-rose-50 text-[#526176] hover:text-rose-600 border border-[#DCE7E9] cursor-pointer"
                                 title="Remove Job"
                               >
                                 <Trash2 className="h-3 w-3" />
-                              </button>
+                              </Button>
                             </div>
-
-                          </div>
-
-                        </div>
+                          </CardContent>
+                        </Card>
                       );
                     })
                   )}
                 </div>
-
               </div>
             );
           })}

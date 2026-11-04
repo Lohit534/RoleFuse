@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { resumeText, jobDescription, jobTitle, company } = body;
+    const { resumeText, jobDescription, jobTitle, company, tone } = body;
 
     if (!resumeText || typeof resumeText !== "string" || !resumeText.trim()) {
       return NextResponse.json(
@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
       resumeText,
       jobDescription,
       jobTitle || "target position",
-      company || "company"
+      company || "company",
+      tone
     );
 
     const coverLetter = await callAIText(prompt);

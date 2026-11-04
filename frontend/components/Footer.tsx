@@ -23,7 +23,7 @@ export default function Footer() {
   const trustLinks = [
     { label: "Privacy policy", href: "/privacy" },
     { label: "Terms", href: "/terms" },
-    { label: "Contact support", href: "mailto:support@rolefuse.ai", isExternal: true },
+    { label: "Contact support", href: "mailto:rolefuse.ai@gmail.com", isExternal: true },
   ];
 
   const accountLinks = [

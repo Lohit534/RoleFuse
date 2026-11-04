@@ -9,16 +9,16 @@ import { motion } from "motion/react";
  * No hardcoded static fake values — pure animated shimmer bones reflecting dynamic layout.
  */
 
-const BONE_BASE = "rgba(226, 232, 240, 0.75)";
-const BONE_HIGHLIGHT = "rgba(13, 110, 90, 0.16)";
-const SHIMMER_GRADIENT = `linear-gradient(90deg, ${BONE_BASE} 25%, ${BONE_HIGHLIGHT} 50%, ${BONE_BASE} 75%)`;
+const BONE_BASE = "rgba(226, 232, 240, 0.55)";
+const BONE_HIGHLIGHT = "rgba(8, 127, 110, 0.08)";
+const SHIMMER_GRADIENT = `linear-gradient(90deg, rgba(226, 232, 240, 0.5) 0%, rgba(241, 245, 249, 0.9) 35%, rgba(8, 127, 110, 0.08) 50%, rgba(241, 245, 249, 0.9) 65%, rgba(226, 232, 240, 0.5) 100%)`;
 const shimmerAnimate = { backgroundPosition: ["-200% 0", "200% 0"] };
 
 export const Bone = ({
   width = "100%",
   height = 16,
   borderRadius = 8,
-  duration = 1.5,
+  duration = 2.4,
   className = "",
   style,
 }: {
@@ -31,14 +31,14 @@ export const Bone = ({
 }) => (
   <motion.div
     animate={shimmerAnimate}
-    transition={{ duration, ease: "easeInOut", repeat: Infinity }}
-    className={className}
+    transition={{ duration, ease: [0.4, 0, 0.2, 1], repeat: Infinity }}
+    className={`claude-shimmer ${className}`}
     style={{
       width,
       height,
       borderRadius,
       background: SHIMMER_GRADIENT,
-      backgroundSize: "200% 100%",
+      backgroundSize: "250% 100%",
       flexShrink: 0,
       ...style,
     }}
@@ -46,7 +46,7 @@ export const Bone = ({
 );
 
 export const Shimmer = ({
-  duration = 1.5,
+  duration = 2.4,
   borderRadius = "8px",
   style,
   className = "",
@@ -60,12 +60,12 @@ export const Shimmer = ({
 }) => (
   <motion.div
     animate={shimmerAnimate}
-    transition={{ duration, ease: "easeInOut", repeat: Infinity }}
-    className={className}
+    transition={{ duration, ease: [0.4, 0, 0.2, 1], repeat: Infinity }}
+    className={`claude-shimmer ${className}`}
     style={{
       borderRadius,
       background: SHIMMER_GRADIENT,
-      backgroundSize: "200% 100%",
+      backgroundSize: "250% 100%",
       overflow: "hidden",
       ...style,
     }}
@@ -654,6 +654,375 @@ export function AuthSkeleton() {
 }
 
 /**
+ * Cover Letter Studio Skeleton
+ */
+export function CoverLetterSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFB] flex flex-col text-slate-900 select-none">
+      <NavbarSkeleton />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Bone width={90} height={20} borderRadius={6} />
+              <Bone width={120} height={14} borderRadius={4} />
+            </div>
+            <Bone width={320} height={28} borderRadius={8} />
+            <Bone width={480} height={16} borderRadius={4} />
+          </div>
+          <div className="flex items-center gap-2.5">
+            <Bone width={110} height={36} borderRadius={10} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-5 bg-white border border-slate-200 shadow-xs rounded-2xl p-5 sm:p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <Bone width={160} height={20} borderRadius={6} />
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Bone width={140} height={14} borderRadius={4} />
+                <Bone width="100%" height={40} borderRadius={10} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Bone width={70} height={14} borderRadius={4} />
+                  <Bone width="100%" height={40} borderRadius={10} />
+                </div>
+                <div className="space-y-1.5">
+                  <Bone width={80} height={14} borderRadius={4} />
+                  <Bone width="100%" height={40} borderRadius={10} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Bone width={130} height={14} borderRadius={4} />
+                <Bone width="100%" height={120} borderRadius={10} />
+              </div>
+              <div className="space-y-1.5">
+                <Bone width={80} height={14} borderRadius={4} />
+                <div className="grid grid-cols-4 gap-2">
+                  <Bone width="100%" height={32} borderRadius={8} />
+                  <Bone width="100%" height={32} borderRadius={8} />
+                  <Bone width="100%" height={32} borderRadius={8} />
+                  <Bone width="100%" height={32} borderRadius={8} />
+                </div>
+              </div>
+              <Bone width="100%" height={44} borderRadius={12} />
+            </div>
+          </div>
+
+          <div className="lg:col-span-7 bg-white border border-slate-200 shadow-xs rounded-2xl p-5 sm:p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Bone width={180} height={20} borderRadius={6} />
+                <Bone width={70} height={18} borderRadius={12} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Bone width={70} height={32} borderRadius={8} />
+                <Bone width={70} height={32} borderRadius={8} />
+              </div>
+            </div>
+            <div className="space-y-3 pt-2">
+              <Bone width={140} height={16} borderRadius={4} />
+              <Bone width={200} height={14} borderRadius={4} />
+              <div className="pt-3 space-y-2.5">
+                <Bone width="100%" height={14} borderRadius={4} />
+                <Bone width="96%" height={14} borderRadius={4} />
+                <Bone width="92%" height={14} borderRadius={4} />
+                <Bone width="98%" height={14} borderRadius={4} />
+              </div>
+              <div className="pt-2 space-y-2.5">
+                <Bone width="100%" height={14} borderRadius={4} />
+                <Bone width="94%" height={14} borderRadius={4} />
+                <Bone width="97%" height={14} borderRadius={4} />
+                <Bone width="60%" height={14} borderRadius={4} />
+              </div>
+              <div className="pt-2 space-y-2">
+                <Bone width={120} height={14} borderRadius={4} />
+                <Bone width={160} height={16} borderRadius={4} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * LinkedIn Optimizer Studio Skeleton
+ */
+export function LinkedInOptimizerSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFB] flex flex-col text-slate-900 select-none">
+      <NavbarSkeleton />
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+        <div className="text-center space-y-3 max-w-2xl mx-auto">
+          <div className="flex justify-center">
+            <Bone width={150} height={24} borderRadius={12} />
+          </div>
+          <Bone width="90%" height={32} borderRadius={8} className="mx-auto" />
+          <Bone width="80%" height={18} borderRadius={6} className="mx-auto" />
+        </div>
+
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xs space-y-6 max-w-3xl mx-auto">
+          <div className="grid grid-cols-2 gap-3 pb-2 border-b border-slate-100">
+            <Bone width="100%" height={44} borderRadius={14} />
+            <Bone width="100%" height={44} borderRadius={14} />
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
+            <Bone width={160} height={16} borderRadius={4} />
+            <div className="space-y-1.5">
+              <Bone width="90%" height={12} borderRadius={3} />
+              <Bone width="80%" height={12} borderRadius={3} />
+              <Bone width="85%" height={12} borderRadius={3} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Bone width={180} height={14} borderRadius={4} />
+            <Bone width="100%" height={46} borderRadius={12} />
+          </div>
+          <Bone width="100%" height={48} borderRadius={14} />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * Mock Interview Skeleton
+ */
+export function MockInterviewSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFB] flex flex-col text-slate-900 select-none">
+      <NavbarSkeleton />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
+          <div className="space-y-2">
+            <Bone width={140} height={20} borderRadius={6} />
+            <Bone width={300} height={28} borderRadius={8} />
+            <Bone width={420} height={16} borderRadius={4} />
+          </div>
+          <Bone width={130} height={36} borderRadius={10} />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
+            <Bone width={180} height={20} borderRadius={6} />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Bone width={110} height={14} borderRadius={4} />
+                <Bone width="100%" height={42} borderRadius={10} />
+              </div>
+              <div className="space-y-1.5">
+                <Bone width={120} height={14} borderRadius={4} />
+                <Bone width="100%" height={42} borderRadius={10} />
+              </div>
+              <div className="space-y-1.5">
+                <Bone width={100} height={14} borderRadius={4} />
+                <div className="grid grid-cols-3 gap-2">
+                  <Bone width="100%" height={36} borderRadius={8} />
+                  <Bone width="100%" height={36} borderRadius={8} />
+                  <Bone width="100%" height={36} borderRadius={8} />
+                </div>
+              </div>
+              <Bone width="100%" height={46} borderRadius={12} />
+            </div>
+          </div>
+
+          <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <Bone width={44} height={44} borderRadius={22} />
+              <div className="space-y-1.5 flex-1">
+                <Bone width={160} height={16} borderRadius={4} />
+                <Bone width={100} height={12} borderRadius={3} />
+              </div>
+              <Bone width={80} height={24} borderRadius={12} />
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+              <Bone width="95%" height={14} borderRadius={4} />
+              <Bone width="88%" height={14} borderRadius={4} />
+            </div>
+            <Bone width="100%" height={120} borderRadius={12} />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * Products Catalog Skeleton
+ */
+export function ProductsSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFB] flex flex-col text-slate-900 select-none">
+      <NavbarSkeleton />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-12 space-y-10">
+        <div className="text-center space-y-3 max-w-2xl mx-auto">
+          <div className="flex justify-center">
+            <Bone width={130} height={22} borderRadius={12} />
+          </div>
+          <Bone width={360} height={34} borderRadius={8} className="mx-auto" />
+          <Bone width={460} height={18} borderRadius={6} className="mx-auto" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <Bone width={42} height={42} borderRadius={12} />
+                <Bone width={60} height={20} borderRadius={10} />
+              </div>
+              <Bone width={180} height={20} borderRadius={6} />
+              <div className="space-y-1.5">
+                <Bone width="100%" height={13} borderRadius={3} />
+                <Bone width="90%" height={13} borderRadius={3} />
+              </div>
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <Bone width={100} height={14} borderRadius={4} />
+                <Bone width={24} height={24} borderRadius={12} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * ATS Resume Checker Skeleton
+ */
+export function AtsResumeSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFB] flex flex-col text-slate-900 select-none">
+      <NavbarSkeleton />
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-10 space-y-8">
+        <div className="text-center space-y-3 max-w-2xl mx-auto">
+          <div className="flex justify-center">
+            <Bone width={140} height={22} borderRadius={12} />
+          </div>
+          <Bone width={380} height={32} borderRadius={8} className="mx-auto" />
+          <Bone width={480} height={16} borderRadius={4} className="mx-auto" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+          <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center space-y-4 min-h-[320px]">
+            <Bone width={56} height={56} borderRadius={16} />
+            <Bone width={220} height={20} borderRadius={6} />
+            <Bone width={280} height={14} borderRadius={4} />
+            <Bone width={140} height={40} borderRadius={10} />
+          </div>
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <Bone width={150} height={20} borderRadius={6} />
+              <Bone width={50} height={50} borderRadius={25} />
+            </div>
+            <div className="space-y-3 pt-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <Bone width={100} height={14} borderRadius={4} />
+                    <Bone width={40} height={14} borderRadius={4} />
+                  </div>
+                  <Bone width="100%" height={8} borderRadius={4} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * Resources Library Skeleton
+ */
+export function ResourcesSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFB] flex flex-col text-slate-900 select-none">
+      <NavbarSkeleton />
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-10 space-y-8">
+        <div className="text-center space-y-3 max-w-xl mx-auto">
+          <Bone width={120} height={20} borderRadius={10} className="mx-auto" />
+          <Bone width={300} height={32} borderRadius={8} className="mx-auto" />
+          <Bone width={400} height={16} borderRadius={4} className="mx-auto" />
+          <div className="pt-2">
+            <Bone width="100%" height={46} borderRadius={14} className="max-w-md mx-auto" />
+          </div>
+        </div>
+
+        <div className="flex justify-center gap-2 flex-wrap">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Bone key={i} width={90} height={32} borderRadius={16} />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs">
+              <Bone width="100%" height={140} borderRadius={12} />
+              <Bone width={80} height={16} borderRadius={6} />
+              <Bone width={200} height={18} borderRadius={6} />
+              <div className="space-y-1">
+                <Bone width="100%" height={12} borderRadius={3} />
+                <Bone width="80%" height={12} borderRadius={3} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/**
+ * Landing Page Root Skeleton
+ */
+export function LandingSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFB] flex flex-col text-slate-900 select-none">
+      <NavbarSkeleton />
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-14 space-y-12">
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
+          <div className="flex justify-center">
+            <Bone width={220} height={28} borderRadius={14} />
+          </div>
+          <Bone width="90%" height={44} borderRadius={10} className="mx-auto" />
+          <Bone width="75%" height={40} borderRadius={10} className="mx-auto" />
+          <Bone width="80%" height={20} borderRadius={6} className="mx-auto" />
+          <div className="pt-4 flex justify-center gap-4">
+            <Bone width={160} height={48} borderRadius={12} />
+            <Bone width={160} height={48} borderRadius={12} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-xs max-w-4xl mx-auto space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <Bone width={40} height={40} borderRadius={10} />
+              <div className="space-y-1.5">
+                <Bone width={180} height={18} borderRadius={4} />
+                <Bone width={120} height={12} borderRadius={3} />
+              </div>
+            </div>
+            <Bone width={90} height={36} borderRadius={18} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Bone width="100%" height={90} borderRadius={14} />
+            <Bone width="100%" height={90} borderRadius={14} />
+            <Bone width="100%" height={90} borderRadius={14} />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/**
  * Fallback & default exports
  */
 export function PageMotionLoader({
@@ -667,7 +1036,7 @@ export function PageMotionLoader({
 }
 
 export default function SkeletonShimmer({
-  shimmerDuration = 1.5,
+  shimmerDuration = 2.4,
   loadDelay = 2200,
 }: {
   shimmerDuration?: number;

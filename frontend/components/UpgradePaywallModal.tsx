@@ -373,7 +373,7 @@ export default function UpgradePaywallModal() {
                 </div>
                 <div className="border-t border-emerald-100 my-3" />
                 <ul className="space-y-1.5 text-xs text-slate-700 font-medium">
-                  <li className="flex items-center gap-1.5 font-bold text-[#0d6e5a]">
+                  <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
                     <span>20 AI resume optimizations per month</span>
                   </li>
@@ -471,7 +471,7 @@ export default function UpgradePaywallModal() {
                 </div>
                 <div className="border-t border-slate-100 my-3" />
                 <ul className="space-y-1.5 text-xs text-slate-700 font-medium">
-                  <li className="flex items-center gap-1.5 font-bold text-[#0d6e5a]">
+                  <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
                     <span>90 AI resume optimizations per month</span>
                   </li>
@@ -539,6 +539,21 @@ export default function UpgradePaywallModal() {
                 )}
               </button>
             </div>
+          </div>
+
+          {/* See full pricing page link */}
+          <div className="pt-2 text-center select-none">
+            <button
+              type="button"
+              onClick={() => {
+                closeModal();
+                router.push("/dashboard/pricing");
+              }}
+              className="text-xs font-bold text-[#087F6E] hover:text-[#065F53] hover:underline inline-flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <span>See full pricing page</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 

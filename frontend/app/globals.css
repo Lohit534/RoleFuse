@@ -411,3 +411,26 @@ input:focus, textarea:focus {
 .animate-float-slow {
   animation: floatSlow 4.5s ease-in-out infinite;
 }
+
+/* Claude-Style Decent Shimmer Wave */
+@keyframes claudeShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.claude-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.5) 0%,
+    rgba(241, 245, 249, 0.9) 35%,
+    rgba(8, 127, 110, 0.08) 50%,
+    rgba(241, 245, 249, 0.9) 65%,
+    rgba(226, 232, 240, 0.5) 100%
+  );
+  background-size: 250% 100%;
+  animation: claudeShimmer 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}

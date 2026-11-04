@@ -353,10 +353,19 @@ export function buildCoverLetterPrompt(
   resumeText: string,
   jobDescription: string,
   jobTitle?: string,
-  company?: string
+  company?: string,
+  tone?: string
 ): string {
   const truncatedJd = jobDescription.slice(0, 4000);
   const truncatedResume = resumeText.slice(0, 6000);
+
+  const toneInstruction = tone === "formal"
+    ? "Tone: Polished, executive, respectful, and authoritative."
+    : tone === "startup"
+    ? "Tone: Agile, enthusiastic, high-impact, problem-solver mindset."
+    : tone === "creative"
+    ? "Tone: Compelling narrative, storytelling hooks, memorable and engaging."
+    : "Tone: Modern, direct, confident, impact-driven, zero corporate fluff.";
 
   return (
     "You are an expert career consultant and professional cover letter writer.\n\n" +
@@ -371,10 +380,10 @@ export function buildCoverLetterPrompt(
     "2. Explain clearly why the candidate is interested in " + (company || "this company") + " and the " + (jobTitle || "target role") + ".\n" +
     "3. Seamlessly connect the candidate's background, technical skills, and measurable achievements\n" +
     "   from their resume with key requirements in the JD.\n" +
-    "4. Keep tone: professional, natural, engaging, genuinely human.\n" +
+    "4. " + toneInstruction + "\n" +
     "5. Strictly avoid: I am writing with great enthusiasm, synergy, hardworking team player, dynamic professional, or any AI cliches.\n" +
     "6. Structure: Salutation -> Engaging Introduction -> 1-2 Strong Body Paragraphs with concrete achievements -> Professional Closing Call-to-Action.\n" +
-    "7. Length: 300-400 words. Not longer.\n\n" +
+    "7. Length: 280-380 words. Punchy and readable.\n\n" +
     "==================================================\n" +
     "TARGET JOB DESCRIPTION:\n" +
     truncatedJd + "\n\n" +
@@ -382,5 +391,164 @@ export function buildCoverLetterPrompt(
     "CANDIDATE RESUME:\n" +
     truncatedResume + "\n\n" +
     "Return ONLY the complete text of the personalized cover letter. Do not include markdown code fences or conversational intro/outro text."
+  );
+}
+
+export function buildInterviewQuestionsPrompt(
+  resumeText: string,
+  jobDescription: string,
+  jobTitle?: string,
+  company?: string
+): string {
+  const truncatedJd = jobDescription.slice(0, 4000);
+  const truncatedResume = resumeText.slice(0, 5000);
+
+  return (
+    "You are an elite Tech & Executive Interview Coach who has conducted hundreds of hiring loops at top companies.\n\n" +
+    "CORE TASK:\n" +
+    "Analyze this candidate's resume against the target Job Description (" + (jobTitle || "Target Role") + " at " + (company || "Target Company") + ").\n" +
+    "Generate 8 realistic, high-signal interview questions tailored specifically to their background and the job requirements.\n\n" +
+    "DISTRIBUTION:\n" +
+    "- 3 Behavioral Questions (Conflict, Leadership, Deadline pressure, Overcoming failure)\n" +
+    "- 3 Technical / Hard Skill Questions (Testing exact tools, frameworks, system design, or domain expertise in JD & resume)\n" +
+    "- 2 Situational / Problem-Solving Questions (Real dilemmas they will face in the first 90 days in this role)\n\n" +
+    "OUTPUT FORMAT:\n" +
+    "Return ONLY valid JSON matching this schema with NO markdown code fences or extra text:\n" +
+    "{\n" +
+    '  "overview": "Brief 1-2 sentence preparation strategy for this role",\n' +
+    '  "questions": [\n' +
+    "    {\n" +
+    '      "id": "q1",\n' +
+    '      "category": "behavioral" | "technical" | "situational",\n' +
+    '      "difficulty": "Easy" | "Medium" | "Hard",\n' +
+    '      "question": "The exact question text",\n' +
+    '      "whyAsked": "What the recruiter/interviewer is secretly looking for",\n' +
+    '      "sampleAnswer": "A full, high-scoring STAR method answer the candidate can study",\n' +
+    '      "keyPoints": ["Key point 1 to mention", "Key point 2 to mention", "Key point 3 to mention"]\n' +
+    "    }\n" +
+    "  ]\n" +
+    "}\n\n" +
+    "JOB DESCRIPTION:\n" + truncatedJd + "\n\n" +
+    "CANDIDATE RESUME:\n" + truncatedResume
+  );
+}
+
+export function buildEvaluateAnswerPrompt(
+  question: string,
+  userAnswer: string,
+  jobDescription?: string,
+  resumeText?: string
+): string {
+  return (
+    "You are an expert interview evaluator.\n\n" +
+    "Evaluate this candidate's practice interview answer for the following question.\n\n" +
+    "QUESTION: " + question + "\n\n" +
+    "CANDIDATE'S ANSWER:\n" + userAnswer + "\n\n" +
+    (jobDescription ? "JOB CONTEXT:\n" + jobDescription.slice(0, 1500) + "\n\n" : "") +
+    "Evaluate with honesty and actionable advice. Check for STAR format (Situation, Task, Action, Result), quantifiable metrics, and clarity.\n\n" +
+    "Return ONLY valid JSON matching this schema:\n" +
+    "{\n" +
+    '  "score": 85,\n' +
+    '  "verdict": "Exceptional" | "Solid" | "Needs Improvement",\n' +
+    '  "feedback": "2-3 sentences of overall constructive assessment",\n' +
+    '  "starBreakdown": {\n' +
+    '    "situation": "Assessment of Situation context provided",\n' +
+    '    "task": "Assessment of Task definition",\n' +
+    '    "action": "Assessment of specific actions taken",\n' +
+    '    "result": "Assessment of measurable outcomes/impact"\n' +
+    "  },\n" +
+    '  "strengths": ["Strength 1", "Strength 2"],\n' +
+    '  "improvements": ["Improvement tip 1", "Improvement tip 2"],\n' +
+    '  "improvedVersion": "A polished, top-tier rephrasing of their answer using the STAR method"\n' +
+    "}"
+  );
+}
+
+export function buildLinkedInOptimizerPrompt(
+  resumeText: string,
+  targetRole?: string,
+  industry?: string,
+  jobDescription?: string,
+  linkedinUrl?: string
+): string {
+  const truncatedResume = resumeText.slice(0, 5000);
+  const truncatedJd = jobDescription ? jobDescription.slice(0, 3500) : "";
+
+  return (
+    "You are the world's leading LinkedIn personal branding and executive profile consultant (comparable to Jobscan LinkedIn Optimization).\n\n" +
+    "CORE OBJECTIVE:\n" +
+    "Get this candidate noticed and found on LinkedIn by recruiters searching for: " + (targetRole || "Target Industry Role") + ".\n" +
+    (linkedinUrl ? "LinkedIn Profile URL: " + linkedinUrl + "\n" : "") +
+    (truncatedJd ? "TARGET JOB DESCRIPTION TO MATCH AGAINST:\n" + truncatedJd + "\n\n" : "") +
+    "CANDIDATE PROFILE / RESUME DATA:\n" + truncatedResume + "\n\n" +
+    "TASKS:\n" +
+    "1. Calculate a realistic LinkedIn Profile Match Score (0-100) showing how well their profile matches recruiter search queries and target job expectations.\n" +
+    "2. Diagnose exactly where human recruiters lose interest (dropoff points) and why.\n" +
+    "3. Flag exact skill gaps (missing hard skills vs matched skills found in target job).\n" +
+    "4. Generate 4 high-converting, magnetic headline variations (under 220 chars) that get found in LinkedIn Recruiter.\n" +
+    "5. Generate 3 complete, formatted About summary variations tailored to convert views into interviews.\n" +
+    "6. Identify the top 12 recruiter search keywords.\n" +
+    "7. Provide 2-3 before/after bullet upgrades using Google's XYZ formula.\n\n" +
+    "Return ONLY valid JSON matching this schema with NO markdown code fences or conversational text:\n" +
+    "{\n" +
+    '  "profileScore": 74,\n' +
+    '  "profileScoreFeedback": "Summary of your profile readiness and recruiter search visibility",\n' +
+    '  "dropoffAnalysis": "Recruiters lose interest after 6 seconds if your headline lacks hard skills or your summary is a generic bio. Adding quantifiable metrics and targeted keywords prevents dropoff.",\n' +
+    '  "skillGaps": {\n' +
+    '    "missingSkills": ["Key Skill 1", "Key Skill 2", "Key Skill 3", "Key Skill 4"],\n' +
+    '    "matchedSkills": ["Matched Skill 1", "Matched Skill 2", "Matched Skill 3"]\n' +
+    "  },\n" +
+    '  "headlines": [\n' +
+    "    {\n" +
+    '      "style": "Keyword-Dense & ATS Ranked",\n' +
+    '      "headline": "Target Role | Core Skills & Tech Stack | Value Proposition (under 220 chars)",\n' +
+    '      "reason": "Why this headline ranks highest in LinkedIn search algorithm"\n' +
+    "    },\n" +
+    "    {\n" +
+    '      "style": "Metric & Impact Driven",\n' +
+    '      "headline": "Headline highlighting scale, metrics, dollars, or users impacted",\n' +
+    '      "reason": "Builds instant authority with hiring leaders"\n' +
+    "    },\n" +
+    "    {\n" +
+    '      "style": "Modern & Visionary",\n' +
+    '      "headline": "Target Role | Building [Industry Innovation] | Core Competencies",\n' +
+    '      "reason": "Ideal for fast-growing startups and scaleups"\n' +
+    "    },\n" +
+    "    {\n" +
+    '      "style": "Executive & Authority",\n' +
+    '      "headline": "Senior Role | Specialization | Delivering Strategic Business Outcomes",\n' +
+    '      "reason": "Positions you as a proven domain expert"\n' +
+    "    }\n" +
+    "  ],\n" +
+    '  "aboutSummaries": [\n' +
+    "    {\n" +
+    '      "style": "The First-Person Storyteller",\n' +
+    '      "description": "Engaging hook -> career journey -> core expertise -> call to connect",\n' +
+    '      "content": "Full formatted 3-paragraph LinkedIn About section"\n' +
+    "    },\n" +
+    "    {\n" +
+    '      "style": "The Impact & Metrics Champion",\n' +
+    '      "description": "Bold value proposition -> key achievements with numbers -> technical competencies",\n' +
+    '      "content": "Full formatted LinkedIn About section"\n' +
+    "    },\n" +
+    "    {\n" +
+    '      "style": "The Scannable Modern Executive",\n' +
+    '      "description": "Optimized for mobile readers with clean bullets, emojis, and skills matrix",\n' +
+    '      "content": "Full formatted LinkedIn About section with bullet points"\n' +
+    "    }\n" +
+    "  ],\n" +
+    '  "recruiterKeywords": [\n' +
+    '    "Keyword 1", "Keyword 2", "Keyword 3", "Keyword 4", "Keyword 5",\n' +
+    '    "Keyword 6", "Keyword 7", "Keyword 8", "Keyword 9", "Keyword 10"\n' +
+    "  ],\n" +
+    '  "experienceUpgrades": [\n' +
+    "    {\n" +
+    '      "role": "Current/Past Role Context",\n' +
+    '      "before": "Passive unquantified duty",\n' +
+    '      "after": "Active XYZ metric-backed achievement",\n' +
+    '      "why": "Why this bullet converts recruiter views into messages"\n' +
+    "    }\n" +
+    "  ]\n" +
+    "}"
   );
 }

@@ -48,3 +48,8 @@ next-env.d.ts
 /public/uploads/*.mov
 /public/uploads/*.mkv
 /public/uploads/*.avi
+
+.vercel
+.env*
+
+/data/

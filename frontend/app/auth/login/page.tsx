@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import {
   Loader2,
@@ -16,10 +16,11 @@ export const dynamic = "force-dynamic";
 
 function LoginFormContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const errorParam = searchParams.get("error");
     if (errorParam === "auth-code-error") {
       setError("Authentication link expired or invalid. Please try signing in again.");
@@ -30,17 +31,51 @@ function LoginFormContent() {
       localStorage.removeItem("fastHire_sampleResume");
       localStorage.removeItem("fastHire_sampleJD");
     }
-  }, [searchParams]);
+
+    // Auto-redirect to dashboard if user is already signed in
+    const checkActiveSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const isSample = searchParams.get("sample") === "true" || localStorage.getItem("fastHire_pendingSample") === "true";
+          const nextParam = searchParams.get("next") || searchParams.get("redirect");
+          const target = nextParam || (isSample ? "/dashboard?sample=true" : "/dashboard");
+          router.replace(target);
+        }
+      } catch (err) {
+        // silent fallback
+      }
+    };
+    checkActiveSession();
+
+    // Listen for auth state changes (e.g. successful login)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+      if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        const isSample = searchParams.get("sample") === "true" || localStorage.getItem("fastHire_pendingSample") === "true";
+        const nextParam = searchParams.get("next") || searchParams.get("redirect");
+        const target = nextParam || (isSample ? "/dashboard?sample=true" : "/dashboard");
+        router.replace(target);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [searchParams, router]);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError(null);
     try {
       const isSample = searchParams.get("sample") === "true" || localStorage.getItem("fastHire_pendingSample") === "true";
-      const nextPath = isSample ? "/dashboard?sample=true" : "/dashboard";
+      const nextParam = searchParams.get("next") || searchParams.get("redirect");
+      const nextPath = nextParam || (isSample ? "/dashboard?sample=true" : "/dashboard");
 
       const origin = typeof window !== "undefined"
-        ? window.location.origin.replace("0.0.0.0", "localhost").replace("https://localhost", "http://localhost")
+        ? window.location.origin
+            .replace("0.0.0.0", "localhost")
+            .replace("127.0.0.1", "localhost")
+            .replace("https://localhost", "http://localhost")
         : "";
 
       const { error: authError } = await supabase.auth.signInWithOAuth({

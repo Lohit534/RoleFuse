@@ -19,7 +19,22 @@ import {
   Briefcase,
   FileText,
   TrendingUp,
+  Globe2,
 } from "lucide-react";
+import {
+  GoogleLogo,
+  MicrosoftLogo,
+  AmazonLogo,
+  MetaLogo,
+  AppleLogo,
+  NetflixLogo,
+  SpotifyLogo,
+  UberLogo,
+  AirbnbLogo,
+  StripeLogo,
+  DeloitteLogo,
+  SalesforceLogo,
+} from "@/components/icons/CompanyLogos";
 import ScrollFadeIn from "@/components/ScrollFadeIn";
 import CircleGauge from "@/components/CircleGauge";
 import { supabase } from "@/lib/supabase/client";
@@ -27,6 +42,22 @@ import { DemoVideoModal } from "@/components/DemoVideoModal";
 import { SAMPLE_RESUME_TEXT, SAMPLE_JD_TEXT } from "@/lib/sample-data";
 import Footer from "@/components/Footer";
 import { DashboardSkeleton } from "@/components/SkeletonShimmer";
+
+/* ── Global Companies & Countries ────────────────────────────── */
+const GLOBAL_COMPANIES = [
+  { name: "Google", Logo: GoogleLogo, tag: "Tech Giant" },
+  { name: "Microsoft", Logo: MicrosoftLogo, tag: "Cloud & AI" },
+  { name: "Amazon", Logo: AmazonLogo, tag: "E-Commerce" },
+  { name: "Meta", Logo: MetaLogo, tag: "Social & VR" },
+  { name: "Apple", Logo: AppleLogo, tag: "Hardware & iOS" },
+  { name: "Netflix", Logo: NetflixLogo, tag: "Streaming" },
+  { name: "Stripe", Logo: StripeLogo, tag: "Fintech" },
+  { name: "Spotify", Logo: SpotifyLogo, tag: "Audio & Media" },
+  { name: "Uber", Logo: UberLogo, tag: "Mobility" },
+  { name: "Airbnb", Logo: AirbnbLogo, tag: "Travel" },
+  { name: "Salesforce", Logo: SalesforceLogo, tag: "Enterprise Cloud" },
+  { name: "Deloitte", Logo: DeloitteLogo, tag: "Strategy & Tech" },
+];
 
 /* ── Landing FAQ ─────────────────────────────────────────── */
 const LANDING_FAQS = [
@@ -260,10 +291,7 @@ export default function LandingPage() {
                 <Link href={user ? "/dashboard" : "/auth/signup"} className="w-full sm:w-auto">
                   <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-7 text-[15px] font-semibold flex items-center justify-center gap-2 rounded-md shadow-xs transition-colors cursor-pointer">
                     {user ? (
-                      <>
-                        <Sparkles className="h-4 w-4 text-white" />
-                        <span>Go to Dashboard</span>
-                      </>
+                      <span>Go to Dashboard</span>
                     ) : (
                       <span>Get Started Free</span>
                     )}
@@ -319,7 +347,7 @@ export default function LandingPage() {
                   />
                 </div>
                 <div className="text-xs text-[#526176]">
-                  <span className="font-semibold text-[#111827]">Trusted by 10,000+ job seekers</span>
+                  <span className="font-semibold text-[#111827]">Trusted by 1,000+ active users</span>
                   <span className="mx-1.5">•</span>
                   <span>4.9/5 satisfaction</span>
                 </div>
@@ -329,16 +357,6 @@ export default function LandingPage() {
             {/* RIGHT COLUMN: Realistic Product Preview (Directly from Reference Panel 1) */}
             <div className="lg:col-span-6 flex justify-center lg:justify-end animate-fade-in-up" style={{ animationDelay: "150ms" }}>
               <div className="relative w-full max-w-[480px]">
-
-                {/* Panel 1 Signature Fluid Mint Backdrop Shape Behind Preview Card */}
-                <div
-                  className="absolute -inset-6 sm:-inset-10 -z-10 rounded-[44px] pointer-events-none"
-                  style={{
-                    background:
-                      "radial-gradient(ellipse 90% 80% at 65% 45%, rgba(212, 243, 239, 0.8) 0%, rgba(229, 248, 245, 0.6) 45%, rgba(234, 249, 248, 0.4) 75%, transparent 100%)",
-                    filter: "blur(24px)",
-                  }}
-                />
 
                 {/* Subtle Real-time status pill top right */}
                 <div className="absolute -top-3.5 right-4 z-20 flex items-center gap-2 bg-white border border-[#DCE7E9] px-3.5 py-1.5 rounded-full shadow-xs">
@@ -895,9 +913,9 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               { value: 1000, suffix: "+", label: "Users Optimized", color: "#087F6E", sub: "Active job hunters" },
-              { value: 94, suffix: "%", label: "Success Rate", color: "#075E53", sub: "Reported more callbacks" },
-              { value: 57, suffix: "+", label: "Avg. Score Lift", color: "#087F6E", sub: "ATS points gained" },
-              { value: 800, suffix: "+", label: "Positive Reviews", color: "#075E53", sub: "Verified user feedbacks" },
+              { value: 50, suffix: "+", label: "Countries Represented", color: "#075E53", sub: "Global candidate reach" },
+              { value: 94, suffix: "%", label: "Callback Rate", color: "#087F6E", sub: "Reported more interviews" },
+              { value: 57, suffix: "+", label: "Avg. Score Lift", color: "#075E53", sub: "ATS points gained" },
             ].map(({ value, suffix, label, color, sub }) => (
               <div
                 key={label}
@@ -916,53 +934,62 @@ export default function LandingPage() {
         </div>
       </ScrollFadeIn>
 
-      {/* ── 5. TOP COMPANIES MARQUEE ─────────────────────────────────────────── */}
-      <ScrollFadeIn className="py-16 border-b border-[#DCE7E9] bg-transparent">
-        <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10 space-y-2">
-            <span className="text-xs font-mono font-semibold uppercase tracking-widest text-[#087F6E]">
-              Top Companies
-            </span>
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold text-[#111827] tracking-tight">
-              Resumes Shortlisted At
+      {/* ── 5. TOP COMPANIES & GLOBAL COUNTRIES MARQUEE ──────────────────────── */}
+      <ScrollFadeIn className="py-20 border-b border-[#DCE7E9] bg-transparent">
+        <div className="mx-auto max-w-[1240px] px-4 sm:px-6 lg:px-8 space-y-10">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-[#087F6E] text-xs font-semibold">
+              <Globe2 className="h-3.5 w-3.5" />
+              <span>Global Hiring Network</span>
+            </div>
+            <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl font-bold text-[#111827] tracking-tight">
+              Shortlisted at Leading Companies in 50+ Countries
             </h2>
-            <p className="text-[#526176] text-sm sm:text-base max-w-md mx-auto leading-relaxed">
-              Our users have been shortlisted and hired across top global technology teams.
+            <p className="text-[#526176] text-sm sm:text-base leading-relaxed">
+              From Silicon Valley tech giants to high-growth international scale-ups, job seekers rely on RoleFuse to pass ATS filters and secure interview callbacks worldwide.
             </p>
           </div>
 
-          {/* Infinite scroll marquee */}
-          <div className="relative overflow-hidden">
-            <div
-              className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
-              style={{ background: "linear-gradient(to right, #F5FAFA, transparent)" }}
-            />
-            <div
-              className="absolute right-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
-              style={{ background: "linear-gradient(to left, #F5FAFA, transparent)" }}
-            />
+          {/* Row 1: Top Company Logos Marquee */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span>Top Hiring Companies</span>
+              <span className="text-[#087F6E] font-bold">Fortune 500 &amp; Tech Giants</span>
+            </div>
 
-            <div className="flex animate-marquee gap-6 whitespace-nowrap">
-              {[
-                "Google", "Microsoft", "Amazon", "Meta", "Apple",
-                "Flipkart", "Infosys", "Wipro", "TCS", "Accenture",
-                "Deloitte", "IBM", "Capgemini", "HCL", "Cognizant",
-                "Swiggy", "Zomato", "Razorpay", "PhonePe",
-                "Paytm", "Freshworks", "Zoho",
-              ]
-                .concat([
-                  "Google", "Microsoft", "Amazon", "Meta", "Apple",
-                  "Flipkart", "Infosys", "Wipro", "TCS", "Accenture",
-                ])
-                .map((company, i) => (
-                  <div
-                    key={i}
-                    className="inline-flex items-center px-6 py-3 rounded-xl bg-white border border-[#DCE7E9] text-[#111827] font-semibold text-sm hover:border-[#087F6E]/40 transition-all shrink-0 shadow-xs"
-                  >
-                    <span className="h-2 w-2 rounded-full bg-[#087F6E] mr-2 shrink-0" />
-                    {company}
-                  </div>
-                ))}
+            <div className="relative overflow-hidden py-1">
+              <div
+                className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
+                style={{ background: "linear-gradient(to right, #F8FAFB, transparent)" }}
+              />
+              <div
+                className="absolute right-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
+                style={{ background: "linear-gradient(to left, #F8FAFB, transparent)" }}
+              />
+
+              <div className="flex animate-marquee gap-4 whitespace-nowrap">
+                {GLOBAL_COMPANIES.concat(GLOBAL_COMPANIES).map((company, i) => {
+                  const Logo = company.Logo;
+                  return (
+                    <div
+                      key={`company-${i}`}
+                      className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white border border-[#DCE7E9] text-[#111827] hover:border-[#087F6E]/50 hover:shadow-xs transition-all shrink-0 cursor-default"
+                    >
+                      <div className="h-7 w-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center p-1 shrink-0">
+                        <Logo className="h-5 w-5" />
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="font-bold text-sm text-[#111827] leading-tight">
+                          {company.name}
+                        </span>
+                        <span className="text-[10px] text-[#087F6E] font-medium">
+                          {company.tag}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -1155,10 +1182,7 @@ export default function LandingPage() {
             <Link href={user ? "/dashboard" : "/auth/signup"} className="w-full sm:w-auto">
               <button className="w-full sm:w-auto h-12 bg-[#087F6E] hover:bg-[#075E53] text-white px-8 text-[15px] font-semibold flex items-center justify-center gap-2 rounded-md shadow-xs transition-colors cursor-pointer">
                 {user ? (
-                  <>
-                    <Sparkles className="h-4 w-4 text-white" />
-                    <span>Go to Dashboard</span>
-                  </>
+                  <span>Go to Dashboard</span>
                 ) : (
                   <span>Start For Free</span>
                 )}

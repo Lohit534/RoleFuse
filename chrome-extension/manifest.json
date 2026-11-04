@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "RoleFuse AI - 1-Click Job Capture",
+  "version": "1.0.0",
+  "description": "Securely capture job descriptions from LinkedIn, Indeed, and careers pages to tailor resumes and cover letters in 1 click.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://*.glassdoor.com/*",
+    "https://boards.greenhouse.io/*",
+    "https://jobs.lever.co/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "RoleFuse AI - 1-Click Job Capture"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}

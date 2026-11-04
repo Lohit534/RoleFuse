@@ -37,11 +37,13 @@ import {
   Target,
   Star,
 } from "lucide-react";
+import { LinkedInIcon } from "@/components/icons/LinkedInIcon";
 import { CreditInfo } from "@/types";
 import { toast } from "react-hot-toast";
 import SupportChatbot from "@/components/SupportChatbot";
 
 import FeedbackToast from "@/components/FeedbackToast";
+import FeedbackBanner from "@/components/FeedbackBanner";
 import { ReferralModal } from "@/components/ReferralModal";
 import { DemoVideoModal } from "@/components/DemoVideoModal";
 import { DataPreferencesModal } from "@/components/DataPreferencesModal";
@@ -281,6 +283,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
   const isProMax = !isOwner && credits?.planId === "promax" && !credits?.isFirst50;
   const isPremium =
     !isOwner && !isProMax && (credits?.planId === "premium" || credits?.isFirst50 || (credits?.paidCredits ?? 0) > 0);
+  const isPaid = isOwner || isProMax || isPremium;
   const totalFree = isOwner ? 9999 : isProMax ? 90 : isPremium ? 20 : 2;
   const freeRemaining = isOwner ? 9999 : Math.min(totalFree, credits?.freeRemaining ?? totalFree);
 
@@ -294,12 +297,32 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
   const creditsDisplay = isOwner ? "Unlimited" : `${freeRemaining} left`;
 
+  const handleNavbarUpgradeClick = () => {
+    if (isPremium) {
+      useUpgradeModalStore.getState().openModal({
+        badge: "PRO MAX",
+        title: "Upgrade to Pro Max",
+        description:
+          "Unlock 90 AI optimizations every month, priority ATS scoring, and high-performance resume analysis.",
+      });
+    } else {
+      useUpgradeModalStore.getState().openModal({
+        badge: "PRO",
+        title: "Upgrade to Premium Pro",
+        description:
+          freeRemaining <= 0
+            ? "You've used all 2 free resume optimizations. Upgrade to Premium Pro for 20 monthly optimizations, unlimited PDF & DOCX downloads, and full ATS features."
+            : "Get 20 AI resume optimizations/month, unlimited PDF & DOCX downloads, and priority features.",
+      });
+    }
+  };
+
   return (
     <>
       <nav className="border-b border-[#DCE7E9] bg-white text-[#111827] sticky top-0 z-50 shadow-xs select-none">
         <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            {/* Left: Brand logo & Navigation */}
+          <div className="flex h-16 items-center justify-between relative">
+            {/* Left: Brand logo & Dashboard internal navigation */}
             <div className="flex items-center gap-7">
               {/* Brand Logo */}
               <Link href="/" className="flex items-center gap-2 group select-none">
@@ -313,149 +336,229 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                 </span>
               </Link>
 
-              {/* ────────────────────────────────────────────────────────── */}
-              {/* Desktop Navigation Links                                   */}
-              {/* If on Public/Landing: Show 'Products, ATS Resume, Pricing, Resources' */}
-              {/* If inside Dashboard: Show Dashboard sub-routes             */}
-              {/* ────────────────────────────────────────────────────────── */}
-
-              {!isDashboardSubpage ? (
-                /* Public Navigation with Centered Middle Dropdowns (Teal, Black & White) */
+              {/* Inside Dashboard: Direct subpage tabs */}
+              {isDashboardSubpage && user && !hideNav && (
                 <div className="hidden md:flex items-center gap-1 h-16 ml-1">
-                  {/* 1. Products (Hover Middle Box + Direct Link to /products) */}
-                  <div
-                    ref={productsNavRef}
-                    className="relative"
-                    onMouseEnter={() => setActiveMenu("products")}
-                    onMouseLeave={() => setActiveMenu(null)}
-                  >
-                    <Link
-                      href="/products"
-                      className={`flex items-center gap-1 px-3 py-2 text-[14px] font-medium transition-colors cursor-pointer rounded-lg ${
-                        pathname === "/products" || activeMenu === "products"
-                          ? "text-[#087F6E] bg-teal-50 font-semibold"
-                          : "text-[#526176] hover:text-[#111827] hover:bg-slate-50"
-                      }`}
-                    >
-                      <span>Products</span>
-                      <ChevronDown
-                        className={`h-3.5 w-3.5 transition-transform duration-200 ${
-                          activeMenu === "products" ? "rotate-180 text-[#087F6E]" : "text-slate-400"
+                  {dashboardLinks.map((link) => {
+                    const isActive = pathname === link.href;
+                    return (
+                      <Link
+                        key={link.label}
+                        href={link.href}
+                        onClick={() => {
+                          if (link.href === "/dashboard" && typeof window !== "undefined") {
+                            window.dispatchEvent(new CustomEvent("open-optimize-editor"));
+                          }
+                        }}
+                        className={`relative flex items-center h-full px-3 text-sm font-semibold transition-colors select-none ${
+                          isActive
+                            ? "text-[#111827] font-bold"
+                            : "text-[#526176] hover:text-[#111827]"
                         }`}
-                      />
-                    </Link>
+                      >
+                        {link.label}
+                        {isActive && (
+                          <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#087F6E] rounded-full" />
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-                    {/* Centered Middle Box */}
+            {/* ────────────────────────────────────────────────────────── */}
+            {/* Desktop Navigation Links (Centered in Middle on Landing)   */}
+            {/* ────────────────────────────────────────────────────────── */}
+            {!isDashboardSubpage && (
+              <div className="hidden md:flex items-center gap-1.5 h-16 absolute left-1/2 -translate-x-1/2">
+                {/* 1. Products (Hover Middle Box + Direct Link to /products) */}
+                <div
+                  ref={productsNavRef}
+                  className="relative"
+                  onMouseEnter={() => setActiveMenu("products")}
+                  onMouseLeave={() => setActiveMenu(null)}
+                >
+                  <Link
+                    href="/products"
+                    className={`flex items-center gap-1 px-3 py-2 text-[14px] font-medium transition-colors cursor-pointer rounded-lg ${
+                      pathname === "/products" || activeMenu === "products"
+                        ? "text-[#087F6E] bg-teal-50 font-semibold"
+                        : "text-[#526176] hover:text-[#111827] hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>Products</span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                        activeMenu === "products" ? "rotate-180 text-[#087F6E]" : "text-slate-400"
+                      }`}
+                    />
+                  </Link>
+
+                    {/* Centered Middle Box matching Resources */}
                     {activeMenu === "products" && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[330px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                        <button
-                          onClick={() => handleProtectedNavigate(user ? "/dashboard" : "/ats-optimizer")}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
-                            <Sparkles className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                              AI Resume Optimizer
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[720px] max-w-[95vw] bg-white border border-slate-200 rounded-3xl shadow-2xl p-4 sm:p-5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-3.5">
+                          <button
+                            onClick={() => handleProtectedNavigate(user ? "/dashboard" : "/ats-optimizer")}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <Sparkles className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="text-[11px] text-slate-500 font-normal">
-                              Tailor resume to target JD with AI.
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                AI Resume Optimizer
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Tailor resume to target JD with AI.
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
 
-                        <button
-                          onClick={() => {
-                            setActiveMenu(null);
-                            if (user) {
-                              router.push("/dashboard");
-                            } else {
-                              router.push("/ats-checker");
-                            }
-                          }}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
-                            <Search className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                              ATS Resume Scanner
+                          <button
+                            onClick={() => {
+                              setActiveMenu(null);
+                              if (user) {
+                                router.push("/dashboard");
+                              } else {
+                                router.push("/ats-checker");
+                              }
+                            }}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <Search className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="text-[11px] text-slate-500 font-normal">
-                              Check ATS score &amp; missing keywords.
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                ATS Resume Scanner
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Check ATS score &amp; missing keywords.
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
 
-                        <button
-                          onClick={() => handleProtectedNavigate(user ? "/dashboard/resumes" : "/resume-builder")}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
-                            <FileText className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                              AI Resume Builder
+                          <button
+                            onClick={() => handleProtectedNavigate(user ? "/dashboard/resumes" : "/resume-builder")}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <FileText className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="text-[11px] text-slate-500 font-normal">
-                              Build structured ATS-compliant resumes.
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                AI Resume Builder
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Build structured ATS-compliant resumes.
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
 
-                        <button
-                          onClick={() => handleProtectedNavigate("/dashboard/job-tracker")}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
-                            <Briefcase className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                              Job Application Tracker
+                          <button
+                            onClick={() => handleProtectedNavigate("/dashboard/cover-letter")}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <FileCheck className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="text-[11px] text-slate-500 font-normal">
-                              Track applications in Kanban pipeline.
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                AI Cover Letter Studio
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                One-click personalized tailored letters.
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
 
-                        <button
-                          onClick={() => handleProtectedNavigate("/dashboard/history")}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
-                            <History className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                              Resume History &amp; Downloads
+                          <button
+                            onClick={() => handleProtectedNavigate("/dashboard/mock-interview")}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <Target className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="text-[11px] text-slate-500 font-normal">
-                              Compare past scans &amp; re-download PDFs.
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                AI Mock Interview Coach
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Practice questions with STAR scoring.
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
+
+                          <button
+                            onClick={() => handleProtectedNavigate("/dashboard/linkedin-optimizer")}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <LinkedInIcon className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                LinkedIn Profile Optimizer
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Headlines, All-Star bio &amp; recruiter SEO.
+                              </div>
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => handleProtectedNavigate("/dashboard/job-tracker")}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <Briefcase className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                Job Application Tracker
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Track applications in Kanban pipeline.
+                              </div>
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => handleProtectedNavigate("/dashboard/history")}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <History className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                Resume History &amp; Downloads
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Compare past scans &amp; re-download PDFs.
+                              </div>
+                            </div>
+                          </button>
+                        </div>
 
                         {/* Bottom Action Button for Products */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                          <Link href="/resume-builder" onClick={() => setActiveMenu(null)}>
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                          <Link href="/products" onClick={() => setActiveMenu(null)}>
                             <button
                               type="button"
-                              className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-4 rounded-md transition-all cursor-pointer shadow-xs"
+                              className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-5 rounded-md transition-all cursor-pointer shadow-xs"
                             >
-                              Resume Builder
+                              Explore All Products
                             </button>
                           </Link>
                           <Link
-                            href="/products"
+                            href="/resume-builder"
                             onClick={() => setActiveMenu(null)}
                             className="text-xs font-semibold text-[#087F6E] hover:underline"
                           >
-                            Explore All Products
+                            Open Resume Builder &rarr;
                           </Link>
                         </div>
                       </div>
@@ -487,86 +590,88 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
                     {/* Centered Middle Box */}
                     {activeMenu === "ats" && (
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[320px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 space-y-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                        <button
-                          onClick={() => {
-                            setActiveMenu(null);
-                            if (user) {
-                              router.push("/dashboard");
-                            } else {
-                              router.push("/ats-checker");
-                            }
-                          }}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
-                            <Search className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                              Resume Scanner
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[640px] max-w-[95vw] bg-white border border-slate-200 rounded-3xl shadow-2xl p-4 sm:p-5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-3.5">
+                          <button
+                            onClick={() => {
+                              setActiveMenu(null);
+                              if (user) {
+                                router.push("/dashboard");
+                              } else {
+                                router.push("/ats-checker");
+                              }
+                            }}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <Search className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="text-[11px] text-slate-500 font-normal">
-                              Test resume against ATS filters.
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                Resume Scanner
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Test resume against ATS filters.
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
 
-                        <button
-                          onClick={() => handleProtectedNavigate(user ? "/dashboard/resumes" : "/resume-builder")}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
-                            <FileText className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                              ATS Resume Builder
+                          <button
+                            onClick={() => handleProtectedNavigate(user ? "/dashboard/resumes" : "/resume-builder")}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <FileText className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="text-[11px] text-slate-500 font-normal">
-                              Build single-column parser-safe resume.
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                ATS Resume Builder
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Build single-column parser-safe resume.
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
 
-                        <Link
-                          href="/ats-resume#templates"
-                          onClick={() => setActiveMenu(null)}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
-                            <LayoutTemplate className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                              ATS Resume Templates
+                          <Link
+                            href="/ats-resume#templates"
+                            onClick={() => setActiveMenu(null)}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <LayoutTemplate className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="text-[11px] text-slate-500 font-normal">
-                              4 verified parser-safe layouts.
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                ATS Resume Templates
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                4 verified parser-safe layouts.
+                              </div>
                             </div>
-                          </div>
-                        </Link>
+                          </Link>
 
-                        <Link
-                          href="/ats-resume#rules"
-                          onClick={() => setActiveMenu(null)}
-                          className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50 transition-colors text-left group cursor-pointer"
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] group-hover:text-white transition-colors">
-                            <ShieldCheck className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                              The 5 Golden Rules of ATS
+                          <Link
+                            href="/ats-resume#rules"
+                            onClick={() => setActiveMenu(null)}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <ShieldCheck className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="text-[11px] text-slate-500 font-normal">
-                              Layout rules to avoid silent rejection.
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                The 5 Golden Rules of ATS
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Layout rules to avoid silent rejection.
+                              </div>
                             </div>
-                          </div>
-                        </Link>
+                          </Link>
+                        </div>
 
                         {/* Bottom Action Button for ATS Resume */}
-                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                           <button
                             type="button"
                             onClick={() => {
@@ -577,7 +682,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                                 router.push("/ats-checker");
                               }
                             }}
-                            className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-4 rounded-xl transition-all cursor-pointer shadow-xs"
+                            className="bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs py-2 px-5 rounded-md transition-all cursor-pointer shadow-xs"
                           >
                             Check ATS Score
                           </button>
@@ -586,7 +691,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                             onClick={() => setActiveMenu(null)}
                             className="text-xs font-semibold text-[#087F6E] hover:underline"
                           >
-                            Open ATS Resume Hub
+                            Open ATS Resume Hub &rarr;
                           </Link>
                         </div>
                       </div>
@@ -817,53 +922,22 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                     )}
                   </div>
                 </div>
-              ) : (
-                /* Inside Dashboard: Direct subpage tabs */
-                user &&
-                !hideNav && (
-                  <div className="hidden md:flex items-center gap-1 h-16 ml-1">
-                    {dashboardLinks.map((link) => {
-                      const isActive = pathname === link.href;
-                      return (
-                        <Link
-                          key={link.label}
-                          href={link.href}
-                          onClick={() => {
-                            if (link.href === "/dashboard" && typeof window !== "undefined") {
-                              window.dispatchEvent(new CustomEvent("open-optimize-editor"));
-                            }
-                          }}
-                          className={`relative flex items-center h-full px-3 text-sm font-semibold transition-colors select-none ${
-                            isActive
-                              ? "text-[#111827] font-bold"
-                              : "text-[#526176] hover:text-[#111827]"
-                          }`}
-                        >
-                          {link.label}
-                          {isActive && (
-                            <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#087F6E] rounded-full" />
-                          )}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )
               )}
-            </div>
 
             {/* Right Section Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {user ? (
                 <>
-                  {/* Quick Dashboard button when on marketing/landing pages */}
-                  {!isDashboardSubpage && (
-                    <Link
-                      href="/dashboard"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs transition-all shadow-xs"
+                  {/* Dynamic Plan-based Upgrade Text Link (No box) */}
+                  {!isOwner && !isProMax && (
+                    <button
+                      type="button"
+                      onClick={handleNavbarUpgradeClick}
+                      className="text-xs sm:text-sm font-bold text-[#087F6E] hover:text-[#065F53] hover:underline transition-colors cursor-pointer px-1 py-1"
+                      title="Upgrade your plan"
                     >
-                      <Sparkles className="h-3.5 w-3.5 text-white" />
-                      <span>Dashboard</span>
-                    </Link>
+                      Upgrade?
+                    </button>
                   )}
 
                   {/* Profile Button with Google Avatar & Credits Ring */}
@@ -1116,22 +1190,22 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
                         {/* 4. Secondary actions */}
                         <div className="space-y-0.5">
-                          {(isOwner || isPremium || isProMax) && (
-                            <button
-                              onClick={() => {
-                                setIsDropdownOpen(false);
-                                window.dispatchEvent(
-                                  new CustomEvent("open-support-chatbot", {
-                                    detail: { mode: "help-center" },
-                                  })
-                                );
-                              }}
-                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
-                            >
-                              <HelpCircle className="h-3.5 w-3.5 text-slate-400" />
-                              <span>Help &amp; Support</span>
-                            </button>
-                          )}
+                          {/* Help & Support (opens Help Center widget) */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsDropdownOpen(false);
+                              window.dispatchEvent(
+                                new CustomEvent("open-support-chatbot", {
+                                  detail: { mode: "help-center" },
+                                })
+                              );
+                            }}
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
+                          >
+                            <HelpCircle className="h-3.5 w-3.5 text-slate-400" />
+                            <span>Help &amp; Support</span>
+                          </button>
                           <button
                             onClick={() => {
                               setIsDropdownOpen(false);
@@ -1210,9 +1284,49 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
         </div>
       </nav>
 
+      {/* Feedback Notification Banner after login */}
+      {user && !hideNav && pathname.startsWith("/dashboard") && (
+        <FeedbackBanner onOpenFeedback={() => setIsFeedbackOpen(true)} />
+      )}
+
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
         <div className="sm:hidden border-t border-[#DCE7E9] bg-white px-5 py-4 space-y-3 animate-in fade-in duration-150 select-none">
+          {/* Plan & Credits Status Box in Mobile Menu */}
+          {user && !isOwner && !isProMax && (
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2 mb-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-600">{planLabel}</span>
+                <span className={`font-bold ${freeRemaining <= 0 ? "text-amber-600" : "text-[#087F6E]"}`}>
+                  {creditsDisplay}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleNavbarUpgradeClick();
+                }}
+                className={`w-full py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer ${
+                  freeRemaining <= 0
+                    ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white animate-pulse"
+                    : "bg-[#087F6E] hover:bg-[#065F53] text-white"
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5 fill-current" />
+                <span>
+                  {freeRemaining <= 0
+                    ? isPremium
+                      ? "0 Credits • Upgrade Pro Max"
+                      : "0 Credits • Upgrade Now"
+                    : isPremium
+                    ? "Upgrade to Pro Max"
+                    : "Upgrade to Pro"}
+                </span>
+              </button>
+            </div>
+          )}
+
           <div className="font-bold text-xs uppercase tracking-wider text-slate-400 pb-1">
             Navigation
           </div>
@@ -1314,12 +1428,35 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
             <History className="h-5 w-5" />
             <span className="text-[10px] font-bold">History</span>
           </Link>
+          {!isOwner && !isProMax && (
+            <button
+              type="button"
+              onClick={handleNavbarUpgradeClick}
+              className={`flex flex-col items-center gap-1 transition-colors cursor-pointer ${
+                freeRemaining <= 0
+                  ? "text-amber-500 hover:text-amber-600 animate-pulse"
+                  : "text-slate-400 hover:text-[#087F6E]"
+              }`}
+            >
+              <div className="relative">
+                <Zap
+                  className={`h-5 w-5 ${
+                    freeRemaining <= 0 ? "fill-amber-500 text-amber-500" : ""
+                  }`}
+                />
+                {freeRemaining <= 0 && (
+                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+                )}
+              </div>
+              <span className="text-[10px] font-bold">Upgrade?</span>
+            </button>
+          )}
         </div>
       )}
 
 
-      {/* Persistent Support, Feedback & Paywall */}
-      {user && !hideNav && (isOwner || isPremium || isProMax) && <SupportChatbot />}
+      {/* Persistent Help Center & Support Launcher */}
+      {user && !hideNav && <SupportChatbot />}
       <FeedbackToast isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} userEmail={user?.email} />
       <ReferralModal isOpen={isReferralOpen} onClose={() => setIsReferralOpen(false)} />
       <DemoVideoModal isOpen={isDemoModalOpen} onClose={() => setIsDemoModalOpen(false)} />

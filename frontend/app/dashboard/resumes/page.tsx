@@ -39,7 +39,6 @@ import {
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { ResumesSkeleton, ResumesGridSkeleton } from "@/components/SkeletonShimmer";
-import ImportViaAiModal from "@/components/ImportViaAiModal";
 import { getTemplateById, ATS_TEMPLATES_DATA, AtsTemplateProfile } from "@/lib/ats-templates-data";
 import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 import { Palette, Maximize2, Minimize2 } from "lucide-react";
@@ -200,7 +199,6 @@ function ResumesPageContent() {
   const [mobileTab, setMobileTab] = useState<"fields" | "preview">("fields");
   const [templateStyle, setTemplateStyle] = useState<string>("financial-analyst");
   const [isFullLengthPreview, setIsFullLengthPreview] = useState(false);
-  const [isAiImportModalOpen, setIsAiImportModalOpen] = useState(false);
   const searchParams = useSearchParams();
   const templateParam = searchParams?.get("template");
 
@@ -746,67 +744,7 @@ function ResumesPageContent() {
   };
 
 
-  // AI Import Gated Trigger
-  const handleOpenAiImport = () => {
-    const isOwner = activePlan === "owner" || (userId && isOwnerEmail(userId));
-    if (activePlan === "free" && !isOwner) {
-      useUpgradeModalStore.getState().openModal({
-        badge: "PRO & PRO MAX",
-        title: "Unlock AI Resume Import",
-        description: "Importing resumes via AI is an exclusive Pro & Pro Max feature. Upgrade to automatically parse and populate your resume fields from any existing resume or LinkedIn profile in seconds.",
-      });
-      return;
-    }
-    setIsAiImportModalOpen(true);
-  };
 
-  const handleAiImportSuccess = async (importedData: StructuredResume, detectedTitle?: string) => {
-    const title = detectedTitle || `${importedData.name || "Imported"}'s Resume`;
-    const compiled = compileStructuredResume(importedData);
-
-    try {
-      setActionLoading("create");
-      const res = await fetch("/api/resumes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: generateUUID(),
-          originalText: compiled,
-          optimizedText: compiled,
-          jobDescription: "",
-          jobTitle: title,
-          company: "General Application",
-          scoreBefore: 70,
-          scoreAfter: 85,
-          keywordsBefore: 5,
-          keywordsAfter: 12,
-          impactBefore: 5,
-          impactAfter: 10,
-          keywordsAdded: [],
-        }),
-      });
-
-      if (res.ok) {
-        const newRec = await res.json();
-        setResumes((prev) => [newRec, ...prev]);
-        setEditingResume(newRec);
-        setEditorData(importedData);
-        setTempTitle(title);
-        toast.success("Resume imported and opened in editor!");
-      } else if (editingResume) {
-        setEditorData(importedData);
-        saveEditorData(importedData, { jobTitle: title });
-        toast.success("Active resume updated with imported content!");
-      }
-    } catch (err: any) {
-      if (editingResume) {
-        setEditorData(importedData);
-        saveEditorData(importedData);
-      }
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const handleTemplateStyleChange = (styleId: string) => {
     setTemplateStyle(styleId);
@@ -1441,33 +1379,18 @@ function ResumesPageContent() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleOpenAiImport}
-                    className="bg-gradient-to-r from-teal-600 to-[#087F6E] hover:from-teal-700 hover:to-[#065F53] text-white font-bold h-9 text-xs rounded-xl px-4 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                  >
-                    <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                    <span>Import via AI</span>
-                    {activePlan === "free" && (
-                      <span className="bg-amber-400 text-slate-900 text-[8px] font-black uppercase px-1 rounded">
-                        PRO
-                      </span>
-                    )}
-                  </Button>
-
-                  <Button
-                    onClick={() => handleCreateNewResume()}
-                    disabled={actionLoading === "create" || resumes.length >= maxLimit}
-                    className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold h-9 text-xs rounded-xl px-4 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                  >
-                    {actionLoading === "create" ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Plus className="h-4 w-4 text-[#087F6E]" />
-                    )}
-                    New Resume
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => handleCreateNewResume()}
+                  disabled={actionLoading === "create" || resumes.length >= maxLimit}
+                  className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold h-9 text-xs rounded-xl px-5 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  {actionLoading === "create" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  New Resume
+                </Button>
               </div>
 
               {/* Grid display options */}
@@ -1485,25 +1408,12 @@ function ResumesPageContent() {
                     <p className="text-xs sm:text-sm text-[#526176] max-w-md mt-1 leading-relaxed font-normal">
                       Start from scratch or select a pre-engineered ATS template verified against Workday, Taleo, and Greenhouse parsers.
                     </p>
-                    <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+                    <div className="mt-5">
                       <Button 
                         onClick={() => handleCreateNewResume()}
-                        variant="outline"
-                        className="bg-white hover:bg-slate-50 text-slate-700 border-slate-300 font-bold text-xs rounded-xl px-5 h-10 shadow-xs cursor-pointer"
+                        className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs rounded-xl px-6 h-10 shadow-xs cursor-pointer"
                       >
                         Create Blank Resume
-                      </Button>
-                      <Button 
-                        onClick={handleOpenAiImport}
-                        className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs rounded-xl px-6 h-10 shadow-xs cursor-pointer flex items-center gap-2"
-                      >
-                        <Sparkles className="h-4 w-4 text-amber-300" />
-                        <span>Import via AI</span>
-                        {activePlan === "free" && (
-                          <span className="bg-amber-400 text-slate-900 text-[8px] font-black uppercase px-1.5 py-0.5 rounded">
-                            PRO
-                          </span>
-                        )}
                       </Button>
                     </div>
                   </div>
@@ -1745,17 +1655,6 @@ function ResumesPageContent() {
                   ))}
                 </select>
               </div>
-
-              {/* Import via AI button in editor */}
-              <Button
-                onClick={handleOpenAiImport}
-                variant="outline"
-                className="h-8 text-xs font-bold border-teal-200 bg-teal-50/70 hover:bg-teal-100 text-[#087F6E] rounded-lg px-2.5 flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                <span className="hidden md:inline">Import via AI</span>
-                <span className="md:hidden">Import</span>
-              </Button>
 
               <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 sm:px-3 py-1 rounded-full">
                 <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" />

@@ -500,14 +500,12 @@ export default function BillingPage() {
                 <h4 className="text-xs font-bold text-slate-900">Need Billing Help?</h4>
                 <p className="text-[10px] text-slate-500">Questions about payments, plans, or custom invoices?</p>
               </div>
-              <button
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent("open-support-chatbot", { detail: { mode: "admin" } }));
-                }}
-                className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#094d3f] text-white text-[10px] font-bold h-8 rounded-lg px-3.5 transition-all cursor-pointer shrink-0"
+              <a
+                href="mailto:rolefuse.ai@gmail.com?subject=RoleFuse%20Support"
+                className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#094d3f] text-white text-[10px] font-bold h-8 rounded-lg px-3.5 transition-all cursor-pointer shrink-0 inline-flex items-center justify-center text-center"
               >
                 Contact Us
-              </button>
+              </a>
             </div>
 
           </div>

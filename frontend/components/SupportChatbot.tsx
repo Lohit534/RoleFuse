@@ -4,19 +4,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { 
-  MessageSquare, 
   X, 
   Send, 
-  Sparkles, 
-  User, 
-  Cpu, 
   Loader2, 
   RefreshCw, 
   HelpCircle,
-  Coins,
   ShieldCheck,
   Clock,
   HeadphonesIcon,
@@ -26,82 +20,72 @@ import {
   Mail,
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
+  Check,
+  Copy,
   ExternalLink,
   CreditCard,
   FileText,
-  Globe,
+  User,
   Settings,
-  List
+  Sparkles
 } from "lucide-react";
 import { toast } from "react-hot-toast";
-import Link from "next/link";
-import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
-
-interface ChatMessage {
-  sender: "user" | "ai" | "admin" | "system";
-  text: string;
-  timestamp: Date;
-  status?: string;
-}
-
-interface UserCreditsInfo {
-  freeUsed: number;
-  paidCredits: number;
-  freeRemaining: number;
-  isOwner: boolean;
-}
 
 interface FAQItem {
   id: string;
+  category: "all" | "billing" | "optimization" | "account" | "gst";
   question: string;
   answer: string;
-}
-
-/**
- * Remove all asterisks and format cleanly
- */
-function cleanAsterisks(text: string): string {
-  if (!text) return "";
-  return text
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/(^|\n)\s*[\*\-]\s+/g, "$1• ")
-    .replace(/\*/g, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
 }
 
 const FAQS: FAQItem[] = [
   {
     id: "plan-status-free",
+    category: "billing",
     question: "If I haven't purchased a plan, does it always show Free?",
     answer: "Yes! If you have not purchased a plan, your account strictly stays on the Free Plan with your monthly free credits. You can view all 3 plans on the Pricing page to compare features, but you will never be charged or switched to a paid plan without your explicit checkout."
   },
   {
     id: "payment-visibility",
+    category: "billing",
     question: "Why is my payment not visible on the dashboard?",
-    answer: "Payments are verified securely in real-time via Razorpay. If your credits haven't refreshed immediately, please check your Billing & Subscription page, click 'Refresh', or create a support ticket with your Payment ID."
+    answer: "Payments are verified securely in real-time via Razorpay. If your credits haven't refreshed immediately, please check your Billing & Subscription page, click 'Refresh', or create a support ticket with your Payment ID or email rolefuse.ai@gmail.com."
   },
   {
     id: "credits-reset",
+    category: "billing",
     question: "When do my monthly optimization credits reset?",
     answer: "Your credits refresh automatically every 30 days on your monthly cycle. Free plan users get free monthly credits, Pro gets 20, and Pro Max members get unlimited optimizations."
   },
   {
     id: "ats-scoring",
+    category: "optimization",
     question: "How does RoleFuse ATS scoring & keyword optimization work?",
     answer: "RoleFuse analyzes your resume against target job description keywords, technical requirements, and industry-standard ATS rubrics, highlighting exact keyword gaps and upgrading weak bullet points to help you reach a 90+ score."
   },
   {
     id: "gst-invoices",
+    category: "gst",
     question: "How do GST tax invoices work?",
     answer: "Every transaction generates an official 5% GST tax invoice with an official breakdown. You can preview and download GST invoices as PDFs anytime on your Billing page."
   },
   {
     id: "plan-switching",
+    category: "billing",
     question: "Can I upgrade or switch between plans anytime?",
     answer: "Yes! You can upgrade from Free to Pro (20 optimizations/month) or Pro Max (Unlimited) at any time from the Pricing page."
+  },
+  {
+    id: "resume-import",
+    category: "optimization",
+    question: "Can I upload my existing PDF or DOCX resume?",
+    answer: "Yes! Navigate to the Resume Editor or ATS Checker to upload any PDF or DOCX file. Our engine parses the text, extracts your contact info, skills, experience, and education, and prepares it for instant ATS tailoring."
+  },
+  {
+    id: "data-privacy",
+    category: "account",
+    question: "Is my resume and personal data secure?",
+    answer: "RoleFuse uses enterprise-grade Supabase encryption and strict row-level security (RLS). Your resume data is never shared with third parties or used to train public AI models."
   }
 ];
 
@@ -152,33 +136,22 @@ const TICKET_TOPICS = [
 
 export default function SupportChatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  // Views: 'help-center' (Image 1) | 'contact-options' (Image 2) | 'ticket' (Admin team) | 'ai-chat' (AI chatbot)
-  const [view, setView] = useState<"help-center" | "contact-options" | "ticket" | "ai-chat">("help-center");
+  // Views: 'help-center' | 'contact-options' | 'ticket' | 'mail'
+  const [view, setView] = useState<"help-center" | "contact-options" | "ticket" | "mail">("help-center");
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<"all" | "billing" | "optimization" | "account" | "gst">("all");
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
   
   const [ticketTopic, setTicketTopic] = useState<string | null>(null);
+  const [ticketInput, setTicketInput] = useState("");
+  const [sendingTicket, setSendingTicket] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState(false);
 
-  // Chat states
-  const [inputText, setInputText] = useState("");
-  const [loading, setLoading] = useState(false);
-  
-  // User metadata
+  // User state
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [activePlan, setActivePlan] = useState<string>("Free Tier");
-  const [remainingCredits, setRemainingCredits] = useState<string>("2");
-  const [rawCredits, setRawCredits] = useState<UserCreditsInfo | null>(null);
-
-  // Chat message histories
-  const [aiHistory, setAiHistory] = useState<ChatMessage[]>([
-    {
-      sender: "ai",
-      text: "Hello! I am your RoleFuse AI Assistant. Ask me anything about resume optimization, ATS keywords, pricing plans, or career advice!",
-      timestamp: new Date()
-    }
-  ]);
+  const [activePlan, setActivePlan] = useState<"free" | "premium" | "promax" | "owner">("free");
   
   const [adminTickets, setAdminTickets] = useState<any[]>([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
@@ -187,10 +160,10 @@ export default function SupportChatbot() {
 
   // Auto-scroll messages to bottom
   useEffect(() => {
-    if (view === "ai-chat" || view === "ticket") {
+    if (view === "ticket") {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [aiHistory, adminTickets, isOpen, view]);
+  }, [adminTickets, isOpen, view]);
 
   // Load User Authentication & Plan details
   const loadUserData = async () => {
@@ -202,20 +175,15 @@ export default function SupportChatbot() {
         
         const credRes = await fetch("/api/credits");
         if (credRes.ok) {
-          const creds: UserCreditsInfo = await credRes.json();
-          setRawCredits(creds);
-
-          const userPlan = (creds as any).planId || localStorage.getItem(`fastHire_plan_${user.id}`) || "free";
-          setActivePlan(userPlan);
-          
+          const creds = await credRes.json();
           if (creds.isOwner) {
-            setRemainingCredits("Unlimited");
-          } else if (userPlan === "promax" || creds.paidCredits >= 90) {
-            setRemainingCredits(`${creds.paidCredits} Credits`);
-          } else if (userPlan === "premium" || creds.paidCredits > 0) {
-            setRemainingCredits(`${creds.paidCredits} Credits`);
+            setActivePlan("owner");
+          } else if (creds.paidCredits >= 90) {
+            setActivePlan("promax");
+          } else if (creds.paidCredits > 0) {
+            setActivePlan("premium");
           } else {
-            setRemainingCredits(`${creds.freeRemaining} Free left`);
+            setActivePlan("free");
           }
         }
       }
@@ -230,17 +198,18 @@ export default function SupportChatbot() {
     }
   }, [isOpen]);
 
-  // External open trigger listener (from Billing "Contact Us" or Navbar)
+  // External open trigger listener (from Navbar or Profile menu)
   useEffect(() => {
     const handleOpenChat = (e: Event) => {
       const customEvent = e as CustomEvent;
-      const targetMode = customEvent.detail?.mode || "contact-options";
+      const targetMode = customEvent.detail?.mode || "help-center";
       setIsOpen(true);
       if (targetMode === "admin" || targetMode === "ticket") {
         setView("ticket");
-      } else if (targetMode === "ai" || targetMode === "ai-chat") {
-        setView("ai-chat");
-      } else if (targetMode === "contact-options") {
+        loadAdminTickets(false);
+      } else if (targetMode === "mail" || targetMode === "email") {
+        setView("mail");
+      } else if (targetMode === "contact" || targetMode === "contact-options") {
         setView("contact-options");
       } else {
         setView("help-center");
@@ -281,148 +250,95 @@ export default function SupportChatbot() {
     }
   }, [isOpen, view]);
 
-  // Send AI Chat Message
-  const handleSendAiMessage = async (e?: React.FormEvent) => {
+  // Send Ticket Message to Admin
+  const handleSendTicket = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const userMsg = inputText.trim();
-    if (!userMsg || loading) return;
+    const msg = ticketInput.trim();
+    if (!msg || sendingTicket) return;
 
-    setInputText("");
-    const newHistory: ChatMessage[] = [
-      ...aiHistory,
-      { sender: "user", text: userMsg, timestamp: new Date() }
-    ];
-    setAiHistory(newHistory);
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/support/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          question: userMsg,
-          messages: aiHistory.map(m => ({
-            role: m.sender === 'user' ? 'user' : 'assistant',
-            content: m.text
-          })),
-          userPlan: activePlan === "promax" || activePlan === "owner" ? "promax" : activePlan === "premium" ? "premium" : "free"
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (typeof data.creditsRemaining === "number") {
-          setRawCredits((prev) => prev ? { ...prev, paidCredits: data.creditsRemaining } : null);
-          if (activePlan !== "owner" && !rawCredits?.isOwner) {
-            setRemainingCredits(`${data.creditsRemaining} Credits`);
-          }
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("credits-updated", { detail: { paidCredits: data.creditsRemaining } }));
-          }
-        }
-        setAiHistory([
-          ...newHistory,
-          {
-            sender: "ai",
-            text: cleanAsterisks(data.answer) || "I am here to assist with any questions about RoleFuse!",
-            timestamp: new Date()
-          }
-        ]);
-      } else {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || "Chat request failed");
-      }
-    } catch (err: any) {
-      setAiHistory([
-        ...newHistory,
-        {
-          sender: "ai",
-          text: `Error: ${err?.message || "Failed to get a response"}`,
-          timestamp: new Date()
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Send Admin Ticket Message
-  const handleSendTicketMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const userMsg = inputText.trim();
-    if (!userMsg || loading) return;
-
-    setInputText("");
-    setLoading(true);
+    setTicketInput("");
+    setSendingTicket(true);
 
     try {
       const res = await fetch("/api/support/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: userMsg,
-          userPlan: activePlan === "promax" || activePlan === "owner" ? "promax" : activePlan === "premium" ? "premium" : "free",
-          userCredits: rawCredits?.isOwner ? 999999 : (activePlan === "premium" ? rawCredits?.paidCredits : rawCredits?.freeRemaining) || 0
+          message: msg,
+          userPlan: activePlan,
+          topic: ticketTopic || "general"
         })
       });
 
       if (res.ok) {
-        toast.success("Ticket message sent to Admin team.");
-        await loadAdminTickets();
+        toast.success("Support ticket submitted to Admin team.");
+        await loadAdminTickets(false);
       } else {
-        toast.error("Failed to send ticket message.");
+        toast.error("Failed to submit ticket. Please try again.");
       }
     } catch {
       toast.error("Network error. Please try again.");
     } finally {
-      setLoading(false);
+      setSendingTicket(false);
     }
   };
 
-  // Filter FAQs by search query
-  const filteredFaqs = FAQS.filter(faq => 
-    faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const copySupportEmail = () => {
+    navigator.clipboard.writeText("rolefuse.ai@gmail.com");
+    setCopiedEmail(true);
+    toast.success("Support email copied to clipboard!");
+    setTimeout(() => setCopiedEmail(false), 2500);
+  };
+
+  // Filter FAQs based on query and category
+  const filteredFaqs = FAQS.filter(faq => {
+    const matchesCat = selectedCategory === "all" || faq.category === selectedCategory;
+    const matchesQuery = !searchQuery.trim() || 
+      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCat && matchesQuery;
+  });
 
   return (
-    <div className={`fixed z-50 font-sans ${isOpen ? "inset-0 flex items-center justify-center bg-black/40 sm:bg-transparent sm:block sm:inset-auto sm:bottom-6 sm:right-6 pointer-events-auto sm:pointer-events-none" : "bottom-6 right-6"}`}>
-      
-      {/* Floating Toggle Button */}
+    <div className="fixed bottom-6 right-6 z-40 select-none">
+      {/* Floating Help Center Launcher Button */}
       {!isOpen && (
         <button
+          type="button"
           onClick={() => {
             setIsOpen(true);
             setView("help-center");
           }}
-          className="hidden sm:flex h-14 w-14 rounded-full bg-white hover:bg-slate-50 text-[#0d6e5a] shadow-xl items-center justify-center border border-slate-200 hover:scale-105 active:scale-95 transition-all duration-300 select-none cursor-pointer pointer-events-auto"
+          className="flex h-13 w-13 sm:h-14 sm:w-14 rounded-full bg-white hover:bg-slate-50 text-[#0d6e5a] shadow-xl items-center justify-center border border-slate-200 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer pointer-events-auto group"
           title="Open Help Center"
+          aria-label="Open Help Center"
         >
-          <HeadphonesIcon className="h-6 w-6 text-[#0d6e5a]" />
+          <HeadphonesIcon className="h-6 w-6 text-[#0d6e5a] group-hover:rotate-6 transition-transform" />
         </button>
       )}
 
       {/* Main Container Widget */}
       {isOpen && (
-        <Card className="w-[90vw] sm:w-[380px] h-[80vh] sm:h-[540px] max-h-[800px] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 sm:slide-in-from-bottom-5 duration-200 relative pointer-events-auto">
+        <Card className="w-[92vw] sm:w-[400px] h-[82vh] sm:h-[560px] max-h-[820px] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative pointer-events-auto text-left">
           
           {/* ============================================================ */}
-          {/* VIEW 1: HELP CENTER                                           */}
+          {/* VIEW 1: HELP CENTER FAQS                                      */}
           {/* ============================================================ */}
           {view === "help-center" && (
             <div className="flex flex-col h-full bg-white">
               {/* Header */}
-              <div className="bg-white border-b border-slate-200 p-4 sm:p-5 flex items-start justify-between select-none">
+              <div className="bg-white border-b border-slate-100 p-4 sm:p-4.5 flex items-start justify-between select-none">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a] shrink-0">
                     <HelpCircle className="h-5 w-5" />
                   </div>
-                  <div className="space-y-0.5">
-                    <h3 className="font-extrabold text-slate-900 text-base tracking-tight">Help Center</h3>
-                    <p className="text-xs text-slate-500 font-medium">How can we help you today?</p>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">Help Center</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">How can we help you today?</p>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsOpen(false)}
                   className="h-7 w-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                 >
@@ -430,101 +346,131 @@ export default function SupportChatbot() {
                 </button>
               </div>
 
-              {/* Search Bar */}
-              <div className="p-3.5 bg-slate-50 border-b border-slate-200">
+              {/* Search input */}
+              <div className="p-3 border-b border-slate-100 bg-slate-50/50">
                 <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                   <Input
+                    placeholder="Search answers..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search FAQs..."
-                    className="pl-9 bg-white border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 rounded-xl h-9 focus:border-[#0d6e5a]"
+                    className="pl-8 text-xs bg-white border-slate-200 focus:border-[#0d6e5a] h-8.5 rounded-xl"
                   />
                   {searchQuery && (
-                    <button 
+                    <button
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
+
+                {/* Category Pills */}
+                <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar pb-0.5">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "billing", label: "Billing" },
+                    { id: "optimization", label: "ATS & Resume" },
+                    { id: "gst", label: "GST Tax" },
+                    { id: "account", label: "Account" },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id as any)}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer border ${
+                        selectedCategory === cat.id
+                          ? "bg-[#0d6e5a] text-white border-[#0d6e5a]"
+                          : "bg-white text-slate-600 hover:bg-slate-100 border-slate-200"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Popular FAQs list */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
-                <div className="flex items-center justify-between select-none">
-                  <h4 className="text-xs font-bold text-slate-800">Popular FAQs</h4>
-                  <span className="text-[10px] text-slate-500 font-semibold">{filteredFaqs.length} articles</span>
-                </div>
-
-                <div className="space-y-2">
-                  {filteredFaqs.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400 text-xs font-semibold">
-                      No results found for &ldquo;{searchQuery}&rdquo;
-                    </div>
-                  ) : (
-                    filteredFaqs.map((faq) => {
-                      const isExpanded = expandedFaq === faq.id;
-                      return (
-                        <div
-                          key={faq.id}
-                          className="bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-xl transition-all overflow-hidden"
+              {/* FAQ Accordion List */}
+              <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-slate-50/40">
+                {filteredFaqs.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 space-y-2">
+                    <HelpCircle className="h-8 w-8 mx-auto opacity-40" />
+                    <p className="text-xs font-semibold">No answers match your search</p>
+                    <button
+                      onClick={() => { setSearchQuery(""); setSelectedCategory("all"); }}
+                      className="text-[11px] font-bold text-[#0d6e5a] hover:underline"
+                    >
+                      Reset filters
+                    </button>
+                  </div>
+                ) : (
+                  filteredFaqs.map((faq) => {
+                    const isExpanded = expandedFaq === faq.id;
+                    return (
+                      <div
+                        key={faq.id}
+                        className="bg-white border border-slate-200/90 rounded-xl overflow-hidden transition-all shadow-xs"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setExpandedFaq(isExpanded ? null : faq.id)}
+                          className="w-full p-3 text-left flex items-center justify-between gap-2.5 hover:bg-slate-50/80 transition-colors"
                         >
-                          <button
-                            onClick={() => setExpandedFaq(isExpanded ? null : faq.id)}
-                            className="w-full p-3.5 flex items-center justify-between text-left gap-3 text-xs font-bold text-slate-800 hover:text-[#0d6e5a]"
-                          >
-                            <span className="leading-snug">{faq.question}</span>
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
-                            )}
-                          </button>
-                          {isExpanded && (
-                            <div className="px-3.5 pb-3.5 pt-1 text-[11px] text-slate-600 leading-relaxed border-t border-slate-200 bg-white">
-                              {faq.answer}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                          <span className="text-xs font-bold text-slate-800 leading-snug">
+                            {faq.question}
+                          </span>
+                          <span className="shrink-0 text-slate-400">
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </span>
+                        </button>
+                        {isExpanded && (
+                          <div className="px-3 pb-3 pt-0 text-[11px] leading-relaxed text-slate-600 border-t border-slate-100 bg-slate-50/50">
+                            {faq.answer}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
               {/* Bottom "Need more help? -> Contact Us" Footer */}
-              <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-2 text-center select-none">
-                <p className="text-[11px] text-slate-500 font-semibold">Need more help?</p>
+              <div className="p-3.5 bg-slate-50 border-t border-slate-200 space-y-2 text-center select-none">
+                <p className="text-[11px] text-slate-500 font-semibold">Still need help?</p>
                 <Button
                   onClick={() => setView("contact-options")}
-                  className="w-full bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-10 rounded-xl flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors"
+                  className="w-full bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9.5 rounded-xl flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors"
                 >
-                  <HeadphonesIcon className="h-4 w-4" />
-                  Contact Us
+                  <HeadphonesIcon className="h-3.5 w-3.5" />
+                  Contact Support Team
                 </Button>
               </div>
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* VIEW 2: CONTACT US SELECTION                                 */}
+          {/* VIEW 2: CONTACT US OPTIONS                                   */}
           {/* ============================================================ */}
           {view === "contact-options" && (
             <div className="flex flex-col h-full bg-white">
               {/* Header */}
-              <div className="bg-white border-b border-slate-200 p-4 sm:p-5 flex items-center justify-between select-none">
+              <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between select-none">
                 <div className="flex items-center gap-2.5">
                   <button
+                    type="button"
                     onClick={() => setView("help-center")}
                     className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                    title="Back to FAQs"
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </button>
-                  <h3 className="font-extrabold text-slate-900 text-base tracking-tight">Contact Us</h3>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-sm tracking-tight">Contact Us</h3>
+                    <p className="text-[10px] text-slate-500 font-medium">Choose your preferred support channel</p>
+                  </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsOpen(false)}
                   className="h-7 w-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                 >
@@ -532,86 +478,79 @@ export default function SupportChatbot() {
                 </button>
               </div>
 
-              {/* Contact Options List */}
-              <div className="p-4 space-y-3 flex-1 flex flex-col justify-center bg-slate-50/50">
-                {/* Option 1: Create Ticket (Admin Team) */}
+              {/* Options */}
+              <div className="p-4 space-y-3.5 flex-1 flex flex-col justify-center bg-slate-50/50">
+                {/* Option 1: Mail Support (Direct Email) */}
+                <div className="p-4 bg-white border border-teal-200/80 rounded-2xl shadow-sm space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a] shrink-0">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-xs font-extrabold text-slate-900">Mail Support</h4>
+                        <span className="text-[9px] font-bold text-[#0d6e5a] bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
+                          Recommended
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-mono text-slate-700 font-medium mt-0.5">
+                        rolefuse.ai@gmail.com
+                      </p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Guaranteed response within 24 hours
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <a
+                      href="mailto:rolefuse.ai@gmail.com?subject=RoleFuse%20Support%20Request"
+                      className="inline-flex items-center justify-center gap-1.5 h-8.5 rounded-xl bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open Mail
+                    </a>
+                    <button
+                      type="button"
+                      onClick={copySupportEmail}
+                      className="inline-flex items-center justify-center gap-1.5 h-8.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      {copiedEmail ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copiedEmail ? "Copied!" : "Copy Email"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Option 2: Admin Support Ticket */}
                 <button
+                  type="button"
                   onClick={() => {
                     setView("ticket");
-                    if (userId) loadAdminTickets();
+                    if (userId) loadAdminTickets(false);
                   }}
-                  className="w-full p-4 bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0d6e5a]/40 rounded-2xl flex items-center justify-between gap-4 text-left transition-all group shadow-sm cursor-pointer"
+                  className="w-full p-4 bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0d6e5a]/40 rounded-2xl flex items-center justify-between gap-3 text-left transition-all shadow-sm cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a] group-hover:scale-105 transition-transform shrink-0">
-                      <Mail className="h-5 w-5" />
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 group-hover:scale-105 transition-transform shrink-0">
+                      <HeadphonesIcon className="h-5 w-5" />
                     </div>
                     <div>
                       <h4 className="text-xs font-extrabold text-slate-900 group-hover:text-[#0d6e5a] transition-colors">
-                        Create Ticket
+                        Admin Support Ticket
                       </h4>
                       <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                        Resolution in 1-2 days &bull; Admin Support
+                        Submit a direct message &bull; Track replies here
                       </p>
                     </div>
                   </div>
                   <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#0d6e5a] group-hover:translate-x-0.5 transition-all shrink-0" />
                 </button>
-
-                {/* Option 2: AI Assistant Chat (Available for all, Free/Pro shows PRO MAX badge to upgrade) */}
-                {(() => {
-                  // Strictly check for Pro Max: must have 90+ credits OR be owner/admin_promax
-                  const isProMax = activePlan === "promax" || 
-                                   activePlan === "owner" || 
-                                   (rawCredits?.isOwner ?? false) || 
-                                   (rawCredits as any)?.planId === "promax" ||
-                                   (rawCredits?.paidCredits ?? 0) >= 90;
-                  return (
-                    <button
-                      onClick={() => {
-                        if (!isProMax) {
-                          setIsOpen(false);
-                          useUpgradeModalStore.getState().openModal({
-                            badge: "PRO MAX",
-                            title: "Unlock 24/7 AI Assistant & Coach",
-                            description: "24/7 AI Chatbot Assistant is an exclusive feature of the Pro Max plan. Get instant resume advice, live ATS diagnostics, and 90 optimizations/month.",
-                          });
-                          return;
-                        }
-                        setView("ai-chat");
-                      }}
-                      className="w-full p-4 bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0d6e5a]/40 rounded-2xl flex items-center justify-between gap-4 text-left transition-all group shadow-sm cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className="h-10 w-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-[#0d6e5a] group-hover:scale-105 transition-transform shrink-0">
-                          <Sparkles className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className={`text-xs font-extrabold ${isProMax ? "text-slate-900" : "text-slate-700"} group-hover:text-[#0d6e5a] transition-colors`}>
-                              AI Chat
-                            </h4>
-                            {/* Pro Max exclusive badge — only visible for non-Pro Max users */}
-                            {!isProMax && (
-                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 uppercase tracking-wider select-none shadow-xs">
-                                PRO MAX
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                            24/7 AI Assistant &bull; Ask anything about RoleFuse
-                          </p>
-                        </div>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#0d6e5a] group-hover:translate-x-0.5 transition-all shrink-0" />
-                    </button>
-                  );
-                })()}
               </div>
 
               {/* Bottom Quick Back Link */}
-              <div className="p-4 border-t border-slate-200 text-center bg-slate-50">
+              <div className="p-3.5 border-t border-slate-200 text-center bg-slate-50">
                 <button
+                  type="button"
                   onClick={() => setView("help-center")}
                   className="text-xs font-bold text-slate-500 hover:text-[#0d6e5a] transition-colors"
                 >
@@ -627,9 +566,10 @@ export default function SupportChatbot() {
           {view === "ticket" && (
             <div className="flex flex-col h-full bg-white">
               {/* Header */}
-              <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between select-none">
-                <div className="flex items-center gap-2.5">
+              <div className="bg-white border-b border-slate-100 p-3.5 sm:p-4 flex items-center justify-between select-none">
+                <div className="flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => setView("contact-options")}
                     className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                     title="Back to Contact Options"
@@ -637,15 +577,16 @@ export default function SupportChatbot() {
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                   <div>
-                    <h3 className="font-extrabold text-slate-900 text-xs tracking-tight">Admin Support Ticket</h3>
+                    <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm tracking-tight">Admin Support Ticket</h3>
                     <span className="text-[9px] text-slate-500 font-semibold flex items-center gap-1 select-none">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Direct Admin Message
+                      Direct Admin Support
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
+                    type="button"
                     onClick={() => loadAdminTickets(false)}
                     className="h-7 w-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
                     title="Refresh tickets"
@@ -653,6 +594,7 @@ export default function SupportChatbot() {
                     <RefreshCw className="h-3.5 w-3.5" />
                   </button>
                   <button
+                    type="button"
                     onClick={() => setIsOpen(false)}
                     className="h-7 w-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
                   >
@@ -662,28 +604,29 @@ export default function SupportChatbot() {
               </div>
 
               {/* Ticket Messages Body */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/70">
+              <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-slate-50/70 text-left">
                 {loadingTickets ? (
-                  <div className="flex flex-col items-center justify-center py-20 gap-2 select-none">
+                  <div className="flex flex-col items-center justify-center py-16 gap-2 select-none">
                     <Loader2 className="h-5 w-5 text-[#0d6e5a] animate-spin" />
-                    <p className="text-[10px] text-slate-500 font-semibold">Loading messages...</p>
+                    <p className="text-[10px] text-slate-500 font-semibold">Loading your tickets...</p>
                   </div>
                 ) : adminTickets.length === 0 ? (
                   <div className="flex flex-col gap-2">
                     {!ticketTopic ? (
                       <>
-                        <div className="px-1 mb-2">
-                          <h4 className="text-[11px] font-bold text-slate-900">Choose a topic to continue</h4>
+                        <div className="px-1 mb-1">
+                          <h4 className="text-[11px] font-bold text-slate-900">Choose a topic to create ticket</h4>
                           <p className="text-[9px] text-slate-500">Select a category related to your issue</p>
                         </div>
                         {TICKET_TOPICS.map((topic) => (
                           <button
                             key={topic.id}
+                            type="button"
                             onClick={() => setTicketTopic(topic.id)}
-                            className="bg-white border border-slate-200 hover:border-[#0d6e5a]/40 hover:bg-slate-50 p-3.5 rounded-xl flex items-center justify-between transition-all group shadow-sm text-left"
+                            className="bg-white border border-slate-200 hover:border-[#0d6e5a]/40 hover:bg-slate-50 p-3 rounded-xl flex items-center justify-between transition-all shadow-xs text-left cursor-pointer group"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                            <div className="flex items-center gap-2.5">
+                              <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
                                 {topic.icon}
                               </div>
                               <span className="text-xs font-semibold text-slate-700">{topic.title}</span>
@@ -694,58 +637,60 @@ export default function SupportChatbot() {
                       </>
                     ) : (
                       <>
-                        <div className="px-1 mb-2 flex items-center gap-2">
-                          <button onClick={() => setTicketTopic(null)} className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500">
-                            <ArrowLeft className="h-3.5 w-3.5" />
+                        <div className="px-1 mb-1 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setTicketTopic(null)}
+                            className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500"
+                          >
+                            <ArrowLeft className="h-3 w-3" />
                           </button>
                           <div>
-                            <h4 className="text-[11px] font-bold text-slate-900">Choose a question to continue</h4>
-                            <p className="text-[9px] text-slate-500">Select a question to prepopulate your ticket</p>
+                            <h4 className="text-[11px] font-bold text-slate-900">Quick question prepopulate</h4>
+                            <p className="text-[9px] text-slate-500">Click to fill message or type your own below</p>
                           </div>
                         </div>
                         {TICKET_TOPICS.find((t) => t.id === ticketTopic)?.questions.map((q, i) => (
                           <button
                             key={i}
-                            onClick={() => {
-                              setInputText(q);
-                              // Keep the user in this view so they can just hit send, 
-                              // or they can change their mind and go back.
-                            }}
-                            className="bg-white border border-slate-200 hover:border-[#0d6e5a]/40 hover:bg-slate-50 p-3.5 rounded-xl flex items-center justify-between transition-all group shadow-sm text-left"
+                            type="button"
+                            onClick={() => setTicketInput(q)}
+                            className="bg-white border border-slate-200 hover:border-[#0d6e5a]/40 hover:bg-slate-50 p-2.5 rounded-xl flex items-center justify-between transition-all shadow-xs text-left cursor-pointer group"
                           >
-                            <span className="text-xs font-semibold text-slate-700 leading-relaxed pr-2">{q}</span>
-                            <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-[#0d6e5a] shrink-0" />
+                            <span className="text-xs font-medium text-slate-700 leading-relaxed pr-2">{q}</span>
+                            <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-[#0d6e5a] shrink-0" />
                           </button>
                         ))}
                       </>
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="bg-white border border-slate-200 p-2.5 rounded-xl text-[10px] text-slate-600 flex items-center justify-between select-none shadow-xs">
+                  <div className="space-y-3">
+                    <div className="bg-white border border-slate-200 p-2 rounded-xl text-[10px] text-slate-600 flex items-center justify-between select-none shadow-xs">
                       <span className="flex items-center gap-1.5 text-slate-600 font-medium">
                         <Clock className="h-3 w-3 text-teal-600 shrink-0" />
-                        Ticket replies retained for 7 days
+                        Ticket history active
                       </span>
                       <button
+                        type="button"
                         onClick={() => loadAdminTickets(false)}
-                        className="text-[#0d6e5a] hover:text-[#094d3f] flex items-center gap-1 font-bold cursor-pointer text-xs"
+                        className="text-[#0d6e5a] hover:text-[#094d3f] flex items-center gap-1 font-bold cursor-pointer text-[10px]"
                       >
-                        <RefreshCw className="h-3 w-3" /> Refresh
+                        <RefreshCw className="h-2.5 w-2.5" /> Refresh
                       </button>
                     </div>
 
                     {adminTickets.map((ticket: any) => (
-                      <div key={ticket.id} className="space-y-2.5">
+                      <div key={ticket.id} className="space-y-2">
                         {/* User message */}
                         <div className="flex justify-end">
-                          <div className="max-w-[88%] bg-[#0d6e5a] text-white rounded-2xl rounded-br-none px-3.5 py-2.5 text-xs leading-relaxed shadow-xs">
+                          <div className="max-w-[88%] bg-[#0d6e5a] text-white rounded-2xl rounded-br-none px-3.5 py-2 text-xs leading-relaxed shadow-xs">
                             <p className="whitespace-pre-wrap">{ticket.message}</p>
-                            <div className="flex items-center justify-end gap-1.5 mt-1.5 border-t border-white/20 pt-1">
+                            <div className="flex items-center justify-end gap-1.5 mt-1 border-t border-white/20 pt-1">
                               <span className="text-[9px] text-white/80">
-                                {new Date(ticket.createdAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                                {ticket.createdAt ? new Date(ticket.createdAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "Sent"}
                               </span>
-                              <span className="text-[8px] font-bold bg-white/20 px-1.5 py-0.5 rounded text-white">Sent</span>
+                              <span className="text-[8px] font-bold bg-white/20 px-1 py-0.2 rounded text-white">Sent</span>
                             </div>
                           </div>
                         </div>
@@ -753,31 +698,31 @@ export default function SupportChatbot() {
                         {/* Admin reply */}
                         {ticket.reply ? (
                           <div className="flex justify-start">
-                            <div className="max-w-[88%] bg-white border border-teal-200/90 text-slate-800 rounded-2xl rounded-bl-none p-3.5 text-xs leading-relaxed shadow-xs space-y-2">
-                              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
-                                <div className="flex items-center gap-1.5 text-[10px] text-[#0d6e5a] font-black uppercase tracking-wider">
-                                  <ShieldCheck className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                            <div className="max-w-[88%] bg-white border border-teal-200 text-slate-800 rounded-2xl rounded-bl-none p-3 text-xs leading-relaxed shadow-xs space-y-1.5">
+                              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1">
+                                <div className="flex items-center gap-1.5 text-[9px] text-[#0d6e5a] font-black uppercase tracking-wider">
+                                  <ShieldCheck className="h-3 w-3 text-[#0d6e5a]" />
                                   <span>RoleFuse Support Reply</span>
                                 </div>
-                                <span className="text-[9px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/60">
+                                <span className="text-[8px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded-full border border-teal-200/60">
                                   Official
                                 </span>
                               </div>
                               <p className="text-slate-800 font-normal leading-relaxed whitespace-pre-wrap">{ticket.reply}</p>
-                              <div className="text-[9px] text-slate-400 font-medium text-right pt-1">
+                              <div className="text-[9px] text-slate-400 font-medium text-right pt-0.5">
                                 Replied {ticket.repliedAt ? new Date(ticket.repliedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" }) : "Recently"}
                               </div>
                             </div>
                           </div>
                         ) : (
                           <div className="flex justify-start">
-                            <div className="max-w-[88%] bg-amber-50/80 border border-amber-200/90 text-amber-900 rounded-2xl rounded-bl-none p-3 text-xs leading-relaxed select-none">
-                              <div className="flex items-center gap-1.5 text-[9px] text-amber-700 font-bold uppercase tracking-wider mb-1">
-                                <Clock className="h-3.5 w-3.5 animate-spin" />
+                            <div className="max-w-[88%] bg-amber-50/90 border border-amber-200 text-amber-900 rounded-2xl rounded-bl-none p-2.5 text-xs leading-relaxed select-none">
+                              <div className="flex items-center gap-1.5 text-[9px] text-amber-700 font-bold uppercase tracking-wider mb-0.5">
+                                <Clock className="h-3 w-3 animate-spin" />
                                 <span>Awaiting Support Team Reply</span>
                               </div>
-                              <p className="text-[11px] text-amber-800/90 font-normal">
-                                Your ticket has been dispatched to our engineering team. We will respond directly in this chat.
+                              <p className="text-[10px] text-amber-800/90 font-normal">
+                                Your ticket has been logged with our team. Responses appear directly here.
                               </p>
                             </div>
                           </div>
@@ -789,22 +734,22 @@ export default function SupportChatbot() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Compose Ticket Input */}
-              <div className="p-3.5 border-t border-slate-200 bg-white">
-                <form onSubmit={handleSendTicketMessage} className="flex gap-2">
+              {/* Ticket Input Form */}
+              <div className="p-3 border-t border-slate-200 bg-white">
+                <form onSubmit={handleSendTicket} className="flex gap-2">
                   <Input
-                    placeholder="Describe your issue or request..."
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    disabled={loading}
+                    placeholder="Type your issue or ticket message..."
+                    value={ticketInput}
+                    onChange={(e) => setTicketInput(e.target.value)}
+                    disabled={sendingTicket}
                     className="flex-1 bg-slate-50 border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0d6e5a] focus:bg-white rounded-xl h-9"
                   />
                   <Button
                     type="submit"
-                    disabled={loading || !inputText.trim()}
-                    className="h-9 w-9 p-0 bg-[#0d6e5a] hover:bg-[#094d3f] text-white rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-colors"
+                    disabled={sendingTicket || !ticketInput.trim()}
+                    className="h-9 w-9 p-0 bg-[#0d6e5a] hover:bg-[#094d3f] text-white rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-colors cursor-pointer"
                   >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4" />}
+                    {sendingTicket ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </form>
               </div>
@@ -812,112 +757,82 @@ export default function SupportChatbot() {
           )}
 
           {/* ============================================================ */}
-          {/* VIEW 4: AI ASSISTANT CHATBOT                                 */}
+          {/* VIEW 4: DEDICATED MAIL SUPPORT                                */}
           {/* ============================================================ */}
-          {view === "ai-chat" && (
+          {view === "mail" && (
             <div className="flex flex-col h-full bg-white">
               {/* Header */}
-              <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between select-none">
+              <div className="bg-white border-b border-slate-100 p-4 flex items-center justify-between select-none">
                 <div className="flex items-center gap-2.5">
                   <button
-                    onClick={() => setView("contact-options")}
+                    type="button"
+                    onClick={() => setView("help-center")}
                     className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                    title="Back to Contact Options"
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                   <div>
-                    <h3 className="font-extrabold text-slate-900 text-xs tracking-tight">RoleFuse AI Assistant</h3>
-                    <div className="flex items-center gap-2 select-none">
-                      <span className="text-[9px] text-slate-500 font-semibold flex items-center gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#0d6e5a] animate-pulse" />
-                        24/7 AI Coach
-                      </span>
-                      <span className="text-[9px] font-bold text-[#0d6e5a] bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60">
-                        {rawCredits?.isOwner ? "Unlimited" : `${rawCredits?.paidCredits ?? 0} Credits left`}
-                      </span>
-                    </div>
+                    <h3 className="font-extrabold text-slate-900 text-sm tracking-tight">Mail Support</h3>
+                    <p className="text-[10px] text-slate-500 font-medium">Direct email communication</p>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsOpen(false)}
-                  className="h-7 w-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                  className="h-7 w-7 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* AI Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/70">
-                {aiHistory.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+              {/* Content */}
+              <div className="p-5 flex-1 flex flex-col justify-center items-center text-center bg-slate-50/50 space-y-4">
+                <div className="h-14 w-14 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a] shadow-xs">
+                  <Mail className="h-7 w-7" />
+                </div>
+
+                <div className="space-y-1">
+                  <h4 className="text-base font-extrabold text-slate-900">Email Our Support Team</h4>
+                  <p className="text-xs text-slate-500 max-w-[260px]">
+                    Have an inquiry, billing issue, or feature request? Email us directly and our team will get back to you within 24 hours.
+                  </p>
+                </div>
+
+                <div className="w-full bg-white border border-slate-200 rounded-xl p-3 shadow-xs space-y-2">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Official Support Email</span>
+                  <div className="text-sm font-mono font-bold text-[#0d6e5a]">
+                    rolefuse.ai@gmail.com
+                  </div>
+                </div>
+
+                <div className="w-full grid grid-cols-2 gap-2.5 pt-2">
+                  <a
+                    href="mailto:rolefuse.ai@gmail.com?subject=RoleFuse%20Support%20Inquiry"
+                    className="inline-flex items-center justify-center gap-2 h-10 rounded-xl bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
                   >
-                    <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed shadow-sm ${
-                      msg.sender === "user"
-                        ? "bg-[#0d6e5a] text-white rounded-br-none"
-                        : "bg-white border border-slate-200 text-slate-800 rounded-bl-none"
-                    }`}>
-                      <div className="whitespace-pre-wrap">{cleanAsterisks(msg.text)}</div>
-                      <span className={`block text-[8px] font-semibold text-right mt-1.5 ${
-                        msg.sender === "user" ? "text-white/80" : "text-slate-400"
-                      }`}>
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-
-                {loading && (
-                  <div className="flex justify-start">
-                    <div className="bg-white border border-slate-200 text-slate-600 rounded-2xl rounded-bl-none px-3.5 py-2.5 text-xs flex items-center gap-2 shadow-sm">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0d6e5a]" />
-                      <span>RoleFuse AI is thinking...</span>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Suggested Quick Prompt Chips */}
-              <div className="px-3.5 py-2 border-t border-slate-200 bg-slate-50 flex items-center gap-1.5 overflow-x-auto select-none no-scrollbar">
-                {[
-                  "How to get 90+ ATS score?",
-                  "How to tailor for any JD?",
-                  "Explain pricing plans",
-                  "How do credits work?"
-                ].map((chip, idx) => (
+                    <ExternalLink className="h-4 w-4" />
+                    Open Mail App
+                  </a>
                   <button
-                    key={idx}
-                    onClick={() => {
-                      setInputText(chip);
-                    }}
-                    className="shrink-0 text-[9px] font-bold px-2.5 py-1 rounded-full bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors shadow-sm cursor-pointer"
+                    type="button"
+                    onClick={copySupportEmail}
+                    className="inline-flex items-center justify-center gap-2 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
                   >
-                    {chip}
+                    {copiedEmail ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                    {copiedEmail ? "Copied!" : "Copy Address"}
                   </button>
-                ))}
+                </div>
               </div>
 
-              {/* Chat Input */}
-              <div className="p-3.5 border-t border-slate-200 bg-white">
-                <form onSubmit={handleSendAiMessage} className="flex gap-2">
-                  <Input
-                    placeholder="Ask AI anything..."
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    disabled={loading}
-                    className="flex-1 bg-slate-50 border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#0d6e5a] focus:bg-white rounded-xl h-9"
-                  />
-                  <Button
-                    type="submit"
-                    disabled={loading || !inputText.trim()}
-                    className="h-9 w-9 p-0 bg-[#0d6e5a] hover:bg-[#094d3f] text-white rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-colors"
-                  >
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Send className="h-4 w-4" />}
-                  </Button>
-                </form>
+              {/* Bottom Quick Back Link */}
+              <div className="p-3.5 border-t border-slate-200 text-center bg-slate-50">
+                <button
+                  type="button"
+                  onClick={() => setView("help-center")}
+                  className="text-xs font-bold text-slate-500 hover:text-[#0d6e5a] transition-colors"
+                >
+                  &larr; Back to Help Center FAQs
+                </button>
               </div>
             </div>
           )}

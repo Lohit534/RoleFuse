@@ -99,7 +99,7 @@ export default function GstInvoiceModal({
               </div>
               <p className="text-[10px] sm:text-[11px] text-slate-600 print:text-slate-600 font-semibold">RoleFuse Cloud Technologies</p>
               <p className="text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">SAC Code: 998313 &bull; IT Software as a Service</p>
-              <p className="text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">support@rolefuse.ai</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">rolefuse.ai@gmail.com</p>
             </div>
 
             <div className="sm:text-right space-y-1 w-full sm:w-auto">

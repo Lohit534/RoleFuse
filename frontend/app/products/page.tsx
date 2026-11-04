@@ -20,7 +20,11 @@ import {
   ShieldCheck,
   Download,
   Lock,
+  FileCheck,
+  Star,
+  MessageSquare,
 } from "lucide-react";
+import { LinkedInIcon } from "@/components/icons/LinkedInIcon";
 import { Button } from "@/components/ui/button";
 
 export default function ProductsPage() {
@@ -320,6 +324,101 @@ export default function ProductsPage() {
         </div>
       ),
     },
+    {
+      id: "cover-letter",
+      name: "AI Cover Letter Studio",
+      tagline: "Generate tailored, 1-click personalized cover letters matching your resume and JD",
+      badge: "High Conversion",
+      icon: <FileCheck className="h-6 w-6 text-[#087F6E]" />,
+      badgeColor: "bg-teal-50 text-[#087F6E] border-teal-200",
+      description:
+        "Stop writing cover letters from scratch. Our neural writer seamlessly matches your real achievements with the company's job requirements across 4 writing tones (Modern, Executive, Startup, Storyteller).",
+      highlights: [
+        "Direct connection between candidate metrics and JD requirements",
+        "Multiple tone options: Modern & Direct, Executive, Startup, Creative",
+        "Instant PDF, TXT download & one-click clipboard copy",
+        "One-click pipeline addition into your Job Application Tracker",
+      ],
+      ctaText: "Launch Cover Letter Studio",
+      ctaPath: "/dashboard/cover-letter",
+      requiresAuth: true,
+      preview: (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 text-xs select-none">
+          <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 font-bold uppercase">
+            <span>Tailored Application Letter</span>
+            <span className="text-[#087F6E]">320 Words • Modern Tone</span>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl p-2.5 space-y-1.5">
+            <div className="text-[10px] font-bold text-slate-800">Dear Hiring Team at Stripe,</div>
+            <p className="text-[9px] text-slate-600 line-clamp-3 leading-relaxed">
+              With 5+ years scaling distributed payment systems and reducing API latency by 34%, I am eager to contribute to Stripe&apos;s Core Infrastructure team...
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "mock-interview",
+      name: "AI Mock Interview Simulator",
+      tagline: "Master role-specific questions and practice answers with instant STAR scoring",
+      badge: "Interview Prep",
+      icon: <Target className="h-6 w-6 text-[#087F6E]" />,
+      badgeColor: "bg-teal-50 text-[#087F6E] border-teal-200",
+      description:
+        "Never get caught off guard in an interview again. RoleFuse generates realistic behavioral, technical, and situational questions tailored to your background and the target JD, complete with instant STAR rubric scoring.",
+      highlights: [
+        "Anticipates exact behavioral and technical questions from your JD",
+        "Interactive practice mode with real-time STAR method evaluation",
+        "Model 10/10 sample answers and key points to hit",
+        "Printable interview prep cheat sheets for offline revision",
+      ],
+      ctaText: "Launch Interview Simulator",
+      ctaPath: "/dashboard/mock-interview",
+      requiresAuth: true,
+      preview: (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 text-xs select-none">
+          <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 font-bold uppercase">
+            <span>AI Practice Loop</span>
+            <span className="text-emerald-600 font-bold">STAR Score: 92/100</span>
+          </div>
+          <div className="bg-white border border-emerald-200 rounded-xl p-2.5 space-y-1">
+            <div className="text-[9px] font-bold text-slate-800">Tell me about a time you resolved a major production outage.</div>
+            <div className="text-[8.5px] text-emerald-800 font-semibold">&bull; Excellent Situation &amp; Action breakdown with metrics</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "linkedin-optimizer",
+      name: "LinkedIn Profile Optimizer",
+      tagline: "Rank higher in recruiter searches and write magnetic headlines & All-Star bios",
+      badge: "Recruiter SEO",
+      icon: <LinkedInIcon className="h-6 w-6 text-[#087F6E]" />,
+      badgeColor: "bg-teal-50 text-[#087F6E] border-teal-200",
+      description:
+        "Transform your LinkedIn profile into a recruiter magnet. Generate 4 high-converting headline variations, narrative About summaries, and recruiter search keywords tailored to your target position.",
+      highlights: [
+        "4 headline variations (Keyword-dense, Metric-driven, Startup, Executive)",
+        "Formatted LinkedIn About bios with story hooks and skills matrix",
+        "Top 15 search keywords recruiters filter on LinkedIn Recruiter",
+        "Before/After experience bullet power-ups using Google's XYZ formula",
+      ],
+      ctaText: "Launch LinkedIn Studio",
+      ctaPath: "/dashboard/linkedin-optimizer",
+      requiresAuth: true,
+      preview: (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2 text-xs select-none">
+          <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 font-bold uppercase">
+            <span>LinkedIn Recruiter Match</span>
+            <span className="text-[#087F6E] font-bold">All-Star Profile</span>
+          </div>
+          <div className="bg-white border border-teal-200 rounded-xl p-2.5 space-y-1">
+            <div className="text-[9px] font-bold text-slate-800">Staff Full Stack Engineer | React, Next.js, Node.js | $12M ARR Scale</div>
+            <div className="text-[8.5px] text-[#087F6E] font-semibold">Ranked #1 for target industry recruiter searches</div>
+          </div>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -443,7 +542,7 @@ export default function ProductsPage() {
               <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-1 shadow-2xs">
                 <div className="text-xl sm:text-2xl font-black text-[#087F6E]">92%</div>
                 <div className="text-xs font-bold text-slate-900">Average ATS Pass Rate</div>
-                <div className="text-[10px] text-slate-500">Across 10,000+ optimized scans</div>
+                <div className="text-[10px] text-slate-500">Across 1,000+ optimized scans</div>
               </div>
               <div className="bg-white border border-slate-200 rounded-2xl p-4 text-center space-y-1 shadow-2xs">
                 <div className="text-xl sm:text-2xl font-black text-[#087F6E]">~20s</div>

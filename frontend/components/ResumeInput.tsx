@@ -20,7 +20,7 @@ export default function ResumeInput({
   disabled,
   onOpenSavedResumes,
 }: ResumeInputProps) {
-  const [activeTab, setActiveTab] = useState<"paste" | "upload">("paste");
+  const [activeTab, setActiveTab] = useState<"upload" | "paste">("upload");
   const [loading, setLoading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,23 +122,12 @@ export default function ResumeInput({
           </p>
         </div>
 
-        {/* Segmented Tab Control */}
-        <div className="bg-[#F1F5F7] p-1 rounded-xl flex items-center gap-1 shrink-0 self-start sm:self-auto border border-slate-200/60 shadow-xs">
-          <button
-            type="button"
-            onClick={() => setActiveTab("paste")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              activeTab === "paste"
-                ? "bg-white text-[#087F6E] shadow-xs"
-                : "text-[#526176] hover:text-[#087F6E]"
-            }`}
-          >
-            Paste text
-          </button>
+        {/* Segmented Tab Control: Upload file first, then Paste text */}
+        <div className="bg-[#F1F5F7] p-1 rounded-xl flex items-center gap-1 shrink-0 w-full sm:w-auto overflow-x-auto border border-slate-200/60 shadow-xs">
           <button
             type="button"
             onClick={() => setActiveTab("upload")}
-            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-none text-center px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "upload"
                 ? "bg-white text-[#087F6E] shadow-xs"
                 : "text-[#526176] hover:text-[#087F6E]"
@@ -148,8 +137,19 @@ export default function ResumeInput({
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab("paste")}
+            className={`flex-1 sm:flex-none text-center px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "paste"
+                ? "bg-white text-[#087F6E] shadow-xs"
+                : "text-[#526176] hover:text-[#087F6E]"
+            }`}
+          >
+            Paste text
+          </button>
+          <button
+            type="button"
             onClick={() => onOpenSavedResumes?.()}
-            className="px-3 py-1.5 text-xs font-bold rounded-lg text-[#526176] hover:text-[#087F6E] transition-all cursor-pointer whitespace-nowrap"
+            className="flex-1 sm:flex-none text-center px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg text-[#526176] hover:text-[#087F6E] transition-all cursor-pointer whitespace-nowrap"
           >
             Saved resumes
           </button>

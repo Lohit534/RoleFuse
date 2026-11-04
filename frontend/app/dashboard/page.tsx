@@ -19,6 +19,8 @@ import BulletEnrichmentModal, {
 } from "@/components/BulletEnrichmentModal";
 import { enrichResumeWithAnswers } from "@/lib/resume-inspector";
 import { DashboardSkeleton } from "@/components/SkeletonShimmer";
+import { LinkedInIcon } from "@/components/icons/LinkedInIcon";
+import { GeminiIcon } from "@/components/icons/GeminiIcon";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,6 +50,9 @@ import {
   Check,
   CheckCircle2,
   AlertCircle,
+  XCircle,
+  Calendar,
+  FileCheck2,
   Bell,
   BookmarkPlus,
   BookmarkCheck,
@@ -227,6 +232,25 @@ function loadActiveSession() {
   }
 }
 
+function getScoreRingStyle(score: number) {
+  if (score >= 75) {
+    return {
+      gradient: "from-[#087F6E] via-emerald-400 to-teal-300",
+      textColor: "text-[#087F6E]",
+    };
+  }
+  if (score >= 50) {
+    return {
+      gradient: "from-amber-500 via-amber-400 to-yellow-300",
+      textColor: "text-amber-600",
+    };
+  }
+  return {
+    gradient: "from-rose-500 via-rose-400 to-orange-400",
+    textColor: "text-rose-600",
+  };
+}
+
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -346,6 +370,31 @@ export default function DashboardPage() {
 
   const [viewMode, setViewMode] = useState<"result" | "editor">("editor");
 
+  // Executive Overview Cards State (Latest Resume Scan & Job Tracker)
+  const [latestScanInfo, setLatestScanInfo] = useState<{
+    score: number;
+    jobTitle: string;
+    company: string;
+  }>({
+    score: 40,
+    jobTitle: "Software Engineer",
+    company: "Company Name",
+  });
+
+  const [jobTrackerStats, setJobTrackerStats] = useState<{
+    saved: number;
+    applied: number;
+    interview: number;
+    offer: number;
+    nextInterview: string | null;
+  }>({
+    saved: 0,
+    applied: 0,
+    interview: 0,
+    offer: 0,
+    nextInterview: null,
+  });
+
   useEffect(() => {
     const handleOpenEditor = () => {
       clearActiveSession();
@@ -462,6 +511,61 @@ export default function DashboardPage() {
           setUserPlan(cachedPlan);
         }
         setAuthLoading(false);
+
+        // Load Job Tracker counts for overview card
+        try {
+          const storedJobsStr = localStorage.getItem(`fastHire_jobs_${data.user.id}`);
+          if (storedJobsStr) {
+            const parsed = JSON.parse(storedJobsStr);
+            if (Array.isArray(parsed)) {
+              const savedCount = parsed.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
+              const appliedCount = parsed.filter((j: any) => j.status === "applied").length;
+              const interviewCount = parsed.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
+              const offerCount = parsed.filter((j: any) => j.status === "offered" || j.status === "offer").length;
+              const upcoming = parsed.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
+              setJobTrackerStats({
+                saved: savedCount,
+                applied: appliedCount,
+                interview: interviewCount,
+                offer: offerCount,
+                nextInterview: upcoming ? upcoming.date : null,
+              });
+            } else {
+              setJobTrackerStats({
+                saved: 0,
+                applied: 0,
+                interview: 0,
+                offer: 0,
+                nextInterview: null,
+              });
+            }
+          } else {
+            setJobTrackerStats({
+              saved: 0,
+              applied: 0,
+              interview: 0,
+              offer: 0,
+              nextInterview: null,
+            });
+          }
+        } catch (e) {}
+
+        // Load Latest Scan Information for overview card
+        try {
+          const cachedHistory = localStorage.getItem(`fastHire_history_cache_${data.user.id}`);
+          if (cachedHistory) {
+            const historyList = JSON.parse(cachedHistory);
+            if (Array.isArray(historyList) && historyList.length > 0) {
+              const latest = historyList[0];
+              const scoreVal = typeof latest.scoreAfter === "number" ? latest.scoreAfter : (typeof latest.scoreBefore === "number" ? latest.scoreBefore : 40);
+              setLatestScanInfo({
+                score: scoreVal,
+                jobTitle: latest.jobTitle || "Software Engineer",
+                company: latest.company || "Target Company",
+              });
+            }
+          }
+        } catch (e) {}
 
         // Fetch plan/credits details safely in separate block
         try {
@@ -972,7 +1076,7 @@ export default function DashboardPage() {
     <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans">
       <Navbar refreshKey={refreshKey} />
 
-      <main className="relative flex-1 mx-auto max-w-[1280px] w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-8">
+      <main className="relative flex-1 mx-auto max-w-[1280px] w-full px-3.5 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-8">
 
         {/* ── LOADING OVERLAY ─────────────────────────────────────── */}
         {optimizing && (
@@ -1071,19 +1175,19 @@ export default function DashboardPage() {
           </div>
         ) : (
           /* Header Title Block */
-          <div className="text-center space-y-3 mb-8 select-none">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#111827] tracking-tight leading-[1.15]">
+          <div className="text-center space-y-2.5 sm:space-y-3 mb-6 sm:mb-8 select-none">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#111827] tracking-tight leading-[1.2] sm:leading-[1.15]">
               Improve Your Resume{" "}
               <span className="bg-gradient-to-r from-[#087F6E] via-[#075E53] to-[#087F6E] bg-clip-text text-transparent">
                 for Any Job
               </span>
             </h1>
-            <p className="text-sm sm:text-base text-[#526176] max-w-xl mx-auto font-normal leading-relaxed">
+            <p className="text-xs sm:text-base text-[#526176] max-w-xl mx-auto font-normal leading-relaxed px-2">
               Paste your resume and the job you want. We improve it to match
               &mdash; automatically. Get 2 free resumes per month.
             </p>
             <div>
-              <Badge className="bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] hover:bg-[#E5F8F5] px-3.5 py-1.5 text-xs rounded-full font-semibold select-none">
+              <Badge className="bg-[#E5F8F5] border border-[#D4F3EF] text-[#087F6E] hover:bg-[#E5F8F5] px-3 sm:px-3.5 py-1 sm:py-1.5 text-[11px] sm:text-xs rounded-full font-semibold select-none">
                 +1 extra resume for each referral
               </Badge>
             </div>
@@ -1224,6 +1328,60 @@ export default function DashboardPage() {
                   }}
                 />
               </div>
+            </div>
+
+            {/* ─── NEXT STEP CAREER ACCELERATORS ─── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Link
+                href="/dashboard/cover-letter"
+                className="bg-white hover:bg-teal-50/50 border border-slate-200 hover:border-teal-300 rounded-2xl p-4 transition-all shadow-xs group cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
+                    Cover Letter Studio
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal">
+                  Draft a personalized, high-converting letter tailored to this JD.
+                </p>
+              </Link>
+
+              <Link
+                href="/dashboard/mock-interview"
+                className="bg-white hover:bg-teal-50/50 border border-slate-200 hover:border-teal-300 rounded-2xl p-4 transition-all shadow-xs group cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <Target className="h-4 w-4" />
+                  </div>
+                  <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
+                    Mock Interview Simulator
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal">
+                  Practice role-specific STAR questions generated from this job.
+                </p>
+              </Link>
+
+              <Link
+                href="/dashboard/linkedin-optimizer"
+                className="bg-white hover:bg-teal-50/50 border border-slate-200 hover:border-teal-300 rounded-2xl p-4 transition-all shadow-xs group cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <LinkedInIcon className="h-4 w-4" />
+                  </div>
+                  <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
+                    LinkedIn Optimizer
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-normal">
+                  Rank #1 in recruiter searches with optimized headlines and bio.
+                </p>
+              </Link>
             </div>
 
             {/* ─── SKILL ROADMAP & COVER LETTER (Matching History Style) ─── */}
@@ -1406,15 +1564,25 @@ export default function DashboardPage() {
                       <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl text-xs text-slate-900 leading-relaxed font-serif shadow-xs select-text">
                         <pre className="whitespace-pre-wrap font-serif text-slate-900 select-text">{coverLetterGenerated}</pre>
                       </div>
-                      <Button
-                        onClick={() => {
-                          navigator.clipboard.writeText(coverLetterGenerated);
-                          toast.success("Cover letter copied to clipboard!");
-                        }}
-                        className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer font-bold"
-                      >
-                        Copy Cover Letter
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          onClick={() => {
+                            navigator.clipboard.writeText(coverLetterGenerated);
+                            toast.success("Cover letter copied to clipboard!");
+                          }}
+                          className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer font-bold"
+                        >
+                          Copy Cover Letter
+                        </Button>
+                        <Link href="/dashboard/cover-letter">
+                          <Button
+                            variant="outline"
+                            className="text-xs h-8 rounded-md font-bold text-[#087F6E] border-teal-200 hover:bg-teal-50"
+                          >
+                            Open in Dedicated Studio &rarr;
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1423,11 +1591,11 @@ export default function DashboardPage() {
           </div>
         ) : (
           /* ── INPUT WORKSPACE ──────────────────────────────────── */
-          <div className="space-y-5 max-w-5xl mx-auto select-none">
+          <div className="space-y-4 sm:space-y-5 max-w-5xl mx-auto select-none">
             {/* Split-panel: Resume | Job Description (Equal size and width, side-by-side) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 items-stretch w-full">
               {/* Resume Card */}
-              <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-5 sm:p-6 transition-colors duration-200 shadow-xs">
+              <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-4 sm:p-6 transition-colors duration-200 shadow-xs">
                 <ResumeInput
                   value={resumeText}
                   onChange={setResumeText}
@@ -1437,7 +1605,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Job Description Card */}
-              <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-5 sm:p-6 transition-colors duration-200 shadow-xs">
+              <div className="group flex-1 flex flex-col bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-4 sm:p-6 transition-colors duration-200 shadow-xs">
                 <JobDescriptionInput
                   value={jobDescription}
                   onChange={setJobDescription}
@@ -1447,10 +1615,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Custom optimization instructions card */}
-            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-6 space-y-4 shadow-xs">
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xs">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#087F6E]" />
-                <h4 className="font-heading font-bold text-sm text-[#111827]">
+                <h4 className="font-heading font-bold text-xs sm:text-sm text-[#111827]">
                   Custom Guidance{" "}
                   <span className="text-[#526176] font-normal">(Optional)</span>
                 </h4>
@@ -1465,14 +1633,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Resume Length card */}
-            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-6 space-y-4 shadow-xs">
+            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xs">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-[#087F6E]" />
-                <h4 className="font-heading font-bold text-sm text-[#111827]">
+                <h4 className="font-heading font-bold text-xs sm:text-sm text-[#111827]">
                   Resume Length
                 </h4>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                 {[
                   {
                     value: "Auto-detect",
@@ -1499,7 +1667,7 @@ export default function DashboardPage() {
                     key={opt.value}
                     type="button"
                     onClick={() => setLengthOption(opt.value)}
-                    className={`flex flex-col items-start gap-1.5 rounded-xl p-3.5 border text-left transition-all duration-200 cursor-pointer ${
+                    className={`flex flex-col items-start gap-1 sm:gap-1.5 rounded-xl p-2.5 sm:p-3.5 border text-left transition-all duration-200 cursor-pointer ${
                       lengthOption === opt.value
                         ? "bg-[#E5F8F5] border-[#087F6E] shadow-xs"
                         : "bg-white border-[#DCE7E9] hover:border-[#087F6E]/40 hover:bg-[#F5FAFA]"
@@ -1515,7 +1683,7 @@ export default function DashboardPage() {
                       >
                         {opt.label}
                       </span>
-                      <span className="text-[10px] text-[#526176] font-normal leading-tight block mt-1">
+                      <span className="text-[10px] text-[#526176] font-normal leading-tight block mt-0.5 sm:mt-1">
                         {opt.sub}
                       </span>
                     </div>
@@ -1541,27 +1709,208 @@ export default function DashboardPage() {
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4.5 w-4.5 text-white" />
+                    <GeminiIcon className="h-5 w-5 text-white" />
                     <span>Optimize My Resume</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* Trust badges */}
-            <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 pt-2 text-[10px] text-slate-600 font-semibold select-none">
+            {/* ─── EXECUTIVE OVERVIEW SECTION (Latest Scan, LinkedIn, Job Tracker) ─── */}
+            <div className="pt-4 sm:pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5">
+                {/* 1. Latest Resume Scan */}
+                <Link
+                  href="/dashboard/history"
+                  className="group relative bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                >
+                  <div className="space-y-3.5">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-md bg-teal-50 border border-teal-200/60 flex items-center justify-center text-[#087F6E]">
+                          <FileCheck2 className="h-3.5 w-3.5" />
+                        </div>
+                        <h3 className="text-xs sm:text-sm font-bold text-[#111827]">
+                          Latest Resume Scan
+                        </h3>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#087F6E] group-hover:translate-x-0.5 transition-all" />
+                    </div>
+
+                    {/* Dial & Title */}
+                    <div className="flex items-center gap-3 pt-0.5">
+                      {/* Circular score dial with dynamic colors based on ATS score */}
+                      {(() => {
+                        const style = getScoreRingStyle(latestScanInfo.score);
+                        return (
+                          <div
+                            className={`relative h-11 w-11 rounded-full p-[2px] bg-gradient-to-tr ${style.gradient} flex items-center justify-center shadow-xs shrink-0`}
+                          >
+                            <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
+                              <span className={`text-xs sm:text-sm font-black ${style.textColor}`}>
+                                {latestScanInfo.score}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      <div className="min-w-0">
+                        <p className="text-[11px] text-slate-500 font-medium truncate">
+                          {latestScanInfo.jobTitle}
+                        </p>
+                        <p className="text-xs sm:text-sm font-bold text-[#111827] truncate">
+                          {latestScanInfo.company}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 5-item diagnostic checklist */}
+                    <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pt-1 text-[10px] sm:text-[11px] font-medium text-slate-600">
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span className="truncate">Searchability</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span className="truncate">Formatting</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        <span className="truncate">Skills Match</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">Cover Letter</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 col-span-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span className="truncate">Recruiter Tips</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* 2. LinkedIn Report */}
+                <div className="group relative bg-white border border-[#DCE7E9] hover:border-[#0077B5]/50 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                  <div className="space-y-3">
+                    {/* Header with authentic LinkedIn Blue icon */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded flex items-center justify-center text-[#0077B5]">
+                          <LinkedInIcon className="h-5 w-5" />
+                        </div>
+                        <h3 className="text-xs sm:text-sm font-bold text-[#111827]">
+                          LinkedIn Report
+                        </h3>
+                      </div>
+                      <Link href="/dashboard/linkedin-optimizer">
+                        <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#0077B5] group-hover:translate-x-0.5 transition-all cursor-pointer" />
+                      </Link>
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                      Optimize your LinkedIn profile to match your preferred job listings
+                    </p>
+                  </div>
+
+                  {/* Action button in authentic style */}
+                  <div className="pt-4">
+                    <Link href="/dashboard/linkedin-optimizer" className="inline-block">
+                      <Button
+                        variant="outline"
+                        className="h-8 text-xs font-bold text-slate-800 border-slate-300 hover:border-[#0077B5] hover:text-[#0077B5] hover:bg-sky-50/40 rounded-lg shadow-xs transition-colors cursor-pointer"
+                      >
+                        Optimize LinkedIn
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* 3. Job Tracker */}
+                <Link
+                  href="/dashboard/job-tracker"
+                  className="group relative bg-white border border-[#DCE7E9] hover:border-[#087F6E]/50 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer"
+                >
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-md bg-teal-50 border border-teal-200/60 flex items-center justify-center text-[#087F6E]">
+                          <Briefcase className="h-3.5 w-3.5" />
+                        </div>
+                        <h3 className="text-xs sm:text-sm font-bold text-[#111827]">
+                          Job Tracker
+                        </h3>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#087F6E] group-hover:translate-x-0.5 transition-all" />
+                    </div>
+
+                    {/* 4 Metric Boxes */}
+                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2 pt-0.5">
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-1.5 sm:p-2 text-center min-w-0">
+                        <span className="block text-sm sm:text-base font-black text-[#087F6E]">
+                          {jobTrackerStats.saved}
+                        </span>
+                        <span className="block text-[9px] sm:text-[10px] text-slate-500 font-semibold mt-0.5 truncate">
+                          Saved
+                        </span>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-1.5 sm:p-2 text-center min-w-0">
+                        <span className="block text-sm sm:text-base font-black text-slate-800">
+                          {jobTrackerStats.applied}
+                        </span>
+                        <span className="block text-[9px] sm:text-[10px] text-slate-500 font-semibold mt-0.5 truncate">
+                          Applied
+                        </span>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-1.5 sm:p-2 text-center min-w-0">
+                        <span className="block text-sm sm:text-base font-black text-slate-800">
+                          {jobTrackerStats.interview}
+                        </span>
+                        <span className="block text-[9px] sm:text-[10px] text-slate-500 font-semibold mt-0.5 truncate">
+                          Interview
+                        </span>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-1.5 sm:p-2 text-center min-w-0">
+                        <span className="block text-sm sm:text-base font-black text-slate-800">
+                          {jobTrackerStats.offer}
+                        </span>
+                        <span className="block text-[9px] sm:text-[10px] text-slate-500 font-semibold mt-0.5 truncate">
+                          Offer
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sub-footer: Next Interview */}
+                  <div className="pt-3 border-t border-slate-100 mt-3 space-y-1">
+                    <p className="text-[10px] sm:text-[11px] font-semibold text-slate-600">
+                      Next Interview
+                    </p>
+                    <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span>{jobTrackerStats.nextInterview || "No upcoming interview"}</span>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            </div>
+
+            {/* Trust badges (Placed below overview boxes) */}
+            <div className="flex flex-wrap justify-center items-center gap-x-6 sm:gap-x-8 gap-y-2.5 pt-6 text-[10px] sm:text-xs text-slate-600 font-semibold select-none">
               <span className="flex items-center gap-1.5">
-                <Shield className="h-3 w-3 text-slate-700" /> No data sold
+                <Shield className="h-3.5 w-3.5 text-slate-700 shrink-0" /> No data sold
               </span>
               <span className="flex items-center gap-1.5">
-                <Zap className="h-3 w-3 text-slate-700" /> ~20s results
+                <Zap className="h-3.5 w-3.5 text-slate-700 shrink-0" /> ~ 30s results
               </span>
               <span className="flex items-center gap-1.5">
-                <Target className="h-3 w-3 text-slate-700" /> ATS-Tested
+                <Target className="h-3.5 w-3.5 text-slate-700 shrink-0" /> ATS Tested
               </span>
               <span className="flex items-center gap-1.5">
-                <TrendingUp className="h-3 w-3 text-slate-700" /> Score
-                improvement guaranteed
+                <TrendingUp className="h-3.5 w-3.5 text-slate-700 shrink-0" /> Score improvement guaranteed
               </span>
             </div>
           </div>
