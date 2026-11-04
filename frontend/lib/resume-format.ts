@@ -280,6 +280,26 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
     }
   }
 
+  // 1.5 Strip hallucinated LANGUAGES section if original resume did not have spoken languages
+  const cleanOrigWithoutTech = original
+    .replace(/(?:programming|coding|technical|software|markup)\s+languages?\b/gi, "")
+    .replace(/(?:languages?\s*:\s*[A-Za-z0-9#+.,\s]+\n)/gi, "");
+  const hasOrigSpokenLangs = /(?:^|\n)\s*(?:spoken\s+languages?|languages?\s+known|languages?\s+spoken|languages)\s*[:\n]/i.test(cleanOrigWithoutTech);
+
+  if (!hasOrigSpokenLangs) {
+    const langIdx = out.findIndex((l) => /^LANGUAGES\b/i.test(l.trim()));
+    if (langIdx !== -1) {
+      let langEnd = out.length;
+      for (let i = langIdx + 1; i < out.length; i++) {
+        if (detectSectionHeader(out[i])) {
+          langEnd = i;
+          break;
+        }
+      }
+      out.splice(langIdx, langEnd - langIdx);
+    }
+  }
+
   // 2. Preserve and restore Verified Tech Stack into Technical Skills and Experience/Projects
   const techStackMatch = original.match(/\[Verified (?:Project & Internship Technologies|Internship & Project Tech Stack|Tech Stack):\s*([^\]]+)\]/i);
   if (techStackMatch && techStackMatch[1]) {
@@ -299,13 +319,13 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
       const skillsSlice = out.slice(skillsIdx, skillsEndIdx).join(" ").toLowerCase();
       const missingTech = techWords.filter((w) => !skillsSlice.includes(w.toLowerCase()));
       if (missingTech.length > 0) {
-        out.splice(skillsEndIdx, 0, `• Technologies & Tools: ${verifiedStack}`);
+        out.splice(skillsEndIdx, 0, `Technologies & Tools: ${verifiedStack}`);
       }
     } else {
       // If no skills section exists, create one before experience/projects or education
       const insertBeforeIdx = out.findIndex((l) => /^(?:EXPERIENCE|WORK EXPERIENCE|PROJECTS|EDUCATION)\b/i.test(l.trim()));
       const targetIdx = insertBeforeIdx !== -1 ? insertBeforeIdx : out.length;
-      out.splice(targetIdx, 0, "TECHNICAL SKILLS", `• Technologies & Tools: ${verifiedStack}`, "");
+      out.splice(targetIdx, 0, "TECHNICAL SKILLS", `Technologies & Tools: ${verifiedStack}`, "");
     }
 
     // Also ensure verified tech stack is tagged in the internship or projects if missing
@@ -428,9 +448,21 @@ export function preserveCandidateContactDetails(optimized: string, original: str
     if (originalEmail && !topHeaderSlice.includes(originalEmail.toLowerCase())) {
       contactParts.splice(contactParts.length > 0 ? 1 : 0, 0, originalEmail);
     }
-    // Ensure location is present
+    // Ensure location is present only if in original, otherwise strip hallucinated location
     if (originalLocation && !topHeaderSlice.includes(originalLocation.toLowerCase())) {
       contactParts.push(originalLocation);
+    } else if (!originalLocation) {
+      for (let i = contactParts.length - 1; i >= 0; i--) {
+        const p = contactParts[i];
+        const isPhone = /\d{7,}/.test(p);
+        const isEmail = /@/.test(p);
+        const isUrl = /(?:http|www|\.com|\.in|\.org|\.io|linkedin|github)/i.test(p);
+        if (!isPhone && !isEmail && !isUrl) {
+          if (!originalHeader.toLowerCase().includes(p.toLowerCase())) {
+            contactParts.splice(i, 1);
+          }
+        }
+      }
     }
     // Ensure LinkedIn is present
     if (originalLinkedin && !topHeaderSlice.includes("linkedin.com")) {

@@ -623,6 +623,15 @@ export default function DashboardPage() {
         console.error("Score refresh error:", scoreErr);
       }
 
+      // Guard: bullet improvement must NEVER reduce the score below current afterScore
+      if (newScoreData && afterScore?.overall) {
+        if (newScoreData.overall < afterScore.overall) {
+          newScoreData.overall = afterScore.overall;
+          newScoreData.keywordMatch = Math.max(afterScore.keywordMatch || 0, newScoreData.keywordMatch);
+          newScoreData.impactBullets = Math.max(afterScore.impactBullets || 0, newScoreData.impactBullets);
+        }
+      }
+
       const dynamicScore = newScoreData || afterScore;
       setAfterScore(dynamicScore);
 

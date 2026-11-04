@@ -23,7 +23,8 @@ const SCORABLE_SECTIONS = [
   "SELECTED PROJECTS", "FEATURED PROJECTS", "CLIENT PROJECTS", "FREELANCE",
   "FREELANCE EXPERIENCE", "CONSULTING", "LEADERSHIP EXPERIENCE", "VOLUNTEER EXPERIENCE",
   "OPEN SOURCE CONTRIBUTIONS", "RESEARCH EXPERIENCE", "SOFTWARE PROJECTS",
-  "ACHIEVEMENTS", "KEY ACHIEVEMENTS", "AWARDS", "HONORS", "HONOURS",
+  // NOTE: "ACHIEVEMENTS" is intentionally NOT here — it is covered by NON_SCORABLE_SECTIONS
+  // when combined with CERTIFICATIONS. Pure standalone "AWARDS"/"HONORS" lists remain non-scorable.
 ];
 
 /** Sections whose items are factual credentials/lists and must NEVER need verbs/metrics. */
@@ -35,6 +36,10 @@ const NON_SCORABLE_SECTIONS = [
   "PROFESSIONAL SUMMARY", "SUMMARY", "OBJECTIVE", "CAREER OBJECTIVE", "PROFILE",
   "ABOUT ME", "INTERESTS", "HOBBIES", "EXTRA-CURRICULAR", "EXTRACURRICULAR ACTIVITIES",
   "VOLUNTEERING", "REFERENCES", "DECLARATION", "PERSONAL DETAILS", "PUBLICATIONS",
+  // Combined certification+achievement sections are credential lists — never score bullets here
+  "CERTIFICATIONS & ACHIEVEMENTS", "CERTIFICATIONS AND ACHIEVEMENTS",
+  "ACHIEVEMENTS & CERTIFICATIONS", "ACHIEVEMENTS AND CERTIFICATIONS",
+  "AWARDS & CERTIFICATIONS", "CERTIFICATIONS & AWARDS",
 ];
 
 /** Weak openers that do NOT count as strong action verbs. */
@@ -97,7 +102,10 @@ export function detectSectionHeader(line: string): { name: string; scorable: boo
     upper.startsWith(h + " &") ||
     upper.endsWith(" " + h) ||
     upper.includes(" " + h + " ")
-  );
+  ) ||
+  // Treat ANY combined cert+achievement section as non-scorable (bullets are plain credential lines)
+  (/CERTIF/i.test(upper) && /ACHIEVE|AWARD/i.test(upper)) ||
+  (/ACHIEVE|AWARD/i.test(upper) && /CERTIF/i.test(upper));
   if (isNonScorable) return { name: upper, scorable: false };
 
   // Scorable section check (Experience, Work, Projects, Internships, etc.)
@@ -174,6 +182,7 @@ export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
 
     // Skip all non-scorable sections (Skills, Education, Summary, Certifications, etc.)
     if (hasRecognizableHeaders && !currentScorable) return;
+    if (/CERTIF|ACHIEVE|AWARD|HONOR|LICENSE|PUBLICATION|LANGUAGE|SKILL|EDUCATION|SUMMARY|OBJECTIVE|PROFILE/i.test(currentSection)) return;
 
     // Contact details, inline languages, or certification credentials must NEVER be evaluated as work bullets
     if (isContactOrHeaderLine(trimmed)) return;
@@ -183,6 +192,9 @@ export function extractScorableBullets(resumeText: string): ExtractedBullet[] {
     const isBullet = BULLET_MARKER_REGEX.test(line);
     const clean = cleanBulletText(trimmed);
     if (clean.length < 12) return;
+
+    // Direct certification/course provider pattern filter (e.g. "Python Foundations – Infosys", "LeetCode - 150 problems")
+    if (/\b(?:certified|certification|coursera|udemy|hackerrank|leetcode|springboard|codetantra|nptel|simplilearn)\b/i.test(clean) && !/\b(?:developed|built|engineered|architected|implemented|deployed)\b/i.test(clean)) return;
 
     if (isBullet) {
       results.push({ index, rawLine: line, cleanText: clean, section: currentSection || "EXPERIENCE" });

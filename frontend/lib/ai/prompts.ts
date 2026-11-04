@@ -56,7 +56,10 @@ export function buildOptimizationPrompt(
   const pageBudget = getPageBudget(resumeText);
   const isFresher = pageBudget.level === "fresher";
   const hasOriginalSummary = /(?:summary|about\s*me|objective|profile)\b/i.test(resumeText);
-  const hasOriginalLanguages = /(?:languages?|languages?\s*(?:spoken|known))\b/i.test(resumeText);
+  const cleanResumeWithoutTech = resumeText
+    .replace(/(?:programming|coding|technical|software|markup)\s+languages?\b/gi, "")
+    .replace(/(?:languages?\s*:\s*[A-Za-z0-9#+.,\s]+\n)/gi, "");
+  const hasOriginalLanguages = /(?:^|\n)\s*(?:spoken\s+languages?|languages?\s+known|languages?\s+spoken|languages)\s*[:\n]/i.test(cleanResumeWithoutTech);
   const includeSummary = !isFresher || hasOriginalSummary;
 
   let sectionOrderStr = "1. NAME\n2. CONTACT LINE (phone | email | LinkedIn | GitHub | Portfolio)\n3. (blank line)\n";
@@ -108,10 +111,11 @@ export function buildOptimizationPrompt(
     "NAME LINE:\n" +
     "  Candidate full name -- e.g. DINESH KAARTHIK MOODE\n\n" +
     "CONTACT LINE (single line, | separator):\n" +
-    "  phone | email | LinkedIn URL | GitHub URL | portfolio URL | location (City, State/Country)\n" +
+    "  Format: phone | email | LinkedIn URL | GitHub URL | portfolio URL | location (ONLY if present in original resume)\n" +
     "  CRITICAL CONTACT RULES:\n" +
-    "  - Extract and include ALL candidate contact details from the original resume: Phone number, Email address, LinkedIn profile, GitHub profile, Portfolio/Website, and Location/City.\n" +
-    "  - NEVER drop or omit candidate phone number, email, or location.\n" +
+    "  - ONLY include contact details that ACTUALLY exist in the candidate's original resume: Phone number, Email address, LinkedIn profile, GitHub profile, Portfolio/Website, Location.\n" +
+    "  - NEVER invent, assume, or fabricate a location/city/country if the candidate did not explicitly write one in their original resume! If there is no location in the original resume, do NOT add any location.\n" +
+    "  - NEVER drop or omit candidate phone number, email, or LinkedIn/GitHub links that were provided in the original resume.\n" +
     "  - DO NOT add a target job title, job name, or domain subtitle line under the name or inside the contact details line. Place the contact line directly beneath candidate name.\n" +
     "  - Preserve ALL URLs exactly as in original resume.\n\n" +
     (includeSummary
@@ -168,9 +172,10 @@ export function buildOptimizationPrompt(
     "CERTIFICATIONS & ACHIEVEMENTS:\n" +
     "  Header: CERTIFICATIONS & ACHIEVEMENTS (ALL CAPS)\n" +
     "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section. Do NOT create two separate sections.\n" +
-    "  CERTIFICATIONS format: • Certification Name – Issuing Provider (e.g. • Infosys Springboard – Python Foundations, • CodeTantra – Python Programming Certification)\n" +
+    "  CERTIFICATIONS format: • Certification Name – Providing Organization / Platform (e.g. • Python Foundations – Infosys Springboard, • Python Programming – CodeTantra, • Foundations of Cybersecurity – Google)\n" +
+    "  CRITICAL FOR CERTIFICATIONS: Keep the EXACT Certification Name and EXACT Providing Company Name as provided by the candidate. NEVER swap them, NEVER change company names, and NEVER write wordy sentences or explanations.\n" +
     "  ACHIEVEMENTS format: • Descriptive accomplishment sentence (e.g. • Solved 150+ Data Structures and Algorithms problems on LeetCode, • Solved 30+ Python algorithmic challenges on HackerRank)\n" +
-    "  SIMPLE BULLET STANDARD: Keep certifications clean and simple — just the Certification Name and Provided Company / Platform Name. DO NOT generate wordy explanations, paragraphs, or extra sentences.\n" +
+    "  SIMPLE BULLET STANDARD: Keep certifications clean and simple — strictly '• Certification Name – Provider Company'. DO NOT generate paragraphs or fabricated project text.\n" +
     "  CRITICAL RULE FOR YEARS: NEVER invent, guess, or add a year or date to a certification or achievement if candidate did NOT mention a year in their original resume! ONLY set the year if explicitly in the original resume.\n\n" +
     (hasOriginalLanguages
       ? "LANGUAGES:\n" +
@@ -268,7 +273,7 @@ export function buildOptimizationPrompt(
     "PRE-FLIGHT CHECKLIST (verify ALL before outputting):\n" +
     sep + "\n" +
     "[ ] Name is ALL CAPS on line 1\n" +
-    "[ ] Contact line has email | phone | location | URLs separated by | (ALL contact items from original resume preserved)\n" +
+    "[ ] Contact line contains ONLY contact items provided in the original resume -- zero fabricated locations or fields\n" +
     (includeSummary ? "[ ] Professional Summary is a concise 2-3 sentence executive paragraph\n" : "[ ] No artificial professional summary added for fresher (jump straight to Technical Skills and Projects)\n") +
     "[ ] TECHNICAL SKILLS appears exactly ONCE with ZERO bullet points (•, -, *) anywhere in the skills section\n" +
     "[ ] No extra or invented commentary text added beyond candidate facts and target JD keywords\n" +
