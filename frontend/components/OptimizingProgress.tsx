@@ -109,7 +109,7 @@ export default function OptimizingProgress({
         finishOptimization(backendResultRef.current);
       } else {
         // Wait on Step 7 in running state until backend arrives
-        // Safety: bail out after 15s max so the UI never hangs forever
+        // Safety: bail out after 50s max so the UI never hangs forever
         let waited = 0;
         const interval = setInterval(() => {
           waited += 300;
@@ -122,7 +122,7 @@ export default function OptimizingProgress({
             finishOptimization(backendResultRef.current);
             return;
           }
-          if (waited >= 15000) {
+          if (waited >= 50000) {
             clearInterval(interval);
             if (isMountedRef.current && onError) {
               onError("Optimization timed out. Please try again.");
@@ -200,7 +200,7 @@ export default function OptimizingProgress({
   useEffect(() => {
     let cancelled = false;
     const abortCtrl = new AbortController();
-    // Hard 28s timeout — surface error clearly instead of hanging forever
+    // Hard 55s timeout — surface error clearly instead of hanging forever
     const hardTimeout = setTimeout(() => {
       if (!backendResultRef.current && !awaitingInputRef.current) {
         abortCtrl.abort();
@@ -208,7 +208,7 @@ export default function OptimizingProgress({
           onError("Optimization is taking too long. Please try again.");
         }
       }
-    }, 28000);
+    }, 55000);
 
     const startPipeline = async () => {
       try {
@@ -331,7 +331,7 @@ export default function OptimizingProgress({
           onError("Optimization is taking too long. Please try again.");
         }
       }
-    }, 28000);
+    }, 55000);
 
     try {
       const res = await fetch("/api/optimize", {

@@ -641,6 +641,8 @@ function parseAIResponse(raw: string, fallbackText: string): AIResult {
   return defaultFallback;
 }
 
+let isGroqKeyInvalid = false;
+
 export async function callAI(prompt: string, rawText = ""): Promise<AIResult> {
   const safeRawText = sanitizeResumeText(rawText);
   const defaultFallback: AIResult = {
@@ -653,7 +655,7 @@ export async function callAI(prompt: string, rawText = ""): Promise<AIResult> {
     detectedCompany: "General Application",
   };
 
-  const hasGroq = !!process.env.GROQ_API_KEY;
+  const hasGroq = !!process.env.GROQ_API_KEY && !isGroqKeyInvalid;
 
   if (hasGroq) {
     try {
@@ -704,7 +706,7 @@ export async function callAIText(prompt: string): Promise<string> {
   const apiKeyGroq = (process.env.GROQ_API_KEY || "")
     .replace(/^["']|["']$/g, "")
     .trim();
-  if (apiKeyGroq) {
+  if (apiKeyGroq && !isGroqKeyInvalid) {
     for (const modelName of GROQ_MODELS) {
       try {
         logger.info(
@@ -730,8 +732,13 @@ export async function callAIText(prompt: string): Promise<string> {
           const json = await response.json();
           const content = json.choices?.[0]?.message?.content;
           if (content) return content.trim();
+        } else if (response.status === 401 || response.status === 403) {
+          isGroqKeyInvalid = true;
+          logger.warn(`Groq text call: API key invalid (${response.status}), bypassing Groq.`);
+          break;
         }
       } catch (e) {
+        if (isGroqKeyInvalid) break;
         logger.warn(
           `AI Router: Groq text call with ${modelName} failed, trying next...`,
           e,
@@ -781,6 +788,9 @@ export async function callAIText(prompt: string): Promise<string> {
 
 // Raw Groq call returning string content (with multi-model fallback)
 async function callGroqRaw(prompt: string): Promise<string> {
+  if (isGroqKeyInvalid) {
+    throw new Error("Groq API key invalid, bypassing Groq.");
+  }
   const apiKey = (process.env.GROQ_API_KEY || "")
     .replace(/^["']|["']$/g, "")
     .trim();
@@ -809,6 +819,11 @@ async function callGroqRaw(prompt: string): Promise<string> {
       );
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          isGroqKeyInvalid = true;
+          logger.warn(`Groq API key returned status ${response.status} (invalid), bypassing Groq immediately.`);
+          throw new Error(`Groq API key invalid (${response.status})`);
+        }
         const errorText = await response.text();
         throw new Error(
           `Groq API (${modelName}) returned status ${response.status}: ${errorText}`,
@@ -820,6 +835,7 @@ async function callGroqRaw(prompt: string): Promise<string> {
       if (content) return content;
     } catch (err: any) {
       lastError = err;
+      if (isGroqKeyInvalid) break;
       logger.warn(
         `Groq model ${modelName} failed, trying fallback model...`,
         err?.message,

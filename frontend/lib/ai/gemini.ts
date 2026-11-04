@@ -3,11 +3,11 @@ import { logger } from "../logger";
 
 // Active supported Gemini models in priority order
 export const GEMINI_MODELS = [
-  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash",
   "gemini-3-flash-preview",
   "gemini-flash-lite-latest",
   "gemini-3.5-flash-lite",
-  "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
   "gemini-3.8-flash",
 ];
 
@@ -106,17 +106,21 @@ export async function callGemini(
 
         const errMsg = sdkError?.message || "";
         const isQuota429 = sdkError?.status === 429 || /429|quota/i.test(errMsg);
+        const isNotFound404 = sdkError?.status === 404 || /404|not found|no longer available/i.test(errMsg);
         const isTransient503 = sdkError?.status === 503 || /503|demand/i.test(errMsg);
 
-        // If quota 429 exceeded, immediately advance to next model without waiting
-        if (isQuota429) {
+        // If quota 429 exceeded or model 404, immediately advance to next model without waiting
+        if (isQuota429 || isNotFound404) {
           break;
         }
 
-        // If transient spike (503), short wait before retry
-        if (isTransient503 && attempt < 3) {
-          await new Promise((r) => setTimeout(r, 800 * attempt));
-          continue;
+        // If transient spike (503), do at most 1 brief retry then fall through to next model
+        if (isTransient503) {
+          if (attempt === 1) {
+            await new Promise((r) => setTimeout(r, 600));
+            continue;
+          }
+          break;
         }
 
         // If not transient or last attempt, try direct REST fallback once

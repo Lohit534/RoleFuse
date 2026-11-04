@@ -128,12 +128,22 @@ function saveActiveSession(data: {
       localStorage.setItem(ACTIVE_KEYS.RESUME_ID, data.resumeId || "");
     }
     if (data.resumeText !== undefined) {
-      sessionStorage.setItem(ACTIVE_KEYS.RESUME_TEXT, data.resumeText || "");
-      localStorage.setItem(ACTIVE_KEYS.RESUME_TEXT, data.resumeText || "");
+      if (data.resumeText) {
+        sessionStorage.setItem(ACTIVE_KEYS.RESUME_TEXT, data.resumeText);
+        localStorage.setItem(ACTIVE_KEYS.RESUME_TEXT, data.resumeText);
+      } else {
+        sessionStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
+        localStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
+      }
     }
     if (data.jobDescription !== undefined) {
-      sessionStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription || "");
-      localStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription || "");
+      if (data.jobDescription) {
+        sessionStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription);
+        localStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription);
+      } else {
+        sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+        localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+      }
     }
     if (data.roadmapContent !== undefined) {
       if (data.roadmapContent) {
@@ -722,11 +732,23 @@ export default function DashboardPage() {
       beforeScore: data.scoreBefore || null,
       afterScore: data.scoreAfter || null,
       resumeId: targetResumeId || undefined,
-      resumeText: activeOptimizationText || resumeText,
-      jobDescription: jobDescription,
+      resumeText: "", // Do not retain old input text in storage
+      jobDescription: "", // Do not retain old input text in storage
       trackerAdded: false,
       userId: user?.id,
     });
+
+    // Clear input fields and active states so after optimization inputs are reset cleanly
+    setResumeText("");
+    setJobDescription("");
+    setActiveOptimizationText("");
+    setActiveOptimizationInstructions("");
+    try {
+      localStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
+      sessionStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
+      localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+      sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+    } catch {}
 
     // Small delay before scrolling to results
     setTimeout(() => {
