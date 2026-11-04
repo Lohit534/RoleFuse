@@ -432,33 +432,51 @@ export default function BulletImprover({
                         {suggestion.improvedBullet}
                       </p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 text-sm">
-                      <div>
-                        <span className="font-bold text-slate-600 block">
-                          Explanation:
-                        </span>
-                        <span className="text-slate-500">
-                          {suggestion.explanation}
-                        </span>
-                      </div>
-                      <div className="flex gap-1.5 flex-wrap items-start">
-                        <Badge className="bg-slate-900 text-slate-100 text-xs hover:bg-slate-900">
-                          Verb: {suggestion.actionVerbUsed}
-                        </Badge>
-                        {suggestion.metricsAdded && (
-                          <Badge className="bg-emerald-600 text-emerald-50 text-xs hover:bg-emerald-600">
-                            Metric: {suggestion.metricsAdded}
+                    <div className="space-y-3 pt-2 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <span className="font-bold text-slate-600 block">
+                            Explanation:
+                          </span>
+                          <span className="text-slate-500">
+                            {suggestion.explanation}
+                          </span>
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap items-start">
+                          <Badge className="bg-slate-900 text-slate-100 text-xs hover:bg-slate-900">
+                            Verb: {suggestion.actionVerbUsed}
                           </Badge>
-                        )}
-                        {suggestion.keywordsInjected.map((kw, i) => (
-                          <Badge
-                            key={i}
-                            className="bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs hover:bg-indigo-100"
-                          >
-                            +{kw}
-                          </Badge>
-                        ))}
+                          {suggestion.metricsAdded && (
+                            <Badge className="bg-emerald-600 text-emerald-50 text-xs hover:bg-emerald-600">
+                              Metric: {suggestion.metricsAdded}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
+                      {/* ATS Keywords Impact Panel — shown prominently when keywords were injected */}
+                      {suggestion.keywordsInjected && suggestion.keywordsInjected.length > 0 && (
+                        <div className="bg-indigo-900/10 border border-indigo-300/40 rounded-lg p-3">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <TrendingUp className="h-3.5 w-3.5 text-indigo-600" />
+                            <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                              ATS Keywords Injected ({suggestion.keywordsInjected.length})
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {suggestion.keywordsInjected.map((kw, i) => (
+                              <Badge
+                                key={i}
+                                className="bg-indigo-600 text-white border-0 text-xs font-semibold hover:bg-indigo-700 shadow-sm"
+                              >
+                                + {kw}
+                              </Badge>
+                            ))}
+                          </div>
+                          <p className="text-[11px] text-indigo-600/80 mt-1.5 font-medium">
+                            These keywords from the job description were woven into your bullet.
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
                       <Button

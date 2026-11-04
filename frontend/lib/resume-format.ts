@@ -222,6 +222,25 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
     out.push(line.replace(/[ \t]+([,.])(\s|$)/g, "$1$2"));
   }
 
+  // 1a. Normalize PROFESSIONAL EXPERIENCE vs INTERNSHIP EXPERIENCE heading based on original resume
+  //     If original has work experience, use PROFESSIONAL EXPERIENCE.
+  //     If only internship content found, use INTERNSHIP EXPERIENCE.
+  //     Never fabricate experience sections that don't exist in original.
+  {
+    const hasOrigExp = /\b(professional\s+experience|work\s+experience|employment\s+history|work\s+history)\b/i.test(original);
+    const hasOrigIntern = /\b(internship|intern\b|trainee|apprentice|industrial\s+training)\b/i.test(original);
+    // Fix heading: if output says PROFESSIONAL EXPERIENCE but original only has internship, rename
+    if (!hasOrigExp && hasOrigIntern) {
+      for (let i = 0; i < out.length; i++) {
+        const h = out[i].trim().toUpperCase();
+        if (h === 'PROFESSIONAL EXPERIENCE' || h === 'WORK EXPERIENCE') {
+          out[i] = 'INTERNSHIP EXPERIENCE';
+          break;
+        }
+      }
+    }
+  }
+
   // 1. Preserve and restore SSC (10th) and Intermediate (12th) if present in original or user verified answers but dropped by AI
   const hasOriginalSSC = /\b(ssc|10th|class\s*x\b|matriculation|secondary\s*school|high\s*school)\b/i.test(originalLower);
   const hasOriginalInter = /\b(intermediate|12th|class\s*xii\b|hsc|senior\s*secondary|higher\s*secondary)\b/i.test(originalLower);

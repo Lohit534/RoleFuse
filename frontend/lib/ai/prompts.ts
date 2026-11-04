@@ -62,6 +62,16 @@ export function buildOptimizationPrompt(
   const hasOriginalLanguages = /(?:^|\n)\s*(?:spoken\s+languages?|languages?\s+known|languages?\s+spoken|languages)\s*[:\n]/i.test(cleanResumeWithoutTech);
   const includeSummary = !isFresher || hasOriginalSummary;
 
+  // Detect whether the original resume actually has professional experience or internship content
+  const hasOriginalExperience = /\b(professional\s+experience|work\s+experience|employment\s+history|work\s+history|employment|career\s+history)\b/i.test(resumeText);
+  const hasOriginalInternship = /\b(internship|intern\b|trainee|apprentice|industrial\s+training)\b/i.test(resumeText);
+  // Determine the correct experience section heading
+  const expSectionHeading = hasOriginalExperience
+    ? "PROFESSIONAL EXPERIENCE"
+    : hasOriginalInternship
+    ? "INTERNSHIP EXPERIENCE"
+    : "PROFESSIONAL EXPERIENCE"; // default fallback
+
   let sectionOrderStr = "1. NAME\n2. CONTACT LINE (phone | email | LinkedIn | GitHub | Portfolio)\n3. (blank line)\n";
   let stepNum = 4;
 
@@ -75,7 +85,7 @@ export function buildOptimizationPrompt(
     sectionOrderStr += `${stepNum++}. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n${stepNum++}. (blank line)\n`;
     sectionOrderStr += `${stepNum++}. EDUCATION\n`;
   } else {
-    sectionOrderStr += `${stepNum++}. PROFESSIONAL EXPERIENCE\n${stepNum++}. (blank line)\n`;
+    sectionOrderStr += `${stepNum++}. ${expSectionHeading}\n${stepNum++}. (blank line)\n`;
     sectionOrderStr += `${stepNum++}. TECHNICAL SKILLS\n${stepNum++}. (blank line)\n`;
     sectionOrderStr += `${stepNum++}. PROJECTS\n${stepNum++}. (blank line)\n`;
     sectionOrderStr += `${stepNum++}. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n${stepNum++}. (blank line)\n`;
@@ -142,14 +152,25 @@ export function buildOptimizationPrompt(
     "    Cloud: AWS (EC2, S3), GCP (if applicable)\n" +
     "    Core Concepts: REST APIs, Microservices, OOP, Multithreading, JWT Authentication\n" +
     "  List JD-matching skills FIRST in each category\n\n" +
-    "PROFESSIONAL EXPERIENCE & INTERNSHIPS:\n" +
-    "  Header: PROFESSIONAL EXPERIENCE (ALL CAPS)\n" +
-    "  For each role / internship:\n" +
-    "    Line 1: Role / Internship Title | Month YYYY – Month YYYY (or Duration / Present)\n" +
-    "    Line 2: Company Name | Technologies & Frameworks (e.g. Company Name | Java, Spring Boot, MySQL)\n" +
-    "    Lines 3+: 2-4 strong action-verb bullet points\n" +
-    "    CRITICAL FOR INTERNSHIPS: When the candidate provides technologies and frameworks used in an internship, place them on Line 2 alongside Company Name ('Company Name | Tech Stack') so they render on the right in italics. NEVER dump internship technologies into Technical Skills.\n" +
-    "  Every bullet MUST begin with a powerful past-tense action verb and quantify impact.\n\n" +
+    `PROFESSIONAL EXPERIENCE & INTERNSHIPS:\n` +
+    `  Header: ${expSectionHeading} (ALL CAPS)\n` +
+    `  CRITICAL: ONLY include this section if the original resume actually contains work experience, internship, or trainee content. DO NOT fabricate experience entries.\n` +
+    `  For each role:\n` +
+    `    Line 1: Role Title | Month YYYY – Month YYYY (or "Duration" / Present if dates given)\n` +
+    `    Line 2: Company Name | Technologies & Frameworks used\n` +
+    `    Lines 3+: 2-4 strong action-verb bullets (• prefix)\n` +
+    `  For each INTERNSHIP entry, follow this EXACT format (MANDATORY):\n` +
+    `    Line 1: Internship Title | Month YYYY – Month YYYY (use "Duration" if no specific dates given, or exact dates from original resume)\n` +
+    `    Line 2: Company Name | Tech Stack (comma-separated technologies used in that internship)\n` +
+    `    Lines 3+: • Strong past-tense action verb bullet with quantified impact\n` +
+    `    INTERNSHIP FORMAT EXAMPLE:\n` +
+    `    Web Development Intern | Jan 2024 – Jun 2024\n` +
+    `    TechCorp Solutions | React, Node.js, MongoDB, Express\n` +
+    `    • Developed 12 REST API endpoints using Node.js and Express, reducing data fetch time by 35%.\n` +
+    `    • Built 8 reusable React components, improving page load speed by 28% across 5 screens.\n` +
+    `  NEVER dump internship technologies into Technical Skills — they belong on Line 2 of the internship entry.\n` +
+    `  NEVER fabricate dates/years that are not in the original resume; use "Duration" as placeholder if unknown.\n` +
+    `  Every bullet MUST begin with a powerful past-tense action verb and quantify impact.\n\n` +
     "PROJECTS:\n" +
     "  Header: PROJECTS (ALL CAPS)\n" +
     "  For each project:\n" +
@@ -193,6 +214,13 @@ export function buildOptimizationPrompt(
     sep + "\n" +
     "STEP 2 — KEYWORD INJECTION\n" +
     sep + "\n\n" +
+    "IMPORTANT — MAXIMUM ATS ALIGNMENT:\n" +
+    "Even if the candidate's background differs significantly from the target job, maximize ATS alignment by:\n" +
+    "1. Reframing existing bullet points to emphasize transferable skills that match JD requirements\n" +
+    "2. Prioritizing JD keywords in Technical Skills categories (never fabricate technologies not in resume)\n" +
+    "3. Restructuring the Professional Summary to bridge the candidate's background to target role\n" +
+    "4. Highlighting overlapping skills and competencies between the resume and JD\n" +
+    "5. Never fabricate experience — only reframe genuine experience with JD-aligned language\n\n" +
     "TASK 1 -- KEYWORD INJECTION (top priority):\n" +
     "Keywords to inject (ALL of them, at least once each):\n" +
     (keywordList || "(inject all JD tech terms you can identify)") + "\n\n" +
@@ -281,6 +309,7 @@ export function buildOptimizationPrompt(
     "[ ] Education contains all candidate stages including SSC (10th) and Intermediate (12th) if in original resume -- zero dropped education entries\n" +
     "[ ] Resume fits the PAGE BUDGET (" + pageBudget.maxPages + " page" + (pageBudget.maxPages > 1 ? "s" : "") + " max)\n" +
     "[ ] Zero fabricated or invented dates/years/months for internships, projects, or certifications\n" +
+    "[ ] Every internship entry follows Line 1 (Title | Dates) + Line 2 (Company | Tech Stack) format\n" +
     "[ ] Certifications and achievements combined into a single CERTIFICATIONS & ACHIEVEMENTS section\n" +
     "[ ] Metrics/numbers added or [ADD:] placeholders used where missing\n" +
     "[ ] No LaTeX, no Markdown, no literal backslash-n in resume text\n" +
