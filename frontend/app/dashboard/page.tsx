@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ATSScore, isOwnerEmail } from "@/types";
+import { generateUUID } from "@/lib/utils";
 import { SAMPLE_RESUME_TEXT, SAMPLE_JD_TEXT } from "@/lib/sample-data";
 import {
   Sparkles,
@@ -48,6 +49,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Bell,
+  BookmarkPlus,
+  BookmarkCheck,
   RotateCcw,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -253,6 +256,55 @@ export default function DashboardPage() {
   const [userPlan, setUserPlan] = useState<string>("free");
   const [userCredits, setUserCredits] = useState<any>(null);
   const [trackerAdded, setTrackerAdded] = useState(false);
+  const [isSavedToResumes, setIsSavedToResumes] = useState(false);
+  const [savingToResumes, setSavingToResumes] = useState(false);
+
+  const handleSaveToResumes = async () => {
+    if (!user) {
+      toast.error("Please sign in to save resumes to your library.");
+      return;
+    }
+    const textToSave = optimizeResult?.optimizedText || resumeText;
+    if (!textToSave) {
+      toast.error("No optimized resume text found to save.");
+      return;
+    }
+
+    setSavingToResumes(true);
+    try {
+      const res = await fetch("/api/resumes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: generateUUID(),
+          originalText: resumeText,
+          optimizedText: textToSave,
+          jobDescription: "", // Empty JD marks it as user's standalone resume in /dashboard/resumes
+          jobTitle: optimizeResult?.jobTitle ? `${optimizeResult.jobTitle} (Optimized)` : "Target Role Resume",
+          company: optimizeResult?.company || "General Application",
+          scoreBefore: beforeScore?.overall || 50,
+          scoreAfter: afterScore?.overall || 85,
+          keywordsBefore: beforeScore?.foundKeywords?.length || 0,
+          keywordsAfter: afterScore?.foundKeywords?.length || 10,
+          impactBefore: beforeScore?.impactBullets || 0,
+          impactAfter: afterScore?.impactBullets || 10,
+          keywordsAdded: optimizeResult?.keywordsAdded || [],
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to save to Resumes library.");
+      }
+
+      setIsSavedToResumes(true);
+      toast.success("Optimized resume saved to your My Resumes library!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save resume.");
+    } finally {
+      setSavingToResumes(false);
+    }
+  };
   const [bulletImprovementsCount, setBulletImprovementsCount] = useState(0);
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
   // Placeholder filler state
@@ -764,6 +816,7 @@ export default function DashboardPage() {
     setRoadmapContent(null);
     setCoverLetterGenerated(null);
     setTrackerAdded(false);
+    setIsSavedToResumes(false);
     setViewMode("editor");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -962,6 +1015,27 @@ export default function DashboardPage() {
             </div>
             {/* Actions — responsive on mobile: old clean layout with + Job Tracker, Start Over, History */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+              {/* Clear Saving Option for Optimized Resume */}
+              <Button
+                onClick={handleSaveToResumes}
+                disabled={savingToResumes || isSavedToResumes}
+                size="sm"
+                className={`flex-1 sm:flex-none text-xs font-bold h-9 rounded-md px-3.5 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  isSavedToResumes
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100"
+                    : "bg-[#087F6E] hover:bg-[#065F53] text-white"
+                }`}
+              >
+                {savingToResumes ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : isSavedToResumes ? (
+                  <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
+                ) : (
+                  <BookmarkPlus className="h-3.5 w-3.5" />
+                )}
+                <span>{isSavedToResumes ? "Saved in Resumes" : "Save to My Resumes"}</span>
+              </Button>
+
               <Button
                 onClick={() => {
                   if (trackerAdded) {

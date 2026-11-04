@@ -2,27 +2,53 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Copy, Check, FileText, ShieldCheck, Phone, Mail, Globe } from "lucide-react";
+import {
+  Loader2,
+  Copy,
+  Check,
+  FileText,
+  ShieldCheck,
+  Phone,
+  Mail,
+  Globe,
+  Maximize2,
+  Minimize2,
+  BookmarkPlus,
+  BookmarkCheck,
+  Palette,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
-import { parseResumeIntoBlocks, stripMarkdownAsterisks, getCleanExportFilename, ResumeBlock, toSectionTitle, splitCertText, isRoleOrTitle } from "@/lib/export/pdf-document";
+import {
+  parseResumeIntoBlocks,
+  stripMarkdownAsterisks,
+  getCleanExportFilename,
+  toSectionTitle,
+  splitCertText,
+  isRoleOrTitle,
+} from "@/lib/export/pdf-document";
 import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
+import { generateUUID } from "@/lib/utils";
 
 const LinkedInIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
   </svg>
 );
 
 const GitHubIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+    />
   </svg>
 );
 
 function getPdfDownloadLimit(plan: string): number {
   if (plan === "promax" || plan === "owner") return 30;
   if (plan === "premium") return 15;
-  return 1; // free
+  return 1;
 }
 
 function getMonthKey() {
@@ -45,6 +71,7 @@ interface ResumeViewerProps {
   userId?: string;
   userPlan?: string;
   jobTitle?: string;
+  onSavedToLibrary?: () => void;
 }
 
 export default function ResumeViewer({
@@ -54,11 +81,18 @@ export default function ResumeViewer({
   jobDescription,
   userId = "",
   userPlan = "free",
-  jobTitle = ""
+  jobTitle = "",
+  onSavedToLibrary,
 }: ResumeViewerProps) {
   const [copied, setCopied] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [docxLoading, setDocxLoading] = useState(false);
+  const [savingLibrary, setSavingLibrary] = useState(false);
+  const [isSavedInLibrary, setIsSavedInLibrary] = useState(false);
+
+  // Layout & Template State
+  const [isFullLength, setIsFullLength] = useState(true);
+  const [templateStyle, setTemplateStyle] = useState<"academic" | "modern" | "clean">("academic");
 
   // Parse blocks for rendering
   const blocks = parseResumeIntoBlocks(text);
@@ -94,11 +128,55 @@ export default function ResumeViewer({
   };
 
   const handleCopy = async () => {
-    const cleanText = text.split("\n").map(l => stripMarkdownAsterisks(l)).join("\n");
+    const cleanText = text.split("\n").map((l) => stripMarkdownAsterisks(l)).join("\n");
     await navigator.clipboard.writeText(cleanText);
     setCopied(true);
     toast.success("Optimized resume text copied!");
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Explicit Save Option: Saves optimized resume directly into the user's My Resumes library
+  const handleSaveToLibrary = async () => {
+    if (!userId) {
+      toast.error("Please sign in to save resumes to your library.");
+      return;
+    }
+
+    setSavingLibrary(true);
+    try {
+      const res = await fetch("/api/resumes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: generateUUID(),
+          originalText: originalText || text,
+          optimizedText: text,
+          jobDescription: "", // Empty JD marks it as a standalone user resume in the library
+          jobTitle: jobTitle ? `${jobTitle} (Optimized)` : "Optimized Resume",
+          company: "General Application",
+          scoreBefore: 70,
+          scoreAfter: 90,
+          keywordsBefore: 0,
+          keywordsAfter: 10,
+          impactBefore: 0,
+          impactAfter: 10,
+          keywordsAdded: [],
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to save resume to library.");
+      }
+
+      setIsSavedInLibrary(true);
+      toast.success("Resume saved successfully to your Resumes library!");
+      if (onSavedToLibrary) onSavedToLibrary();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save to Resumes library.");
+    } finally {
+      setSavingLibrary(false);
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -106,12 +184,12 @@ export default function ResumeViewer({
       useUpgradeModalStore.getState().openModal({
         badge: "DOWNLOAD BLOCKED",
         title: "Your 2 free optimizations are used up",
-        description: "Your optimized resume is saved and stays in your history. Free includes the ATS score and live preview; downloading is on a paid plan.",
+        description:
+          "Your optimized resume is saved and stays in your history. Free includes the ATS score and live preview; downloading is on a paid plan.",
       });
       return;
     }
 
-    // Check monthly PDF download limit
     const pdfLimit = getPdfDownloadLimit(userPlan);
     if (userId && pdfLimit !== Infinity) {
       const storageKey = `fastHire_pdfDownloads_${userId}_${getMonthKey()}`;
@@ -154,7 +232,8 @@ export default function ResumeViewer({
       useUpgradeModalStore.getState().openModal({
         badge: "DOWNLOAD BLOCKED",
         title: "Your 2 free optimizations are used up",
-        description: "Your optimized resume is saved and stays in your history. Free includes the ATS score and live preview; downloading is on a paid plan.",
+        description:
+          "Your optimized resume is saved and stays in your history. Free includes the ATS score and live preview; downloading is on a paid plan.",
       });
       return;
     }
@@ -185,20 +264,71 @@ export default function ResumeViewer({
     }
   };
 
+  // Font family and layout accents per template style
+  const getStyleConfig = () => {
+    switch (templateStyle) {
+      case "modern":
+        return {
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          headerBorder: "border-b-2 border-slate-900",
+          headerCase: "font-black tracking-tight",
+          nameStyle: "font-extrabold tracking-tight",
+        };
+      case "clean":
+        return {
+          fontFamily: "Arial, Helvetica, sans-serif",
+          headerBorder: "border-b border-slate-400",
+          headerCase: "font-bold tracking-normal uppercase",
+          nameStyle: "font-bold tracking-normal",
+        };
+      case "academic":
+      default:
+        return {
+          fontFamily: "'Times New Roman', Times, 'Liberation Serif', serif",
+          headerBorder: "border-b border-black",
+          headerCase: "font-bold tracking-wide",
+          nameStyle: "font-normal tracking-wide",
+        };
+    }
+  };
+
+  const styleConfig = getStyleConfig();
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col h-full">
-      {/* Top Header Panel */}
-      <div className="bg-slate-50 px-3 sm:px-5 py-3 sm:py-4 border-b border-slate-200 flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
+      {/* Top Header Panel: Title & Primary Actions */}
+      <div className="bg-slate-50 px-3 sm:px-5 py-3 sm:py-3.5 border-b border-slate-200 flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-[#0d6e5a] shrink-0" />
           <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm">Optimized Resume Preview</h3>
         </div>
 
-        {/* Action Downloads / Copy */}
+        {/* Action Downloads / Saving / Copy */}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Clear Saving Option Button */}
+          <Button
+            onClick={handleSaveToLibrary}
+            disabled={savingLibrary || isSavedInLibrary}
+            size="sm"
+            className={`flex-1 sm:flex-initial text-xs h-8 sm:h-9 rounded-lg flex items-center justify-center gap-1.5 px-3 cursor-pointer font-bold transition-all ${
+              isSavedInLibrary
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100"
+                : "bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:bg-slate-50 shadow-2xs"
+            }`}
+          >
+            {savingLibrary ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0d6e5a]" />
+            ) : isSavedInLibrary ? (
+              <BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />
+            ) : (
+              <BookmarkPlus className="h-3.5 w-3.5 text-[#0d6e5a]" />
+            )}
+            <span>{isSavedInLibrary ? "Saved to Library" : "Save to Resumes"}</span>
+          </Button>
+
           <button
             onClick={handleCopy}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 sm:py-2 rounded-lg transition-all text-slate-600 hover:text-slate-900 border border-slate-200 bg-white h-8 sm:h-9"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900 border border-slate-200 bg-white h-8 sm:h-9"
           >
             {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
             <span>{copied ? "Copied!" : "Copy"}</span>
@@ -243,12 +373,79 @@ export default function ResumeViewer({
         </div>
       </div>
 
-      {/* Workspace Display Area */}
-      <div className="flex-1 p-2 sm:p-4 md:p-6 overflow-y-auto max-h-[650px] bg-slate-50 select-text">
-        {/* Render visual styling matching the LaTeX-style PDF engine output */}
+      {/* Secondary Controls Bar: Template Style Connection & Full Length Toggle */}
+      <div className="bg-slate-100/80 px-3 sm:px-5 py-2 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+        {/* Template Style Selector */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1 mr-1">
+            <Palette className="h-3 w-3 text-[#0d6e5a]" />
+            Template:
+          </span>
+          <button
+            type="button"
+            onClick={() => setTemplateStyle("academic")}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+              templateStyle === "academic"
+                ? "bg-[#0d6e5a] text-white shadow-2xs"
+                : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-200"
+            }`}
+          >
+            Classic Academic (LaTeX)
+          </button>
+          <button
+            type="button"
+            onClick={() => setTemplateStyle("modern")}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+              templateStyle === "modern"
+                ? "bg-[#0d6e5a] text-white shadow-2xs"
+                : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-200"
+            }`}
+          >
+            Modern Tech
+          </button>
+          <button
+            type="button"
+            onClick={() => setTemplateStyle("clean")}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+              templateStyle === "clean"
+                ? "bg-[#0d6e5a] text-white shadow-2xs"
+                : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-200"
+            }`}
+          >
+            Clean Minimalist
+          </button>
+        </div>
+
+        {/* Full Length View Toggle */}
+        <button
+          type="button"
+          onClick={() => setIsFullLength(!isFullLength)}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-white text-slate-700 hover:text-slate-900 border border-slate-200 shadow-2xs hover:bg-slate-50 transition-all cursor-pointer ml-auto"
+        >
+          {isFullLength ? (
+            <>
+              <Minimize2 className="h-3 w-3 text-[#0d6e5a]" />
+              <span>Compact View</span>
+            </>
+          ) : (
+            <>
+              <Maximize2 className="h-3 w-3 text-[#0d6e5a]" />
+              <span>Full Length View</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Workspace Display Area: Responsive on Desktop & Mobile with Full Length Option */}
+      <div
+        className={`flex-1 p-2 sm:p-4 md:p-6 bg-slate-50 select-text transition-all ${
+          isFullLength ? "overflow-visible min-h-[750px]" : "overflow-y-auto max-h-[650px]"
+        }`}
+      >
+        {/* Render visual styling matching the selected ATS template */}
         <div
-          className="w-full max-w-4xl mx-auto bg-white text-black border border-slate-200 rounded-lg sm:rounded-xl p-3.5 sm:p-6 md:p-10 shadow-md sm:shadow-2xl font-serif select-text relative leading-snug break-words"
-          style={{ fontFamily: "'Times New Roman', Times, 'Liberation Serif', serif" }}
+          className="w-full max-w-4xl mx-auto bg-white text-black border border-slate-200 rounded-lg sm:rounded-xl p-3 sm:p-6 md:p-10 shadow-md sm:shadow-2xl select-text relative leading-snug break-words transition-all"
+          style={{ fontFamily: styleConfig.fontFamily }}
         >
           {blocks.map((block, idx) => {
             switch (block.type) {
@@ -256,8 +453,8 @@ export default function ResumeViewer({
                 return (
                   <h1
                     key={idx}
-                    className="text-[20px] sm:text-[24px] font-normal text-center text-black mb-0 leading-tight select-text tracking-wide"
-                    style={{ fontVariant: "small-caps" }}
+                    className={`text-[19px] sm:text-[23px] text-center text-black mb-0 leading-tight select-text ${styleConfig.nameStyle}`}
+                    style={templateStyle === "academic" ? { fontVariant: "small-caps" } : undefined}
                   >
                     {block.text}
                   </h1>
@@ -265,27 +462,41 @@ export default function ResumeViewer({
               case "subtitle":
                 return null;
               case "contact": {
-                const cleanSegments = block.segments.filter(seg => !isRoleOrTitle(seg.text));
+                const cleanSegments = block.segments.filter((seg) => !isRoleOrTitle(seg.text));
                 if (cleanSegments.length === 0) return null;
                 return (
-                  <div key={idx} className="flex justify-center items-center flex-wrap gap-y-0.5 gap-x-3 sm:gap-x-4 text-[9.5px] sm:text-[10px] text-center text-black mt-0.5 mb-2 leading-normal select-text">
+                  <div
+                    key={idx}
+                    className="flex justify-center items-center flex-wrap gap-y-0.5 gap-x-2.5 sm:gap-x-4 text-[9px] sm:text-[10px] text-center text-black mt-0.5 mb-2 leading-normal select-text"
+                  >
                     {cleanSegments.map((seg, sIdx) => {
                       const lower = (seg.text || "").toLowerCase() + " " + (seg.url || "").toLowerCase();
                       let IconComponent: React.ComponentType<{ className?: string }> = Globe;
-                      if (seg.text.includes('@') || lower.includes('@')) IconComponent = Mail;
+                      if (seg.text.includes("@") || lower.includes("@")) IconComponent = Mail;
                       else if (/\+?\d[\d\s\-\(\)]{7,}/.test(seg.text)) IconComponent = Phone;
-                      else if (lower.includes('linkedin')) IconComponent = LinkedInIcon;
-                      else if (lower.includes('github')) IconComponent = GitHubIcon;
+                      else if (lower.includes("linkedin")) IconComponent = LinkedInIcon;
+                      else if (lower.includes("github")) IconComponent = GitHubIcon;
 
-                      const cleanHandle = seg.text.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '').replace(/^mailto:/, '').replace(/^tel:/, '');
+                      const cleanHandle = seg.text
+                        .replace(/^https?:\/\/(www\.)?/i, "")
+                        .replace(/\/$/, "")
+                        .replace(/^mailto:/, "")
+                        .replace(/^tel:/, "");
 
-                      const el = seg.isLink && seg.url ? (
-                        <a key={sIdx} href={seg.url} target="_blank" rel="noopener noreferrer" className="hover:underline text-slate-900">
-                          {cleanHandle}
-                        </a>
-                      ) : (
-                        <span key={sIdx}>{cleanHandle}</span>
-                      );
+                      const el =
+                        seg.isLink && seg.url ? (
+                          <a
+                            key={sIdx}
+                            href={seg.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline text-slate-900"
+                          >
+                            {cleanHandle}
+                          </a>
+                        ) : (
+                          <span key={sIdx}>{cleanHandle}</span>
+                        );
 
                       return (
                         <div key={sIdx} className="inline-flex items-center gap-1">
@@ -299,7 +510,10 @@ export default function ResumeViewer({
               }
               case "section":
                 return (
-                  <h2 key={idx} className="text-[11.5px] sm:text-[12px] font-bold text-black border-b border-black mt-2.5 mb-1 pb-0 leading-snug select-text">
+                  <h2
+                    key={idx}
+                    className={`text-[11.5px] sm:text-[12px] text-black mt-2.5 mb-1 pb-0 leading-snug select-text ${styleConfig.headerBorder} ${styleConfig.headerCase}`}
+                  >
                     {toSectionTitle(block.text)}
                   </h2>
                 );
@@ -308,7 +522,7 @@ export default function ResumeViewer({
                 return (
                   <p
                     key={idx}
-                    className="text-[10px] mb-1 text-black leading-snug select-text text-justify w-full"
+                    className="text-[9.5px] sm:text-[10px] mb-1 text-black leading-snug select-text text-justify w-full"
                     style={{ textAlign: "justify", textJustify: "inter-word", hyphens: "none" }}
                   >
                     {renderHighlightedText(cleanText)}
@@ -317,22 +531,29 @@ export default function ResumeViewer({
               }
               case "skillLine":
                 return (
-                  <div key={idx} className="text-[10px] mb-0.5 leading-snug select-text">
+                  <div key={idx} className="text-[9.5px] sm:text-[10px] mb-0.5 leading-snug select-text">
                     <span className="font-bold text-black">{block.label}: </span>
-                    <span className="text-black" style={{ hyphens: "none" }}>{renderHighlightedText(block.value)}</span>
+                    <span className="text-black" style={{ hyphens: "none" }}>
+                      {renderHighlightedText(block.value)}
+                    </span>
                   </div>
                 );
               case "project":
                 return (
                   <div key={idx} className="mb-1.5">
-                    <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[10px] font-bold text-black mt-1 mb-0.5 leading-snug select-text">
+                    <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] font-bold text-black mt-1 mb-0.5 leading-snug select-text">
                       <div className="flex items-baseline gap-1.5 flex-wrap flex-1 min-w-0">
                         <span>{block.name}</span>
                         {block.tech && (
                           <span className="font-bold text-black">&nbsp;—&nbsp;{renderHighlightedText(block.tech)}</span>
                         )}
                         {block.projectUrl && (
-                          <a href={block.projectUrl} target="_blank" rel="noopener noreferrer" className="text-[9.5px] text-blue-700 underline font-normal break-all">
+                          <a
+                            href={block.projectUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[9px] text-blue-700 underline font-normal break-all"
+                          >
                             {getReadableLinkLabel(block.projectUrl, block.name)}
                           </a>
                         )}
@@ -342,9 +563,14 @@ export default function ResumeViewer({
                       ) : null}
                     </div>
                     {block.bullets.map((bullet, bIdx) => {
-                      const cleanBullet = bullet.replace(/^\s*([•\-\*–—+•\u2022\u25cf\u2043▸►→]|\d+\.)\s*/, "").trim();
+                      const cleanBullet = bullet
+                        .replace(/^\s*([•\-\*–—+•\u2022\u25cf\u2043▸►→]|\d+\.)\s*/, "")
+                        .trim();
                       return (
-                        <div key={bIdx} className="flex items-start text-[10px] mb-px pl-2 sm:pl-3 leading-snug select-text">
+                        <div
+                          key={bIdx}
+                          className="flex items-start text-[9.5px] sm:text-[10px] mb-px pl-2 sm:pl-3 leading-snug select-text"
+                        >
                           <span className="w-2.5 sm:w-3 shrink-0 select-none text-black">•</span>
                           <span className="flex-1 min-w-0 text-black text-justify">{renderHighlightedText(cleanBullet)}</span>
                         </div>
@@ -356,20 +582,27 @@ export default function ResumeViewer({
               case "job":
                 return (
                   <div key={idx} className="mb-1.5">
-                    <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[10px] font-bold text-black mt-1 leading-snug select-text">
+                    <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] font-bold text-black mt-1 leading-snug select-text">
                       <span className="flex-1 min-w-0">{renderHighlightedText(block.title)}</span>
                       <span className="font-bold text-black shrink-0 ml-auto">{renderHighlightedText(block.dates)}</span>
                     </div>
-                    {(block.company || (block as any).tech) ? (
-                      <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[10px] italic text-black mb-0.5 leading-snug select-text">
+                    {block.company || (block as any).tech ? (
+                      <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] italic text-black mb-0.5 leading-snug select-text">
                         <span className="min-w-0">{renderHighlightedText(block.company || "")}</span>
-                        {(block as any).tech ? <span className="ml-auto">{renderHighlightedText((block as any).tech)}</span> : null}
+                        {(block as any).tech ? (
+                          <span className="ml-auto">{renderHighlightedText((block as any).tech)}</span>
+                        ) : null}
                       </div>
                     ) : null}
                     {block.bullets.map((bullet, bIdx) => {
-                      const cleanBullet = bullet.replace(/^\s*([•\-\*–—+•\u2022\u25cf\u2043▸►→]|\d+\.)\s*/, "").trim();
+                      const cleanBullet = bullet
+                        .replace(/^\s*([•\-\*–—+•\u2022\u25cf\u2043▸►→]|\d+\.)\s*/, "")
+                        .trim();
                       return (
-                        <div key={bIdx} className="flex items-start text-[10px] mb-px pl-2 sm:pl-3 leading-snug select-text">
+                        <div
+                          key={bIdx}
+                          className="flex items-start text-[9.5px] sm:text-[10px] mb-px pl-2 sm:pl-3 leading-snug select-text"
+                        >
                           <span className="w-2.5 sm:w-3 shrink-0 select-none text-black">•</span>
                           <span className="flex-1 min-w-0 text-black text-justify">{renderHighlightedText(cleanBullet)}</span>
                         </div>
@@ -380,11 +613,11 @@ export default function ResumeViewer({
               case "education":
                 return (
                   <div key={idx} className="mb-1">
-                    <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[10px] font-bold text-black leading-snug select-text">
+                    <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] font-bold text-black leading-snug select-text">
                       <span className="min-w-0">{renderHighlightedText(block.degree)}</span>
                       <span className="font-bold text-black ml-auto">{renderHighlightedText(block.dates)}</span>
                     </div>
-                    <div className="flex flex-wrap justify-between items-baseline gap-x-2 text-[10px] italic text-black leading-snug select-text">
+                    <div className="flex flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] italic text-black leading-snug select-text">
                       <span className="min-w-0">{renderHighlightedText(block.school)}</span>
                       <span className="ml-auto">{renderHighlightedText(block.gpa)}</span>
                     </div>
@@ -392,7 +625,7 @@ export default function ResumeViewer({
                 );
               case "bullet":
                 return (
-                  <div key={idx} className="flex items-start text-[10px] mb-px pl-2 sm:pl-3 leading-snug select-text">
+                  <div key={idx} className="flex items-start text-[9.5px] sm:text-[10px] mb-px pl-2 sm:pl-3 leading-snug select-text">
                     <span className="w-2.5 sm:w-3 shrink-0 select-none text-black">•</span>
                     <span className="flex-1 min-w-0 text-black">{renderHighlightedText(block.text)}</span>
                   </div>
@@ -400,7 +633,7 @@ export default function ResumeViewer({
               case "cert": {
                 const { title, rest } = splitCertText(block.text);
                 return (
-                  <div key={idx} className="flex items-start text-[10px] mb-px pl-2 sm:pl-3 leading-snug">
+                  <div key={idx} className="flex items-start text-[9.5px] sm:text-[10px] mb-px pl-2 sm:pl-3 leading-snug">
                     <span className="w-2.5 sm:w-3 shrink-0 select-none text-black">•</span>
                     <span className="flex-1 min-w-0 text-black text-justify">
                       {title ? <span className="font-bold">{title}</span> : null}
@@ -411,7 +644,13 @@ export default function ResumeViewer({
               }
               case "link":
                 return (
-                  <a key={idx} href={block.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 underline mb-0.5 block leading-normal select-text font-serif">
+                  <a
+                    key={idx}
+                    href={block.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[9.5px] sm:text-[10px] text-blue-600 underline mb-0.5 block leading-normal select-text"
+                  >
                     {block.label}
                   </a>
                 );

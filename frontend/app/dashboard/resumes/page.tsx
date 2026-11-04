@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useResumeStore } from "@/store/useResumeStore";
 import Navbar from "@/components/Navbar";
@@ -38,6 +39,10 @@ import {
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 import { ResumesSkeleton, ResumesGridSkeleton } from "@/components/SkeletonShimmer";
+import ImportViaAiModal from "@/components/ImportViaAiModal";
+import { getTemplateById, ATS_TEMPLATES_DATA, AtsTemplateProfile } from "@/lib/ats-templates-data";
+import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
+import { Palette, Maximize2, Minimize2 } from "lucide-react";
 
 // Structured Resume Form Types
 interface StructuredResume {
@@ -69,7 +74,113 @@ const renderRichText = (text: string) => {
   });
 };
 
-export default function ResumesPage() {
+
+export interface TemplateStyleOption {
+  id: string;
+  name: string;
+  badge: string;
+  tagline: string;
+  fontFamily: string;
+  headerBorder: string;
+  headerCase: string;
+  nameStyle: string;
+  smallCaps: boolean;
+}
+
+export const TEMPLATE_STYLES: TemplateStyleOption[] = [
+  {
+    id: "financial-analyst",
+    name: "Classic Academic",
+    badge: "LaTeX Standard",
+    tagline: "LaTeX single-column serif format with horizontal section rules",
+    fontFamily: "'Times New Roman', Times, 'Liberation Serif', serif",
+    headerBorder: "border-b border-black",
+    headerCase: "font-bold uppercase tracking-wide",
+    nameStyle: "font-normal tracking-wide",
+    smallCaps: true,
+  },
+  {
+    id: "kickresume-black",
+    name: "Modern Tech",
+    badge: "High-Contrast",
+    tagline: "High-contrast clean tech format engineered for modern ATS parsers",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    headerBorder: "border-b-2 border-slate-900",
+    headerCase: "font-extrabold uppercase tracking-tight",
+    nameStyle: "font-extrabold tracking-tight",
+    smallCaps: false,
+  },
+  {
+    id: "classic-ats",
+    name: "Classic Corporate",
+    badge: "Fortune 500",
+    tagline: "Traditional single-column format preferred by Fortune 500 companies",
+    fontFamily: "'Times New Roman', Times, serif",
+    headerBorder: "border-b border-slate-700",
+    headerCase: "font-bold uppercase tracking-wider",
+    nameStyle: "font-bold",
+    smallCaps: false,
+  },
+  {
+    id: "resumedone-clean",
+    name: "Clean Minimalist",
+    badge: "OCR Optimized",
+    tagline: "Streamlined modern structure with optimal OCR readability",
+    fontFamily: "Arial, Helvetica, sans-serif",
+    headerBorder: "border-b border-slate-300",
+    headerCase: "font-bold uppercase",
+    nameStyle: "font-bold",
+    smallCaps: false,
+  },
+];
+
+function convertTemplateToStructuredResume(tmpl: AtsTemplateProfile): StructuredResume {
+  const c = tmpl.candidate;
+  return {
+    name: c.fullName || "",
+    email: c.email || "",
+    phone: c.phone || "",
+    location: c.location || "",
+    linkedin: c.linkedin || "",
+    github: c.github || "",
+    website: c.portfolio || "",
+    summary: c.summary || "",
+    experience: (c.experience || []).map((exp) => ({
+      id: Math.random().toString(36).substring(2, 9),
+      company: exp.company || "",
+      title: exp.role || "",
+      date: exp.dates || "",
+      bullets: exp.bullets || [],
+    })),
+    education: (c.education || []).map((edu) => ({
+      id: Math.random().toString(36).substring(2, 9),
+      school: edu.school || "",
+      degree: edu.degree || "",
+      field: "",
+      date: edu.dates || "",
+      gpa: edu.score || "",
+      description: "",
+    })),
+    projects: (c.projects || []).map((proj) => ({
+      id: Math.random().toString(36).substring(2, 9),
+      name: proj.title || "",
+      techStack: proj.tech || "",
+      link: "",
+      date: proj.year || "",
+      bullets: proj.bullets || [],
+    })),
+    skills: (c.skills || []).map((s) => ({
+      id: Math.random().toString(36).substring(2, 9),
+      category: s.label || "General",
+      list: (s.items || "").split(",").map((i) => i.trim()).filter(Boolean),
+    })),
+    certifications: c.certifications || [],
+    languages: c.languages || [],
+    achievements: c.achievements || [],
+  };
+}
+
+function ResumesPageContent() {
   const router = useRouter();
   const store = useResumeStore();
   
@@ -87,6 +198,11 @@ export default function ResumesPage() {
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"fields" | "preview">("fields");
+  const [templateStyle, setTemplateStyle] = useState<string>("financial-analyst");
+  const [isFullLengthPreview, setIsFullLengthPreview] = useState(false);
+  const [isAiImportModalOpen, setIsAiImportModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const templateParam = searchParams?.get("template");
 
   // Accordion collapsibles state in left column of Editor
   const [collapsibles, setCollapsibles] = useState({
@@ -629,10 +745,84 @@ export default function ResumesPage() {
     return text.trim();
   };
 
+
+  // AI Import Gated Trigger
+  const handleOpenAiImport = () => {
+    const isOwner = activePlan === "owner" || (userId && isOwnerEmail(userId));
+    if (activePlan === "free" && !isOwner) {
+      useUpgradeModalStore.getState().openModal({
+        badge: "PRO & PRO MAX",
+        title: "Unlock AI Resume Import",
+        description: "Importing resumes via AI is an exclusive Pro & Pro Max feature. Upgrade to automatically parse and populate your resume fields from any existing resume or LinkedIn profile in seconds.",
+      });
+      return;
+    }
+    setIsAiImportModalOpen(true);
+  };
+
+  const handleAiImportSuccess = async (importedData: StructuredResume, detectedTitle?: string) => {
+    const title = detectedTitle || `${importedData.name || "Imported"}'s Resume`;
+    const compiled = compileStructuredResume(importedData);
+
+    try {
+      setActionLoading("create");
+      const res = await fetch("/api/resumes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: generateUUID(),
+          originalText: compiled,
+          optimizedText: compiled,
+          jobDescription: "",
+          jobTitle: title,
+          company: "General Application",
+          scoreBefore: 70,
+          scoreAfter: 85,
+          keywordsBefore: 5,
+          keywordsAfter: 12,
+          impactBefore: 5,
+          impactAfter: 10,
+          keywordsAdded: [],
+        }),
+      });
+
+      if (res.ok) {
+        const newRec = await res.json();
+        setResumes((prev) => [newRec, ...prev]);
+        setEditingResume(newRec);
+        setEditorData(importedData);
+        setTempTitle(title);
+        toast.success("Resume imported and opened in editor!");
+      } else if (editingResume) {
+        setEditorData(importedData);
+        saveEditorData(importedData, { jobTitle: title });
+        toast.success("Active resume updated with imported content!");
+      }
+    } catch (err: any) {
+      if (editingResume) {
+        setEditorData(importedData);
+        saveEditorData(importedData);
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleTemplateStyleChange = (styleId: string) => {
+    setTemplateStyle(styleId);
+    if (editingResume && typeof window !== "undefined") {
+      localStorage.setItem(`fastHire_resume_template_${editingResume.id}`, styleId);
+    }
+    const tmplName = TEMPLATE_STYLES.find(t => t.id === styleId)?.name || styleId;
+    toast.success(`Applied ${tmplName} template style!`);
+  };
+
   // Open Resume Editor
-  const handleOpenEditor = (record: ResumeRecord) => {
+  const handleOpenEditor = (record: ResumeRecord, forceTemplateId?: string) => {
     setEditingResume(record);
     setTempTitle(record.jobTitle || "Untitled Resume");
+    const savedTmpl = forceTemplateId || (typeof window !== "undefined" ? localStorage.getItem(`fastHire_resume_template_${record.id}`) : null) || "financial-analyst";
+    setTemplateStyle(savedTmpl);
     
     // Check if text content is present
     const rawText = (record.optimizedText && record.optimizedText.trim()) 
@@ -663,9 +853,11 @@ export default function ResumesPage() {
     setEditorData(parsed);
   };
 
-  // Create New Resume Card Trigger
-  const handleCreateNewResume = async () => {
+  // Create New Resume Card Trigger (with optional connected template)
+  const handleCreateNewResume = async (selectedTemplateId?: string | React.MouseEvent) => {
     if (!userId) return;
+
+    const actualTemplateId = typeof selectedTemplateId === "string" ? selectedTemplateId : undefined;
 
     // Enforce resumes built from scratch limit (Free: 2, Pro: 20, Pro Max: 40)
     try {
@@ -684,7 +876,21 @@ export default function ResumesPage() {
 
     setActionLoading("create");
 
-    const defaultText = ``;
+    const tmplId = actualTemplateId || "financial-analyst";
+    let defaultText = "";
+    let initialTitle = "Untitled Resume";
+    let initialParsed: StructuredResume | null = null;
+
+    if (actualTemplateId) {
+      try {
+        const tmpl = getTemplateById(actualTemplateId);
+        if (tmpl) {
+          initialTitle = tmpl.name;
+          initialParsed = convertTemplateToStructuredResume(tmpl);
+          defaultText = compileStructuredResume(initialParsed);
+        }
+      } catch (e) {}
+    }
 
     try {
       const res = await fetch("/api/resumes", {
@@ -695,7 +901,7 @@ export default function ResumesPage() {
           originalText: defaultText,
           optimizedText: defaultText,
           jobDescription: "",
-          jobTitle: "Untitled Resume",
+          jobTitle: initialTitle || "Untitled Resume",
           company: "General Application",
           scoreBefore: 45,
           scoreAfter: 45,
@@ -722,8 +928,15 @@ export default function ResumesPage() {
           }
           return next;
         });
-        handleOpenEditor(newRecord);
-        toast.success("New resume card created successfully!");
+        if (initialParsed) {
+          setEditorData(initialParsed);
+          setTemplateStyle(tmplId);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`fastHire_resume_template_${newRecord.id}`, tmplId);
+          }
+        }
+        handleOpenEditor(newRecord, tmplId);
+        toast.success(selectedTemplateId ? `New resume created with ${initialTitle} template!` : "New resume card created successfully!");
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to create new resume.");
@@ -1228,18 +1441,33 @@ export default function ResumesPage() {
                   </p>
                 </div>
 
-                <Button
-                  onClick={handleCreateNewResume}
-                  disabled={actionLoading === "create" || resumes.length >= maxLimit}
-                  className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold h-9 text-xs rounded-xl px-5 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                >
-                  {actionLoading === "create" ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                  New Resume
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleOpenAiImport}
+                    className="bg-gradient-to-r from-teal-600 to-[#087F6E] hover:from-teal-700 hover:to-[#065F53] text-white font-bold h-9 text-xs rounded-xl px-4 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                    <span>Import via AI</span>
+                    {activePlan === "free" && (
+                      <span className="bg-amber-400 text-slate-900 text-[8px] font-black uppercase px-1 rounded">
+                        PRO
+                      </span>
+                    )}
+                  </Button>
+
+                  <Button
+                    onClick={() => handleCreateNewResume()}
+                    disabled={actionLoading === "create" || resumes.length >= maxLimit}
+                    className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-bold h-9 text-xs rounded-xl px-4 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    {actionLoading === "create" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 text-[#087F6E]" />
+                    )}
+                    New Resume
+                  </Button>
+                </div>
               </div>
 
               {/* Grid display options */}
@@ -1257,12 +1485,25 @@ export default function ResumesPage() {
                     <p className="text-xs sm:text-sm text-[#526176] max-w-md mt-1 leading-relaxed font-normal">
                       Start from scratch or select a pre-engineered ATS template verified against Workday, Taleo, and Greenhouse parsers.
                     </p>
-                    <div className="mt-5">
+                    <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
                       <Button 
-                        onClick={handleCreateNewResume}
-                        className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs rounded-xl px-6 h-10 shadow-xs cursor-pointer"
+                        onClick={() => handleCreateNewResume()}
+                        variant="outline"
+                        className="bg-white hover:bg-slate-50 text-slate-700 border-slate-300 font-bold text-xs rounded-xl px-5 h-10 shadow-xs cursor-pointer"
                       >
                         Create Blank Resume
+                      </Button>
+                      <Button 
+                        onClick={handleOpenAiImport}
+                        className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs rounded-xl px-6 h-10 shadow-xs cursor-pointer flex items-center gap-2"
+                      >
+                        <Sparkles className="h-4 w-4 text-amber-300" />
+                        <span>Import via AI</span>
+                        {activePlan === "free" && (
+                          <span className="bg-amber-400 text-slate-900 text-[8px] font-black uppercase px-1.5 py-0.5 rounded">
+                            PRO
+                          </span>
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -1342,7 +1583,7 @@ export default function ResumesPage() {
 
                           <div className="pt-2 border-t border-slate-100">
                             <Button
-                              onClick={handleCreateNewResume}
+                              onClick={() => handleCreateNewResume(tmpl.id)}
                               className="w-full h-10 bg-[#087F6E] hover:bg-[#065F53] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
                             >
                               Use This Template
@@ -1427,7 +1668,7 @@ export default function ResumesPage() {
                   {/* Dashed placeholder template card */}
                   {resumes.length < maxLimit && (
                     <div
-                      onClick={handleCreateNewResume}
+                      onClick={() => handleCreateNewResume()}
                       className="border border-dashed border-slate-300 bg-white hover:bg-slate-50 hover:border-[#0d6e5a] rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 min-h-[160px] select-none shadow-sm"
                     >
                       <Plus className="h-7 w-7 text-slate-400 group-hover:text-[#0d6e5a] mb-2" />
@@ -1488,7 +1729,34 @@ export default function ResumesPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              {/* Template Style Selector Dropdown */}
+              <div className="hidden sm:flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                <Palette className="h-3 w-3 text-[#0d6e5a] ml-1" />
+                <select
+                  value={templateStyle}
+                  onChange={(e) => handleTemplateStyleChange(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer py-0.5 pr-2"
+                >
+                  {TEMPLATE_STYLES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Import via AI button in editor */}
+              <Button
+                onClick={handleOpenAiImport}
+                variant="outline"
+                className="h-8 text-xs font-bold border-teal-200 bg-teal-50/70 hover:bg-teal-100 text-[#087F6E] rounded-lg px-2.5 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                <span className="hidden md:inline">Import via AI</span>
+                <span className="md:hidden">Import</span>
+              </Button>
+
               <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 sm:px-3 py-1 rounded-full">
                 <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span>Auto-saved</span>
@@ -2175,12 +2443,44 @@ export default function ResumesPage() {
             </div>
 
             {/* Right Column: Live Professional Preview sheet matching HTML design (Image 2) */}
-            <div className={`w-full lg:w-1/2 bg-slate-100 overflow-y-auto px-2 py-4 sm:px-6 sm:py-8 md:px-8 md:py-10 flex justify-center ${mobileTab === "preview" ? "flex" : "hidden lg:flex"}`}>
-              
+            <div className={`w-full lg:w-1/2 bg-slate-100 overflow-y-auto px-2 py-3 sm:px-6 sm:py-6 md:px-8 md:py-8 flex flex-col items-center ${mobileTab === "preview" ? "flex" : "hidden lg:flex"}`}>
+              {/* Preview Toolbar with Template Style Badge & Full Length Toggle */}
+              <div className="w-full max-w-[800px] mb-3 flex items-center justify-between gap-2 px-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Palette className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                    <span>{TEMPLATE_STYLES.find(t => t.id === templateStyle)?.name || "Classic Academic"}</span>
+                  </span>
+                  <span className="bg-teal-50 text-[#0d6e5a] border border-teal-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {TEMPLATE_STYLES.find(t => t.id === templateStyle)?.badge || "LaTeX Standard"}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsFullLengthPreview(!isFullLengthPreview)}
+                  className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 shadow-2xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  {isFullLengthPreview ? (
+                    <>
+                      <Minimize2 className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                      <span>Compact View</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                      <span>Full Length View</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               {editorData && (
                 <div 
-                  className="w-full max-w-[800px] min-h-[600px] sm:min-h-[850px] lg:min-h-[1056px] bg-white text-black p-4 sm:p-8 md:p-12 lg:p-[20mm] shadow-xl sm:shadow-2xl flex flex-col font-serif select-text border border-slate-300 rounded-lg sm:rounded-none"
-                  style={{ fontFamily: "'Times New Roman', Times, serif" }}
+                  className={`w-full max-w-[800px] bg-white text-black p-3.5 sm:p-8 md:p-12 lg:p-[20mm] shadow-xl sm:shadow-2xl flex flex-col select-text border border-slate-300 rounded-lg sm:rounded-none transition-all ${
+                    isFullLengthPreview ? "min-h-auto" : "min-h-[600px] sm:min-h-[850px] lg:min-h-[1056px]"
+                  }`}
+                  style={{ fontFamily: TEMPLATE_STYLES.find(t => t.id === templateStyle)?.fontFamily || "'Times New Roman', Times, serif" }}
                 >
                   
                   {/* Name center header */}
@@ -2382,5 +2682,14 @@ export default function ResumesPage() {
       )}
 
     </div>
+  );
+}
+
+
+export default function ResumesPage() {
+  return (
+    <Suspense fallback={<ResumesSkeleton />}>
+      <ResumesPageContent />
+    </Suspense>
   );
 }
