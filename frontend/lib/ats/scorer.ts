@@ -2,12 +2,14 @@ import axios from "axios";
 import { ATSScore } from "../../types";
 import { logger } from "../logger";
 import { extractKeywords, extractTechTerms } from "./keywords";
-import { extractScorableBullets, hasStrongActionVerb } from "./bullets";
+import { extractScorableBullets, hasStrongActionVerb, hasQuantifiedMetric } from "./bullets";
+
+export { hasQuantifiedMetric };
 
 /** Absolute ceiling — no real ATS gives a perfect score; 96 = fully optimized resume. */
 export const MAX_ATS_SCORE = 96;
 
-const COMMON_TITLES = [
+export const COMMON_TITLES = [
   "Software Engineer", "Frontend Engineer", "Backend Engineer", "Full Stack Developer",
   "Developer", "Data Scientist", "Data Analyst", "Product Manager", "Project Manager",
   "Business Analyst", "System Administrator", "DevOps Engineer", "QA Engineer",
@@ -87,42 +89,6 @@ const RELATED_SKILLS: Record<string, string[]> = {
   "agile": ["scrum", "jira"],
   "git": ["github", "gitlab"],
 };
-
-/**
- * Checks if a bullet contains quantifiable, measurable metrics
- */
-export function hasQuantifiedMetric(bullet: string): boolean {
-  if (!bullet || bullet.length < 5) return false;
-
-  // 1. Percentages (e.g. 35%, 12.5%, 100 percent)
-  if (/\b\d+(?:\.\d+)?\s*%|\b\d+\s*percent\b/i.test(bullet)) return true;
-
-  // 2. Scale / Multipliers (e.g. 10k+, 2M+, 500+, 2x, 10x, 10,000+)
-  if (/\b\d[\d,\.]*\s*(?:k|m|b|million|billion|thousand|\+|x)\b|\b\d[\d,\.]*\+/i.test(bullet)) return true;
-
-  // 3. Numbers with relevant domain nouns (e.g. 50 users, 15 microservices, 25 endpoints, 10,000 tasks/min)
-  if (/\b\d[\d,\.]*\s*(?:users?|customers?|clients?|requests?|queries|endpoints?|microservices?|transactions?|records?|bugs?|issues?|pipelines?|features?|projects?|tasks?|services?|datasets?|lines?)\b/i.test(bullet)) return true;
-
-  // 4. Performance, Latency & Time (e.g. 45ms, 2 seconds, 3 weeks, 4+ years)
-  if (/\b\d[\d,\.]*\s*(?:ms|sec|seconds?|mins?|minutes?|hours?|hrs?|days?|weeks?|months?|years?)\b/i.test(bullet)) return true;
-
-  // 5. Financial metrics (e.g. $500k, $10,000, 20% margin, $2M)
-  if (/\$[\d,]+(?:\.\d+)?|\b\d+%\s*(?:revenue|cost|margin|growth|savings?)\b/i.test(bullet)) return true;
-
-  // 6. Team size / Leadership scope (e.g. team of 6, led 4 engineers)
-  if (/\bteam\s+of\s+\d+\b|\b\d+\s*(?:engineers?|developers?|members?|peers?)\b/i.test(bullet)) return true;
-
-  // 7. Generic numbers > 1 in context (e.g. over 50, by 25, 3x)
-  if (/\b(?:from|to|by|over|top|exceeding)\s+\d+/i.test(bullet) || /\b\d+x\b/i.test(bullet)) return true;
-
-  // 8. Short time units, data sizes and other measurable units (e.g. 3s, 800ms, 2TB, 60fps)
-  if (/\b\d+(?:\.\d+)?\s*(?:s|ms|gb|tb|mb|kb|fps|rps|qps|tps|pts|points|stars|downloads|lakhs?|crores?)\b/i.test(bullet)) return true;
-
-  // 9. Counted deliverables (e.g. 12 modules, 8 REST APIs, 30 screens, 5 ML models)
-  if (/\b\d[\d,]*\s+(?:[A-Za-z.\-\/]+\s+){0,2}(?:modules?|components?|apis?|pages?|screens?|reports?|dashboards?|models?|students?|participants?|teams?|applications?|apps?|tests?|test cases|workflows?|jobs|servers?|nodes?|clusters?|countries|regions|stores?|sites?|websites?)\b/i.test(bullet)) return true;
-
-  return false;
-}
 
 export function localScore(resumeText: string, jobDescription: string): ATSScore {
   logger.info("Executing dynamic ATS scoring calculation...");
