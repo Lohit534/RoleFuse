@@ -300,7 +300,7 @@ export default function SupportChatbot() {
   });
 
   return (
-    <div className="fixed bottom-6 right-6 z-40 select-none">
+    <div className={`fixed select-none ${isOpen ? "bottom-3 right-3 sm:bottom-6 sm:right-6 z-[110]" : "bottom-[72px] right-3 sm:bottom-6 sm:right-6 z-40"}`}>
       {/* Floating Help Center Launcher Button */}
       {!isOpen && (
         <button
@@ -309,17 +309,17 @@ export default function SupportChatbot() {
             setIsOpen(true);
             setView("help-center");
           }}
-          className="flex h-13 w-13 sm:h-14 sm:w-14 rounded-full bg-white hover:bg-slate-50 text-[#0d6e5a] shadow-xl items-center justify-center border border-slate-200 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer pointer-events-auto group"
+          className="flex h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-white hover:bg-slate-50 text-[#087F6E] shadow-md sm:shadow-xl items-center justify-center border border-slate-200/90 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer pointer-events-auto group"
           title="Open Help Center"
           aria-label="Open Help Center"
         >
-          <HeadphonesIcon className="h-6 w-6 text-[#0d6e5a] group-hover:rotate-6 transition-transform" />
+          <HeadphonesIcon className="h-5 w-5 sm:h-5.5 sm:w-5.5 text-[#087F6E] group-hover:rotate-6 transition-transform" />
         </button>
       )}
 
       {/* Main Container Widget */}
       {isOpen && (
-        <Card className="w-[92vw] sm:w-[400px] h-[82vh] sm:h-[560px] max-h-[820px] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative pointer-events-auto text-left">
+        <Card className="w-[calc(100vw-24px)] sm:w-[400px] h-[80vh] sm:h-[560px] max-h-[760px] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative pointer-events-auto text-left">
           
           {/* ============================================================ */}
           {/* VIEW 1: HELP CENTER FAQS                                      */}

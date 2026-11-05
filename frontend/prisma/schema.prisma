@@ -36,6 +36,8 @@ model Resume {
   pdfUrl         String?
   docxUrl        String?
   createdAt      DateTime @default(now())
+  roadmap        String?  @db.Text
+  coverLetter    String?  @db.Text
 
   @@index([userId])
 }

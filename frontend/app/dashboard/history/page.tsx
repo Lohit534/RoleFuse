@@ -102,13 +102,32 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [docxLoading, setDocxLoading] = useState(false);
   const [selectedRoadmapSkills, setSelectedRoadmapSkills] = useState<string[]>([]);
-  const [roadmapContent, setRoadmapContent] = useState<string | null>(null);
+  const [roadmapContent, setRoadmapContent] = useState<string | null>(() => {
+    if (resume.roadmap) return resume.roadmap;
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(`fastHire_roadmap_${resume.id}`) || null;
+    }
+    return null;
+  });
   const [roadmapLoading, setRoadmapLoading] = useState(false);
-  const [coverLetterGenerated, setCoverLetterGenerated] = useState<string | null>(null);
+  const [coverLetterGenerated, setCoverLetterGenerated] = useState<string | null>(() => {
+    if (resume.coverLetter) return resume.coverLetter;
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(`fastHire_coverLetter_${resume.id}`) || null;
+    }
+    return null;
+  });
   const [generatingLetter, setGeneratingLetter] = useState(false);
   const [showRoadmapAccordion, setShowRoadmapAccordion] = useState(false);
   const [activeTab, setActiveTab] = useState<"resume" | "changes" | "breakdown" | "roadmap" | "cover_letter">("resume");
   const [showShareModal, setShowShareModal] = useState(false);
+
+  useEffect(() => {
+    const loadedRoadmap = resume.roadmap || (typeof window !== "undefined" ? localStorage.getItem(`fastHire_roadmap_${resume.id}`) : null);
+    setRoadmapContent(loadedRoadmap || null);
+    const loadedLetter = resume.coverLetter || (typeof window !== "undefined" ? localStorage.getItem(`fastHire_coverLetter_${resume.id}`) : null);
+    setCoverLetterGenerated(loadedLetter || null);
+  }, [resume.id, resume.roadmap, resume.coverLetter]);
 
   const delta = resume.scoreAfter - resume.scoreBefore;
   const isPaidUser = userPlan === "premium" || userPlan === "promax" || userPlan === "owner";
@@ -249,6 +268,14 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
       await new Promise(resolve => setTimeout(resolve, 800));
       const content = generateMultiSkillRoadmap(selectedRoadmapSkills);
       setRoadmapContent(content);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`fastHire_roadmap_${resume.id}`, content);
+      }
+      fetch("/api/history", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeId: resume.id, roadmap: content }),
+      }).catch(() => {});
       toast.success(`Generated 90-day roadmap for ${selectedRoadmapSkills.length} selected skill${selectedRoadmapSkills.length > 1 ? "s" : ""}!`);
     } catch (e) {
       toast.error("Failed to generate learning roadmap.");
@@ -278,6 +305,14 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
 
       const data = await res.json();
       setCoverLetterGenerated(data.coverLetter);
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`fastHire_coverLetter_${resume.id}`, data.coverLetter);
+      }
+      fetch("/api/history", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeId: resume.id, coverLetter: data.coverLetter }),
+      }).catch(() => {});
     } catch (e: any) {
       toast.error(e.message || "Failed to generate cover letter.");
     } finally {

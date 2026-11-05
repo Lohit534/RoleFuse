@@ -217,7 +217,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { resumeId, scoreAfter, optimizedText } = body;
+    const { resumeId, scoreAfter, optimizedText, roadmap, coverLetter } = body;
 
     if (!resumeId) {
       return NextResponse.json(
@@ -270,6 +270,8 @@ export async function PATCH(request: NextRequest) {
     const updatePayload: any = {};
     if (scoreAfter !== undefined) updatePayload.scoreAfter = Math.round(scoreAfter);
     if (optimizedText !== undefined) updatePayload.optimizedText = optimizedText;
+    if (roadmap !== undefined) updatePayload.roadmap = roadmap;
+    if (coverLetter !== undefined) updatePayload.coverLetter = coverLetter;
 
     const { error: updateErr } = await admin
       .from("Resume")

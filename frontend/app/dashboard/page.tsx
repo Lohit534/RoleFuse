@@ -1084,6 +1084,26 @@ export default function DashboardPage() {
         roadmapContent: content,
         userId: user?.id,
       });
+
+      const targetId = currentResumeId || optimizeResult?.resumeId || optimizeResult?.id;
+      if (targetId) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`fastHire_roadmap_${targetId}`, content);
+        }
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData?.session?.access_token;
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+          fetch("/api/history", {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify({ resumeId: targetId, roadmap: content }),
+          }).catch(() => {});
+        } catch (_e) {}
+      }
+
       toast.success(
         `Generated 90-day roadmap for ${selectedRoadmapSkills.length} selected skill${selectedRoadmapSkills.length > 1 ? "s" : ""}!`,
       );
@@ -1141,6 +1161,25 @@ export default function DashboardPage() {
         coverLetter: data.coverLetter,
         userId: user?.id,
       });
+
+      const targetId = currentResumeId || optimizeResult?.resumeId || optimizeResult?.id;
+      if (targetId) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem(`fastHire_coverLetter_${targetId}`, data.coverLetter);
+        }
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData?.session?.access_token;
+          const headers: Record<string, string> = { "Content-Type": "application/json" };
+          if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+          fetch("/api/history", {
+            method: "PATCH",
+            headers,
+            body: JSON.stringify({ resumeId: targetId, coverLetter: data.coverLetter }),
+          }).catch(() => {});
+        } catch (_e) {}
+      }
     } catch (e: any) {
       toast.error(e.message || "Failed to generate cover letter.");
     } finally {

@@ -42,6 +42,8 @@ export interface ResumeRecord {
   pdfUrl?: string | null;
   docxUrl?: string | null;
   createdAt: Date | string;
+  roadmap?: string | null;
+  coverLetter?: string | null;
 }
 
 export interface CreditInfo {
