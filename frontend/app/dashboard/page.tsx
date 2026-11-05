@@ -288,6 +288,7 @@ export default function DashboardPage() {
   // User plan states
   const [user, setUser] = useState<any>(null);
   const [userPlan, setUserPlan] = useState<string>("free");
+  const isOwner = userPlan === "owner" || (user?.email && isOwnerEmail(user.email));
   const [userCredits, setUserCredits] = useState<any>(null);
   const [trackerAdded, setTrackerAdded] = useState(false);
   const [isSavedToResumes, setIsSavedToResumes] = useState(false);
@@ -1460,13 +1461,20 @@ export default function DashboardPage() {
                 href="/dashboard/cover-letter"
                 className="bg-white hover:bg-teal-50/50 border border-slate-200 hover:border-teal-300 rounded-2xl p-4 transition-all shadow-xs group cursor-pointer"
               >
-                <div className="flex items-center gap-2.5 mb-1.5">
-                  <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <FileText className="h-4 w-4" />
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
+                      Cover Letter Studio
+                    </span>
                   </div>
-                  <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                    Cover Letter Studio
-                  </span>
+                  {!isOwner && userPlan !== "promax" && (
+                    <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
+                      PRO
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-slate-500 leading-normal">
                   Draft a personalized, high-converting letter tailored to this JD.
@@ -1494,13 +1502,20 @@ export default function DashboardPage() {
                 href="/dashboard/linkedin-optimizer"
                 className="bg-white hover:bg-teal-50/50 border border-slate-200 hover:border-teal-300 rounded-2xl p-4 transition-all shadow-xs group cursor-pointer"
               >
-                <div className="flex items-center gap-2.5 mb-1.5">
-                  <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <LinkedInIcon className="h-4 w-4" />
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <LinkedInIcon className="h-4 w-4" />
+                    </div>
+                    <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
+                      LinkedIn Optimizer
+                    </span>
                   </div>
-                  <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                    LinkedIn Optimizer
-                  </span>
+                  {!isOwner && userPlan !== "promax" && (
+                    <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
+                      PRO
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-slate-500 leading-normal">
                   Rank #1 in recruiter searches with optimized headlines and bio.
@@ -1927,6 +1942,11 @@ export default function DashboardPage() {
                         <h3 className="text-xs sm:text-sm font-bold text-[#111827]">
                           LinkedIn Report
                         </h3>
+                        {!isOwner && userPlan !== "promax" && (
+                          <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider ml-1">
+                            PRO
+                          </span>
+                        )}
                       </div>
                       <Link href="/dashboard/linkedin-optimizer">
                         <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#0077B5] group-hover:translate-x-0.5 transition-all cursor-pointer" />

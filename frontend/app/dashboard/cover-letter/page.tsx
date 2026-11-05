@@ -21,11 +21,14 @@ import {
   Loader2,
   BookmarkPlus,
   Zap,
-  Printer
+  Printer,
+  Lock
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
 import { CoverLetterSkeleton } from "@/components/SkeletonShimmer";
+import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
+import { isOwnerEmail } from "@/types";
 
 interface SavedResume {
   id: string;
@@ -42,6 +45,7 @@ function CoverLetterContent() {
 
   const [loadingUser, setLoadingUser] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [isAllowed, setIsAllowed] = useState(false);
 
   // Form states
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
@@ -68,6 +72,21 @@ function CoverLetterContent() {
           return;
         }
         setUser(user);
+
+        // Check Pro Max access
+        let allowed = false;
+        try {
+          const credRes = await fetch("/api/credits");
+          if (credRes.ok) {
+            const credData = await credRes.json();
+            allowed = credData.isOwner || (credData.planId === "promax" && !credData.isFirst50);
+          }
+        } catch (e) {}
+
+        if (!allowed && user.email && isOwnerEmail(user.email)) {
+          allowed = true;
+        }
+        setIsAllowed(allowed);
 
         // Populate from Chrome Extension query parameters if present
         const queryTitle = searchParams.get("title");
@@ -131,6 +150,16 @@ function CoverLetterContent() {
   // Generate Cover Letter
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAllowed) {
+      toast.error("AI Cover Letter Studio is exclusively available for Pro Max members.");
+      useUpgradeModalStore.getState().openModal({
+        badge: "PRO MAX",
+        title: "Unlock AI Cover Letter Studio",
+        description:
+          "AI Cover Letter Studio is exclusively available for Pro Max members. Upgrade to Pro Max to generate unlimited tailored cover letters.",
+      });
+      return;
+    }
     if (!resumeText.trim()) {
       toast.error("Please provide your resume content.");
       return;
@@ -266,7 +295,48 @@ function CoverLetterContent() {
           </div>
         </div>
 
-        {/* Studio 2-Column Grid */}
+        {/* Studio 2-Column Grid / Pro Max Locked Gate */}
+        {!isAllowed ? (
+          <Card className="bg-white border-slate-200 shadow-sm rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6">
+            <div className="h-16 w-16 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#087F6E] mx-auto shadow-xs">
+              <Lock className="h-8 w-8" />
+            </div>
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-black uppercase tracking-wider">
+                Pro Max Exclusive Feature
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Unlock AI Cover Letter Studio
+              </h2>
+              <p className="text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                AI Cover Letter Studio is exclusively available for Pro Max members. Generate tailored, high-converting cover letters matching your resume and JD in seconds across 4 professional writing tones.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button
+                onClick={() => {
+                  useUpgradeModalStore.getState().openModal({
+                    badge: "PRO MAX",
+                    title: "Unlock AI Cover Letter Studio",
+                    description:
+                      "AI Cover Letter Studio is exclusively available for Pro Max members. Upgrade to Pro Max to generate unlimited tailored cover letters.",
+                  });
+                }}
+                className="w-full sm:w-auto bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-sm h-11 px-8 rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Upgrade to Pro Max
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/dashboard/pricing")}
+                className="w-full sm:w-auto border-slate-300 text-slate-800 hover:bg-slate-50 font-bold text-sm h-11 px-6 rounded-xl cursor-pointer"
+              >
+                View Plans &amp; Pricing
+              </Button>
+            </div>
+          </Card>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Form: Inputs & Configuration */}
           <Card className="lg:col-span-5 bg-white border-slate-200 shadow-sm rounded-2xl overflow-hidden">
@@ -505,6 +575,7 @@ function CoverLetterContent() {
             </div>
           </Card>
         </div>
+        )}
       </main>
     </div>
   );

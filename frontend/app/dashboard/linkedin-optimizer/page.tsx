@@ -29,11 +29,14 @@ import {
   ChevronUp,
   Target,
   Building2,
-  Share2
+  Share2,
+  Lock
 } from "lucide-react";
 import { LinkedInIcon } from "@/components/icons/LinkedInIcon";
 import { toast } from "react-hot-toast";
 import { LinkedInOptimizerSkeleton } from "@/components/SkeletonShimmer";
+import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
+import { isOwnerEmail } from "@/types";
 
 interface HeadlineItem {
   style: string;
@@ -73,6 +76,7 @@ interface LinkedInPack {
 export default function LinkedInOptimizerPage() {
   const router = useRouter();
   const [loadingUser, setLoadingUser] = useState(true);
+  const [isAllowed, setIsAllowed] = useState(false);
 
   // Step state (1: Add LinkedIn Profile URL, 2: Add Jobs)
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
@@ -104,6 +108,21 @@ export default function LinkedInOptimizerPage() {
           router.push("/auth/login?redirect=/dashboard/linkedin-optimizer");
           return;
         }
+
+        // Check Pro Max access
+        let allowed = false;
+        try {
+          const credRes = await fetch("/api/credits");
+          if (credRes.ok) {
+            const credData = await credRes.json();
+            allowed = credData.isOwner || (credData.planId === "promax" && !credData.isFirst50);
+          }
+        } catch (e) {}
+
+        if (!allowed && user.email && isOwnerEmail(user.email)) {
+          allowed = true;
+        }
+        setIsAllowed(allowed);
 
         const res = await fetch("/api/resumes");
         if (res.ok) {
@@ -149,6 +168,17 @@ export default function LinkedInOptimizerPage() {
 
   const handleScan = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+
+    if (!isAllowed) {
+      toast.error("LinkedIn Profile Optimizer is exclusively available for Pro Max members.");
+      useUpgradeModalStore.getState().openModal({
+        badge: "PRO MAX",
+        title: "Unlock LinkedIn Profile Optimizer",
+        description:
+          "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
+      });
+      return;
+    }
 
     if (inputMethod === "url" && !linkedinUrl.trim()) {
       toast.error("Please enter your LinkedIn profile URL.");
@@ -249,7 +279,48 @@ export default function LinkedInOptimizerPage() {
           </div>
         </div>
 
-        {/* 2-Step Interactive Wizard Form */}
+        {/* 2-Step Interactive Wizard Form / Pro Max Locked Gate */}
+        {!isAllowed ? (
+          <Card className="bg-white border-slate-200 shadow-sm rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6">
+            <div className="h-16 w-16 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#087F6E] mx-auto shadow-xs">
+              <Lock className="h-8 w-8" />
+            </div>
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-black uppercase tracking-wider">
+                Pro Max Exclusive Feature
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Unlock LinkedIn Profile Optimizer
+              </h2>
+              <p className="text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                LinkedIn Profile Optimizer is exclusively available for Pro Max members. Rank #1 in recruiter searches, write magnetic All-Star headlines &amp; bios, and pinpoint keyword gaps tailored to your target job.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button
+                onClick={() => {
+                  useUpgradeModalStore.getState().openModal({
+                    badge: "PRO MAX",
+                    title: "Unlock LinkedIn Profile Optimizer",
+                    description:
+                      "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
+                  });
+                }}
+                className="w-full sm:w-auto bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-sm h-11 px-8 rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Upgrade to Pro Max
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/dashboard/pricing")}
+                className="w-full sm:w-auto border-slate-300 text-slate-800 hover:bg-slate-50 font-bold text-sm h-11 px-6 rounded-xl cursor-pointer"
+              >
+                View Plans &amp; Pricing
+              </Button>
+            </div>
+          </Card>
+        ) : (
         <Card className="bg-white border-slate-200 shadow-sm rounded-3xl overflow-hidden">
           {/* Step Selector Header Tabs */}
           <div className="grid grid-cols-2 border-b border-slate-200 bg-slate-50/70 select-none">
@@ -510,6 +581,7 @@ export default function LinkedInOptimizerPage() {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* RESULTS WORKSPACE (Jobscan Match Diagnostic) */}
         {pack && (

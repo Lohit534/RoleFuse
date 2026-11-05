@@ -458,15 +458,34 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                           </button>
 
                           <button
-                            onClick={() => handleProtectedNavigate("/dashboard/cover-letter")}
+                            onClick={() => {
+                              if (!isOwner && !isProMax) {
+                                setActiveMenu(null);
+                                useUpgradeModalStore.getState().openModal({
+                                  badge: "PRO MAX",
+                                  title: "Unlock AI Cover Letter Studio",
+                                  description:
+                                    "AI Cover Letter Studio is exclusively available for Pro Max members. Upgrade to Pro Max to generate unlimited tailored cover letters.",
+                                });
+                                return;
+                              }
+                              handleProtectedNavigate("/dashboard/cover-letter");
+                            }}
                             className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
                           >
                             <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
                               <FileCheck className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                AI Cover Letter Studio
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                  AI Cover Letter Studio
+                                </span>
+                                {!isOwner && !isProMax && (
+                                  <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
+                                    PRO
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
                                 One-click personalized tailored letters.
@@ -492,15 +511,34 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                           </button>
 
                           <button
-                            onClick={() => handleProtectedNavigate("/dashboard/linkedin-optimizer")}
+                            onClick={() => {
+                              if (!isOwner && !isProMax) {
+                                setActiveMenu(null);
+                                useUpgradeModalStore.getState().openModal({
+                                  badge: "PRO MAX",
+                                  title: "Unlock LinkedIn Profile Optimizer",
+                                  description:
+                                    "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
+                                });
+                                return;
+                              }
+                              handleProtectedNavigate("/dashboard/linkedin-optimizer");
+                            }}
                             className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
                           >
                             <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
                               <LinkedInIcon className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                LinkedIn Profile Optimizer
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                  LinkedIn Profile Optimizer
+                                </span>
+                                {!isOwner && !isProMax && (
+                                  <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
+                                    PRO
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
                                 Headlines, All-Star bio &amp; recruiter SEO.
