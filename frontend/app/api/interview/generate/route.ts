@@ -25,6 +25,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { getAdminClient } = await import("@/lib/supabase/admin");
+    const { isOwnerEmail } = await import("@/types");
+    const admin = getAdminClient();
+    const isOwner = isOwnerEmail(user.email);
+    const activeUserId = user.id;
+
+    if (!isOwner) {
+      const { data: userRow } = await admin
+        .from("User")
+        .select("planTier")
+        .eq("id", activeUserId)
+        .maybeSingle();
+
+      const { data: creditRow } = await admin
+        .from("Credit")
+        .select("*")
+        .eq("userId", activeUserId)
+        .maybeSingle();
+
+      const isProMax =
+        userRow?.planTier === "promax" ||
+        creditRow?.planId === "promax" ||
+        creditRow?.billingCycle === "admin_promax" ||
+        (creditRow?.paidCredits && creditRow.paidCredits >= 900000) ||
+        (creditRow?.paidCredits && creditRow.paidCredits >= 90);
+
+      if (!isProMax) {
+        return NextResponse.json(
+          { error: "AI Mock Interview Coach is exclusively available for Pro Max members. Please upgrade to Pro Max to access." },
+          { status: 403 }
+        );
+      }
+    }
+
     const body = await request.json();
     const { resumeText, jobDescription, jobTitle, company } = body;
 

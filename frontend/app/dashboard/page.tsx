@@ -1461,20 +1461,13 @@ export default function DashboardPage() {
                 href="/dashboard/cover-letter"
                 className="bg-white hover:bg-teal-50/50 border border-slate-200 hover:border-teal-300 rounded-2xl p-4 transition-all shadow-xs group cursor-pointer"
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                      Cover Letter Studio
-                    </span>
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <FileText className="h-4 w-4" />
                   </div>
-                  {!isOwner && userPlan !== "promax" && (
-                    <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
-                      PRO MAX
-                    </span>
-                  )}
+                  <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
+                    Cover Letter Studio
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-normal">
                   Draft a personalized, high-converting letter tailored to this JD.
@@ -1483,13 +1476,40 @@ export default function DashboardPage() {
 
               <Link
                 href="/dashboard/mock-interview"
-                className="bg-white hover:bg-teal-50/50 border border-slate-200 hover:border-teal-300 rounded-2xl p-4 transition-all shadow-xs group cursor-pointer"
+                onClick={(e: React.MouseEvent) => {
+                  if (!isOwner && userPlan !== "promax") {
+                    e.preventDefault();
+                    useUpgradeModalStore.getState().openModal({
+                      badge: "MAX",
+                      title: "Unlock AI Mock Interview Coach",
+                      description: "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
+                    });
+                  }
+                }}
+                className={`relative rounded-2xl p-4 transition-all shadow-xs border ${
+                  !isOwner && userPlan !== "promax"
+                    ? "bg-slate-50/40 border-slate-200/50 opacity-50 cursor-pointer"
+                    : "bg-white hover:bg-teal-50/50 border-slate-200 hover:border-teal-300 group cursor-pointer"
+                }`}
               >
-                <div className="flex items-center gap-2.5 mb-1.5">
-                  <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
+                {!isOwner && userPlan !== "promax" && (
+                  <span className="absolute top-3.5 right-3.5 text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal">
+                    MAX
+                  </span>
+                )}
+                <div className="flex items-center gap-2.5 mb-1.5 pr-16">
+                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center transition-transform ${
+                    !isOwner && userPlan !== "promax"
+                      ? "bg-slate-100 text-slate-400"
+                      : "bg-teal-50 text-[#087F6E] group-hover:scale-105"
+                  }`}>
                     <Target className="h-4 w-4" />
                   </div>
-                  <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
+                  <span className={`font-extrabold text-xs transition-colors ${
+                    !isOwner && userPlan !== "promax"
+                      ? "text-slate-700"
+                      : "text-slate-900 group-hover:text-[#087F6E]"
+                  }`}>
                     Mock Interview Simulator
                   </span>
                 </div>
@@ -1500,22 +1520,42 @@ export default function DashboardPage() {
 
               <Link
                 href="/dashboard/linkedin-optimizer"
-                className="bg-white hover:bg-teal-50/50 border border-slate-200 hover:border-teal-300 rounded-2xl p-4 transition-all shadow-xs group cursor-pointer"
+                onClick={(e: React.MouseEvent) => {
+                  if (!isOwner && userPlan !== "promax") {
+                    e.preventDefault();
+                    useUpgradeModalStore.getState().openModal({
+                      badge: "MAX",
+                      title: "Unlock LinkedIn Profile Optimizer",
+                      description: "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
+                    });
+                  }
+                }}
+                className={`relative rounded-2xl p-4 transition-all shadow-xs border ${
+                  !isOwner && userPlan !== "promax"
+                    ? "bg-slate-50/40 border-slate-200/50 opacity-50 cursor-pointer"
+                    : "bg-white hover:bg-teal-50/50 border-slate-200 hover:border-teal-300 group cursor-pointer"
+                }`}
               >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <LinkedInIcon className="h-4 w-4" />
-                    </div>
-                    <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                      LinkedIn Optimizer
-                    </span>
+                {!isOwner && userPlan !== "promax" && (
+                  <span className="absolute top-3.5 right-3.5 text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal">
+                    MAX
+                  </span>
+                )}
+                <div className="flex items-center gap-2.5 mb-1.5 pr-16">
+                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center transition-transform ${
+                    !isOwner && userPlan !== "promax"
+                      ? "bg-slate-100 text-slate-400"
+                      : "bg-teal-50 text-[#087F6E] group-hover:scale-105"
+                  }`}>
+                    <LinkedInIcon className="h-4 w-4" />
                   </div>
-                  {!isOwner && userPlan !== "promax" && (
-                    <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
-                      PRO MAX
-                    </span>
-                  )}
+                  <span className={`font-extrabold text-xs transition-colors ${
+                    !isOwner && userPlan !== "promax"
+                      ? "text-slate-700"
+                      : "text-slate-900 group-hover:text-[#087F6E]"
+                  }`}>
+                    LinkedIn Optimizer
+                  </span>
                 </div>
                 <p className="text-[11px] text-slate-500 leading-normal">
                   Rank #1 in recruiter searches with optimized headlines and bio.
@@ -1566,7 +1606,7 @@ export default function DashboardPage() {
                         <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
                           Skills Learning Roadmap
                           {userPlan === "free" && (
-                            <span className="bg-[#0d6e5a] text-[9px] text-white px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                            <span className="text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal inline-flex items-center">
                               PRO
                             </span>
                           )}
@@ -1831,24 +1871,63 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* CTA Button */}
-            <div className="flex justify-center pt-2">
+            {/* CTA Button & Available Scans */}
+            <div className="w-full flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 pt-2">
+              {/* Available Scans (Left Side - Kept exactly as earlier) */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 h-10 bg-slate-50/90 border border-slate-200/80 rounded-md text-xs font-medium text-slate-600 select-none">
+                <span>
+                  Available scans:{" "}
+                  <strong className="font-semibold text-slate-900">
+                    {isOwner
+                      ? "∞"
+                      : userPlan === "free"
+                      ? (userCredits?.freeRemaining ?? 2)
+                      : (userCredits?.paidCredits ?? userCredits?.freeRemaining ?? 0)}
+                  </strong>
+                </span>
+                {!isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      useUpgradeModalStore.getState().openModal({
+                        badge: userPlan === "free" ? "PRO" : "MAX",
+                        title: userPlan === "free" ? "Upgrade to Premium Pro" : "Upgrade to Pro Max",
+                        description: "Get more AI resume optimizations, unlimited downloads, and full access to RoleFuse career tools.",
+                      });
+                    }}
+                    className="text-[#087F6E] hover:text-[#065F53] font-semibold no-underline hover:no-underline ml-1 cursor-pointer transition-colors"
+                  >
+                    Upgrade
+                  </button>
+                )}
+              </div>
+
+              {/* Optimize My Resume (Right Side - Matching Border & Corner Radius with Available Scans) */}
               <button
                 onClick={handleOptimize}
-                disabled={optimizing || isPrechecking}
-                className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#075E53] active:scale-98 text-white px-12 py-3.5 text-sm sm:text-base font-bold flex items-center justify-center gap-2.5 rounded-md shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                disabled={!resumeText?.trim() || !jobDescription?.trim() || optimizing || isPrechecking}
+                title={
+                  !resumeText?.trim() || !jobDescription?.trim()
+                    ? "Enter both resume and job description to enable optimization"
+                    : "Optimize My Resume"
+                }
+                className={`w-full sm:w-auto h-10 px-7 sm:px-8 py-2 rounded-md text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all duration-200 ${
+                  !resumeText?.trim() || !jobDescription?.trim()
+                    ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60 shadow-none select-none"
+                    : "bg-[#087F6E] hover:bg-[#065F53] active:scale-98 text-white border border-[#087F6E] shadow-xs hover:shadow cursor-pointer"
+                }`}
               >
                 {optimizing ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Optimizing Resume...
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-white" /> Optimizing Resume...
                   </>
                 ) : isPrechecking ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Analyzing Resume &amp; Missing Metrics...
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-white" /> Analyzing Resume &amp; Missing Metrics...
                   </>
                 ) : (
                   <>
-                    <GeminiIcon className="h-5 w-5 text-white" />
+                    <GeminiIcon className={`h-4 w-4 ${resumeText?.trim() && jobDescription?.trim() ? "text-white" : "text-slate-400"}`} />
                     <span>Optimize My Resume</span>
                   </>
                 )}
@@ -1931,24 +2010,42 @@ export default function DashboardPage() {
                 </Link>
 
                 {/* 2. LinkedIn Report */}
-                <div className="group relative bg-white border border-[#DCE7E9] hover:border-[#0077B5]/50 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                <div className={`relative rounded-2xl p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between border ${
+                  !isOwner && userPlan !== "promax"
+                    ? "bg-slate-50/40 border-slate-200/50 opacity-50 cursor-pointer"
+                    : "bg-white border-[#DCE7E9] hover:border-[#0077B5]/50 group hover:shadow-md cursor-pointer"
+                }`}>
+                  {!isOwner && userPlan !== "promax" && (
+                    <span className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal z-10">
+                      MAX
+                    </span>
+                  )}
                   <div className="space-y-3">
                     {/* Header with authentic LinkedIn Blue icon */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between pr-16">
                       <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 rounded flex items-center justify-center text-[#0077B5]">
+                        <div className={`h-6 w-6 rounded flex items-center justify-center ${
+                          !isOwner && userPlan !== "promax" ? "bg-slate-100 text-slate-400" : "text-[#0077B5]"
+                        }`}>
                           <LinkedInIcon className="h-5 w-5" />
                         </div>
                         <h3 className="text-xs sm:text-sm font-bold text-[#111827]">
                           LinkedIn Report
                         </h3>
-                        {!isOwner && userPlan !== "promax" && (
-                          <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider ml-1">
-                            PRO MAX
-                          </span>
-                        )}
                       </div>
-                      <Link href="/dashboard/linkedin-optimizer">
+                      <Link
+                        href="/dashboard/linkedin-optimizer"
+                        onClick={(e: React.MouseEvent) => {
+                          if (!isOwner && userPlan !== "promax") {
+                            e.preventDefault();
+                            useUpgradeModalStore.getState().openModal({
+                              badge: "MAX",
+                              title: "Unlock LinkedIn Profile Optimizer",
+                              description: "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
+                            });
+                          }
+                        }}
+                      >
                         <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#0077B5] group-hover:translate-x-0.5 transition-all cursor-pointer" />
                       </Link>
                     </div>
@@ -1961,7 +2058,20 @@ export default function DashboardPage() {
 
                   {/* Action button in authentic style */}
                   <div className="pt-4">
-                    <Link href="/dashboard/linkedin-optimizer" className="inline-block">
+                    <Link
+                      href="/dashboard/linkedin-optimizer"
+                      onClick={(e: React.MouseEvent) => {
+                        if (!isOwner && userPlan !== "promax") {
+                          e.preventDefault();
+                          useUpgradeModalStore.getState().openModal({
+                            badge: "MAX",
+                            title: "Unlock LinkedIn Profile Optimizer",
+                            description: "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
+                          });
+                        }
+                      }}
+                      className="inline-block"
+                    >
                       <Button
                         variant="outline"
                         className="h-8 text-xs font-bold text-slate-800 border-slate-300 hover:border-[#0077B5] hover:text-[#0077B5] hover:bg-sky-50/40 rounded-lg shadow-xs transition-colors cursor-pointer"
@@ -2048,7 +2158,7 @@ export default function DashboardPage() {
                 <Shield className="h-3.5 w-3.5 text-slate-700 shrink-0" /> No data sold
               </span>
               <span className="flex items-center gap-1.5">
-                <Zap className="h-3.5 w-3.5 text-slate-700 shrink-0" /> ~ 30s results
+                <GeminiIcon className="h-3.5 w-3.5 text-slate-700 shrink-0" /> ~ 30s results
               </span>
               <span className="flex items-center gap-1.5">
                 <Target className="h-3.5 w-3.5 text-slate-700 shrink-0" /> ATS Tested

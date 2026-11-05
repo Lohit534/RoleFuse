@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     const admin = getAdminClient();
     const isOwner = isOwnerEmail(user.email);
     const activeUserId = user.id;
+    let userCreditRow: any = null;
 
     if (!isOwner) {
       const { data: userRow } = await admin
@@ -44,14 +45,27 @@ export async function POST(request: NextRequest) {
         .eq("userId", activeUserId)
         .maybeSingle();
 
+      userCreditRow = creditRow;
+
       const isProMax =
         userRow?.planTier === "promax" ||
         creditRow?.planId === "promax" ||
-        (creditRow?.paidCredits && creditRow.paidCredits >= 900000);
+        creditRow?.billingCycle === "admin_promax" ||
+        (creditRow?.paidCredits && creditRow.paidCredits >= 900000) ||
+        (creditRow?.paidCredits && creditRow.paidCredits >= 90);
 
       if (!isProMax) {
         return NextResponse.json(
-          { error: "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Please upgrade to Pro Max to access." },
+          { error: "LinkedIn Profile Optimizer is exclusively available for Pro Max members (90 credits pool). Please upgrade to Pro Max to access." },
+          { status: 403 }
+        );
+      }
+
+      // Credit-wise check on 90 credits pool
+      const currentCredits = creditRow?.paidCredits ?? 0;
+      if (currentCredits <= 0) {
+        return NextResponse.json(
+          { error: "You have 0 credits remaining in your 90 credits pool. Please renew or upgrade your credits to continue using LinkedIn Profile Optimizer." },
           { status: 403 }
         );
       }
@@ -84,9 +98,27 @@ export async function POST(request: NextRequest) {
     const rawResponse = await callAIText(prompt);
     const parsedData = extractJSON(rawResponse);
 
+    // Deduct 1 credit for non-owner Pro Max users
+    let remainingCredits: number | null = null;
+    if (!isOwner && userCreditRow) {
+      try {
+        const currentPaid = userCreditRow.paidCredits ?? 0;
+        const newPaidCredits = Math.max(0, currentPaid - 1);
+        await admin
+          .from("Credit")
+          .update({ paidCredits: newPaidCredits })
+          .eq("userId", activeUserId);
+        remainingCredits = newPaidCredits;
+        logger.info(`[linkedin-optimize] Deducted 1 credit for ${user.email}. Remaining credits: ${newPaidCredits}`);
+      } catch (deductErr: any) {
+        logger.error("[linkedin-optimize] Failed to deduct credit:", deductErr.message);
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      data: parsedData
+      data: parsedData,
+      remainingCredits
     });
   } catch (error: any) {
     logger.error("[linkedin-optimize] API error:", error?.message);

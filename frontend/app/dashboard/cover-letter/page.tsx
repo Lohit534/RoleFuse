@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
+import { COMPANY_OPTIONS, IT_ROLE_OPTIONS } from "@/lib/constants/career-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +46,8 @@ function CoverLetterContent() {
 
   const [loadingUser, setLoadingUser] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [isAllowed, setIsAllowed] = useState(false);
+  const [userPlan, setUserPlan] = useState<"free" | "premium" | "promax">("free");
+  const [isAllowed, setIsAllowed] = useState(true);
 
   // Form states
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
@@ -73,20 +75,37 @@ function CoverLetterContent() {
         }
         setUser(user);
 
-        // Check Pro Max access
-        let allowed = false;
+        // Check plan access & remaining credits
+        let allowed = true;
+        let plan: "free" | "premium" | "promax" = "free";
         try {
           const credRes = await fetch("/api/credits");
           if (credRes.ok) {
             const credData = await credRes.json();
-            allowed = credData.isOwner || (credData.planId === "promax" && !credData.isFirst50);
+            const isOwner = credData.isOwner || (user.email && isOwnerEmail(user.email));
+            const isProMax = credData.planId === "promax";
+            const isPro = credData.planId === "premium" || credData.isFirst50 || (credData.paidCredits > 0);
+
+            if (isOwner || isProMax) {
+              plan = "promax";
+              allowed = true;
+            } else if (isPro) {
+              plan = "premium";
+              allowed = true; // Pro users always have access (5 letters/month)
+            } else {
+              plan = "free";
+              // Free tier gets 1 sample letter
+              const freeUsed = credData.freeUsed ?? 0;
+              allowed = freeUsed < 1;
+            }
           }
         } catch (e) {}
 
-        if (!allowed && user.email && isOwnerEmail(user.email)) {
+        if (user.email && isOwnerEmail(user.email)) {
           allowed = true;
         }
         setIsAllowed(allowed);
+        setUserPlan(plan);
 
         // Populate from Chrome Extension query parameters if present
         const queryTitle = searchParams.get("title");
@@ -109,17 +128,7 @@ function CoverLetterContent() {
           if (list.length > 0) {
             setSelectedResumeId(list[0].id);
             setResumeText(list[0].content || JSON.stringify(list[0].resumeJSON || ""));
-            // Only auto-fill real target role if it's not a resume document name (e.g. "Lohith Peyyala's Resume")
-            if (list[0].jobTitle && !queryTitle) {
-              const isDocName = /resume|cv/i.test(list[0].jobTitle) || list[0].jobTitle.includes("'s");
-              if (!isDocName) setJobTitle(list[0].jobTitle);
-            }
-            // Only auto-fill company if not generic fallback
-            if (list[0].company && !queryCompany) {
-              if (list[0].company.toLowerCase() !== "general application") {
-                setCompany(list[0].company);
-              }
-            }
+            // User manually selects from dropdown or types company & role
           }
         }
       } catch (err) {
@@ -137,13 +146,6 @@ function CoverLetterContent() {
     const found = savedResumes.find(r => r.id === id);
     if (found) {
       setResumeText(found.content || JSON.stringify(found.resumeJSON || ""));
-      if (found.jobTitle && !jobTitle) {
-        const isDocName = /resume|cv/i.test(found.jobTitle) || found.jobTitle.includes("'s");
-        if (!isDocName) setJobTitle(found.jobTitle);
-      }
-      if (found.company && !company && found.company.toLowerCase() !== "general application") {
-        setCompany(found.company);
-      }
     }
   };
 
@@ -151,12 +153,12 @@ function CoverLetterContent() {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAllowed) {
-      toast.error("AI Cover Letter Studio is exclusively available for Pro Max members.");
+      toast.error("You have used your 1 free sample. Please upgrade to continue.");
       useUpgradeModalStore.getState().openModal({
-        badge: "PRO MAX",
-        title: "Unlock AI Cover Letter Studio",
+        badge: "PRO",
+        title: "Upgrade to Premium Pro",
         description:
-          "AI Cover Letter Studio is exclusively available for Pro Max members. Upgrade to Pro Max to generate unlimited tailored cover letters.",
+          "You have used your 1 free sample cover letter. Upgrade to Premium Pro to generate 5 tailored cover letters per month, or Pro Max for 15 per month.",
       });
       return;
     }
@@ -185,6 +187,13 @@ function CoverLetterContent() {
 
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 403) {
+          useUpgradeModalStore.getState().openModal({
+            badge: userPlan === "free" ? "PRO" : "MAX",
+            title: userPlan === "free" ? "Upgrade to Premium Pro" : "Upgrade to Pro Max",
+            description: data.error || "Upgrade your plan to generate more tailored cover letters.",
+          });
+        }
         throw new Error(data.error || "Failed to generate cover letter");
       }
 
@@ -295,7 +304,7 @@ function CoverLetterContent() {
           </div>
         </div>
 
-        {/* Studio 2-Column Grid / Pro Max Locked Gate */}
+        {/* Studio 2-Column Grid / Free User Limit Gate */}
         {!isAllowed ? (
           <Card className="bg-white border-slate-200 shadow-sm rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6">
             <div className="h-16 w-16 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#087F6E] mx-auto shadow-xs">
@@ -303,29 +312,29 @@ function CoverLetterContent() {
             </div>
             <div className="space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-black uppercase tracking-wider">
-                Pro Max Exclusive Feature
+                Free Plan Limit Reached
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                Unlock AI Cover Letter Studio
+                Free Cover Letter Sample Used
               </h2>
               <p className="text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
-                AI Cover Letter Studio is exclusively available for Pro Max members. Generate tailored, high-converting cover letters matching your resume and JD in seconds across 4 professional writing tones.
+                You have used your 1 free sample cover letter. Upgrade to Premium Pro (5 letters/month) or Pro Max (15 letters/month) to continue generating tailored, high-converting cover letters across 4 writing styles.
               </p>
             </div>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Button
                 onClick={() => {
                   useUpgradeModalStore.getState().openModal({
-                    badge: "PRO MAX",
-                    title: "Unlock AI Cover Letter Studio",
+                    badge: "PRO",
+                    title: "Upgrade to Premium Pro",
                     description:
-                      "AI Cover Letter Studio is exclusively available for Pro Max members. Upgrade to Pro Max to generate unlimited tailored cover letters.",
+                      "Get 5 AI tailored cover letters per month, 20 AI resume optimizations, and unlimited PDF downloads.",
                   });
                 }}
                 className="w-full sm:w-auto bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-sm h-11 px-8 rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 <Zap className="h-4 w-4 mr-2" />
-                Upgrade to Pro Max
+                Upgrade to Pro (₹99/mo)
               </Button>
               <Button
                 variant="outline"
@@ -381,29 +390,70 @@ function CoverLetterContent() {
                   )}
                 </div>
 
-                {/* 2. Target Company & Job Title */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* 2. Target Company & Job Title (Dropdown + Manual Type) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                      <Building2 className="h-3 w-3 text-slate-400" /> Company
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                        <Building2 className="h-3 w-3 text-slate-400" /> Company
+                      </label>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) setCompany(e.target.value);
+                        }}
+                        className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
+                      >
+                        <option value="" disabled>Select company ▾</option>
+                        {COMPANY_OPTIONS.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
                     <Input
-                      placeholder="e.g. Stripe, Google"
+                      list="cl-company-options"
+                      placeholder="Type or select company (e.g. Google)..."
                       value={company}
                       onChange={(e) => setCompany(e.target.value)}
                       className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
                     />
+                    <datalist id="cl-company-options">
+                      {COMPANY_OPTIONS.map((c) => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
                   </div>
+
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                      <Briefcase className="h-3 w-3 text-slate-400" /> Target Role
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                        <Briefcase className="h-3 w-3 text-slate-400" /> Target Role
+                      </label>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) setJobTitle(e.target.value);
+                        }}
+                        className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
+                      >
+                        <option value="" disabled>Select IT role ▾</option>
+                        {IT_ROLE_OPTIONS.map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                    </div>
                     <Input
-                      placeholder="e.g. Lead Frontend Engineer"
+                      list="cl-role-options"
+                      placeholder="Type or select IT role (e.g. Software Engineer)..."
                       value={jobTitle}
                       onChange={(e) => setJobTitle(e.target.value)}
                       className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
                     />
+                    <datalist id="cl-role-options">
+                      {IT_ROLE_OPTIONS.map((r) => (
+                        <option key={r} value={r} />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
 

@@ -38,6 +38,7 @@ import {
   Star,
 } from "lucide-react";
 import { LinkedInIcon } from "@/components/icons/LinkedInIcon";
+import { GeminiIcon } from "@/components/icons/GeminiIcon";
 import { CreditInfo } from "@/types";
 import { toast } from "react-hot-toast";
 import SupportChatbot from "@/components/SupportChatbot";
@@ -271,11 +272,28 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
   // Nav links definitions for dashboard internal view
   const dashboardLinks = [
-    { label: "Optimize", href: "/dashboard", icon: <Compass className="h-4 w-4" /> },
+    { label: "Optimize", href: "/dashboard", icon: <GeminiIcon className="h-4 w-4" /> },
     { label: "Resumes", href: "/dashboard/resumes", icon: <FileText className="h-4 w-4" /> },
     { label: "Job Tracker", href: "/dashboard/job-tracker", icon: <Briefcase className="h-4 w-4" /> },
     { label: "History", href: "/dashboard/history", icon: <History className="h-4 w-4" /> },
     { label: "Pricing", href: "/dashboard/pricing", icon: <DollarSign className="h-4 w-4" /> },
+    {
+      label: "LinkedIn Optimizer",
+      href: "/dashboard/linkedin-optimizer",
+      icon: <LinkedInIcon className="h-4 w-4" />,
+      badge: "MAX",
+    },
+    {
+      label: "Cover Letter Studio",
+      href: "/dashboard/cover-letter",
+      icon: <FileText className="h-4 w-4" />,
+    },
+    {
+      label: "AI Coach",
+      href: "/dashboard/mock-interview",
+      icon: <Target className="h-4 w-4" />,
+      badge: "MAX",
+    },
   ];
 
   // Calculations for credit percentage and plan
@@ -338,27 +356,45 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
               {/* Inside Dashboard: Direct subpage tabs */}
               {isDashboardSubpage && user && !hideNav && (
-                <div className="hidden md:flex items-center gap-1 h-16 ml-1">
+                <div className="hidden md:flex items-center gap-1 h-16 ml-1 overflow-x-auto no-scrollbar">
                   {dashboardLinks.map((link) => {
                     const isActive = pathname === link.href;
                     return (
                       <Link
                         key={link.label}
                         href={link.href}
-                        onClick={() => {
+                        onClick={(e: React.MouseEvent) => {
+                          if (link.badge && !isOwner && !isProMax) {
+                            e.preventDefault();
+                            useUpgradeModalStore.getState().openModal({
+                              badge: "PRO MAX",
+                              title: `Unlock ${link.label}`,
+                              description: `${link.label} is exclusively available for Pro Max members. Upgrade to Pro Max to get full access.`,
+                            });
+                            return;
+                          }
                           if (link.href === "/dashboard" && typeof window !== "undefined") {
                             window.dispatchEvent(new CustomEvent("open-optimize-editor"));
                           }
                         }}
-                        className={`relative flex items-center h-full px-3 text-sm font-semibold transition-colors select-none ${
-                          isActive
+                        className={`relative flex items-center h-full px-2.5 lg:px-3 text-sm font-semibold select-none whitespace-nowrap shrink-0 ${
+                          link.badge && !isOwner && !isProMax
+                            ? "text-slate-400 opacity-60 cursor-pointer"
+                            : isActive
                             ? "text-[#111827] font-bold"
-                            : "text-[#526176] hover:text-[#111827]"
+                            : "text-[#526176] hover:text-[#111827] transition-colors"
                         }`}
                       >
-                        {link.label}
+                        <span className="inline-flex items-center gap-1.5">
+                          <span>{link.label}</span>
+                          {link.badge && !isOwner && !isProMax && (
+                            <span className="text-[9px] font-bold text-slate-700 bg-slate-100 border border-slate-200/90 px-1.5 py-0.5 rounded-full tracking-normal leading-none inline-flex items-center">
+                              {link.badge}
+                            </span>
+                          )}
+                        </span>
                         {isActive && (
-                          <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#087F6E] rounded-full" />
+                          <span className="absolute bottom-0 left-2.5 right-2.5 lg:left-3 lg:right-3 h-[2px] bg-[#087F6E] rounded-full" />
                         )}
                       </Link>
                     );
@@ -458,34 +494,15 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                           </button>
 
                           <button
-                            onClick={() => {
-                              if (!isOwner && !isProMax) {
-                                setActiveMenu(null);
-                                useUpgradeModalStore.getState().openModal({
-                                  badge: "PRO MAX",
-                                  title: "Unlock AI Cover Letter Studio",
-                                  description:
-                                    "AI Cover Letter Studio is exclusively available for Pro Max members. Upgrade to Pro Max to generate unlimited tailored cover letters.",
-                                });
-                                return;
-                              }
-                              handleProtectedNavigate("/dashboard/cover-letter");
-                            }}
+                            onClick={() => handleProtectedNavigate("/dashboard/cover-letter")}
                             className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
                           >
                             <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
                               <FileCheck className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1.5">
-                                <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                  AI Cover Letter Studio
-                                </span>
-                                {!isOwner && !isProMax && (
-                                  <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
-                                    PRO MAX
-                                  </span>
-                                )}
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                AI Cover Letter Studio
                               </div>
                               <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
                                 One-click personalized tailored letters.
@@ -494,15 +511,34 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                           </button>
 
                           <button
-                            onClick={() => handleProtectedNavigate("/dashboard/mock-interview")}
+                            onClick={() => {
+                              if (!isOwner && !isProMax) {
+                                setActiveMenu(null);
+                                useUpgradeModalStore.getState().openModal({
+                                  badge: "PRO MAX",
+                                  title: "Unlock AI Mock Interview Coach",
+                                  description:
+                                    "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
+                                });
+                                return;
+                              }
+                              handleProtectedNavigate("/dashboard/mock-interview");
+                            }}
                             className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
                           >
                             <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
                               <Target className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                AI Mock Interview Coach
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                  AI Mock Interview Coach
+                                </span>
+                                {!isOwner && !isProMax && (
+                                  <span className="text-[10px] font-normal text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
+                                    MAX
+                                  </span>
+                                )}
                               </div>
                               <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
                                 Practice questions with STAR scoring.
@@ -515,7 +551,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                               if (!isOwner && !isProMax) {
                                 setActiveMenu(null);
                                 useUpgradeModalStore.getState().openModal({
-                                  badge: "PRO MAX",
+                                  badge: "MAX",
                                   title: "Unlock LinkedIn Profile Optimizer",
                                   description:
                                     "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
@@ -535,8 +571,8 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                                   LinkedIn Profile Optimizer
                                 </span>
                                 {!isOwner && !isProMax && (
-                                  <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
-                                    PRO MAX
+                                  <span className="text-[10px] font-normal text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
+                                    MAX
                                   </span>
                                 )}
                               </div>
@@ -1436,7 +1472,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <Zap className="h-5 w-5" />
+            <GeminiIcon className="h-5 w-5" />
             <span className="text-[10px] font-bold">Optimize</span>
           </Link>
           <Link

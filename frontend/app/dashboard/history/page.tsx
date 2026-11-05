@@ -1023,7 +1023,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                 <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
                   Skills Learning Roadmap
                   {userPlan === "free" && (
-                    <span className="bg-[#0d6e5a] text-[9px] text-white px-1.5 py-0.2 rounded font-black uppercase tracking-wider">PRO</span>
+                    <span className="text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal inline-flex items-center">PRO</span>
                   )}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">Select up to 3 skills to build a complete 90-day learning curriculum</p>
@@ -1678,7 +1678,6 @@ export default function HistoryPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

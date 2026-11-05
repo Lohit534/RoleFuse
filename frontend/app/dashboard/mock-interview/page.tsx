@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
+import { COMPANY_OPTIONS, IT_ROLE_OPTIONS } from "@/lib/constants/career-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,10 +27,13 @@ import {
   Star, 
   Layers, 
   Zap, 
-  RefreshCw 
+  RefreshCw,
+  Lock
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 import { MockInterviewSkeleton } from "@/components/SkeletonShimmer";
+import { isOwnerEmail } from "@/types";
 
 interface InterviewQuestion {
   id: string;
@@ -59,6 +63,7 @@ interface AnswerEvaluation {
 export default function MockInterviewPage() {
   const router = useRouter();
   const [loadingUser, setLoadingUser] = useState(true);
+  const [isAllowed, setIsAllowed] = useState(false);
 
   // Setup inputs
   const [savedResumes, setSavedResumes] = useState<any[]>([]);
@@ -91,6 +96,21 @@ export default function MockInterviewPage() {
           return;
         }
 
+        // Check Pro Max access
+        let allowed = false;
+        try {
+          const credRes = await fetch("/api/credits");
+          if (credRes.ok) {
+            const credData = await credRes.json();
+            allowed = credData.isOwner || (credData.planId === "promax" && !credData.isFirst50);
+          }
+        } catch (e) {}
+
+        if (!allowed && user.email && isOwnerEmail(user.email)) {
+          allowed = true;
+        }
+        setIsAllowed(allowed);
+
         const res = await fetch("/api/resumes");
         if (res.ok) {
           const data = await res.json();
@@ -99,8 +119,7 @@ export default function MockInterviewPage() {
           if (list.length > 0) {
             setSelectedResumeId(list[0].id);
             setResumeText(list[0].content || JSON.stringify(list[0].resumeJSON || ""));
-            if (list[0].jobTitle) setJobTitle(list[0].jobTitle);
-            if (list[0].company) setCompany(list[0].company);
+            // Keep company and job title empty so user manually selects or types
           }
         }
       } catch (err) {
@@ -117,13 +136,20 @@ export default function MockInterviewPage() {
     const found = savedResumes.find(r => r.id === id);
     if (found) {
       setResumeText(found.content || JSON.stringify(found.resumeJSON || ""));
-      if (found.jobTitle && !jobTitle) setJobTitle(found.jobTitle);
-      if (found.company && !company) setCompany(found.company);
     }
   };
 
   const handleGenerateQuestions = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAllowed) {
+      toast.error("AI Mock Interview Coach is exclusively available for Pro Max members.");
+      useUpgradeModalStore.getState().openModal({
+        badge: "MAX",
+        title: "Unlock AI Mock Interview Coach",
+        description: "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
+      });
+      return;
+    }
     if (!resumeText.trim()) {
       toast.error("Please supply your resume content.");
       return;
@@ -148,6 +174,13 @@ export default function MockInterviewPage() {
 
       const resData = await res.json();
       if (!res.ok) {
+        if (res.status === 403) {
+          useUpgradeModalStore.getState().openModal({
+            badge: "MAX",
+            title: "Unlock AI Mock Interview Coach",
+            description: "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
+          });
+        }
         throw new Error(resData.error || "Failed to generate interview questions");
       }
 
@@ -240,8 +273,51 @@ export default function MockInterviewPage() {
           )}
         </div>
 
-        {/* Input Parameters Section */}
-        <Card className="bg-white border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+        {/* Locked Pro Max Gate or Main Experience */}
+        {!isAllowed ? (
+          <Card className="bg-white border-slate-200 shadow-sm rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6">
+            <div className="h-16 w-16 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#087F6E] mx-auto shadow-xs">
+              <Lock className="h-8 w-8" />
+            </div>
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-black uppercase tracking-wider">
+                Pro Max Exclusive Feature
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Unlock AI Mock Interview Coach
+              </h2>
+              <p className="text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
+                AI Mock Interview Coach is exclusively available for Pro Max members. Simulate role-specific behavioral, technical, and situational loops with real-time STAR rubric scoring and model answers.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button
+                onClick={() => {
+                  useUpgradeModalStore.getState().openModal({
+                    badge: "MAX",
+                    title: "Unlock AI Mock Interview Coach",
+                    description:
+                      "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
+                  });
+                }}
+                className="w-full sm:w-auto bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-sm h-11 px-8 rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Upgrade to Pro Max
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/dashboard/pricing")}
+                className="w-full sm:w-auto border-slate-300 text-slate-800 hover:bg-slate-50 font-bold text-sm h-11 px-6 rounded-xl cursor-pointer"
+              >
+                View Plans &amp; Pricing
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <>
+            {/* Input Parameters Section */}
+            <Card className="bg-white border-slate-200 shadow-sm rounded-2xl overflow-hidden">
           <CardContent className="p-5 sm:p-6 space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <Sparkles className="h-4 w-4 text-[#087F6E]" />
@@ -275,30 +351,70 @@ export default function MockInterviewPage() {
                   )}
                 </div>
 
-                {/* Company Name */}
+                {/* Company Name (Dropdown + Manual Type) */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    <Building2 className="h-3 w-3 text-slate-400" /> Company
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <Building2 className="h-3 w-3 text-slate-400" /> Company
+                    </label>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) setCompany(e.target.value);
+                      }}
+                      className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
+                    >
+                      <option value="" disabled>Select company ▾</option>
+                      {COMPANY_OPTIONS.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
                   <Input
-                    placeholder="e.g. Amazon, Databricks"
+                    list="mock-company-options"
+                    placeholder="Type or select company (e.g. Google)..."
                     value={company}
                     onChange={(e) => setCompany(e.target.value)}
                     className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
                   />
+                  <datalist id="mock-company-options">
+                    {COMPANY_OPTIONS.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
                 </div>
 
-                {/* Job Title */}
+                {/* Job Title / IT Roles (Dropdown + Manual Type) */}
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                    <Briefcase className="h-3 w-3 text-slate-400" /> Target Position
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                      <Briefcase className="h-3 w-3 text-slate-400" /> Target Role
+                    </label>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) setJobTitle(e.target.value);
+                      }}
+                      className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
+                    >
+                      <option value="" disabled>Select IT role ▾</option>
+                      {IT_ROLE_OPTIONS.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
                   <Input
-                    placeholder="e.g. Senior Software Engineer"
+                    list="mock-role-options"
+                    placeholder="Type or select IT role (e.g. Senior Software Engineer)..."
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
                     className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
                   />
+                  <datalist id="mock-role-options">
+                    {IT_ROLE_OPTIONS.map((r) => (
+                      <option key={r} value={r} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
 
@@ -542,6 +658,8 @@ export default function MockInterviewPage() {
               );
             })}
           </div>
+        )}
+          </>
         )}
       </main>
     </div>

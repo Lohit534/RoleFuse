@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     const admin = getAdminClient();
     const isOwner = isOwnerEmail(user.email);
     const activeUserId = user.id;
+    let userCreditRow: any = null;
 
     if (!isOwner) {
       const { data: userRow } = await admin
@@ -54,16 +55,33 @@ export async function POST(request: NextRequest) {
         .eq("userId", activeUserId)
         .maybeSingle();
 
-      const isProMax =
-        userRow?.planTier === "promax" ||
-        creditRow?.planId === "promax" ||
-        (creditRow?.paidCredits && creditRow.paidCredits >= 900000);
+      userCreditRow = creditRow;
 
-      if (!isProMax) {
+      const hasPaidCredits = (creditRow?.paidCredits ?? 0) > 0;
+      const isPaidUser =
+        userRow?.planTier === "promax" ||
+        userRow?.planTier === "premium" ||
+        creditRow?.planId === "promax" ||
+        creditRow?.planId === "premium" ||
+        creditRow?.billingCycle === "admin_promax" ||
+        creditRow?.billingCycle === "admin_premium";
+
+      if (isPaidUser && !hasPaidCredits) {
         return NextResponse.json(
-          { error: "AI Cover Letter Studio is exclusively available for Pro Max members. Please upgrade to Pro Max to access." },
+          { error: "You have 0 credits remaining in your plan. Please wait for your next billing cycle reset or renew your plan to continue using Cover Letter Studio." },
           { status: 403 }
         );
+      }
+
+      if (!isPaidUser && !hasPaidCredits) {
+        // Free tier allowance: 1 sample cover letter
+        const freeUsed = creditRow?.freeUsed ?? 0;
+        if (freeUsed >= 1) {
+          return NextResponse.json(
+            { error: "You have used your 1 free cover letter sample. Please upgrade to Premium Pro (5 letters/month) or Pro Max (15 letters/month) to generate more cover letters." },
+            { status: 403 }
+          );
+        }
       }
     }
 
@@ -77,7 +95,35 @@ export async function POST(request: NextRequest) {
 
     const coverLetter = await callAIText(prompt);
 
-    return NextResponse.json({ coverLetter });
+    // Deduct 1 credit for non-owners (cuts from paidCredits or increments freeUsed)
+    let remainingCredits: number | null = null;
+    if (!isOwner && userCreditRow) {
+      try {
+        const currentPaid = userCreditRow.paidCredits ?? 0;
+        if (currentPaid > 0) {
+          const newPaidCredits = Math.max(0, currentPaid - 1);
+          await admin
+            .from("Credit")
+            .update({ paidCredits: newPaidCredits })
+            .eq("userId", activeUserId);
+          remainingCredits = newPaidCredits;
+          logger.info(`[cover-letter] Deducted 1 paid credit for ${user.email}. Remaining: ${newPaidCredits}`);
+        } else {
+          const currentFreeUsed = userCreditRow.freeUsed ?? 0;
+          const newFreeUsed = currentFreeUsed + 1;
+          await admin
+            .from("Credit")
+            .update({ freeUsed: newFreeUsed })
+            .eq("userId", activeUserId);
+          remainingCredits = 0;
+          logger.info(`[cover-letter] Incremented freeUsed for ${user.email}: ${newFreeUsed}`);
+        }
+      } catch (deductErr: any) {
+        logger.error("[cover-letter] Failed to deduct credit:", deductErr.message);
+      }
+    }
+
+    return NextResponse.json({ coverLetter, remainingCredits });
   } catch (error: any) {
     logger.error("[cover-letter] API Route error:", error?.message);
     return NextResponse.json(

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
+import { COMPANY_OPTIONS, IT_ROLE_OPTIONS } from "@/lib/constants/career-options";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -132,14 +133,7 @@ export default function LinkedInOptimizerPage() {
           if (list.length > 0) {
             setSelectedResumeId(list[0].id);
             setResumeText(list[0].content || JSON.stringify(list[0].resumeJSON || ""));
-            // Only auto-fill real target role if it's not a resume document name (e.g. "Lohith Peyyala's Resume")
-            if (list[0].jobTitle) {
-              const isDocName = /resume|cv/i.test(list[0].jobTitle) || list[0].jobTitle.includes("'s");
-              if (!isDocName) setTargetRole(list[0].jobTitle);
-            }
-            if (list[0].company && list[0].company.toLowerCase() !== "general application") {
-              setTargetCompany(list[0].company);
-            }
+            // User manually selects from dropdown or types role & company
           }
         }
       } catch (err) {
@@ -156,13 +150,6 @@ export default function LinkedInOptimizerPage() {
     const found = savedResumes.find(r => r.id === id);
     if (found) {
       setResumeText(found.content || JSON.stringify(found.resumeJSON || ""));
-      if (found.jobTitle && !targetRole) {
-        const isDocName = /resume|cv/i.test(found.jobTitle) || found.jobTitle.includes("'s");
-        if (!isDocName) setTargetRole(found.jobTitle);
-      }
-      if (found.company && !targetCompany && found.company.toLowerCase() !== "general application") {
-        setTargetCompany(found.company);
-      }
     }
   };
 
@@ -172,7 +159,7 @@ export default function LinkedInOptimizerPage() {
     if (!isAllowed) {
       toast.error("LinkedIn Profile Optimizer is exclusively available for Pro Max members.");
       useUpgradeModalStore.getState().openModal({
-        badge: "PRO MAX",
+        badge: "MAX",
         title: "Unlock LinkedIn Profile Optimizer",
         description:
           "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
@@ -300,7 +287,7 @@ export default function LinkedInOptimizerPage() {
               <Button
                 onClick={() => {
                   useUpgradeModalStore.getState().openModal({
-                    badge: "PRO MAX",
+                    badge: "MAX",
                     title: "Unlock LinkedIn Profile Optimizer",
                     description:
                       "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
@@ -508,27 +495,67 @@ export default function LinkedInOptimizerPage() {
               <div className="space-y-6 max-w-3xl mx-auto">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
-                      <Briefcase className="h-3.5 w-3.5 text-slate-400" /> Target Job Title
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
+                        <Briefcase className="h-3.5 w-3.5 text-slate-400" /> Target Job Title
+                      </label>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) setTargetRole(e.target.value);
+                        }}
+                        className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
+                      >
+                        <option value="" disabled>Select IT role ▾</option>
+                        {IT_ROLE_OPTIONS.map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                    </div>
                     <Input
-                      placeholder="e.g. Senior Product Manager, Full Stack Engineer"
+                      list="li-role-options"
+                      placeholder="Type or select IT role (e.g. Full Stack Engineer)..."
                       value={targetRole}
                       onChange={(e) => setTargetRole(e.target.value)}
                       className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-10"
                     />
+                    <datalist id="li-role-options">
+                      {IT_ROLE_OPTIONS.map((r) => (
+                        <option key={r} value={r} />
+                      ))}
+                    </datalist>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
-                      <Building2 className="h-3.5 w-3.5 text-slate-400" /> Target Company / Industry
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-slate-400" /> Target Company
+                      </label>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) setTargetCompany(e.target.value);
+                        }}
+                        className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
+                      >
+                        <option value="" disabled>Select company ▾</option>
+                        {COMPANY_OPTIONS.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
                     <Input
-                      placeholder="e.g. Google, Stripe, SaaS, FinTech"
+                      list="li-company-options"
+                      placeholder="Type or select company (e.g. Google)..."
                       value={targetCompany}
                       onChange={(e) => setTargetCompany(e.target.value)}
                       className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-10"
                     />
+                    <datalist id="li-company-options">
+                      {COMPANY_OPTIONS.map((c) => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
 

@@ -12,13 +12,14 @@ const TABLE_ROWS = [
   { feature: "ATS score & analysis", free: "✓", pro: "✓" },
   { feature: "Live preview", free: "✓", pro: "✓" },
   { feature: "PDF & DOCX download", free: "—", pro: "✓" },
-  { feature: "Cover letters / month", free: "1 (lifetime)", pro: "5 / 15" },
   { feature: "Skill roadmaps / month", free: "1", pro: "5 / 15" },
   { feature: "Build resumes from scratch", free: "3", pro: "20 / 40" },
   { feature: "AI resume builder", free: "—", pro: "✓" },
   { feature: "Import resume via AI", free: "—", pro: "✓" },
   { feature: "History retention", free: "1 month", pro: "2 / 4 mo" },
-  { feature: "24/7 AI Chatbot & Coach", free: "—", pro: "Pro Max" },
+  { feature: "Cover Letter AI Studio", free: "1 sample", pro: "5 / mo · 15 / mo" },
+  { feature: "LinkedIn Profile Optimizer", free: "—", pro: "Max" },
+  { feature: "AI Mock Interview Coach", free: "—", pro: "Max" },
   { feature: "Job application tracker", free: "✓", pro: "✓" },
   { feature: "Referral bonus", free: "+1 per friend", pro: "+1 per friend" },
 ];
@@ -273,7 +274,7 @@ export default function UpgradePaywallModal() {
                 <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-3 px-4 sm:px-6">FEATURE</th>
                   <th className="py-3 px-4 text-center">FREE</th>
-                  <th className="py-3 px-4 text-center text-[#0d6e5a] font-black">PRO / POWER</th>
+                  <th className="py-3 px-4 text-center text-[#0d6e5a] font-black">PRO / MAX</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs sm:text-[13px] font-medium text-slate-700">
@@ -321,11 +322,11 @@ export default function UpgradePaywallModal() {
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-                    <span>1 resume download (PDF + DOCX)</span>
+                    <span>Cover Letter Studio (1 sample letter)</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-                    <span>1 cover letter download (PDF + DOCX)</span>
+                    <span>1 resume download (PDF + DOCX)</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
@@ -383,7 +384,7 @@ export default function UpgradePaywallModal() {
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-                    <span>5 cover letters / month</span>
+                    <span>Cover Letter AI Studio (5 / month)</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
@@ -448,11 +449,11 @@ export default function UpgradePaywallModal() {
                 <div className="flex items-center justify-between">
                   <h3 className="font-extrabold text-sm text-slate-900">Pro Max</h3>
                   <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-50 text-[#0d6e5a] border border-emerald-200">
-                    POWER TIER
+                    MAX
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                  For active career changers needing maximum optimization power and 24/7 AI features.
+                  For active career changers needing maximum optimization power, LinkedIn optimization, and AI cover letters.
                 </p>
                 <div className="mt-3">
                   <div className="flex items-baseline gap-1">
@@ -481,7 +482,15 @@ export default function UpgradePaywallModal() {
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-                    <span>15 cover letters / month</span>
+                    <span>Cover Letter AI Studio (15 / month)</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
+                    <span>LinkedIn Profile Optimizer</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
+                    <span>AI Mock Interview Coach</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
@@ -490,10 +499,6 @@ export default function UpgradePaywallModal() {
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
                     <span>Build up to 40 resumes from scratch</span>
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />
-                    <span>24/7 AI Chatbot &amp; Assistant</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-[#0d6e5a] shrink-0" />

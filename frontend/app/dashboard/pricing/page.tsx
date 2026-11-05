@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import {
   Check,
   CheckCircle2,
+  X,
   ArrowRight,
   Sparkles,
   Loader2,
@@ -55,6 +56,7 @@ const PLANS: Plan[] = [
     description: "Perfect for casual job seekers needing basic optimization.",
     features: [
       "2 AI resume optimizations per month",
+      "Cover Letter Studio (1 sample letter)",
       "1 resume download (PDF + DOCX)",
       "1 cover letter download (PDF + DOCX)",
       "Job application tracker"
@@ -73,7 +75,7 @@ const PLANS: Plan[] = [
     features: [
       "20 AI resume optimizations per month",
       "Unlimited PDF + DOCX downloads",
-      "5 cover letters / month",
+      "Cover Letter AI Studio (5 / month)",
       "Skills learning roadmap (5/month)",
       "Build up to 20 resumes from scratch",
       "AI resume builder (improve bullets, write summary)",
@@ -93,14 +95,15 @@ const PLANS: Plan[] = [
     periodMonthly: "month",
     periodYearly: "month",
     annualCharged: "₹2,388/yr",
-    description: "For active career changers needing maximum optimization power and 24/7 AI features.",
+    description: "For active career changers needing maximum optimization power, LinkedIn optimization, and AI cover letters.",
     features: [
       "90 AI resume optimizations per month",
       "Unlimited PDF + DOCX downloads",
-      "15 cover letters / month",
       "Skills learning roadmap (15/month)",
       "Build up to 40 resumes from scratch",
-      "24/7 AI Chatbot & Assistant",
+      "Cover Letter AI Studio (15 / month)",
+      "LinkedIn Profile Optimizer",
+      "AI Mock Interview Coach",
       "AI resume builder (improve bullets, write summary)",
       "Import resume via AI",
       "Optimization history logs (4 months retention)",

@@ -2579,7 +2579,6 @@ function ResumesPageContent() {
 
         </div>
       )}
-
     </div>
   );
 }

@@ -359,11 +359,11 @@ export default function ProductsPage() {
     },
     {
       id: "mock-interview",
-      name: "AI Mock Interview Simulator",
+      name: "AI Mock Interview Coach",
       tagline: "Master role-specific questions and practice answers with instant STAR scoring",
-      badge: "Interview Prep",
+      badge: "MAX",
       icon: <Target className="h-6 w-6 text-[#087F6E]" />,
-      badgeColor: "bg-teal-50 text-[#087F6E] border-teal-200",
+      badgeColor: "bg-slate-100 text-slate-800 border-slate-200",
       description:
         "Never get caught off guard in an interview again. RoleFuse generates realistic behavioral, technical, and situational questions tailored to your background and the target JD, complete with instant STAR rubric scoring.",
       highlights: [
@@ -392,9 +392,9 @@ export default function ProductsPage() {
       id: "linkedin-optimizer",
       name: "LinkedIn Profile Optimizer",
       tagline: "Rank higher in recruiter searches and write magnetic headlines & All-Star bios",
-      badge: "Recruiter SEO",
+      badge: "MAX",
       icon: <LinkedInIcon className="h-6 w-6 text-[#087F6E]" />,
-      badgeColor: "bg-teal-50 text-[#087F6E] border-teal-200",
+      badgeColor: "bg-slate-100 text-slate-800 border-slate-200",
       description:
         "Transform your LinkedIn profile into a recruiter magnet. Generate 4 high-converting headline variations, narrative About summaries, and recruiter search keywords tailored to your target position.",
       highlights: [
