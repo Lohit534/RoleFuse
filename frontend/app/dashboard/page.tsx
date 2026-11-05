@@ -1472,7 +1472,7 @@ export default function DashboardPage() {
                   </div>
                   {!isOwner && userPlan !== "promax" && (
                     <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
-                      PRO
+                      PRO MAX
                     </span>
                   )}
                 </div>
@@ -1513,7 +1513,7 @@ export default function DashboardPage() {
                   </div>
                   {!isOwner && userPlan !== "promax" && (
                     <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
-                      PRO
+                      PRO MAX
                     </span>
                   )}
                 </div>
@@ -1944,7 +1944,7 @@ export default function DashboardPage() {
                         </h3>
                         {!isOwner && userPlan !== "promax" && (
                           <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider ml-1">
-                            PRO
+                            PRO MAX
                           </span>
                         )}
                       </div>

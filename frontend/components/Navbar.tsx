@@ -483,7 +483,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                                 </span>
                                 {!isOwner && !isProMax && (
                                   <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
-                                    PRO
+                                    PRO MAX
                                   </span>
                                 )}
                               </div>
@@ -536,7 +536,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                                 </span>
                                 {!isOwner && !isProMax && (
                                   <span className="text-[10px] font-black uppercase text-[#087F6E] tracking-wider shrink-0">
-                                    PRO
+                                    PRO MAX
                                   </span>
                                 )}
                               </div>
