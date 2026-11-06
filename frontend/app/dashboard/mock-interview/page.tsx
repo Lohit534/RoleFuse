@@ -241,9 +241,9 @@ export default function MockInterviewPage() {
     <div className="min-h-screen bg-[#F8FAFB] flex flex-col text-slate-900">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-5 sm:space-y-6 pb-28 sm:pb-16">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200/80 pb-4 sm:pb-5">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#087F6E] bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
@@ -252,7 +252,7 @@ export default function MockInterviewPage() {
               <span className="text-xs text-slate-400">&bull;</span>
               <span className="text-xs font-medium text-slate-500">Commercial Standard</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+            <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               AI Mock Interview Simulator &amp; Evaluator
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
@@ -265,7 +265,7 @@ export default function MockInterviewPage() {
               variant="outline"
               size="sm"
               onClick={() => window.print()}
-              className="h-9 text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-100"
+              className="w-full sm:w-auto h-9 text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer"
             >
               <Printer className="h-3.5 w-3.5 mr-1.5" />
               Print / Save Questions
@@ -465,7 +465,7 @@ export default function MockInterviewPage() {
 
         {/* Category Filters */}
         {questions.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1">
             {[
               { id: "all", label: `All Questions (${questions.length})` },
               { id: "behavioral", label: `Behavioral (${questions.filter(q => q.category === "behavioral").length})` },
@@ -476,7 +476,7 @@ export default function MockInterviewPage() {
                 key={tab.id}
                 type="button"
                 onClick={() => setSelectedCategory(tab.id as any)}
-                className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                   selectedCategory === tab.id
                     ? "bg-[#087F6E] text-white border-[#087F6E]"
                     : "bg-white text-slate-600 hover:bg-slate-50 border-slate-200"
@@ -557,13 +557,13 @@ export default function MockInterviewPage() {
                         className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl leading-relaxed"
                       />
 
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
                         <Button
                           type="button"
                           size="sm"
                           disabled={isEvaluating || !userAnswers[q.id]?.trim()}
                           onClick={() => handleEvaluateAnswer(q.id, q.question)}
-                          className="h-8.5 text-xs font-bold bg-[#087F6E] hover:bg-[#065F53] text-white rounded-xl shadow-xs"
+                          className="w-full sm:w-auto h-9 text-xs font-bold bg-[#087F6E] hover:bg-[#065F53] text-white rounded-xl shadow-xs cursor-pointer"
                         >
                           {isEvaluating ? (
                             <>
@@ -581,7 +581,7 @@ export default function MockInterviewPage() {
                         <button
                           type="button"
                           onClick={() => setExpandedModelAnswer(isModelExpanded ? null : q.id)}
-                          className="text-xs font-bold text-[#087F6E] hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-xs font-bold text-[#087F6E] hover:underline flex items-center justify-center sm:justify-start gap-1 cursor-pointer py-1"
                         >
                           {isModelExpanded ? "Hide Model Answer" : "View Sample 10/10 Answer"}
                           {isModelExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}

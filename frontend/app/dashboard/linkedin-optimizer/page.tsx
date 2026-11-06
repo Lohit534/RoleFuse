@@ -226,25 +226,25 @@ export default function LinkedInOptimizerPage() {
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-[#111827]">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 py-5 sm:py-10 space-y-6 sm:space-y-8 pb-28 sm:pb-16">
         {/* Jobscan-style Hero Header - Exclusively Teal & Black */}
-        <div className="text-center space-y-4 max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-xs font-bold uppercase tracking-wider">
+        <div className="text-center space-y-3 sm:space-y-4 max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#087F6E] text-[11px] sm:text-xs font-bold uppercase tracking-wider">
             <LinkedInIcon className="h-3.5 w-3.5" />
             <span>LinkedIn Optimization</span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[#111827] leading-tight">
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[#111827] leading-tight">
             Get noticed on LinkedIn. <br />
             <span className="text-[#087F6E]">Your LinkedIn profile score is just 2 steps away.</span>
           </h1>
 
-          <p className="text-sm sm:text-base font-bold text-[#111827]">
+          <p className="text-xs sm:text-base font-bold text-[#111827]">
             Get found on LinkedIn:
           </p>
 
           {/* 3 Core Value Props matching Jobscan */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 text-left pt-1">
             <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-start gap-2.5 shadow-2xs">
               <CheckCircle2 className="h-4 w-4 text-[#087F6E] shrink-0 mt-0.5" />
               <p className="text-xs text-slate-700 font-medium leading-snug">
@@ -308,25 +308,25 @@ export default function LinkedInOptimizerPage() {
             </div>
           </Card>
         ) : (
-        <Card className="bg-white border-slate-200 shadow-sm rounded-3xl overflow-hidden">
+        <Card className="bg-white border-slate-200 shadow-sm rounded-2xl sm:rounded-3xl overflow-hidden">
           {/* Step Selector Header Tabs */}
           <div className="grid grid-cols-2 border-b border-slate-200 bg-slate-50/70 select-none">
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className={`p-4 sm:p-5 flex items-center justify-center gap-3 transition-all cursor-pointer border-r border-slate-200 ${
+              className={`p-3 sm:p-5 flex items-center justify-center gap-2 sm:gap-3 transition-all cursor-pointer border-r border-slate-200 ${
                 currentStep === 1
                   ? "bg-white font-extrabold text-[#087F6E] border-b-2 border-b-[#087F6E]"
                   : "text-slate-500 hover:text-[#111827]"
               }`}
             >
-              <span className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+              <span className={`h-6 w-6 sm:h-7 sm:w-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
                 currentStep === 1 ? "bg-[#087F6E] text-white" : "bg-slate-200 text-[#111827]"
               }`}>
                 1
               </span>
-              <div className="text-left">
-                <div className="text-xs sm:text-sm font-bold leading-tight">Add LinkedIn Profile URL</div>
+              <div className="text-left min-w-0">
+                <div className="text-xs sm:text-sm font-bold leading-tight truncate sm:whitespace-normal">Add LinkedIn Profile</div>
                 <div className="text-[10px] text-slate-400 font-normal hidden sm:block">URL, PDF or saved resume</div>
               </div>
             </button>
@@ -334,40 +334,40 @@ export default function LinkedInOptimizerPage() {
             <button
               type="button"
               onClick={() => setCurrentStep(2)}
-              className={`p-4 sm:p-5 flex items-center justify-center gap-3 transition-all cursor-pointer ${
+              className={`p-3 sm:p-5 flex items-center justify-center gap-2 sm:gap-3 transition-all cursor-pointer ${
                 currentStep === 2
                   ? "bg-white font-extrabold text-[#087F6E] border-b-2 border-b-[#087F6E]"
                   : "text-slate-500 hover:text-[#111827]"
               }`}
             >
-              <span className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+              <span className={`h-6 w-6 sm:h-7 sm:w-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
                 currentStep === 2 ? "bg-[#087F6E] text-white" : "bg-slate-200 text-[#111827]"
               }`}>
                 2
               </span>
-              <div className="text-left">
-                <div className="text-xs sm:text-sm font-bold leading-tight">Add Target Jobs</div>
+              <div className="text-left min-w-0">
+                <div className="text-xs sm:text-sm font-bold leading-tight truncate sm:whitespace-normal">Add Target Jobs</div>
                 <div className="text-[10px] text-slate-400 font-normal hidden sm:block">Match skills &amp; keywords</div>
               </div>
             </button>
           </div>
 
-          <CardContent className="p-6 sm:p-8 space-y-6">
+          <CardContent className="p-4 sm:p-8 space-y-5 sm:space-y-6">
             {/* STEP 1: ADD LINKEDIN PROFILE URL */}
             {currentStep === 1 && (
-              <div className="space-y-6 max-w-3xl mx-auto">
+              <div className="space-y-5 sm:space-y-6 max-w-3xl mx-auto">
                 {/* Method selector pills */}
-                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-slate-100 pb-3">
                   {[
                     { id: "url", label: "LinkedIn Profile URL" },
-                    { id: "resume", label: "Use Saved Resume Background" },
+                    { id: "resume", label: "Use Saved Resume" },
                     { id: "paste", label: "Paste Profile Text" }
                   ].map(m => (
                     <button
                       key={m.id}
                       type="button"
                       onClick={() => setInputMethod(m.id as any)}
-                      className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-colors cursor-pointer ${
+                      className={`text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-xl border transition-colors cursor-pointer ${
                         inputMethod === m.id
                           ? "bg-[#087F6E] text-white border-[#087F6E]"
                           : "bg-white text-slate-700 hover:bg-slate-50 border-slate-200"
@@ -575,12 +575,12 @@ export default function LinkedInOptimizerPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setCurrentStep(1)}
-                    className="h-10 text-xs font-bold border-slate-200 text-[#111827] hover:bg-slate-100 rounded-xl"
+                    className="h-10 text-xs font-bold border-slate-200 text-[#111827] hover:bg-slate-100 rounded-xl cursor-pointer"
                   >
                     &larr; Back to Step 1
                   </Button>
@@ -589,17 +589,17 @@ export default function LinkedInOptimizerPage() {
                     type="button"
                     disabled={generating}
                     onClick={handleScan}
-                    className="h-10 px-6 bg-[#111827] hover:bg-[#000000] text-white font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer shadow-sm"
+                    className="h-10 px-6 bg-[#111827] hover:bg-[#000000] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                   >
                     {generating ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin text-white" />
-                        Scanning Profile &amp; Calculating Match...
+                        <span>Scanning Profile &amp; Calculating Match...</span>
                       </>
                     ) : (
                       <>
-                        <Zap className="h-4 w-4 text-[#087F6E]" />
-                        Scan Profile &amp; Get Score
+                        <Sparkles className="h-4 w-4 text-[#087F6E]" />
+                        <span>Scan &amp; Optimize Profile Now</span>
                       </>
                     )}
                   </Button>
@@ -652,7 +652,7 @@ export default function LinkedInOptimizerPage() {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 overflow-x-auto no-scrollbar pb-2">
               {[
                 { id: "gaps", label: `Skill Gaps (${(pack.skillGaps?.missingSkills?.length || 0) + (pack.skillGaps?.matchedSkills?.length || 0)})` },
                 { id: "headlines", label: `AI Headlines (${pack.headlines?.length || 0})` },
@@ -664,7 +664,7 @@ export default function LinkedInOptimizerPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                  className={`text-xs font-bold px-3 sm:px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     activeTab === tab.id
                       ? "bg-[#087F6E] text-white shadow-xs"
                       : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"

@@ -275,9 +275,9 @@ function CoverLetterContent() {
     <div className="min-h-screen bg-[#F8FAFB] flex flex-col text-slate-900">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-5 sm:space-y-6 pb-28 sm:pb-16">
         {/* Header Breadcrumb & Actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200/80 pb-4 sm:pb-5">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#087F6E] bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200/60">
@@ -286,7 +286,7 @@ function CoverLetterContent() {
               <span className="text-xs text-slate-400">&bull;</span>
               <span className="text-xs font-medium text-slate-500">Commercial Standard</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+            <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               One-Click AI Cover Letter Generator
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
@@ -296,7 +296,7 @@ function CoverLetterContent() {
 
           <div className="flex flex-wrap items-center gap-2.5">
             <Link href="/dashboard/job-tracker">
-              <Button variant="outline" size="sm" className="h-9 text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-100">
+              <Button variant="outline" size="sm" className="h-9 text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer">
                 <Briefcase className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
                 Job Tracker
               </Button>
@@ -525,21 +525,21 @@ function CoverLetterContent() {
           </Card>
 
           {/* Right Column: Live Letter Studio Output */}
-          <Card className="lg:col-span-7 bg-white border-slate-200 shadow-sm rounded-2xl overflow-hidden flex flex-col min-h-[580px]">
+          <Card className="lg:col-span-7 bg-white border-slate-200 shadow-sm rounded-2xl overflow-hidden flex flex-col min-h-[440px] sm:min-h-[580px]">
             {/* Top Toolbar */}
-            <div className="bg-slate-50 border-b border-slate-200 p-3.5 sm:px-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+            <div className="bg-slate-50 border-b border-slate-200 p-3 sm:p-4 sm:px-5 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <FileText className="h-4 w-4 text-[#087F6E]" />
                 <span className="font-extrabold text-xs text-slate-800">Generated Cover Letter</span>
                 {coverLetter && (
                   <Badge variant="outline" className="text-[10px] font-semibold bg-white text-slate-600 border-slate-200">
-                    {wordCount} words &bull; ~{readTime} min read
+                    {wordCount} words
                   </Badge>
                 )}
               </div>
 
               {coverLetter && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
                   <Button
                     type="button"
                     variant="outline"

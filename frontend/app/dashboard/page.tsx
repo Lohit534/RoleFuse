@@ -280,6 +280,7 @@ export default function DashboardPage() {
   const [beforeScore, setBeforeScore] = useState<ATSScore | null>(null);
   const [afterScore, setAfterScore] = useState<ATSScore | null>(null);
   const [optimizeResult, setOptimizeResult] = useState<any>(null);
+  const [originalResumeSnapshot, setOriginalResumeSnapshot] = useState<string>("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [instructions, setInstructions] = useState("");
@@ -462,6 +463,8 @@ export default function DashboardPage() {
       if (activeSession) {
         sampleLoadedRef.current = true;
         setOptimizeResult(activeSession.result);
+        if (activeSession.resumeText) setOriginalResumeSnapshot(activeSession.resumeText);
+        else if (activeSession.result?.originalText) setOriginalResumeSnapshot(activeSession.result.originalText);
         if (activeSession.beforeScore) setBeforeScore(activeSession.beforeScore);
         if (activeSession.afterScore) setAfterScore(activeSession.afterScore);
         if (activeSession.resumeId) setCurrentResumeId(activeSession.resumeId);
@@ -692,6 +695,7 @@ export default function DashboardPage() {
 
     setActiveOptimizationText(targetResumeText);
     setActiveOptimizationInstructions(optimizationInstructions);
+    setOriginalResumeSnapshot(targetResumeText);
     setOptimizing(true);
     setBeforeScore(null);
     setAfterScore(null);
@@ -709,7 +713,11 @@ export default function DashboardPage() {
   };
 
   const handleOptimizationComplete = (data: any) => {
-    setOptimizeResult(data);
+    const finalData = {
+      ...data,
+      originalText: data.originalText || originalResumeSnapshot || activeOptimizationText,
+    };
+    setOptimizeResult(finalData);
     setViewMode("result");
 
     // Store resumeId so subsequent bullet improvements can patch the history record
@@ -729,11 +737,11 @@ export default function DashboardPage() {
 
     // Save active optimization session so page reload / refresh keeps the result view intact
     saveActiveSession({
-      result: data,
+      result: finalData,
       beforeScore: data.scoreBefore || null,
       afterScore: data.scoreAfter || null,
       resumeId: targetResumeId || undefined,
-      resumeText: "", // Do not retain old input text in storage
+      resumeText: activeOptimizationText || originalResumeSnapshot || "", // Store the original text for accurate diff highlights
       jobDescription: "", // Do not retain old input text in storage
       trackerAdded: false,
       userId: user?.id,
@@ -830,6 +838,7 @@ export default function DashboardPage() {
     setBeforeScore(null);
     setAfterScore(null);
     setOptimizeResult(null);
+    setOriginalResumeSnapshot("");
     setCurrentResumeId(null);
     setTrackerAdded(false);
     setBulletImprovementsCount(0);
@@ -999,6 +1008,7 @@ export default function DashboardPage() {
     setOptimizeResult(null);
     setBeforeScore(null);
     setAfterScore(null);
+    setOriginalResumeSnapshot("");
     setResumeText("");
     setJobDescription("");
     setInstructions("");
@@ -1408,7 +1418,7 @@ export default function DashboardPage() {
               >
                 <ResumeViewer
                   text={optimizeResult.optimizedText}
-                  originalText={resumeText}
+                  originalText={originalResumeSnapshot || optimizeResult?.originalText || resumeText}
                   resumeId={optimizeResult.resumeId}
                   jobDescription={jobDescription}
                   userId={user?.id || ""}
@@ -2015,14 +2025,9 @@ export default function DashboardPage() {
                     ? "bg-slate-50/40 border-slate-200/50 opacity-50 cursor-pointer"
                     : "bg-white border-[#DCE7E9] hover:border-[#0077B5]/50 group hover:shadow-md cursor-pointer"
                 }`}>
-                  {!isOwner && userPlan !== "promax" && (
-                    <span className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal z-10">
-                      MAX
-                    </span>
-                  )}
                   <div className="space-y-3">
-                    {/* Header with authentic LinkedIn Blue icon */}
-                    <div className="flex items-center justify-between pr-16">
+                    {/* Header with authentic LinkedIn Blue icon & top-right arrow for Pro Max */}
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className={`h-6 w-6 rounded flex items-center justify-center ${
                           !isOwner && userPlan !== "promax" ? "bg-slate-100 text-slate-400" : "text-[#0077B5]"
@@ -2033,21 +2038,15 @@ export default function DashboardPage() {
                           LinkedIn Report
                         </h3>
                       </div>
-                      <Link
-                        href="/dashboard/linkedin-optimizer"
-                        onClick={(e: React.MouseEvent) => {
-                          if (!isOwner && userPlan !== "promax") {
-                            e.preventDefault();
-                            useUpgradeModalStore.getState().openModal({
-                              badge: "MAX",
-                              title: "Unlock LinkedIn Profile Optimizer",
-                              description: "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
-                            });
-                          }
-                        }}
-                      >
-                        <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#0077B5] group-hover:translate-x-0.5 transition-all cursor-pointer" />
-                      </Link>
+                      {!isOwner && userPlan !== "promax" ? (
+                        <span className="text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal">
+                          MAX
+                        </span>
+                      ) : (
+                        <Link href="/dashboard/linkedin-optimizer">
+                          <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#0077B5] group-hover:translate-x-0.5 transition-all cursor-pointer" />
+                        </Link>
+                      )}
                     </div>
 
                     {/* Description */}

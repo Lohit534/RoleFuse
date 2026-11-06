@@ -136,6 +136,7 @@ const TICKET_TOPICS = [
 
 export default function SupportChatbot() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
   // Views: 'help-center' | 'contact-options' | 'ticket' | 'mail'
   const [view, setView] = useState<"help-center" | "contact-options" | "ticket" | "mail">("help-center");
   
@@ -203,6 +204,7 @@ export default function SupportChatbot() {
     const handleOpenChat = (e: Event) => {
       const customEvent = e as CustomEvent;
       const targetMode = customEvent.detail?.mode || "help-center";
+      setIsDismissed(false);
       setIsOpen(true);
       if (targetMode === "admin" || targetMode === "ticket") {
         setView("ticket");
@@ -299,27 +301,55 @@ export default function SupportChatbot() {
     return matchesCat && matchesQuery;
   });
 
+  if (isDismissed && !isOpen) {
+    return null;
+  }
+
   return (
-    <div className={`fixed select-none ${isOpen ? "bottom-3 right-3 sm:bottom-6 sm:right-6 z-[110]" : "bottom-[72px] right-3 sm:bottom-6 sm:right-6 z-40"}`}>
-      {/* Floating Help Center Launcher Button */}
-      {!isOpen && (
-        <button
-          type="button"
-          onClick={() => {
-            setIsOpen(true);
-            setView("help-center");
-          }}
-          className="flex h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-white hover:bg-slate-50 text-[#087F6E] shadow-md sm:shadow-xl items-center justify-center border border-slate-200/90 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer pointer-events-auto group"
-          title="Open Help Center"
-          aria-label="Open Help Center"
-        >
-          <HeadphonesIcon className="h-5 w-5 sm:h-5.5 sm:w-5.5 text-[#087F6E] group-hover:rotate-6 transition-transform" />
-        </button>
+    <>
+      {/* Mobile Backdrop when Help Center is open */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/25 sm:hidden z-[105] backdrop-blur-[1px] transition-opacity"
+          onClick={() => setIsOpen(false)}
+        />
       )}
 
-      {/* Main Container Widget */}
-      {isOpen && (
-        <Card className="w-[calc(100vw-24px)] sm:w-[400px] h-[80vh] sm:h-[560px] max-h-[760px] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative pointer-events-auto text-left">
+      <div className={`fixed select-none ${isOpen ? "bottom-3 right-3 sm:bottom-6 sm:right-6 z-[110]" : "bottom-4 right-4 sm:bottom-6 sm:right-6 z-40"}`}>
+        {/* Floating Help Center Launcher Button */}
+        {!isOpen && (
+          <div className="relative group/help">
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(true);
+                setView("help-center");
+              }}
+              className="flex h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-white hover:bg-slate-50 text-[#087F6E] shadow-md sm:shadow-lg items-center justify-center border border-slate-200/90 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer pointer-events-auto"
+              title="Open Help Center"
+              aria-label="Open Help Center"
+            >
+              <HeadphonesIcon className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-[#087F6E] transition-transform" />
+            </button>
+            {/* Dismiss button to hide floating bubble if disturbing content reading */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDismissed(true);
+              }}
+              className="absolute -top-1.5 -left-1.5 h-4 w-4 rounded-full bg-slate-300 hover:bg-slate-500 text-slate-700 hover:text-white flex items-center justify-center text-[10px] font-bold shadow-xs cursor-pointer opacity-70 sm:opacity-0 sm:group-hover/help:opacity-100 transition-opacity"
+              title="Hide Help button"
+              aria-label="Hide Help button"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* Main Container Widget */}
+        {isOpen && (
+          <Card className="w-[calc(100vw-24px)] sm:w-[400px] h-[80vh] sm:h-[560px] max-h-[760px] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative pointer-events-auto text-left">
           
           {/* ============================================================ */}
           {/* VIEW 1: HELP CENTER FAQS                                      */}
@@ -840,5 +870,6 @@ export default function SupportChatbot() {
         </Card>
       )}
     </div>
+    </>
   );
 }

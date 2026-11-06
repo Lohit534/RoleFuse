@@ -716,10 +716,19 @@ export async function POST(request: NextRequest) {
       scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
     }
 
-    // Accurate dynamic ATS progression:
-    // Accurately reflects injected keywords, action verbs, and quantified metrics without static artificial floors.
+    // Genuine dynamic ATS scoring:
+    // Pure calculation based on real content, keyword matches, and measurable impact.
+    // If optimization missed any target keywords from the original resume, re-enrich genuinely.
     if (scoreAfter.overall < (scoreBefore.overall || 0)) {
-      scoreAfter.overall = Math.min(96, (scoreBefore.overall || 45) + 12);
+      aiResult.resume = enrichResumeATSQuality(
+        aiResult.resume,
+        jobDescription,
+        scoreBefore.missingKeywords,
+        jobTitle
+      );
+      scoreAfter = await scoreResume(aiResult.resume, jobDescription);
+      scoreAfter.missingKeywords = (scoreAfter.missingKeywords || []).filter(isTechnicalKeyword);
+      scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
     }
     const resumeTech = extractTechTerms(resumeText || "");
     const jdLower = (jobDescription || "").toLowerCase();

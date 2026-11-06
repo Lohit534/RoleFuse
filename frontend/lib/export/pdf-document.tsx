@@ -1015,30 +1015,44 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
           const looksLikeJobHeader = lastJobIdx === -1 || ((hasExplicitJobTitle || line.includes('|')) && hasDateHere && !isActionSentence);
 
           if (looksLikeJobHeader) {
-            const parts = line.split(/\s*(?:[|—–]|\s{3,}|\s+-\s+)\s*/);
-            let title = stripMarkdownAsterisks(parts[0] || line);
-            let company = stripMarkdownAsterisks(parts[1] || "");
+            let title = "";
+            let company = "";
             let tech = "";
             let dates = "";
 
-            if (parts.length > 1) {
-              const lastPart = parts[parts.length - 1];
-              if (/\b\d{4}\b/.test(lastPart) || /present|current/i.test(lastPart)) {
-                dates = lastPart;
-                if (parts.length === 2) {
-                  title = parts[0];
-                  company = "";
-                } else if (parts.length === 3) {
-                  title = parts[0];
-                  company = parts[1];
+            // Check if line has a pipe '|', tabs, or wide space separation
+            const pipeParts = line.split(/\s*\|\s*|\t+|\s{3,}/);
+            if (pipeParts.length >= 2) {
+              title = stripMarkdownAsterisks(pipeParts[0] || "");
+              const rightPart = stripMarkdownAsterisks(pipeParts[1] || "");
+              if (/\b\d{4}\b/.test(rightPart) || /present|current|duration/i.test(rightPart) || /\b(?:months?|weeks?|yrs?|years?)\b/i.test(rightPart)) {
+                dates = rightPart;
+                if (pipeParts.length >= 3) {
+                  company = stripMarkdownAsterisks(pipeParts[2] || "");
                 }
+              } else {
+                company = rightPart;
+                if (pipeParts.length >= 3) {
+                  dates = stripMarkdownAsterisks(pipeParts[2] || "");
+                }
+              }
+            } else {
+              // No pipe: extract date pattern from the end of the line if present
+              const dateRegex = /(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}|\d{1,2}\/\d{4}|\b\d{4}\b)\s*[-–—to]+\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}|\d{1,2}\/\d{4}|\b\d{4}\b|present|current)\s*$/i;
+              const dateMatch = line.match(dateRegex);
+              if (dateMatch) {
+                dates = dateMatch[0].trim();
+                title = stripMarkdownAsterisks(line.slice(0, dateMatch.index).trim().replace(/\s*[-–—|]\s*$/, ""));
+              } else {
+                title = stripMarkdownAsterisks(line);
               }
             }
 
+            // Look ahead for Line 2: Company Name & Tech Stack
             if (idx + 1 < rawLines.length) {
               const nextLine = stripMarkdownAsterisks(rawLines[idx + 1]);
               const nextUpper = nextLine.toUpperCase().replace(/[^A-Z ]/g, '').trim();
-              const isNextBullet = /^\s*([•\-\*–—+•\u2022\u25cf\u2043]|\d+\.)\s*/.test(rawLines[idx + 1]);
+              const isNextBullet = /^\s*([•\-\*–—+•\u2022\u25cf\u2043▸►→]|\d+\.)\s*/.test(rawLines[idx + 1]);
               const isNextSection = SECTION_NAMES.includes(nextUpper);
 
               if (!isNextBullet && !isNextSection && nextLine) {
@@ -1046,16 +1060,26 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
                 if (!dates && nextDateMatch && (nextLine.toLowerCase().includes('present') || nextLine.toLowerCase().includes('current') || nextLine.includes('–') || nextLine.includes('-'))) {
                   dates = nextLine;
                   idx++;
-                } else if (!company) {
-                  const nextParts = nextLine.split(/\s*(?:[|—–]|\s{3,}|\s+-\s+)\s*/);
-                  company = nextParts[0] || nextLine;
+                } else {
+                  // Line 2: Company Name | Tech Stack (e.g. "Company Name | Java, Spring Boot, MySQL" or "Company Name — Java, Spring Boot, MySQL")
+                  const nextParts = nextLine.split(/\s*\|\s*|\t+|\s{3,}|\s+[—–]\s+/);
                   if (nextParts.length > 1) {
-                    tech = nextParts.slice(1).join(", ");
+                    if (!company) {
+                      company = nextParts[0].trim();
+                      tech = nextParts.slice(1).join(", ").trim();
+                    } else if (!tech) {
+                      tech = nextLine.trim();
+                    }
+                    idx++;
+                  } else {
+                    if (!company) {
+                      company = nextLine.trim();
+                      idx++;
+                    } else if (!tech) {
+                      tech = nextLine.trim();
+                      idx++;
+                    }
                   }
-                  idx++;
-                } else if (company && !tech) {
-                  tech = nextLine;
-                  idx++;
                 }
               }
             }
