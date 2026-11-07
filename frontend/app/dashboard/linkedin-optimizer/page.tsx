@@ -130,11 +130,8 @@ export default function LinkedInOptimizerPage() {
           const data = await res.json();
           const list = Array.isArray(data) ? data : (data.resumes || []);
           setSavedResumes(list);
-          if (list.length > 0) {
-            setSelectedResumeId(list[0].id);
-            setResumeText(list[0].content || JSON.stringify(list[0].resumeJSON || ""));
-            // User manually selects from dropdown or types role & company
-          }
+          setSelectedResumeId("");
+          setResumeText("");
         }
       } catch (err) {
         console.error("Init linkedin optimizer error:", err);
@@ -147,6 +144,10 @@ export default function LinkedInOptimizerPage() {
 
   const handleSelectResume = (id: string) => {
     setSelectedResumeId(id);
+    if (!id) {
+      setResumeText("");
+      return;
+    }
     const found = savedResumes.find(r => r.id === id);
     if (found) {
       setResumeText(found.content || JSON.stringify(found.resumeJSON || ""));
@@ -395,6 +396,11 @@ export default function LinkedInOptimizerPage() {
                             const val = e.target.value.trim();
                             setLinkedinUrl(val.startsWith("http") ? val : `https://${val}`);
                           }}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          data-lpignore="true"
                           className="pl-20 text-xs sm:text-sm bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-11"
                         />
                       </div>
@@ -452,6 +458,7 @@ export default function LinkedInOptimizerPage() {
                       onChange={(e) => handleSelectResume(e.target.value)}
                       className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#087F6E]/20"
                     >
+                      <option value="">-- Choose a saved resume --</option>
                       {savedResumes.map((res) => (
                         <option key={res.id} value={res.id}>
                           {res.title || res.jobTitle || "Master Resume"} {res.company ? `(${res.company})` : ""}
@@ -472,6 +479,9 @@ export default function LinkedInOptimizerPage() {
                       value={resumeText}
                       onChange={(e) => setResumeText(e.target.value)}
                       rows={6}
+                      autoComplete="off"
+                      spellCheck={false}
+                      data-lpignore="true"
                       className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl"
                     />
                   </div>
@@ -517,6 +527,11 @@ export default function LinkedInOptimizerPage() {
                       placeholder="Type or select IT role (e.g. Full Stack Engineer)..."
                       value={targetRole}
                       onChange={(e) => setTargetRole(e.target.value)}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      data-lpignore="true"
                       className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-10"
                     />
                     <datalist id="li-role-options">
@@ -549,6 +564,11 @@ export default function LinkedInOptimizerPage() {
                       placeholder="Type or select company (e.g. Google)..."
                       value={targetCompany}
                       onChange={(e) => setTargetCompany(e.target.value)}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      data-lpignore="true"
                       className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-10"
                     />
                     <datalist id="li-company-options">
@@ -571,6 +591,9 @@ export default function LinkedInOptimizerPage() {
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
                     rows={6}
+                    autoComplete="off"
+                    spellCheck={false}
+                    data-lpignore="true"
                     className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl"
                   />
                 </div>

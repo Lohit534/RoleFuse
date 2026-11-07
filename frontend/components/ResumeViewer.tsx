@@ -90,8 +90,8 @@ export default function ResumeViewer({
   const [savingLibrary, setSavingLibrary] = useState(false);
   const [isSavedInLibrary, setIsSavedInLibrary] = useState(false);
 
-  // Layout & Template State
-  const [isFullLength, setIsFullLength] = useState(true);
+  // Layout & Template State (Defaults to scrollable preview container)
+  const [isFullLength, setIsFullLength] = useState(false);
   const [templateStyle, setTemplateStyle] = useState<"academic" | "modern" | "clean">("academic");
 
   // Parse blocks for rendering
@@ -131,7 +131,6 @@ export default function ResumeViewer({
     const cleanText = text.split("\n").map((l) => stripMarkdownAsterisks(l)).join("\n");
     await navigator.clipboard.writeText(cleanText);
     setCopied(true);
-    toast.success("Optimized resume text copied!");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -170,7 +169,6 @@ export default function ResumeViewer({
       }
 
       setIsSavedInLibrary(true);
-      toast.success("Resume saved successfully to your Resumes library!");
       if (onSavedToLibrary) onSavedToLibrary();
     } catch (err: any) {
       toast.error(err.message || "Failed to save to Resumes library.");
@@ -416,11 +414,11 @@ export default function ResumeViewer({
           </button>
         </div>
 
-        {/* Full Length View Toggle */}
+        {/* Full Length / Scrollable View Toggle */}
         <button
           type="button"
           onClick={() => setIsFullLength(!isFullLength)}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-white text-slate-700 hover:text-slate-900 border border-slate-200 shadow-2xs hover:bg-slate-50 transition-all cursor-pointer ml-auto"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-white text-slate-700 hover:text-slate-900 border border-slate-200 shadow-2xs hover:bg-slate-50 transition-all cursor-pointer ml-auto"
         >
           {isFullLength ? (
             <>
@@ -430,16 +428,16 @@ export default function ResumeViewer({
           ) : (
             <>
               <Maximize2 className="h-3 w-3 text-[#0d6e5a]" />
-              <span>Full Length View</span>
+              <span>Expand Full Page</span>
             </>
           )}
         </button>
       </div>
 
-      {/* Workspace Display Area: Responsive on Desktop & Mobile with Full Length Option */}
+      {/* Workspace Display Area: Responsive on Desktop & Mobile with Smooth Scrollable Option */}
       <div
         className={`flex-1 p-2 sm:p-4 md:p-6 bg-slate-50 select-text transition-all ${
-          isFullLength ? "overflow-visible min-h-[750px]" : "overflow-y-auto max-h-[650px]"
+          isFullLength ? "overflow-visible min-h-[750px]" : "overflow-y-auto max-h-[720px] sm:max-h-[820px] overscroll-contain"
         }`}
       >
         {/* Render visual styling matching the selected ATS template */}

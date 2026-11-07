@@ -56,7 +56,7 @@ export default function CircleGauge({ value, label, size = 100 }: CircleGaugePro
             className="transition-all duration-150 ease-out"
           />
         </svg>
-        <span className="relative text-2xl font-black tracking-tight animate-pulse-subtle" style={{ color: text }}>{displayValue}</span>
+        <span className={`relative ${size < 80 ? "text-xl" : "text-2xl"} font-black tracking-tight animate-pulse-subtle`} style={{ color: text }}>{displayValue}</span>
       </div>
       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{label}</span>
     </div>

@@ -1,10 +1,15 @@
 import { create } from "zustand";
 import { OptimizeResult, CreditInfo } from "../types";
 
-// Clean up any legacy persistent storage that would force old text on refresh
+// Clean up any persistent storage that would force old input text or URLs on refresh
 if (typeof window !== "undefined") {
   try {
     localStorage.removeItem("fasthire-resume-storage");
+    localStorage.removeItem("fastHire_activeResumeText");
+    localStorage.removeItem("fastHire_activeJobDescription");
+    sessionStorage.removeItem("fasthire-resume-storage");
+    sessionStorage.removeItem("fastHire_activeResumeText");
+    sessionStorage.removeItem("fastHire_activeJobDescription");
   } catch {}
 }
 
@@ -41,6 +46,11 @@ export const useResumeStore = create<ResumeState>()((set) => ({
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("fasthire-resume-storage");
+        localStorage.removeItem("fastHire_activeResumeText");
+        localStorage.removeItem("fastHire_activeJobDescription");
+        sessionStorage.removeItem("fasthire-resume-storage");
+        sessionStorage.removeItem("fastHire_activeResumeText");
+        sessionStorage.removeItem("fastHire_activeJobDescription");
       } catch {}
     }
     set(initialState);

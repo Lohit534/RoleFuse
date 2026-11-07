@@ -119,17 +119,14 @@ function CoverLetterContent() {
           toast.success("Job details loaded into studio!");
         }
 
-        // Fetch user's saved resumes
+        // Fetch user's saved resumes (start empty so user fills newly every time)
         const res = await fetch("/api/resumes");
         if (res.ok) {
           const data = await res.json();
           const list = Array.isArray(data) ? data : (data.resumes || []);
           setSavedResumes(list);
-          if (list.length > 0) {
-            setSelectedResumeId(list[0].id);
-            setResumeText(list[0].content || JSON.stringify(list[0].resumeJSON || ""));
-            // User manually selects from dropdown or types company & role
-          }
+          setSelectedResumeId("");
+          setResumeText("");
         }
       } catch (err) {
         console.error("Init cover letter error:", err);
@@ -143,6 +140,10 @@ function CoverLetterContent() {
   // Handle resume selection change
   const handleSelectResume = (id: string) => {
     setSelectedResumeId(id);
+    if (!id) {
+      setResumeText("");
+      return;
+    }
     const found = savedResumes.find(r => r.id === id);
     if (found) {
       setResumeText(found.content || JSON.stringify(found.resumeJSON || ""));
@@ -363,31 +364,38 @@ function CoverLetterContent() {
                   <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
                     <span>Candidate Resume Source</span>
                     {savedResumes.length > 0 && (
-                      <span className="text-[10px] text-teal-700 font-semibold">{savedResumes.length} saved</span>
+                      <span className="text-[10px] text-teal-700 font-semibold">{savedResumes.length} saved in library</span>
                     )}
                   </label>
 
-                  {savedResumes.length > 0 ? (
+                  {savedResumes.length > 0 && (
                     <select
                       value={selectedResumeId}
                       onChange={(e) => handleSelectResume(e.target.value)}
-                      className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#087F6E]/20 focus:border-[#087F6E]"
+                      className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#087F6E]/20 focus:border-[#087F6E] mb-2"
                     >
+                      <option value="">-- Choose a saved resume (or paste text below) --</option>
                       {savedResumes.map((res) => (
                         <option key={res.id} value={res.id}>
                           {res.title || res.jobTitle || "Master Resume"} {res.company ? `(${res.company})` : ""}
                         </option>
                       ))}
                     </select>
-                  ) : (
-                    <Textarea
-                      placeholder="Paste your resume content or bullet points here..."
-                      value={resumeText}
-                      onChange={(e) => setResumeText(e.target.value)}
-                      rows={4}
-                      className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl"
-                    />
                   )}
+
+                  <Textarea
+                    placeholder="Paste your resume content or bullet points here..."
+                    value={resumeText}
+                    onChange={(e) => {
+                      setResumeText(e.target.value);
+                      if (selectedResumeId) setSelectedResumeId("");
+                    }}
+                    rows={4}
+                    autoComplete="off"
+                    spellCheck={false}
+                    data-lpignore="true"
+                    className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl"
+                  />
                 </div>
 
                 {/* 2. Target Company & Job Title (Dropdown + Manual Type) */}
@@ -415,6 +423,11 @@ function CoverLetterContent() {
                       placeholder="Type or select company (e.g. Google)..."
                       value={company}
                       onChange={(e) => setCompany(e.target.value)}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      data-lpignore="true"
                       className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
                     />
                     <datalist id="cl-company-options">
@@ -447,6 +460,11 @@ function CoverLetterContent() {
                       placeholder="Type or select IT role (e.g. Software Engineer)..."
                       value={jobTitle}
                       onChange={(e) => setJobTitle(e.target.value)}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      data-lpignore="true"
                       className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
                     />
                     <datalist id="cl-role-options">
@@ -469,6 +487,9 @@ function CoverLetterContent() {
                     onChange={(e) => setJobDescription(e.target.value)}
                     rows={6}
                     required
+                    autoComplete="off"
+                    spellCheck={false}
+                    data-lpignore="true"
                     className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl leading-relaxed"
                   />
                 </div>

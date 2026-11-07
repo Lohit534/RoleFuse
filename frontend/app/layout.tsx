@@ -255,9 +255,9 @@ export default function RootLayout({
               width: "auto",
             },
             success: {
-              iconTheme: {
-                primary: "#12C2A4",
-                secondary: "#0f172a",
+              duration: 0,
+              style: {
+                display: "none",
               },
             },
             error: {

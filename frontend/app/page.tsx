@@ -210,6 +210,12 @@ export default function LandingPage() {
     localStorage.removeItem("fastHire_pendingSample");
     localStorage.removeItem("fastHire_sampleResume");
     localStorage.removeItem("fastHire_sampleJD");
+    localStorage.removeItem("fastHire_activeResumeText");
+    localStorage.removeItem("fastHire_activeJobDescription");
+    sessionStorage.removeItem("fastHire_activeResumeText");
+    sessionStorage.removeItem("fastHire_activeJobDescription");
+    localStorage.removeItem("fasthire-resume-storage");
+    sessionStorage.removeItem("fasthire-resume-storage");
 
     let isMounted = true;
 

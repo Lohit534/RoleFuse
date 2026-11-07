@@ -230,6 +230,9 @@ export default function ResumeInput({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             disabled={disabled || loading}
+            autoComplete="off"
+            spellCheck={false}
+            data-lpignore="true"
             className="flex-1 min-h-[290px] h-full overflow-y-auto font-sans text-xs sm:text-sm leading-relaxed border border-[#DCE7E9] bg-white text-[#111827] placeholder:text-[#526176]/50 focus:border-[#087F6E] focus:ring-2 focus:ring-[#087F6E]/20 rounded-xl resize-y p-3.5 pr-4 transition-colors"
           />
 

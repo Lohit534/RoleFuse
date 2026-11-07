@@ -172,6 +172,7 @@ export default function PricingPage() {
   // GST Invoice Modal State
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
 
   // Checkout Modal State
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
@@ -316,33 +317,36 @@ export default function PricingPage() {
     }
 
     if (plan.id === "free") {
-      if (confirm("Are you sure you want to downgrade to the Free Plan? Monthly limits will be applied.")) {
-        try {
-          if (userId) {
-            const res = await fetch("/api/credits", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ planId: "free" })
-            });
-
-            if (!res.ok) {
-              throw new Error("API request failed");
-            }
-
-            localStorage.setItem(`fastHire_plan_${userId}`, "free");
-            setCurrentPlan("free");
-            toast.success("Downgraded to Free plan.");
-          }
-        } catch (err) {
-          toast.error("Failed to downgrade plan. Please try again.");
-        }
-      }
+      setShowDowngradeModal(true);
       return;
     }
 
     // Trigger billing modal
     setSelectedPlan(plan);
     setIsCheckoutOpen(true);
+  };
+
+  const executeDowngradeToFree = async () => {
+    try {
+      if (userId) {
+        const res = await fetch("/api/credits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ planId: "free" })
+        });
+
+        if (!res.ok) {
+          throw new Error("API request failed");
+        }
+
+        localStorage.setItem(`fastHire_plan_${userId}`, "free");
+        setCurrentPlan("free");
+      }
+    } catch (err) {
+      toast.error("Failed to downgrade plan. Please try again.");
+    } finally {
+      setShowDowngradeModal(false);
+    }
   };
 
   // Claim early user free 1-year premium offer
@@ -964,6 +968,40 @@ export default function PricingPage() {
                   View Invoices
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CENTERED DOWNGRADE CONFIRMATION MODAL */}
+      {showDowngradeModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm">Downgrade to Free Plan</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to switch to the Free Career Tier?</p>
+            </div>
+
+            <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded-xl font-medium">
+              Free plan limits will take effect immediately. Features exclusive to Pro and Pro Max will be locked.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowDowngradeModal(false)}
+                className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={executeDowngradeToFree}
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors cursor-pointer"
+              >
+                Downgrade
+              </Button>
             </div>
           </div>
         </div>

@@ -32,11 +32,19 @@ export default function JobDescriptionInput({
   useEffect(() => {
     if (value && value.trim().length > 0) {
       setActiveTab("paste");
+    } else {
+      setUrl("");
     }
   }, [value]);
 
+  useEffect(() => {
+    // Ensure URL input starts empty on initial load
+    setUrl("");
+  }, []);
+
   const handleFetchUrl = async () => {
     if (!url.trim()) return;
+    const targetUrl = url.trim();
     setFetching(true);
     setFetchError(null);
     setFetchSuccess(false);
@@ -45,7 +53,7 @@ export default function JobDescriptionInput({
       const res = await fetch("/api/fetch-jd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: targetUrl }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -65,6 +73,7 @@ export default function JobDescriptionInput({
       }
 
       onChange(text.slice(0, 6000));
+      setUrl(""); // Clear the input URL immediately so old URL is never retained
       setFetchSuccess(true);
       setActiveTab("paste");
       setTimeout(() => setFetchSuccess(false), 3000);
@@ -94,7 +103,10 @@ export default function JobDescriptionInput({
         <div className="bg-[#F1F5F7] p-1 rounded-xl flex items-center gap-1 shrink-0 w-full sm:w-auto overflow-x-auto border border-slate-200/60 shadow-xs">
           <button
             type="button"
-            onClick={() => setActiveTab("paste")}
+            onClick={() => {
+              setActiveTab("paste");
+              setUrl("");
+            }}
             className={`flex-1 sm:flex-none text-center px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "paste"
                 ? "bg-white text-[#087F6E] shadow-xs"
@@ -105,7 +117,10 @@ export default function JobDescriptionInput({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("url")}
+            onClick={() => {
+              setActiveTab("url");
+              setUrl("");
+            }}
             className={`flex-1 sm:flex-none text-center px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "url"
                 ? "bg-white text-[#087F6E] shadow-xs"
@@ -137,6 +152,11 @@ export default function JobDescriptionInput({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               disabled={disabled || fetching}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              data-lpignore="true"
               onKeyDown={(e) => e.key === "Enter" && handleFetchUrl()}
               className="h-10 text-xs border-[#DCE7E9] bg-white text-[#111827] placeholder:text-[#526176]/50 focus:border-[#087F6E] focus:ring-2 focus:ring-[#087F6E]/20 rounded-xl flex-1 shadow-xs"
             />
@@ -179,6 +199,9 @@ export default function JobDescriptionInput({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             disabled={disabled}
+            autoComplete="off"
+            spellCheck={false}
+            data-lpignore="true"
             className={`flex-1 min-h-[290px] h-full overflow-y-auto font-sans text-xs sm:text-sm leading-relaxed bg-white text-[#111827] placeholder:text-[#526176]/50 rounded-xl resize-y p-3.5 pr-4 transition-colors ${
               isOverLimit
                 ? "border-rose-400 focus:border-rose-500"

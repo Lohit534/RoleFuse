@@ -104,11 +104,13 @@ export default function UnifiedAdminDashboard() {
   const [ticketFilter, setTicketFilter] = useState<"all" | "pending" | "replied">("all");
   const [replyText, setReplyText] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [showDeleteTicketModal, setShowDeleteTicketModal] = useState(false);
 
   // Feedback Tab States
   const [feedbackMessages, setFeedbackMessages] = useState<any[]>([]);
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
+  const [deleteTargetFeedbackId, setDeleteTargetFeedbackId] = useState<string | null>(null);
 
   // Invite User Modal States
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -444,9 +446,8 @@ export default function UnifiedAdminDashboard() {
     }
   };
 
-  const handleDeleteTicket = async () => {
+  const executeDeleteTicket = async () => {
     if (!selectedTicket) return;
-    if (!confirm("Are you sure you want to delete this ticket permanently?")) return;
 
     try {
       const res = await fetch("/api/support/messages", {
@@ -469,6 +470,8 @@ export default function UnifiedAdminDashboard() {
       }
     } catch (err) {
       toast.error("Connection error deleting ticket.");
+    } finally {
+      setShowDeleteTicketModal(false);
     }
   };
 
@@ -1053,7 +1056,7 @@ export default function UnifiedAdminDashboard() {
                           onClick={() => setUserSearch("")}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                         >
-                          <span className="text-xs font-bold">✕</span>
+                          <X className="h-4 w-4" />
                         </button>
                       )}
                     </div>
@@ -1289,7 +1292,7 @@ export default function UnifiedAdminDashboard() {
                               </div>
                             </div>
                             <Button
-                              onClick={handleDeleteTicket}
+                              onClick={() => setShowDeleteTicketModal(true)}
                               variant="destructive"
                               size="sm"
                               className="w-full sm:w-auto h-8 text-[11px] font-bold rounded-xl px-3.5 bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white border border-rose-200 transition-colors shrink-0 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
@@ -1434,14 +1437,14 @@ export default function UnifiedAdminDashboard() {
                         <div className="flex items-start justify-between gap-2 min-w-0">
                           <div className="space-y-0.5 min-w-0 flex-1">
                             <p className="text-xs font-bold text-slate-900 truncate">{fb.name || "Anonymous"}</p>
-                            <p className="text-[10px] text-slate-500 font-mono break-all truncate">{fb.email || "—"}</p>
+                            <p className="text-[10px] text-slate-500 font-mono break-all truncate">{fb.email || "N/A"}</p>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${colorClass}`}>
                               {label}
                             </span>
                             <button
-                              onClick={() => handleDeleteFeedback(fb.id)}
+                              onClick={() => setDeleteTargetFeedbackId(fb.id)}
                               disabled={deletingFeedbackId === fb.id}
                               className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                               title="Delete feedback"
@@ -1652,6 +1655,92 @@ export default function UnifiedAdminDashboard() {
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* CENTERED DELETE TICKET CONFIRMATION POPUP MODAL (Like in History) */}
+        {showDeleteTicketModal && selectedTicket && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center text-red-500 shrink-0">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Delete Support Ticket</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to permanently delete this ticket?</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1">
+                <span className="font-bold text-slate-900 block truncate">{selectedTicket.userEmail}</span>
+                <p className="text-[11px] text-slate-600 line-clamp-2">{selectedTicket.message}</p>
+              </div>
+
+              <p className="text-[11px] text-red-600 font-medium">
+                This action cannot be undone and will permanently remove this ticket.
+              </p>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowDeleteTicketModal(false)}
+                  className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={executeDeleteTicket}
+                  className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors cursor-pointer"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CENTERED DELETE FEEDBACK CONFIRMATION POPUP MODAL */}
+        {deleteTargetFeedbackId && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center text-red-500 shrink-0">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Delete Feedback</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to delete this feedback message?</p>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-red-600 font-medium">
+                This action will permanently delete this feedback entry.
+              </p>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setDeleteTargetFeedbackId(null)}
+                  className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    handleDeleteFeedback(deleteTargetFeedbackId);
+                    setDeleteTargetFeedbackId(null);
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors cursor-pointer"
+                >
+                  Delete
+                </Button>
+              </div>
             </div>
           </div>
         )}

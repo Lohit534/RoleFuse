@@ -134,48 +134,22 @@ export const TEMPLATE_STYLES: TemplateStyleOption[] = [
 ];
 
 function convertTemplateToStructuredResume(tmpl: AtsTemplateProfile): StructuredResume {
-  const c = tmpl.candidate;
   return {
-    name: c.fullName || "",
-    email: c.email || "",
-    phone: c.phone || "",
-    location: c.location || "",
-    linkedin: c.linkedin || "",
-    github: c.github || "",
-    website: c.portfolio || "",
-    summary: c.summary || "",
-    experience: (c.experience || []).map((exp) => ({
-      id: Math.random().toString(36).substring(2, 9),
-      company: exp.company || "",
-      title: exp.role || "",
-      date: exp.dates || "",
-      bullets: exp.bullets || [],
-    })),
-    education: (c.education || []).map((edu) => ({
-      id: Math.random().toString(36).substring(2, 9),
-      school: edu.school || "",
-      degree: edu.degree || "",
-      field: "",
-      date: edu.dates || "",
-      gpa: edu.score || "",
-      description: "",
-    })),
-    projects: (c.projects || []).map((proj) => ({
-      id: Math.random().toString(36).substring(2, 9),
-      name: proj.title || "",
-      techStack: proj.tech || "",
-      link: "",
-      date: proj.year || "",
-      bullets: proj.bullets || [],
-    })),
-    skills: (c.skills || []).map((s) => ({
-      id: Math.random().toString(36).substring(2, 9),
-      category: s.label || "General",
-      list: (s.items || "").split(",").map((i) => i.trim()).filter(Boolean),
-    })),
-    certifications: c.certifications || [],
-    languages: c.languages || [],
-    achievements: c.achievements || [],
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    linkedin: "",
+    github: "",
+    website: "",
+    summary: "",
+    experience: [],
+    education: [],
+    projects: [],
+    skills: [],
+    certifications: [],
+    languages: [],
+    achievements: [],
   };
 }
 
@@ -195,6 +169,9 @@ function ResumesPageContent() {
   const [editorData, setEditorData] = useState<StructuredResume | null>(null);
   const [tempTitle, setTempTitle] = useState("");
   const [isTitleEditing, setIsTitleEditing] = useState(false);
+
+  // Centered delete confirmation popup modal (Like in History)
+  const [deleteTargetResume, setDeleteTargetResume] = useState<ResumeRecord | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"fields" | "preview">("fields");
   const [templateStyle, setTemplateStyle] = useState<string>("financial-analyst");
@@ -751,8 +728,6 @@ function ResumesPageContent() {
     if (editingResume && typeof window !== "undefined") {
       localStorage.setItem(`fastHire_resume_template_${editingResume.id}`, styleId);
     }
-    const tmplName = TEMPLATE_STYLES.find(t => t.id === styleId)?.name || styleId;
-    toast.success(`Applied ${tmplName} template style!`);
   };
 
   // Open Resume Editor
@@ -874,7 +849,6 @@ function ResumesPageContent() {
           }
         }
         handleOpenEditor(newRecord, tmplId);
-        toast.success(selectedTemplateId ? `New resume created with ${initialTitle} template!` : "New resume card created successfully!");
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to create new resume.");
@@ -884,12 +858,7 @@ function ResumesPageContent() {
   };
 
   // Delete Resume Card
-  const handleDeleteResume = async (e: React.MouseEvent, recordId: string) => {
-    e.stopPropagation();
-    if (!confirm("Are you sure you want to permanently delete this resume card?")) {
-      return;
-    }
-
+  const executeDeleteResume = async (recordId: string) => {
     setActionLoading(`delete-${recordId}`);
     try {
       const res = await fetch(`/api/resumes?id=${recordId}`, {
@@ -906,7 +875,6 @@ function ResumesPageContent() {
         }
         return next;
       });
-      toast.success("Resume record deleted.");
     } catch (err: any) {
       toast.error(err.message || "Failed to delete resume record.");
     } finally {
@@ -1029,7 +997,6 @@ function ResumesPageContent() {
         const updated = { ...editorData, summary: data.improvedBullet || editorData.summary };
         setEditorData(updated);
         saveEditorData(updated);
-        toast.success("Summary enhanced with AI optimization!");
       } else {
         throw new Error("AI engine failed.");
       }
@@ -1556,7 +1523,10 @@ function ResumesPageContent() {
                               Edit
                             </Button>
                             <Button
-                              onClick={(e) => handleDeleteResume(e, resume.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteTargetResume(resume);
+                              }}
                               disabled={isDeleting}
                               variant="ghost"
                               className="h-8 w-8 p-0 rounded-xl hover:bg-rose-50 text-[#526176] hover:text-rose-600 border border-[#DCE7E9] cursor-pointer"
@@ -1719,63 +1689,98 @@ function ResumesPageContent() {
                         <div className="space-y-1">
                           <label className="text-[10px] text-slate-500 uppercase tracking-wide">Full Name</label>
                           <Input
-                            placeholder="e.g. Alexis Carter"
+                            placeholder="Your Full Name"
                             value={editorData.name}
                             onChange={(e) => handlePersonalInfoChange("name", e.target.value)}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            data-lpignore="true"
                             className="h-9 border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a]"
                           />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-slate-500 uppercase tracking-wide">Email</label>
                           <Input
-                            placeholder="e.g. alexis@mail.com"
+                            placeholder="name@example.com"
                             value={editorData.email}
                             onChange={(e) => handlePersonalInfoChange("email", e.target.value)}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            data-lpignore="true"
                             className="h-9 border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a]"
                           />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-slate-500 uppercase tracking-wide">Phone Number</label>
                           <Input
-                            placeholder="e.g. +1 (555) 000-0000"
+                            placeholder="+1 (555) 000-0000"
                             value={editorData.phone}
                             onChange={(e) => handlePersonalInfoChange("phone", e.target.value)}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            data-lpignore="true"
                             className="h-9 border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a]"
                           />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-slate-500 uppercase tracking-wide">Location</label>
                           <Input
-                            placeholder="e.g. Seattle, WA"
+                            placeholder="City, State / Country"
                             value={editorData.location}
                             onChange={(e) => handlePersonalInfoChange("location", e.target.value)}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            data-lpignore="true"
                             className="h-9 border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a]"
                           />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-slate-500 uppercase tracking-wide">LinkedIn Profile</label>
                           <Input
-                            placeholder="e.g. linkedin.com/in/alexis"
+                            placeholder="linkedin.com/in/yourprofile"
                             value={editorData.linkedin}
                             onChange={(e) => handlePersonalInfoChange("linkedin", e.target.value)}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            data-lpignore="true"
                             className="h-9 border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a]"
                           />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-slate-500 uppercase tracking-wide">GitHub Profile</label>
                           <Input
-                            placeholder="e.g. github.com/alexis"
+                            placeholder="github.com/yourusername"
                             value={editorData.github || ""}
                             onChange={(e) => handlePersonalInfoChange("github", e.target.value)}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            data-lpignore="true"
                             className="h-9 border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a]"
                           />
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-slate-500 uppercase tracking-wide">Portfolio / Website</label>
                           <Input
-                            placeholder="e.g. alexisdev.io"
+                            placeholder="yourportfolio.com"
                             value={editorData.website}
                             onChange={(e) => handlePersonalInfoChange("website", e.target.value)}
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            data-lpignore="true"
                             className="h-9 border-slate-200 bg-white text-slate-900 focus:border-[#0d6e5a]"
                           />
                         </div>
@@ -1819,6 +1824,8 @@ function ResumesPageContent() {
                           value={editorData.summary}
                           onChange={(e) => handleSummaryChange(e.target.value)}
                           rows={4}
+                          autoComplete="off"
+                          spellCheck={false}
                           className="w-full p-2.5 border border-slate-200 bg-white text-slate-900 rounded-lg focus:border-[#0d6e5a] outline-none focus:ring-1 focus:ring-[#0d6e5a] font-sans text-xs resize-none"
                         />
                       </div>
@@ -2577,6 +2584,52 @@ function ResumesPageContent() {
 
           </div>
 
+        </div>
+      )}
+      {/* CENTERED DELETE RESUME CONFIRMATION POPUP MODAL (Like in History) */}
+      {deleteTargetResume && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center text-red-500 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-sm">Delete Resume Card</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to permanently delete this resume?</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700">
+              <span className="font-bold text-slate-900 block truncate">{deleteTargetResume.jobTitle || "Untitled Resume"}</span>
+              <span className="text-[10px] text-slate-500">{deleteTargetResume.company || "General"}</span>
+            </div>
+
+            <p className="text-[11px] text-red-600 font-medium">
+              This action cannot be undone and will permanently remove this resume from your workspace.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setDeleteTargetResume(null)}
+                className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  executeDeleteResume(deleteTargetResume.id);
+                  setDeleteTargetResume(null);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors cursor-pointer"
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

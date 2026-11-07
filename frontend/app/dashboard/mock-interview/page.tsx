@@ -116,11 +116,8 @@ export default function MockInterviewPage() {
           const data = await res.json();
           const list = Array.isArray(data) ? data : (data.resumes || []);
           setSavedResumes(list);
-          if (list.length > 0) {
-            setSelectedResumeId(list[0].id);
-            setResumeText(list[0].content || JSON.stringify(list[0].resumeJSON || ""));
-            // Keep company and job title empty so user manually selects or types
-          }
+          setSelectedResumeId("");
+          setResumeText("");
         }
       } catch (err) {
         console.error("Init mock interview error:", err);
@@ -133,6 +130,10 @@ export default function MockInterviewPage() {
 
   const handleSelectResume = (id: string) => {
     setSelectedResumeId(id);
+    if (!id) {
+      setResumeText("");
+      return;
+    }
     const found = savedResumes.find(r => r.id === id);
     if (found) {
       setResumeText(found.content || JSON.stringify(found.resumeJSON || ""));
@@ -329,26 +330,34 @@ export default function MockInterviewPage() {
                 {/* Resume Source */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700">Resume Background</label>
-                  {savedResumes.length > 0 ? (
+                  {savedResumes.length > 0 && (
                     <select
                       value={selectedResumeId}
                       onChange={(e) => handleSelectResume(e.target.value)}
-                      className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#087F6E]/20"
+                      className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#087F6E]/20 mb-1.5"
                     >
+                      <option value="">-- Choose saved resume (or paste below) --</option>
                       {savedResumes.map((res) => (
                         <option key={res.id} value={res.id}>
                           {res.title || res.jobTitle || "Master Resume"}
                         </option>
                       ))}
                     </select>
-                  ) : (
-                    <Input
-                      placeholder="Paste resume excerpt..."
-                      value={resumeText}
-                      onChange={(e) => setResumeText(e.target.value)}
-                      className="text-xs bg-slate-50 border-slate-200 rounded-xl h-9"
-                    />
                   )}
+                  <Input
+                    placeholder="Paste resume excerpt..."
+                    value={resumeText}
+                    onChange={(e) => {
+                      setResumeText(e.target.value);
+                      if (selectedResumeId) setSelectedResumeId("");
+                    }}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    data-lpignore="true"
+                    className="text-xs bg-slate-50 border-slate-200 rounded-xl h-9"
+                  />
                 </div>
 
                 {/* Company Name (Dropdown + Manual Type) */}
@@ -375,6 +384,11 @@ export default function MockInterviewPage() {
                     placeholder="Type or select company (e.g. Google)..."
                     value={company}
                     onChange={(e) => setCompany(e.target.value)}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    data-lpignore="true"
                     className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
                   />
                   <datalist id="mock-company-options">
@@ -408,6 +422,11 @@ export default function MockInterviewPage() {
                     placeholder="Type or select IT role (e.g. Senior Software Engineer)..."
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    data-lpignore="true"
                     className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
                   />
                   <datalist id="mock-role-options">
@@ -427,6 +446,9 @@ export default function MockInterviewPage() {
                   onChange={(e) => setJobDescription(e.target.value)}
                   rows={4}
                   required
+                  autoComplete="off"
+                  spellCheck={false}
+                  data-lpignore="true"
                   className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl"
                 />
               </div>

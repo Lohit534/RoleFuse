@@ -75,6 +75,11 @@ export default function AdminDashboard() {
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
 
+  // Delete modal targets (replacing window.confirm)
+  const [deleteTargetUser, setDeleteTargetUser] = useState<{ id: string; email: string } | null>(null);
+  const [showDeleteTicketModal, setShowDeleteTicketModal] = useState(false);
+  const [deleteTargetFeedbackId, setDeleteTargetFeedbackId] = useState<string | null>(null);
+
   const [refreshing, setRefreshing] = useState(false);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -237,8 +242,7 @@ export default function AdminDashboard() {
     finally { setUpdatingPlanId(null); }
   };
 
-  const handleDeleteUser = async (targetUserId: string, targetEmail: string) => {
-    if (!confirm(`Permanently delete user "${targetEmail}"? This removes their account from both Supabase Auth and Database.`)) return;
+  const executeDeleteUser = async (targetUserId: string, targetEmail: string) => {
     setDeletingUserId(targetUserId);
     try {
       const res = await fetch(`/api/users?userId=${targetUserId}`, {
@@ -256,6 +260,7 @@ export default function AdminDashboard() {
       toast.error("Failed to delete user.");
     } finally {
       setDeletingUserId(null);
+      setDeleteTargetUser(null);
     }
   };
 
@@ -284,8 +289,8 @@ export default function AdminDashboard() {
     finally { setSubmittingReply(false); }
   };
 
-  const handleDeleteTicket = async () => {
-    if (!selectedTicket || !confirm("Delete this ticket permanently?")) return;
+  const executeDeleteTicket = async () => {
+    if (!selectedTicket) return;
     try {
       const res = await fetch("/api/tickets", {
         method: "POST",
@@ -299,9 +304,10 @@ export default function AdminDashboard() {
         setSelectedTicket(remaining.length > 0 ? remaining[0] : null);
       } else toast.error("Failed to delete ticket.");
     } catch { toast.error("Connection error."); }
+    finally { setShowDeleteTicketModal(false); }
   };
 
-  const handleDeleteFeedback = async (id: string) => {
+  const executeDeleteFeedback = async (id: string) => {
     setDeletingFeedbackId(id);
     try {
       const res = await fetch("/api/feedback", {
@@ -314,30 +320,16 @@ export default function AdminDashboard() {
         toast.success("Feedback deleted.");
       }
     } catch { toast.error("Connection error."); }
-    finally { setDeletingFeedbackId(null); }
+    finally {
+      setDeletingFeedbackId(null);
+      setDeleteTargetFeedbackId(null);
+    }
   };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
   };
-
-  /* ── Loading screen ── */
-  if (authLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f0f4f8]">
-        <div className="text-center space-y-4">
-          <div className="relative mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-[#0d6e5a] to-[#0f766e] flex items-center justify-center shadow-lg">
-            <Loader2 className="h-7 w-7 text-white animate-spin" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-slate-800">Verifying admin access</p>
-            <p className="text-xs text-slate-500">Please wait...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   /* ── Derived values ── */
   const totalUsers = users.length;
@@ -374,6 +366,23 @@ export default function AdminDashboard() {
     { key: "tickets"  as TabKey, label: "Support Tickets", icon: MessageSquare,   badge: pendingTickets > 0 ? String(pendingTickets) : null },
     { key: "feedback" as TabKey, label: "Feedback Inbox",  icon: Inbox,           badge: feedbackMessages.length > 0 ? String(feedbackMessages.length) : null },
   ];
+
+  /* ── Loading screen ── */
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f0f4f8]">
+        <div className="text-center space-y-4">
+          <div className="relative mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-[#0d6e5a] to-[#0f766e] flex items-center justify-center shadow-lg">
+            <Loader2 className="h-7 w-7 text-white animate-spin" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-slate-800">Verifying admin access</p>
+            <p className="text-xs text-slate-500">Please wait...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   /* ── UI ── */
   return (
@@ -802,7 +811,7 @@ export default function AdminDashboard() {
                                 )}
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteUser(u.id, u.email)}
+                                  onClick={() => setDeleteTargetUser({ id: u.id, email: u.email })}
                                   disabled={deletingUserId === u.id}
                                   title="Permanently Delete User"
                                   className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border border-transparent hover:border-rose-200"
@@ -932,7 +941,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                           <button
-                            onClick={handleDeleteTicket}
+                            onClick={() => setShowDeleteTicketModal(true)}
                             className="flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1054,7 +1063,7 @@ export default function AdminDashboard() {
                               {typeLabel[fb.type] || typeLabel.general}
                             </span>
                             <button
-                              onClick={() => handleDeleteFeedback(fb.id)}
+                              onClick={() => setDeleteTargetFeedbackId(fb.id)}
                               disabled={deletingFeedbackId === fb.id}
                               className="h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                             >
@@ -1081,6 +1090,129 @@ export default function AdminDashboard() {
 
         </main>
       </div>
+
+      {/* CENTERED DELETE USER MODAL (Like in History) */}
+      {deleteTargetUser && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center text-red-500 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-sm">Delete User Account</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to permanently delete this user account?</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700">
+              <span className="font-bold text-slate-900 block truncate">{deleteTargetUser.email}</span>
+            </div>
+
+            <p className="text-[11px] text-red-600 font-medium">
+              This action cannot be undone and will permanently remove their account from both Supabase Auth and Database.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTargetUser(null)}
+                className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => executeDeleteUser(deleteTargetUser.id, deleteTargetUser.email)}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors cursor-pointer"
+              >
+                Delete User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CENTERED DELETE TICKET MODAL */}
+      {showDeleteTicketModal && selectedTicket && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center text-red-500 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-sm">Delete Support Ticket</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to permanently delete this ticket?</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-1">
+              <span className="font-bold text-slate-900 block truncate">{selectedTicket.userEmail}</span>
+              <p className="text-[11px] text-slate-600 line-clamp-2">{selectedTicket.message}</p>
+            </div>
+
+            <p className="text-[11px] text-red-600 font-medium">
+              This action cannot be undone and will permanently remove this ticket.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteTicketModal(false)}
+                className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeDeleteTicket}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors cursor-pointer"
+              >
+                Delete Ticket
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CENTERED DELETE FEEDBACK MODAL */}
+      {deleteTargetFeedbackId && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center text-red-500 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-sm">Delete Feedback</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to delete this feedback message?</p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-red-600 font-medium">
+              This action will permanently delete this feedback entry.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTargetFeedbackId(null)}
+                className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => executeDeleteFeedback(deleteTargetFeedbackId)}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

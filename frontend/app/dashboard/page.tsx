@@ -127,24 +127,11 @@ function saveActiveSession(data: {
       sessionStorage.setItem(ACTIVE_KEYS.RESUME_ID, data.resumeId || "");
       localStorage.setItem(ACTIVE_KEYS.RESUME_ID, data.resumeId || "");
     }
-    if (data.resumeText !== undefined) {
-      if (data.resumeText) {
-        sessionStorage.setItem(ACTIVE_KEYS.RESUME_TEXT, data.resumeText);
-        localStorage.setItem(ACTIVE_KEYS.RESUME_TEXT, data.resumeText);
-      } else {
-        sessionStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
-        localStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
-      }
-    }
-    if (data.jobDescription !== undefined) {
-      if (data.jobDescription) {
-        sessionStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription);
-        localStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription);
-      } else {
-        sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
-        localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
-      }
-    }
+    // Input text and URLs are never stored: every time the user fills newly
+    sessionStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
+    localStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
+    sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+    localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
     if (data.roadmapContent !== undefined) {
       if (data.roadmapContent) {
         sessionStorage.setItem(ACTIVE_KEYS.ROADMAP_CONTENT, data.roadmapContent);
@@ -204,12 +191,9 @@ function loadActiveSession() {
     const resumeId =
       sessionStorage.getItem(ACTIVE_KEYS.RESUME_ID) ||
       localStorage.getItem(ACTIVE_KEYS.RESUME_ID);
-    const resumeText =
-      sessionStorage.getItem(ACTIVE_KEYS.RESUME_TEXT) ||
-      localStorage.getItem(ACTIVE_KEYS.RESUME_TEXT);
-    const jobDescription =
-      sessionStorage.getItem(ACTIVE_KEYS.JOB_DESCRIPTION) ||
-      localStorage.getItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+    // Never reload old input text into the form inputs
+    const resumeText = "";
+    const jobDescription = "";
     const roadmapContent =
       sessionStorage.getItem(ACTIVE_KEYS.ROADMAP_CONTENT) ||
       localStorage.getItem(ACTIVE_KEYS.ROADMAP_CONTENT);
@@ -334,7 +318,6 @@ export default function DashboardPage() {
       }
 
       setIsSavedToResumes(true);
-      toast.success("Optimized resume saved to your My Resumes library!");
     } catch (err: any) {
       toast.error(err.message || "Failed to save resume.");
     } finally {
@@ -378,6 +361,7 @@ export default function DashboardPage() {
   const [pendingResumeText, setPendingResumeText] = useState("");
   const [showOneTimeFeedback, setShowOneTimeFeedback] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const sampleLoadedRef = useRef(false);
 
   const [viewMode, setViewMode] = useState<"result" | "editor">("editor");
@@ -394,12 +378,14 @@ export default function DashboardPage() {
   });
 
   const [jobTrackerStats, setJobTrackerStats] = useState<{
+    total: number;
     saved: number;
     applied: number;
     interview: number;
     offer: number;
     nextInterview: string | null;
   }>({
+    total: 0,
     saved: 0,
     applied: 0,
     interview: 0,
@@ -425,6 +411,16 @@ export default function DashboardPage() {
   }, [resetStore, setResumeText, setJobDescription]);
 
   useEffect(() => {
+    // Purge any old input text or URLs from storage so the user fills fresh every time
+    try {
+      localStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
+      localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+      sessionStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
+      sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+      localStorage.removeItem("fasthire-resume-storage");
+      sessionStorage.removeItem("fasthire-resume-storage");
+    } catch {}
+
     if (sampleLoadedRef.current) return;
 
     // Check if sample data was requested from landing page or query
@@ -458,13 +454,14 @@ export default function DashboardPage() {
         window.history.replaceState({}, "", "/dashboard");
       }
     } else {
-      // Restore active optimization result if present, without overwriting user's active typed text
+      // Clear inputs to blank so user fills newly every time
+      setResumeText("");
+      setJobDescription("");
       const activeSession = loadActiveSession();
       if (activeSession) {
         sampleLoadedRef.current = true;
         setOptimizeResult(activeSession.result);
-        if (activeSession.resumeText) setOriginalResumeSnapshot(activeSession.resumeText);
-        else if (activeSession.result?.originalText) setOriginalResumeSnapshot(activeSession.result.originalText);
+        if (activeSession.result?.originalText) setOriginalResumeSnapshot(activeSession.result.originalText);
         if (activeSession.beforeScore) setBeforeScore(activeSession.beforeScore);
         if (activeSession.afterScore) setAfterScore(activeSession.afterScore);
         if (activeSession.resumeId) setCurrentResumeId(activeSession.resumeId);
@@ -540,12 +537,14 @@ export default function DashboardPage() {
               if (validJobs.length !== parsed.length) {
                 localStorage.setItem(`fastHire_jobs_${data.user.id}`, JSON.stringify(validJobs));
               }
+              const totalCount = validJobs.length;
               const savedCount = validJobs.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
               const appliedCount = validJobs.filter((j: any) => j.status === "applied").length;
               const interviewCount = validJobs.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
               const offerCount = validJobs.filter((j: any) => j.status === "offered" || j.status === "offer").length;
               const upcoming = validJobs.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
               setJobTrackerStats({
+                total: totalCount,
                 saved: savedCount,
                 applied: appliedCount,
                 interview: interviewCount,
@@ -554,6 +553,7 @@ export default function DashboardPage() {
               });
             } else {
               setJobTrackerStats({
+                total: 0,
                 saved: 0,
                 applied: 0,
                 interview: 0,
@@ -563,6 +563,7 @@ export default function DashboardPage() {
             }
           } else {
             setJobTrackerStats({
+              total: 0,
               saved: 0,
               applied: 0,
               interview: 0,
@@ -641,12 +642,14 @@ export default function DashboardPage() {
             const validJobs = parsed.filter(
               (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
             );
+            const totalCount = validJobs.length;
             const savedCount = validJobs.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
             const appliedCount = validJobs.filter((j: any) => j.status === "applied").length;
             const interviewCount = validJobs.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
             const offerCount = validJobs.filter((j: any) => j.status === "offered" || j.status === "offer").length;
             const upcoming = validJobs.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
             setJobTrackerStats({
+              total: totalCount,
               saved: savedCount,
               applied: appliedCount,
               interview: interviewCount,
@@ -657,6 +660,7 @@ export default function DashboardPage() {
           }
         }
         setJobTrackerStats({
+          total: 0,
           saved: 0,
           applied: 0,
           interview: 0,
@@ -665,6 +669,7 @@ export default function DashboardPage() {
         });
       } catch (e) {
         setJobTrackerStats({
+          total: 0,
           saved: 0,
           applied: 0,
           interview: 0,
@@ -689,9 +694,10 @@ export default function DashboardPage() {
     optimizationInstructions = instructions,
   ) => {
     if (!targetResumeText.trim() || !jobDescription.trim()) {
-      toast.error("Please provide both resume text and job description.");
+      setValidationMessage("Please provide both resume text and job description.");
       return;
     }
+    setValidationMessage(null);
 
     setActiveOptimizationText(targetResumeText);
     setActiveOptimizationInstructions(optimizationInstructions);
@@ -771,12 +777,13 @@ export default function DashboardPage() {
   };
 
   const handleOptimize = async () => {
+    setValidationMessage(null);
     if (!resumeText?.trim()) {
-      toast.error("Add your resume first.");
+      setValidationMessage("Please add your resume first.");
       return;
     }
     if (!jobDescription?.trim()) {
-      toast.error("Paste the job description to match against.");
+      setValidationMessage("Please paste the job description to match against.");
       return;
     }
 
@@ -1114,10 +1121,6 @@ export default function DashboardPage() {
           }).catch(() => {});
         } catch (_e) {}
       }
-
-      toast.success(
-        `Generated 90-day roadmap for ${selectedRoadmapSkills.length} selected skill${selectedRoadmapSkills.length > 1 ? "s" : ""}!`,
-      );
     } catch (e: any) {
       toast.error(e?.message || "Failed to generate learning roadmap.");
     } finally {
@@ -1241,7 +1244,7 @@ export default function DashboardPage() {
                 <span className="text-[#526176]">
                   {beforeScore?.overall ?? 0}%
                 </span>{" "}
-                →{" "}
+                to{" "}
                 <span className="text-[#087F6E]">
                   {afterScore?.overall ?? 0}%
                 </span>
@@ -1281,13 +1284,12 @@ export default function DashboardPage() {
                     router.push("/dashboard/job-tracker");
                   } else {
                     handleAddToTracker();
-                    toast.success("Added to your Job Tracker!");
                   }
                 }}
                 size="sm"
                 className="flex-1 sm:flex-none bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold h-9 rounded-md px-3.5 shadow-xs transition-all cursor-pointer flex items-center justify-center"
               >
-                <span>{trackerAdded ? "In Tracker" : "+ Job Tracker"}</span>
+                <span>{trackerAdded ? "In Tracker" : "Add to Tracker"}</span>
               </Button>
 
               <Button
@@ -1699,7 +1701,6 @@ export default function DashboardPage() {
                       <Button
                         onClick={() => {
                           navigator.clipboard.writeText(roadmapContent);
-                          toast.success("Roadmap copied to clipboard!");
                         }}
                         className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer font-bold"
                       >
@@ -1757,7 +1758,6 @@ export default function DashboardPage() {
                         <Button
                           onClick={() => {
                             navigator.clipboard.writeText(coverLetterGenerated);
-                            toast.success("Cover letter copied to clipboard!");
                           }}
                           className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer font-bold"
                         >
@@ -1880,6 +1880,13 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
+
+            {/* Inline Validation Message */}
+            {validationMessage && (
+              <div className="w-full max-w-lg mx-auto p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center animate-in fade-in duration-150">
+                {validationMessage}
+              </div>
+            )}
 
             {/* CTA Button & Available Scans */}
             <div className="w-full flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 pt-2">
@@ -2104,10 +2111,10 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-4 gap-1.5 sm:gap-2 pt-0.5">
                       <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-1.5 sm:p-2 text-center min-w-0">
                         <span className="block text-sm sm:text-base font-black text-[#087F6E]">
-                          {jobTrackerStats.saved}
+                          {jobTrackerStats.total ?? jobTrackerStats.saved}
                         </span>
                         <span className="block text-[9px] sm:text-[10px] text-slate-500 font-semibold mt-0.5 truncate">
-                          Saved
+                          Tracked
                         </span>
                       </div>
                       <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-1.5 sm:p-2 text-center min-w-0">
@@ -2131,7 +2138,7 @@ export default function DashboardPage() {
                           {jobTrackerStats.offer}
                         </span>
                         <span className="block text-[9px] sm:text-[10px] text-slate-500 font-semibold mt-0.5 truncate">
-                          Offer
+                          Offers
                         </span>
                       </div>
                     </div>
