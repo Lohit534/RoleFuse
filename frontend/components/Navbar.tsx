@@ -1466,12 +1466,12 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
         </div>
       )}
 
-      {/* Mobile Floating Capsule Navigation Bar (Glassmorphic Blur Capsule with Names & Light Teal Active) */}
+      {/* Mobile Floating Capsule Navigation Bar (Frosted Glassmorphic Capsule matching reference) */}
       {user && !hideNav && (
-        <div className="sm:hidden fixed bottom-3 left-0 right-0 z-[100] flex justify-center pointer-events-none pb-safe px-3">
+        <div className="sm:hidden fixed bottom-[max(12px,env(safe-area-inset-bottom))] left-0 right-0 z-[100] flex justify-center pointer-events-none px-3">
           <nav
             aria-label="Mobile Navigation"
-            className="pointer-events-auto w-full max-w-[340px] bg-white/65 backdrop-blur-2xl border border-white/70 rounded-full px-2 py-1.5 flex items-center justify-around shadow-[0_8px_32px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.04]"
+            className="pointer-events-auto w-full max-w-[316px] bg-white/60 backdrop-blur-3xl border border-white/80 rounded-full px-2 py-1.5 flex items-center justify-around shadow-[0_12px_36px_rgba(0,0,0,0.08),0_2px_10px_rgba(8,127,110,0.06)] ring-1 ring-black/[0.04]"
           >
             {/* 1. Optimize Tab */}
             <Link
@@ -1486,15 +1486,15 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               <div
                 className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
                   pathname === "/dashboard"
-                    ? "bg-[#E6F4F1] text-[#087F6E] shadow-xs ring-1 ring-[#087F6E]/30"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                    ? "bg-[#087F6E]/12 text-[#087F6E] ring-1 ring-[#087F6E]/25 shadow-xs"
+                    : "bg-white/40 text-slate-500 border border-white/50 group-hover:bg-white/70 group-hover:text-slate-700"
                 }`}
               >
                 <GeminiIcon className="h-4 w-4" />
               </div>
               <span
-                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
-                  pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-400 group-hover:text-slate-600"
+                className={`text-[9.5px] mt-0.5 font-bold tracking-tight transition-colors ${
+                  pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-500 group-hover:text-slate-700"
                 }`}
               >
                 Optimize
@@ -1509,15 +1509,15 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               <div
                 className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
                   pathname === "/dashboard/resumes"
-                    ? "bg-[#E6F4F1] text-[#087F6E] shadow-xs ring-1 ring-[#087F6E]/30"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                    ? "bg-[#087F6E]/12 text-[#087F6E] ring-1 ring-[#087F6E]/25 shadow-xs"
+                    : "bg-white/40 text-slate-500 border border-white/50 group-hover:bg-white/70 group-hover:text-slate-700"
                 }`}
               >
                 <FileText className="h-4 w-4" />
               </div>
               <span
-                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
-                  pathname === "/dashboard/resumes" ? "text-[#087F6E]" : "text-slate-400 group-hover:text-slate-600"
+                className={`text-[9.5px] mt-0.5 font-bold tracking-tight transition-colors ${
+                  pathname === "/dashboard/resumes" ? "text-[#087F6E]" : "text-slate-500 group-hover:text-slate-700"
                 }`}
               >
                 Resumes
@@ -1532,15 +1532,15 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               <div
                 className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
                   pathname === "/dashboard/job-tracker"
-                    ? "bg-[#E6F4F1] text-[#087F6E] shadow-xs ring-1 ring-[#087F6E]/30"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                    ? "bg-[#087F6E]/12 text-[#087F6E] ring-1 ring-[#087F6E]/25 shadow-xs"
+                    : "bg-white/40 text-slate-500 border border-white/50 group-hover:bg-white/70 group-hover:text-slate-700"
                 }`}
               >
                 <Briefcase className="h-4 w-4" />
               </div>
               <span
-                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
-                  pathname === "/dashboard/job-tracker" ? "text-[#087F6E]" : "text-slate-400 group-hover:text-slate-600"
+                className={`text-[9.5px] mt-0.5 font-bold tracking-tight transition-colors ${
+                  pathname === "/dashboard/job-tracker" ? "text-[#087F6E]" : "text-slate-500 group-hover:text-slate-700"
                 }`}
               >
                 Tracker
@@ -1555,15 +1555,15 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               <div
                 className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
                   pathname === "/dashboard/history"
-                    ? "bg-[#E6F4F1] text-[#087F6E] shadow-xs ring-1 ring-[#087F6E]/30"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                    ? "bg-[#087F6E]/12 text-[#087F6E] ring-1 ring-[#087F6E]/25 shadow-xs"
+                    : "bg-white/40 text-slate-500 border border-white/50 group-hover:bg-white/70 group-hover:text-slate-700"
                 }`}
               >
                 <History className="h-4 w-4" />
               </div>
               <span
-                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
-                  pathname === "/dashboard/history" ? "text-[#087F6E]" : "text-slate-400 group-hover:text-slate-600"
+                className={`text-[9.5px] mt-0.5 font-bold tracking-tight transition-colors ${
+                  pathname === "/dashboard/history" ? "text-[#087F6E]" : "text-slate-500 group-hover:text-slate-700"
                 }`}
               >
                 History

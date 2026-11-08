@@ -9,8 +9,8 @@ import {
   CheckCircle, User as UserIcon, Clock, AlertCircle,
   Trash2, CheckCircle2, RefreshCw, Menu, X,
   Bell, ChevronRight, Activity, BarChart3,
-  ArrowUpRight, ArrowDownRight, Filter, Eye, Send,
-  Shield, CreditCard, ShieldCheck
+  ArrowUpRight, ArrowDownRight, ArrowRight, Filter, Eye, Send,
+  Shield, CreditCard, ShieldCheck, Radio, Tag, Zap, Plus
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -38,7 +38,7 @@ interface Ticket {
   repliedAt: string | null;
 }
 
-type TabKey = "overview" | "users" | "tickets" | "feedback";
+type TabKey = "overview" | "users" | "tickets" | "feedback" | "broadcasts";
 
 const PLAN_CONFIG = {
   owner:   { label: "Owner",         bg: "bg-amber-50",   border: "border-amber-200",  text: "text-amber-700" },
@@ -75,6 +75,21 @@ export default function AdminDashboard() {
   const [feedbackLoading, setFeedbackLoading] = useState(true);
   const [deletingFeedbackId, setDeletingFeedbackId] = useState<string | null>(null);
 
+  // Broadcasts
+  const [broadcasts, setBroadcasts] = useState<any[]>([]);
+  const [broadcastsLoading, setBroadcastsLoading] = useState(false);
+  const [isCreatingBroadcast, setIsCreatingBroadcast] = useState(false);
+  const [bcTitle, setBcTitle] = useState("");
+  const [bcMessage, setBcMessage] = useState("");
+  const [bcCategory, setBcCategory] = useState<"offer" | "update" | "alert" | "general">("offer");
+  const [bcTag, setBcTag] = useState("");
+  const [bcHighlightNumber, setBcHighlightNumber] = useState("");
+  const [bcActionText, setBcActionText] = useState("");
+  const [bcActionHref, setBcActionHref] = useState("");
+  const [bcExpiresAt, setBcExpiresAt] = useState("");
+  const [submittingBroadcast, setSubmittingBroadcast] = useState(false);
+  const [deleteTargetBroadcastId, setDeleteTargetBroadcastId] = useState<string | null>(null);
+
   // Delete modal targets (replacing window.confirm)
   const [deleteTargetUser, setDeleteTargetUser] = useState<{ id: string; email: string } | null>(null);
   const [showDeleteTicketModal, setShowDeleteTicketModal] = useState(false);
@@ -101,6 +116,7 @@ export default function AdminDashboard() {
       loadUsers(token);
       loadTickets(token);
       loadFeedback(token);
+      loadBroadcasts(token);
     };
 
     const { data: authListener } = (supabase as any).auth.onAuthStateChange(
@@ -206,13 +222,98 @@ export default function AdminDashboard() {
     finally { setFeedbackLoading(false); }
   };
 
+  const loadBroadcasts = async (token = accessToken) => {
+    setBroadcastsLoading(true);
+    try {
+      const res = await fetch(`/api/broadcasts?t=${Date.now()}`, {
+        headers: authHeaders(token),
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBroadcasts(Array.isArray(data.broadcasts) ? data.broadcasts : []);
+      }
+    } catch {
+      toast.error("Error loading broadcasts.");
+    } finally {
+      setBroadcastsLoading(false);
+    }
+  };
+
+  const handleCreateBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bcTitle.trim() || !bcMessage.trim()) {
+      toast.error("Title and message are required.");
+      return;
+    }
+    setSubmittingBroadcast(true);
+    try {
+      const res = await fetch("/api/broadcasts", {
+        method: "POST",
+        headers: authHeaders(accessToken),
+        body: JSON.stringify({
+          title: bcTitle.trim(),
+          message: bcMessage.trim(),
+          category: bcCategory,
+          tag: bcTag.trim() || undefined,
+          highlightNumber: bcHighlightNumber.trim() || undefined,
+          actionText: bcActionText.trim() || undefined,
+          actionHref: bcActionHref.trim() || undefined,
+          expiresAt: bcExpiresAt || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Broadcast announcement sent to all users!");
+        setBroadcasts(prev => [data.broadcast, ...prev]);
+        setBcTitle("");
+        setBcMessage("");
+        setBcTag("");
+        setBcHighlightNumber("");
+        setBcActionText("");
+        setBcActionHref("");
+        setBcExpiresAt("");
+        setIsCreatingBroadcast(false);
+      } else {
+        toast.error(data.error || "Failed to create broadcast.");
+      }
+    } catch {
+      toast.error("Connection error creating broadcast.");
+    } finally {
+      setSubmittingBroadcast(false);
+    }
+  };
+
+  const executeDeleteBroadcast = async (id: string) => {
+    try {
+      const res = await fetch(`/api/broadcasts?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: authHeaders(accessToken),
+      });
+      if (res.ok) {
+        setBroadcasts(prev => prev.filter(b => b.id !== id));
+        toast.success("Broadcast removed.");
+      } else {
+        toast.error("Failed to delete broadcast.");
+      }
+    } catch {
+      toast.error("Connection error.");
+    }
+  };
+
   const handleReload = async () => {
     setRefreshing(true);
     setUsersLoading(true);
     setTicketsLoading(true);
     setFeedbackLoading(true);
+    setBroadcastsLoading(true);
     try {
-      await Promise.allSettled([loadUsers(accessToken), loadTickets(accessToken), loadFeedback(accessToken)]);
+      await Promise.allSettled([
+        loadUsers(accessToken),
+        loadTickets(accessToken),
+        loadFeedback(accessToken),
+        loadBroadcasts(accessToken)
+      ]);
       toast.success("Dashboard reloaded");
     } catch { toast.error("Failed to reload data"); }
     finally { setRefreshing(false); }
@@ -365,6 +466,7 @@ export default function AdminDashboard() {
     { key: "users"    as TabKey, label: "Users & Billing", icon: Users,           badge: totalUsers > 0 ? String(totalUsers) : null },
     { key: "tickets"  as TabKey, label: "Support Tickets", icon: MessageSquare,   badge: pendingTickets > 0 ? String(pendingTickets) : null },
     { key: "feedback" as TabKey, label: "Feedback Inbox",  icon: Inbox,           badge: feedbackMessages.length > 0 ? String(feedbackMessages.length) : null },
+    { key: "broadcasts" as TabKey, label: "Broadcasts",    icon: Radio,           badge: broadcasts.length > 0 ? String(broadcasts.length) : null },
   ];
 
   /* ── Loading screen ── */
@@ -508,12 +610,12 @@ export default function AdminDashboard() {
               <span>Admin Console</span>
               <ChevronRight className="h-3 w-3" />
               <span className="text-slate-900 font-extrabold">
-                {activeTab === "overview" ? "Dashboard" : activeTab === "users" ? "Users & Billing" : activeTab === "tickets" ? "Support Tickets" : "Feedback Inbox"}
+                {activeTab === "overview" ? "Dashboard" : activeTab === "users" ? "Users & Billing" : activeTab === "tickets" ? "Support Tickets" : activeTab === "feedback" ? "Feedback Inbox" : "Broadcast Announcements"}
               </span>
             </div>
             {/* Mobile title */}
             <span className="sm:hidden font-extrabold text-slate-900 text-sm">
-              {activeTab === "overview" ? "Dashboard" : activeTab === "users" ? "Users" : activeTab === "tickets" ? "Tickets" : "Feedback"}
+              {activeTab === "overview" ? "Dashboard" : activeTab === "users" ? "Users" : activeTab === "tickets" ? "Tickets" : activeTab === "feedback" ? "Feedback" : "Broadcasts"}
             </span>
           </div>
 
@@ -1088,6 +1190,382 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* TAB 5: BROADCAST NOTIFICATIONS */}
+          {activeTab === "broadcasts" && (
+            <div className="space-y-6 animate-in fade-in duration-200 max-w-7xl mx-auto">
+              {/* Header and Action Button */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Radio className="h-5 w-5 text-[#0d6e5a]" />
+                    <h2 className="text-base font-black text-slate-900">User Broadcast Center</h2>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Send dynamic announcements, offer banners, discounts &amp; updates directly to all active users&apos; notification bell.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingBroadcast(!isCreatingBroadcast)}
+                  className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold h-9 text-xs rounded-xl px-4 flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+                >
+                  {isCreatingBroadcast ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                  <span>{isCreatingBroadcast ? "Close Composer" : "New Broadcast"}</span>
+                </button>
+              </div>
+
+              {/* Composer Box (Live Preview & Settings) */}
+              {isCreatingBroadcast && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                  {/* Left Column: Form Controls */}
+                  <form onSubmit={handleCreateBroadcast} className="space-y-4">
+                    <div className="border-b border-slate-100 pb-3">
+                      <span className="text-xs font-black uppercase text-[#0d6e5a] tracking-wider">
+                        Compose Announcement
+                      </span>
+                      <p className="text-[11px] text-slate-500">
+                        Select message style and customize the text shown to users.
+                      </p>
+                    </div>
+
+                    {/* Category Selector */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700">Notification Category</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {(
+                          [
+                            { id: "offer", label: "Special Offer", icon: Tag, color: "border-amber-400 bg-amber-50/70 text-amber-900" },
+                            { id: "update", label: "Update / Feature", icon: Zap, color: "border-teal-400 bg-teal-50/70 text-[#087F6E]" },
+                            { id: "alert", label: "Important Alert", icon: AlertCircle, color: "border-rose-400 bg-rose-50/70 text-rose-900" },
+                            { id: "general", label: "General News", icon: Radio, color: "border-slate-300 bg-slate-50 text-slate-800" },
+                          ] as const
+                        ).map((cat) => {
+                          const IconComp = cat.icon;
+                          const isSelected = bcCategory === cat.id;
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => {
+                                setBcCategory(cat.id);
+                                if (cat.id === "offer" && !bcTag) setBcTag("LIMITED OFFER");
+                                if (cat.id === "update" && !bcTag) setBcTag("NEW FEATURE");
+                                if (cat.id === "alert" && !bcTag) setBcTag("NOTICE");
+                              }}
+                              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1.5 ${
+                                isSelected ? `${cat.color} ring-2 ring-[#0d6e5a]/30 shadow-xs` : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                              }`}
+                            >
+                              <IconComp className="h-4 w-4" />
+                              <span className="text-[10px] font-bold leading-tight">{cat.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700">Headline / Title *</label>
+                      <input
+                        required
+                        placeholder="e.g. Weekend Flash Sale: 40% Off Pro Max!"
+                        value={bcTitle}
+                        onChange={(e) => setBcTitle(e.target.value)}
+                        className="w-full h-9 px-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0d6e5a]/20 focus:border-[#0d6e5a]"
+                      />
+                    </div>
+
+                    {/* Message Body */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700">Message Description *</label>
+                      <textarea
+                        required
+                        rows={3}
+                        placeholder="e.g. Upgrade now to unlock unlimited AI optimizations, ATS tailoring, and priority exports before Monday."
+                        value={bcMessage}
+                        onChange={(e) => setBcMessage(e.target.value)}
+                        className="w-full p-3 text-xs border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-[#0d6e5a]/20 focus:border-[#0d6e5a]"
+                      />
+                    </div>
+
+                    {/* Badge Tag & Highlight Number */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-700">Badge Tag (Optional)</label>
+                        <input
+                          placeholder="e.g. 50% OFF, v2.5, NEW"
+                          value={bcTag}
+                          onChange={(e) => setBcTag(e.target.value)}
+                          className="w-full h-9 px-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0d6e5a]/20 focus:border-[#0d6e5a]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-700">Highlight Number (Optional)</label>
+                        <input
+                          placeholder="e.g. 40%, 20+ Resumes"
+                          value={bcHighlightNumber}
+                          onChange={(e) => setBcHighlightNumber(e.target.value)}
+                          className="w-full h-9 px-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0d6e5a]/20 focus:border-[#0d6e5a]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Action Button Link */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-700">Button Text (Optional)</label>
+                        <input
+                          placeholder="e.g. Claim Discount"
+                          value={bcActionText}
+                          onChange={(e) => setBcActionText(e.target.value)}
+                          className="w-full h-9 px-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0d6e5a]/20 focus:border-[#0d6e5a]"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-bold text-slate-700">Button Link (Optional)</label>
+                        <input
+                          placeholder="e.g. /dashboard/pricing"
+                          value={bcActionHref}
+                          onChange={(e) => setBcActionHref(e.target.value)}
+                          className="w-full h-9 px-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0d6e5a]/20 focus:border-[#0d6e5a]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={submittingBroadcast}
+                        className="w-full bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold h-10 text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {submittingBroadcast ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                        <span>Publish Broadcast to All Users</span>
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Right Column: Live User Preview */}
+                  <div className="space-y-4 bg-slate-50/70 p-5 rounded-2xl border border-slate-200/90 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+                        <span className="text-xs font-black text-slate-800">Live User Notification Preview</span>
+                        <span className="text-[10px] bg-white border border-slate-200 px-2 py-0.5 rounded-full font-bold text-slate-500">
+                          Bell Popup Preview
+                        </span>
+                      </div>
+
+                      {/* Mock Card */}
+                      <div className="mt-4 p-4 rounded-xl border bg-white shadow-sm space-y-2 relative">
+                        <div className={`p-3 rounded-xl border transition-all ${
+                          bcCategory === "offer"
+                            ? "bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-50/40 border-amber-300/80"
+                            : bcCategory === "update"
+                            ? "bg-gradient-to-br from-teal-50/90 via-emerald-50/40 to-teal-50/30 border-teal-300/80"
+                            : bcCategory === "alert"
+                            ? "bg-rose-50/70 border-rose-200/80 text-rose-950"
+                            : "bg-slate-50 border-slate-200 text-slate-900"
+                        }`}>
+                          <div className="flex items-start gap-2.5">
+                            <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                              bcCategory === "offer"
+                                ? "bg-amber-100 text-amber-800"
+                                : bcCategory === "update"
+                                ? "bg-[#087F6E] text-white"
+                                : bcCategory === "alert"
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-slate-200 text-slate-700"
+                            }`}>
+                              {bcCategory === "offer" ? (
+                                <Tag className="h-3.5 w-3.5" />
+                              ) : bcCategory === "update" ? (
+                                <Zap className="h-3.5 w-3.5" />
+                              ) : bcCategory === "alert" ? (
+                                <AlertCircle className="h-3.5 w-3.5" />
+                              ) : (
+                                <Radio className="h-3.5 w-3.5" />
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1 space-y-1.5">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {(bcTag || (bcCategory === "offer" ? "OFFER" : bcCategory === "update" ? "UPDATE" : "NEWS")) && (
+                                  <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                                    bcCategory === "offer"
+                                      ? "bg-amber-200/80 text-amber-900"
+                                      : bcCategory === "update"
+                                      ? "bg-teal-100 text-[#087F6E]"
+                                      : "bg-slate-200 text-slate-800"
+                                  }`}>
+                                    {bcTag || (bcCategory === "offer" ? "OFFER" : bcCategory === "update" ? "UPDATE" : "NEWS")}
+                                  </span>
+                                )}
+                                {bcHighlightNumber && (
+                                  <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-md">
+                                    {bcHighlightNumber}
+                                  </span>
+                                )}
+                                <span className="text-[9px] text-slate-400 font-semibold ml-auto">
+                                  Just now
+                                </span>
+                              </div>
+
+                              <div className="text-xs font-black text-slate-900 leading-snug">
+                                {bcTitle || "Announcement Title"}
+                              </div>
+
+                              <p className="text-[11px] text-slate-600 leading-relaxed font-normal">
+                                {bcMessage || "Your announcement message will look like this inside every user's notification dropdown."}
+                              </p>
+
+                              {(bcActionText || bcActionHref) && (
+                                <div className="pt-1">
+                                  <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-md shadow-2xs ${
+                                    bcCategory === "offer"
+                                      ? "bg-amber-600 text-white"
+                                      : bcCategory === "update"
+                                      ? "bg-[#087F6E] text-white"
+                                      : "bg-slate-900 text-white"
+                                  }`}>
+                                    <span>{bcActionText || "Learn More"}</span>
+                                    <ArrowRight className="h-3 w-3" />
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 leading-relaxed mt-4 italic">
+                      Tip: Offer messages get prominent amber/gold styling with action buttons. Update messages get vivid teal accents.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Active Broadcasts History List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black uppercase text-slate-700 tracking-wider">
+                    Published Broadcasts ({broadcasts.length})
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => loadBroadcasts()}
+                    className="text-[10px] font-bold text-[#0d6e5a] hover:text-[#094d3f] border border-teal-200 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {broadcastsLoading ? (
+                  <div className="p-8 text-center text-xs text-slate-500 bg-white border border-slate-200 rounded-2xl">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-[#0d6e5a] mb-2" />
+                    <span>Loading active broadcasts...</span>
+                  </div>
+                ) : broadcasts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 bg-white rounded-2xl shadow-sm">
+                    <Radio className="h-10 w-10 text-slate-400 mb-3" />
+                    <p className="text-sm font-bold text-slate-700">No active broadcasts</p>
+                    <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                      Click &ldquo;New Broadcast&rdquo; above to publish an offer, product update, or message to all users.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {broadcasts.map((bc) => {
+                      const isOffer = bc.category === "offer";
+                      const isUpdate = bc.category === "update";
+                      const isAlert = bc.category === "alert";
+
+                      return (
+                        <div
+                          key={bc.id}
+                          className={`p-4 rounded-2xl border transition-all bg-white relative space-y-3 shadow-xs hover:border-slate-300 ${
+                            isOffer
+                              ? "border-amber-200"
+                              : isUpdate
+                              ? "border-teal-200"
+                              : "border-slate-200"
+                          }`}
+                        >
+                          {/* Delete Broadcast Button */}
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTargetBroadcastId(bc.id)}
+                            className="absolute top-3 right-3 text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Delete Broadcast"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+
+                          <div className="flex items-center gap-2 pr-6">
+                            <span
+                              className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                isOffer
+                                  ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                  : isUpdate
+                                  ? "bg-teal-100 text-[#087F6E] border border-teal-200"
+                                  : isAlert
+                                  ? "bg-rose-100 text-rose-800 border border-rose-200"
+                                  : "bg-slate-100 text-slate-800 border border-slate-200"
+                              }`}
+                            >
+                              {bc.category}
+                            </span>
+                            {bc.tag && (
+                              <span className="text-[9px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                                {bc.tag}
+                              </span>
+                            )}
+                            {bc.highlightNumber && (
+                              <span className="text-[9px] font-black bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded border border-rose-200">
+                                {bc.highlightNumber}
+                              </span>
+                            )}
+                          </div>
+
+                          <div>
+                            <h4 className="text-sm font-extrabold text-slate-900 leading-snug line-clamp-1">
+                              {bc.title}
+                            </h4>
+                            <p className="text-xs text-slate-600 mt-1 line-clamp-3 leading-relaxed">
+                              {bc.message}
+                            </p>
+                          </div>
+
+                          {bc.actionText && (
+                            <div className="pt-1">
+                              <span className="text-[11px] font-bold text-[#0d6e5a] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                                <span>{bc.actionText}</span>
+                                {bc.actionHref && <span className="text-[10px] text-slate-400">({bc.actionHref})</span>}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                            <span>{new Date(bc.createdAt || Date.now()).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                            <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Active for users
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         </main>
       </div>
 
@@ -1208,6 +1686,48 @@ export default function AdminDashboard() {
                 className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors cursor-pointer"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CENTERED DELETE BROADCAST MODAL */}
+      {deleteTargetBroadcastId && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center text-red-500 shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-sm">Delete Broadcast Announcement</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to remove this broadcast from users&apos; notification bells?</p>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-red-600 font-medium">
+              This action will remove the broadcast notification for all users.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTargetBroadcastId(null)}
+                className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = deleteTargetBroadcastId;
+                  setDeleteTargetBroadcastId(null);
+                  if (id) executeDeleteBroadcast(id);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors cursor-pointer"
+              >
+                Delete Broadcast
               </button>
             </div>
           </div>

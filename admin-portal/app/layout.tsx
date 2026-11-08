@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://admin.fasthireai.com"),
@@ -28,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/icon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" />
       </head>
-      <body className={`${inter.className} bg-[#f8fafc] text-slate-900 antialiased overflow-x-hidden`}>
+      <body className="bg-[#f8fafc] text-slate-900 antialiased overflow-x-hidden font-sans">
         {children}
       </body>
     </html>
