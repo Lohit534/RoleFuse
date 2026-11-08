@@ -424,9 +424,14 @@ export async function POST(request: NextRequest) {
     const { planId, billingCycle = "monthly", isEarlyUser = false } = await request.json();
     const isOwner = isOwnerEmail(user.email);
 
-    // Owner is always unlimited - no credits update needed
-    if (isOwner) {
-      return NextResponse.json({ success: true, message: "Bypassed for owner" });
+    // Security Hardening: Direct credit upgrades via POST /api/credits are strictly reserved
+    // for platform owners/administrators. Normal users must complete checkout via Razorpay (/api/payment/verify).
+    if (!isOwner) {
+      logger.warn(`[credits POST] Blocked unauthorized direct plan upgrade attempt by ${user.email} to ${planId}`);
+      return NextResponse.json(
+        { error: "Forbidden: Direct plan modifications require authorized payment verification." },
+        { status: 403 }
+      );
     }
 
     const admin = getAdminClient() as any;

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import SiteBackground from "@/components/SiteBackground";
+import HomescreenPrompt from "@/components/HomescreenPrompt";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -27,6 +28,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.vercel.app"),
+  manifest: "/manifest.json",
   title: {
     default: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",
     template: "%s | RoleFuse — AI Resume Optimization",
@@ -227,9 +229,31 @@ export default function RootLayout({
   return (
     <html lang="en" className={`h-full ${inter.variable} ${plusJakarta.variable} ${jetbrainsMono.variable}`}>
       <head>
+        <meta name="theme-color" content="#087F6E" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="RoleFuse" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.png" type="image/png" sizes="512x512" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.__rolefuse_deferred_prompt = null;
+              window.addEventListener('beforeinstallprompt', function(e) {
+                e.preventDefault();
+                window.__rolefuse_deferred_prompt = e;
+              });
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+              }
+            `,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
@@ -237,6 +261,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-white text-[#111827] flex flex-col antialiased font-sans relative selection:bg-[#087F6E]/15 selection:text-[#087F6E]">
         <SiteBackground />
+        <HomescreenPrompt />
         <Toaster
           position="top-center"
           gutter={8}

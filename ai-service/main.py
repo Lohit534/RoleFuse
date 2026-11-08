@@ -19,12 +19,15 @@ from typing import List, Set, Dict, Any
 
 app = FastAPI(title="FastHire-AI", version="1.0.0")
 
-# Enable CORS for public queries
+# Enable secure CORS handling
+allowed_origins_env = os.environ.get("ALLOWED_ORIGINS", "*").strip()
+allowed_origins = [o.strip() for o in allowed_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=allowed_origins if allowed_origins else ["*"],
+    allow_credentials=False if "*" in allowed_origins or not allowed_origins else True,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 

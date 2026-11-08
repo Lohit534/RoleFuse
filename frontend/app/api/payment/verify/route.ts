@@ -48,13 +48,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Payment gateway not configured." }, { status: 500 });
     }
 
-    // ── 1. Verify HMAC SHA256 signature ───────────────────────────────────────
+    // ── 1. Verify HMAC SHA256 signature using timing-safe comparison ─────────
     const expected = crypto
       .createHmac("sha256", keySecret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
-    if (expected !== razorpay_signature) {
+    const expectedBuf = Buffer.from(expected, "utf-8");
+    const signatureBuf = Buffer.from(String(razorpay_signature || ""), "utf-8");
+
+    const isSignatureValid =
+      expectedBuf.length === signatureBuf.length &&
+      crypto.timingSafeEqual(expectedBuf, signatureBuf);
+
+    if (!isSignatureValid) {
       logger.warn(`[payment/verify] Signature mismatch for user ${user.email}! Possible tampering.`);
       return NextResponse.json({ error: "Payment verification failed. Signature mismatch." }, { status: 400 });
     }

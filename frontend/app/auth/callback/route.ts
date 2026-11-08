@@ -7,15 +7,33 @@ function getSafeRedirectUrl(request: Request, targetPathOrUrl: string): string {
   const host = forwardedHost || request.headers.get("host") || requestUrl.host;
   const hostname = host.split(":")[0];
 
-  let path = targetPathOrUrl || "/dashboard";
-  if (path.startsWith("http://") || path.startsWith("https://")) {
+  let raw = (targetPathOrUrl || "").trim();
+
+  // If full URL was provided, extract pathname + search safely
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
     try {
-      const parsed = new URL(path);
-      path = parsed.pathname + parsed.search + parsed.hash;
+      const parsed = new URL(raw);
+      raw = parsed.pathname + parsed.search + parsed.hash;
     } catch {
-      path = "/dashboard";
+      raw = "/dashboard";
     }
   }
+
+  // Prevent protocol-relative URLs (//evil.com) and backslash tricks (/\\evil.com)
+  if (
+    !raw ||
+    raw.includes("://") ||
+    raw.startsWith("//") ||
+    raw.startsWith("/\\") ||
+    raw.startsWith("\\") ||
+    raw.toLowerCase().startsWith("javascript:") ||
+    raw.toLowerCase().startsWith("data:")
+  ) {
+    raw = "/dashboard";
+  }
+
+  const cleanPath = (raw.startsWith("/") ? raw : `/${raw}`).replace(/[\r\n\0\t]/g, "");
+  const finalPath = (cleanPath.startsWith("//") || cleanPath.startsWith("/\\")) ? "/dashboard" : cleanPath;
 
   const isLocal =
     hostname === "localhost" ||
@@ -25,24 +43,22 @@ function getSafeRedirectUrl(request: Request, targetPathOrUrl: string): string {
     requestUrl.hostname === "127.0.0.1" ||
     requestUrl.hostname === "0.0.0.0";
 
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-
   if (isLocal) {
     const port = requestUrl.port ? `:${requestUrl.port}` : (host.includes(":") ? `:${host.split(":")[1]}` : ":3000");
-    return `http://localhost${port}${cleanPath}`;
+    return `http://localhost${port}${finalPath}`;
   }
 
   // Production (Vercel deployment or custom production domain)
   if (forwardedHost) {
-    return `https://${forwardedHost}${cleanPath}`;
+    return `https://${forwardedHost}${finalPath}`;
   }
 
   if (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")) {
     const base = process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
-    return `${base}${cleanPath}`;
+    return `${base}${finalPath}`;
   }
 
-  return `https://${requestUrl.host}${cleanPath}`;
+  return `https://${requestUrl.host}${finalPath}`;
 }
 
 export async function GET(request: Request) {
