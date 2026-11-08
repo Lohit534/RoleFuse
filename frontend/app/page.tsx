@@ -204,7 +204,26 @@ export default function LandingPage() {
     return null;
   });
 
-  const [checkingAuth, setCheckingAuth] = useState<boolean>(false);
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(() => {
+    // If cached session exists, mark as checkingAuth immediately to prevent landing page flash
+    if (typeof window !== "undefined") {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+            return true;
+          }
+        }
+      } catch {}
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/dashboard");
+    }
+  }, [user, router]);
 
   useEffect(() => {
     localStorage.removeItem("fastHire_pendingSample");
@@ -224,6 +243,8 @@ export default function LandingPage() {
         const { data } = await supabase.auth.getSession();
         if (isMounted && data?.session?.user) {
           setUser(data.session.user);
+          router.replace("/dashboard");
+          return;
         }
       } catch (e) {}
 
@@ -241,7 +262,7 @@ export default function LandingPage() {
     };
   }, [router]);
 
-  if (checkingAuth) {
+  if (checkingAuth || user) {
     return <DashboardSkeleton />;
   }
 

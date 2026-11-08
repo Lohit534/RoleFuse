@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  turbopack: {
+    root: path.resolve(__dirname, ".."),
+  },
   // These packages use Node.js native features / CJS require() and must NOT be
   // bundled by Turbopack/webpack. They are loaded at runtime via require() inside
   // serverless functions where Node.js is available.

@@ -44,7 +44,6 @@ import { toast } from "react-hot-toast";
 import SupportChatbot from "@/components/SupportChatbot";
 
 import FeedbackToast from "@/components/FeedbackToast";
-import FeedbackBanner from "@/components/FeedbackBanner";
 import { ReferralModal } from "@/components/ReferralModal";
 import { DemoVideoModal } from "@/components/DemoVideoModal";
 import { DataPreferencesModal } from "@/components/DataPreferencesModal";
@@ -337,7 +336,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
   return (
     <>
-      <nav className="border-b border-[#DCE7E9] bg-white text-[#111827] sticky top-0 z-50 shadow-xs select-none">
+      <nav className="border-t-[3px] border-t-[#087F6E] border-b border-[#DCE7E9] bg-white text-[#111827] sticky top-0 z-50 shadow-xs select-none">
         <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between relative">
             {/* Left: Brand logo & Dashboard internal navigation */}
@@ -1007,7 +1006,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                     <button
                       type="button"
                       onClick={handleNavbarUpgradeClick}
-                      className="text-xs sm:text-sm font-bold text-[#087F6E] hover:text-[#065F53] hover:underline transition-colors cursor-pointer px-1 py-1"
+                      className="hidden sm:inline-flex text-xs sm:text-sm font-bold text-[#087F6E] hover:text-[#065F53] hover:underline transition-colors cursor-pointer px-1 py-1"
                       title="Upgrade your plan"
                     >
                       Upgrade?
@@ -1358,11 +1357,6 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
         </div>
       </nav>
 
-      {/* Feedback Notification Banner after login */}
-      {user && !hideNav && pathname.startsWith("/dashboard") && (
-        <FeedbackBanner onOpenFeedback={() => setIsFeedbackOpen(true)} />
-      )}
-
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
         <div className="sm:hidden border-t border-[#DCE7E9] bg-white px-5 py-4 space-y-3 animate-in fade-in duration-150 select-none">
@@ -1437,6 +1431,20 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
             <span>Resources</span>
           </Link>
 
+          {user && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                setIsFeedbackOpen(true);
+              }}
+              className="flex items-center gap-2.5 text-sm font-semibold text-[#111827] hover:text-[#087F6E] py-1.5 w-full text-left cursor-pointer"
+            >
+              <MessageSquare className="h-4 w-4 text-[#087F6E]" />
+              <span>Share Feedback</span>
+            </button>
+          )}
+
           {!user && (
             <div className="border-t border-[#E2E8F0] pt-3 flex flex-col gap-2">
               <Link
@@ -1458,73 +1466,110 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
         </div>
       )}
 
-      {/* Mobile Bottom Navigation Bar (for logged-in users on mobile) */}
+      {/* Mobile Floating Capsule Navigation Bar (Glassmorphic Blur Capsule with Names & Light Teal Active) */}
       {user && !hideNav && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-200 flex items-center justify-around px-2 py-3 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-          <Link
-            href="/dashboard"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("open-optimize-editor"));
-              }
-            }}
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
-            }`}
+        <div className="sm:hidden fixed bottom-3 left-0 right-0 z-[100] flex justify-center pointer-events-none pb-safe px-3">
+          <nav
+            aria-label="Mobile Navigation"
+            className="pointer-events-auto w-full max-w-[340px] bg-white/65 backdrop-blur-2xl border border-white/70 rounded-full px-2 py-1.5 flex items-center justify-around shadow-[0_8px_32px_rgba(0,0,0,0.08)] ring-1 ring-black/[0.04]"
           >
-            <GeminiIcon className="h-5 w-5" />
-            <span className="text-[10px] font-bold">Optimize</span>
-          </Link>
-          <Link
-            href="/dashboard/resumes"
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              pathname === "/dashboard/resumes" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            <FileText className="h-5 w-5" />
-            <span className="text-[10px] font-bold">Resumes</span>
-          </Link>
-          <Link
-            href="/dashboard/job-tracker"
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              pathname === "/dashboard/job-tracker" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            <Briefcase className="h-5 w-5" />
-            <span className="text-[10px] font-bold">Tracker</span>
-          </Link>
-          <Link
-            href="/dashboard/history"
-            className={`flex flex-col items-center gap-1 transition-colors ${
-              pathname === "/dashboard/history" ? "text-[#087F6E]" : "text-slate-400 hover:text-slate-600"
-            }`}
-          >
-            <History className="h-5 w-5" />
-            <span className="text-[10px] font-bold">History</span>
-          </Link>
-          {!isOwner && !isProMax && (
-            <button
-              type="button"
-              onClick={handleNavbarUpgradeClick}
-              className={`flex flex-col items-center gap-1 transition-colors cursor-pointer ${
-                freeRemaining <= 0
-                  ? "text-amber-500 hover:text-amber-600 animate-pulse"
-                  : "text-slate-400 hover:text-[#087F6E]"
-              }`}
+            {/* 1. Optimize Tab */}
+            <Link
+              href="/dashboard"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("open-optimize-editor"));
+                }
+              }}
+              className="flex-1 flex flex-col items-center justify-center py-0.5 transition-all group"
             >
-              <div className="relative">
-                <Zap
-                  className={`h-5 w-5 ${
-                    freeRemaining <= 0 ? "fill-amber-500 text-amber-500" : ""
-                  }`}
-                />
-                {freeRemaining <= 0 && (
-                  <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-                )}
+              <div
+                className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
+                  pathname === "/dashboard"
+                    ? "bg-[#E6F4F1] text-[#087F6E] shadow-xs ring-1 ring-[#087F6E]/30"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                }`}
+              >
+                <GeminiIcon className="h-4 w-4" />
               </div>
-              <span className="text-[10px] font-bold">Upgrade?</span>
-            </button>
-          )}
+              <span
+                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
+                  pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-400 group-hover:text-slate-600"
+                }`}
+              >
+                Optimize
+              </span>
+            </Link>
+
+            {/* 2. Resumes Tab */}
+            <Link
+              href="/dashboard/resumes"
+              className="flex-1 flex flex-col items-center justify-center py-0.5 transition-all group"
+            >
+              <div
+                className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
+                  pathname === "/dashboard/resumes"
+                    ? "bg-[#E6F4F1] text-[#087F6E] shadow-xs ring-1 ring-[#087F6E]/30"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                }`}
+              >
+                <FileText className="h-4 w-4" />
+              </div>
+              <span
+                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
+                  pathname === "/dashboard/resumes" ? "text-[#087F6E]" : "text-slate-400 group-hover:text-slate-600"
+                }`}
+              >
+                Resumes
+              </span>
+            </Link>
+
+            {/* 3. Job Tracker Tab */}
+            <Link
+              href="/dashboard/job-tracker"
+              className="flex-1 flex flex-col items-center justify-center py-0.5 transition-all group"
+            >
+              <div
+                className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
+                  pathname === "/dashboard/job-tracker"
+                    ? "bg-[#E6F4F1] text-[#087F6E] shadow-xs ring-1 ring-[#087F6E]/30"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                }`}
+              >
+                <Briefcase className="h-4 w-4" />
+              </div>
+              <span
+                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
+                  pathname === "/dashboard/job-tracker" ? "text-[#087F6E]" : "text-slate-400 group-hover:text-slate-600"
+                }`}
+              >
+                Tracker
+              </span>
+            </Link>
+
+            {/* 4. History Tab */}
+            <Link
+              href="/dashboard/history"
+              className="flex-1 flex flex-col items-center justify-center py-0.5 transition-all group"
+            >
+              <div
+                className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
+                  pathname === "/dashboard/history"
+                    ? "bg-[#E6F4F1] text-[#087F6E] shadow-xs ring-1 ring-[#087F6E]/30"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                }`}
+              >
+                <History className="h-4 w-4" />
+              </div>
+              <span
+                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
+                  pathname === "/dashboard/history" ? "text-[#087F6E]" : "text-slate-400 group-hover:text-slate-600"
+                }`}
+              >
+                History
+              </span>
+            </Link>
+          </nav>
         </div>
       )}
 

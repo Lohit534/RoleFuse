@@ -13,6 +13,7 @@
     "lint": "npm run lint --workspace=frontend"
   },
   "dependencies": {
+    "enhanced-resolve": "^5.26.1",
     "recharts": "^3.10.1"
   },
   "devDependencies": {

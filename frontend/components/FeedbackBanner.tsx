@@ -34,7 +34,7 @@ export default function FeedbackBanner({ onOpenFeedback }: FeedbackBannerProps) 
   if (dismissed) return null;
 
   return (
-    <div className="w-full flex justify-center px-3 pt-2 pb-1 select-none animate-in slide-in-from-top duration-300">
+    <div className="hidden sm:flex w-full justify-center px-3 pt-2 pb-1 select-none animate-in slide-in-from-top duration-300">
       <div className="w-full max-w-[640px] bg-white text-slate-900 border border-slate-200/90 rounded-full py-1.5 px-4 shadow-sm flex items-center justify-between gap-3 transition-all">
         
         {/* Left: Icon Badge + Text */}

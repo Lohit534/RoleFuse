@@ -9,7 +9,7 @@
   "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait-primary",
   "background_color": "#FFFFFF",
-  "theme_color": "#087F6E",
+  "theme_color": "#FFFFFF",
   "prefer_related_applications": false,
   "categories": ["productivity", "business", "utilities"],
   "icons": [

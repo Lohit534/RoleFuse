@@ -323,9 +323,10 @@ export default function JobTrackerPage() {
             </div>
             <Button
               onClick={() => openForm(null)}
-              className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold h-9 text-xs rounded-lg px-4 shadow-2xs transition-colors cursor-pointer"
+              className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold h-9 text-xs rounded-md px-3.5 shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
             >
-              Add Job
+              <span>+</span>
+              <span>Add Job</span>
             </Button>
           </div>
         </div>
@@ -631,7 +632,7 @@ export default function JobTrackerPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmitJob} className="space-y-3 text-xs select-none">
+            <form onSubmit={handleSubmitJob} autoComplete="off" className="space-y-3 text-xs select-none">
               {/* Company input */}
               <div className="space-y-1">
                 <label className="text-slate-600 font-bold uppercase text-[9px] tracking-wider">Company Name (Required)</label>

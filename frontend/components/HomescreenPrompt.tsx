@@ -17,11 +17,6 @@ export default function HomescreenPrompt() {
 
     if (typeof window === "undefined") return;
 
-    // Clean up any stale legacy blocking keys from previous tests
-    try {
-      localStorage.removeItem("rolefuse_homescreen_prompt_seen");
-    } catch {}
-
     // Capture browser install prompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -40,22 +35,18 @@ export default function HomescreenPrompt() {
       if (!userId) return;
       setActiveUserId(userId);
 
-      // If user already installed as home screen app, do not show
+      // Permanently check if user already clicked "Not now" or installed across all tabs
       const isInstalled = localStorage.getItem("rolefuse_homescreen_installed") === "true";
-      if (isInstalled) {
+      const isDismissed =
+        localStorage.getItem("rolefuse_homescreen_dismissed") === "true" ||
+        localStorage.getItem(`rolefuse_homescreen_dismissed_${userId}`) === "true";
+
+      // If user clicked "Not now", do NOT show again even when switching tabs or returning
+      if (isInstalled || isDismissed) {
         return;
       }
 
-      // If user clicked "Not now" during this login session, do not show again
-      const isDismissedInSession =
-        sessionStorage.getItem("rolefuse_homescreen_dismissed_session") === "true" ||
-        sessionStorage.getItem(`rolefuse_homescreen_dismissed_${userId}`) === "true";
-
-      if (isDismissedInSession) {
-        return;
-      }
-
-      // Ensure it displays only 1 time during the current session
+      // Ensure it displays only once
       if (hasTriggeredRef.current) {
         return;
       }
@@ -93,21 +84,11 @@ export default function HomescreenPrompt() {
 
     checkActiveSession();
 
-    // 2. Real-time auth listener for login events
+    // 2. Real-time auth listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event: string, session: any) => {
         const sessionUserId = session?.user?.id;
         if (sessionUserId) {
-          if (event === "SIGNED_IN") {
-            // Fresh login detected: clear session dismissal so the prompt asks
-            try {
-              sessionStorage.removeItem("rolefuse_homescreen_dismissed_session");
-              sessionStorage.removeItem(`rolefuse_homescreen_dismissed_${sessionUserId}`);
-              localStorage.removeItem("rolefuse_homescreen_dismissed");
-              localStorage.removeItem(`rolefuse_homescreen_dismissed_${sessionUserId}`);
-            } catch {}
-            hasTriggeredRef.current = false;
-          }
           triggerPromptForUser(sessionUserId);
         } else if (event === "SIGNED_OUT") {
           if (timerRef.current) clearTimeout(timerRef.current);
@@ -127,13 +108,11 @@ export default function HomescreenPrompt() {
     };
   }, []);
 
-  // When user clicks "Not now", dismiss for this session so it does not show again
+  // When user clicks "Not now", permanently save in localStorage so it NEVER re-appears across tabs
   const handleDismiss = () => {
     try {
-      sessionStorage.setItem("rolefuse_homescreen_dismissed_session", "true");
       localStorage.setItem("rolefuse_homescreen_dismissed", "true");
       if (activeUserId) {
-        sessionStorage.setItem(`rolefuse_homescreen_dismissed_${activeUserId}`, "true");
         localStorage.setItem(`rolefuse_homescreen_dismissed_${activeUserId}`, "true");
       }
     } catch {}
@@ -141,6 +120,14 @@ export default function HomescreenPrompt() {
   };
 
   const handleAddToHomeScreen = async () => {
+    try {
+      localStorage.setItem("rolefuse_homescreen_dismissed", "true");
+      localStorage.setItem("rolefuse_homescreen_installed", "true");
+      if (activeUserId) {
+        localStorage.setItem(`rolefuse_homescreen_dismissed_${activeUserId}`, "true");
+      }
+    } catch {}
+
     const installPrompt =
       deferredPrompt ||
       (typeof window !== "undefined" && (window as any).__rolefuse_deferred_prompt);
@@ -150,9 +137,6 @@ export default function HomescreenPrompt() {
         await installPrompt.prompt();
         const choice = await installPrompt.userChoice;
         if (choice && choice.outcome === "accepted") {
-          try {
-            localStorage.setItem("rolefuse_homescreen_installed", "true");
-          } catch {}
           handleDismiss();
           return;
         }
@@ -191,38 +175,38 @@ export default function HomescreenPrompt() {
       role="dialog"
       aria-modal="true"
       aria-label="Add RoleFuse to Home Screen"
-      className="fixed bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-lg transition-all duration-500 animate-in fade-in slide-in-from-bottom-5"
+      className="fixed bottom-18 sm:bottom-7 left-1/2 -translate-x-1/2 z-[110] w-[calc(100%-1.5rem)] max-w-sm sm:max-w-md transition-all duration-500 animate-in fade-in slide-in-from-bottom-5"
     >
-      <div className="bg-white border border-slate-200/90 rounded-sm p-6 sm:p-7 shadow-2xl shadow-slate-900/15 space-y-4.5 select-none relative">
-        <div className="space-y-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#087F6E] block">
+      <div className="bg-white border border-slate-200/90 rounded-sm p-3.5 sm:p-6 shadow-2xl shadow-slate-900/15 space-y-2.5 sm:space-y-4 select-none relative">
+        <div className="space-y-0.5 sm:space-y-1">
+          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-[#087F6E] block">
             Quick Access
           </span>
-          <h3 className="font-heading font-black text-[#111827] text-lg leading-snug">
+          <h3 className="font-heading font-black text-[#111827] text-sm sm:text-base leading-snug">
             Add RoleFuse to Home Screen
           </h3>
-          <p className="text-xs text-[#526176] font-normal leading-relaxed">
-            Open your resumes, job tracking, and ATS score optimizations directly from your device home screen with one tap.
+          <p className="text-[11px] sm:text-xs text-[#526176] font-normal leading-relaxed">
+            Access your ATS resume optimizer directly from your home screen with one tap.
           </p>
         </div>
 
         {noticeMessage ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-sm p-3.5 text-xs font-semibold text-slate-800 text-center">
+          <div className="bg-slate-50 border border-slate-200 rounded-sm p-2.5 sm:p-3 text-[11px] sm:text-xs font-semibold text-slate-800 text-center">
             {noticeMessage}
           </div>
         ) : (
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1.5">
+          <div className="flex flex-row items-center gap-2 pt-0.5 sm:pt-1">
             <button
               type="button"
               onClick={handleAddToHomeScreen}
-              className="flex-1 h-11 px-5 border-2 border-[#087F6E] bg-transparent hover:bg-[#087F6E] text-[#087F6E] hover:text-white text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer text-center"
+              className="flex-1 h-9 sm:h-10 px-3 sm:px-4 border-2 border-[#087F6E] bg-transparent hover:bg-[#087F6E] text-[#087F6E] hover:text-white text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer text-center truncate"
             >
               Add to Home Screen
             </button>
             <button
               type="button"
               onClick={handleDismiss}
-              className="h-11 px-6 border-2 border-slate-300 bg-transparent hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer text-center"
+              className="h-9 sm:h-10 px-3 sm:px-5 border-2 border-slate-300 bg-transparent hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-[11px] sm:text-xs font-bold uppercase tracking-wider rounded-sm transition-colors cursor-pointer text-center shrink-0"
             >
               Not now
             </button>

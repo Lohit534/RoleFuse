@@ -13,17 +13,24 @@ import {
   ShieldCheck,
   CheckCircle2,
   Calendar,
+  Sparkles,
+  Tag,
+  Zap,
+  Info,
 } from "lucide-react";
 
 export interface AppNotification {
   id: string;
-  type: "upgrade" | "expiring" | "info";
+  type: "upgrade" | "expiring" | "info" | "offer" | "update" | "alert" | "general";
   title: string;
   message: string;
+  tag?: string;
+  highlightNumber?: string;
   actionText?: string;
   actionHref?: string;
   actionOnClick?: () => void;
   dateStr?: string;
+  isBroadcast?: boolean;
 }
 
 interface NotificationBellProps {
@@ -132,12 +139,26 @@ export function hasUnreadNotifications(credits: CreditInfo | null, userEmail?: s
   } catch {
     // Ignore
   }
-  return getActiveNotifications(credits, userEmail, dismissedIds).length > 0;
+
+  // Check cached broadcasts count
+  let unreadBroadcastCount = 0;
+  try {
+    const cachedBc = typeof window !== "undefined" ? localStorage.getItem("fastHire_cached_broadcasts") : null;
+    if (cachedBc) {
+      const list = JSON.parse(cachedBc);
+      if (Array.isArray(list)) {
+        unreadBroadcastCount = list.filter((b: any) => !dismissedIds.includes(b.id)).length;
+      }
+    }
+  } catch {}
+
+  return getActiveNotifications(credits, userEmail, dismissedIds).length + unreadBroadcastCount > 0;
 }
 
 export function NotificationBell({ credits, userEmail, compact = false }: NotificationBellProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+  const [broadcasts, setBroadcasts] = useState<AppNotification[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Load dismissed notifications from localStorage
@@ -150,6 +171,42 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
     } catch {
       // Ignore storage errors
     }
+  }, []);
+
+  // Fetch live admin broadcasts
+  useEffect(() => {
+    let isMounted = true;
+    async function loadBroadcasts() {
+      try {
+        const res = await fetch("/api/notifications/broadcast", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isMounted && Array.isArray(data.broadcasts)) {
+          const mapped: AppNotification[] = data.broadcasts.map((b: any) => ({
+            id: b.id,
+            type: b.category || "general",
+            title: b.title,
+            message: b.message,
+            tag: b.tag,
+            highlightNumber: b.highlightNumber,
+            actionText: b.actionText,
+            actionHref: b.actionHref,
+            dateStr: b.createdAt ? new Date(b.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : undefined,
+            isBroadcast: true,
+          }));
+          setBroadcasts(mapped);
+          try {
+            localStorage.setItem("fastHire_cached_broadcasts", JSON.stringify(mapped));
+          } catch {}
+        }
+      } catch {
+        // silent fail
+      }
+    }
+    loadBroadcasts();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Handle outside click to close popover
@@ -167,8 +224,10 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
     };
   }, [isOpen]);
 
-  const activeNotifications = getActiveNotifications(credits, userEmail, dismissedIds);
-  const unreadCount = activeNotifications.length;
+  const planNotifications = getActiveNotifications(credits, userEmail, dismissedIds);
+  const activeBroadcasts = broadcasts.filter((b) => !dismissedIds.includes(b.id));
+  const allNotifications = [...activeBroadcasts, ...planNotifications];
+  const unreadCount = allNotifications.length;
 
   const handleDismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -183,7 +242,7 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
 
   const handleClearAll = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const updated = [...dismissedIds, ...activeNotifications.map((n) => n.id)];
+    const updated = [...dismissedIds, ...allNotifications.map((n) => n.id)];
     setDismissedIds(updated);
     try {
       localStorage.setItem("fastHire_dismissed_notifications", JSON.stringify(updated));
@@ -207,15 +266,17 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
       >
         <Bell className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex items-center justify-center pointer-events-none">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white shadow-xs" />
+          <span className="absolute -top-1 -right-1 flex items-center justify-center pointer-events-none">
+            <span className="h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white shadow-xs">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
           </span>
         )}
       </button>
 
       {/* Notifications Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-[300px] sm:w-[340px] bg-white text-slate-800 border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 select-none z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute right-0 top-full mt-2 w-[320px] sm:w-[360px] bg-white text-slate-800 border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 select-none z-50 animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-1.5">
@@ -238,7 +299,7 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
           </div>
 
           {/* Notifications List */}
-          {activeNotifications.length === 0 ? (
+          {allNotifications.length === 0 ? (
             <div className="py-6 text-center space-y-1">
               <div className="h-8 w-8 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center mx-auto text-[#0d6e5a]">
                 <CheckCircle2 className="h-4 w-4" />
@@ -247,65 +308,117 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
               <p className="text-[10px] text-slate-400">No unread notifications at this time.</p>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-0.5">
-              {activeNotifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  className={`p-2.5 rounded-xl border transition-all relative ${
-                    notif.type === "expiring"
-                      ? "bg-amber-50/70 border-amber-200/80 text-amber-950"
-                      : "bg-teal-50/50 border-teal-200/70 text-slate-900"
-                  }`}
-                >
-                  {/* Delete (X) button */}
-                  <button
-                    type="button"
-                    onClick={(e) => handleDismiss(notif.id, e)}
-                    aria-label="Delete message"
-                    className="absolute top-2 right-2 text-slate-400 hover:text-slate-700 p-0.5 rounded-md hover:bg-slate-200/50 transition-colors cursor-pointer"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+            <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-0.5">
+              {allNotifications.map((notif) => {
+                const isOffer = notif.type === "offer";
+                const isUpdate = notif.type === "update";
+                const isAlert = notif.type === "alert" || notif.type === "expiring";
 
-                  <div className="flex items-start gap-2 pr-5">
-                    <div
-                      className={`h-6 w-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                        notif.type === "expiring"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-teal-100 text-[#0d6e5a]"
-                      }`}
+                return (
+                  <div
+                    key={notif.id}
+                    className={`p-3 rounded-xl border transition-all relative ${
+                      isOffer
+                        ? "bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-50/40 border-amber-300/80 shadow-2xs"
+                        : isUpdate
+                        ? "bg-gradient-to-br from-teal-50/90 via-emerald-50/40 to-teal-50/30 border-teal-300/80 shadow-2xs"
+                        : isAlert
+                        ? "bg-rose-50/70 border-rose-200/80 text-rose-950"
+                        : "bg-slate-50 border-slate-200 text-slate-900"
+                    }`}
+                  >
+                    {/* Delete (X) button */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleDismiss(notif.id, e)}
+                      aria-label="Delete message"
+                      className="absolute top-2 right-2 text-slate-400 hover:text-slate-700 p-0.5 rounded-md hover:bg-slate-200/50 transition-colors cursor-pointer"
                     >
-                      {notif.type === "expiring" ? (
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                      ) : (
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-extrabold text-slate-900 leading-tight">
-                          {notif.title}
-                        </span>
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+
+                    <div className="flex items-start gap-2.5 pr-5">
+                      <div
+                        className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                          isOffer
+                            ? "bg-amber-100 text-amber-800 shadow-2xs"
+                            : isUpdate
+                            ? "bg-[#087F6E] text-white shadow-2xs"
+                            : isAlert
+                            ? "bg-rose-100 text-rose-700"
+                            : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {isOffer ? (
+                          <Tag className="h-3.5 w-3.5" />
+                        ) : isUpdate ? (
+                          <Zap className="h-3.5 w-3.5" />
+                        ) : isAlert ? (
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                        ) : (
+                          <Info className="h-3.5 w-3.5" />
+                        )}
                       </div>
-                      <p className="text-[10px] text-slate-600 leading-relaxed font-medium">
-                        {notif.message}
-                      </p>
-                      {notif.actionText && notif.actionHref && (
-                        <div className="pt-1">
-                          <Link
-                            href={notif.actionHref}
-                            onClick={() => setIsOpen(false)}
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-[#0d6e5a] hover:text-[#094d3f] hover:underline cursor-pointer"
-                          >
-                            <span>{notif.actionText}</span>
-                            <ArrowRight className="h-2.5 w-2.5" />
-                          </Link>
+
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        {/* Header Tags & Highlight */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {notif.tag && (
+                            <span
+                              className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                                isOffer
+                                  ? "bg-amber-200/80 text-amber-900"
+                                  : isUpdate
+                                  ? "bg-teal-100 text-[#087F6E]"
+                                  : "bg-slate-200 text-slate-800"
+                              }`}
+                            >
+                              {notif.tag}
+                            </span>
+                          )}
+                          {notif.highlightNumber && (
+                            <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-md">
+                              {notif.highlightNumber}
+                            </span>
+                          )}
+                          {notif.dateStr && (
+                            <span className="text-[9px] text-slate-400 font-semibold ml-auto">
+                              {notif.dateStr}
+                            </span>
+                          )}
                         </div>
-                      )}
+
+                        <div className="text-xs font-black text-slate-900 leading-snug">
+                          {notif.title}
+                        </div>
+
+                        <p className="text-[11px] text-slate-600 leading-relaxed font-normal">
+                          {notif.message}
+                        </p>
+
+                        {notif.actionText && notif.actionHref && (
+                          <div className="pt-1">
+                            <Link
+                              href={notif.actionHref}
+                              onClick={() => setIsOpen(false)}
+                              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                                isOffer
+                                  ? "bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
+                                  : isUpdate
+                                  ? "bg-[#087F6E] hover:bg-[#065F53] text-white shadow-2xs"
+                                  : "bg-slate-900 hover:bg-slate-800 text-white"
+                              }`}
+                            >
+                              <span>{notif.actionText}</span>
+                              <ArrowRight className="h-3 w-3" />
+                            </Link>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -410,7 +523,7 @@ export function MonthlyNotificationModal({
   if (!showModal || !modalData) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="hidden sm:flex fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4">
       <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none relative">
         {/* Close (X) button */}
         <button
