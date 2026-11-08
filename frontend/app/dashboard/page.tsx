@@ -689,6 +689,25 @@ export default function DashboardPage() {
     };
   }, [user?.id]);
 
+  // Listen for SIGNED_OUT event so that logging out never leaves user on /dashboard
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any) => {
+      if (event === "SIGNED_OUT") {
+        const isMobile =
+          typeof window !== "undefined" &&
+          (window.innerWidth < 768 ||
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+              navigator.userAgent
+            ));
+        window.location.href = isMobile ? "/auth/login" : "/";
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const runAIAutoImprove = async (
     targetResumeText = resumeText,
     optimizationInstructions = instructions,

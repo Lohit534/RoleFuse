@@ -243,14 +243,52 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
   }, []);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {}
+
     if (typeof window !== "undefined") {
-      sessionStorage.removeItem("fastHire_feedback_dismissed_login");
+      sessionStorage.clear();
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (
+            k &&
+            (k.startsWith("sb-") ||
+              k.startsWith("fastHire_") ||
+              k === "fasthire-resume-storage")
+          ) {
+            localStorage.removeItem(k);
+          }
+        }
+      } catch {}
+
+      // Clear all supabase cookies on the domain
+      try {
+        document.cookie.split(";").forEach((cookie) => {
+          const eqPos = cookie.indexOf("=");
+          const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+          if (name.startsWith("sb-")) {
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;`;
+          }
+        });
+      } catch {}
     }
+
     useResumeStore.getState().reset();
     setIsDropdownOpen(false);
-    router.push("/");
-    router.refresh();
+    setIsMobileMenuOpen(false);
+
+    // Desktop goes to landing page ("/"), Mobile view goes to login page ("/auth/login")
+    const isMobile =
+      typeof window !== "undefined" &&
+      (window.innerWidth < 768 ||
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        ));
+
+    const target = isMobile ? "/auth/login" : "/";
+    window.location.href = target;
   };
 
   const handleProtectedNavigate = async (path: string) => {
@@ -1432,17 +1470,28 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
           </Link>
 
           {user && (
-            <button
-              type="button"
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                setIsFeedbackOpen(true);
-              }}
-              className="flex items-center gap-2.5 text-sm font-semibold text-[#111827] hover:text-[#087F6E] py-1.5 w-full text-left cursor-pointer"
-            >
-              <MessageSquare className="h-4 w-4 text-[#087F6E]" />
-              <span>Share Feedback</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsFeedbackOpen(true);
+                }}
+                className="flex items-center gap-2.5 text-sm font-semibold text-[#111827] hover:text-[#087F6E] py-1.5 w-full text-left cursor-pointer"
+              >
+                <MessageSquare className="h-4 w-4 text-[#087F6E]" />
+                <span>Share Feedback</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="flex items-center gap-2.5 text-sm font-semibold text-rose-600 hover:text-rose-700 py-2 w-full text-left cursor-pointer border-t border-slate-100 pt-2.5 mt-1"
+              >
+                <LogOut className="h-4 w-4 text-rose-500" />
+                <span>Sign Out</span>
+              </button>
+            </>
           )}
 
           {!user && (

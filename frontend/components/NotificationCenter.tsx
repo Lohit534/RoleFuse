@@ -173,12 +173,12 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
     }
   }, []);
 
-  // Fetch live admin broadcasts
+  // Fetch live admin broadcasts with 30s auto-refresh
   useEffect(() => {
     let isMounted = true;
     async function loadBroadcasts() {
       try {
-        const res = await fetch("/api/notifications/broadcast", { cache: "no-store" });
+        const res = await fetch(`/api/notifications/broadcast?t=${Date.now()}`, { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
         if (isMounted && Array.isArray(data.broadcasts)) {
@@ -204,10 +204,41 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
       }
     }
     loadBroadcasts();
+    const interval = setInterval(loadBroadcasts, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Also refresh immediately whenever user clicks/opens the bell
+  useEffect(() => {
+    if (!isOpen) return;
+    let isMounted = true;
+    fetch(`/api/notifications/broadcast?t=${Date.now()}`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data && Array.isArray(data.broadcasts)) {
+          const mapped: AppNotification[] = data.broadcasts.map((b: any) => ({
+            id: b.id,
+            type: b.category || "general",
+            title: b.title,
+            message: b.message,
+            tag: b.tag,
+            highlightNumber: b.highlightNumber,
+            actionText: b.actionText,
+            actionHref: b.actionHref,
+            dateStr: b.createdAt ? new Date(b.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : undefined,
+            isBroadcast: true,
+          }));
+          setBroadcasts(mapped);
+        }
+      })
+      .catch(() => {});
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isOpen]);
 
   // Handle outside click to close popover
   useEffect(() => {

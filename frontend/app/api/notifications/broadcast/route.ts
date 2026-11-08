@@ -35,7 +35,7 @@ function ensureDir() {
   }
 }
 
-function readBroadcasts(): BroadcastNotification[] {
+function readFileBroadcasts(): BroadcastNotification[] {
   try {
     ensureDir();
     if (fs.existsSync(BROADCAST_FILE)) {
@@ -49,7 +49,7 @@ function readBroadcasts(): BroadcastNotification[] {
   return [];
 }
 
-function writeBroadcasts(data: BroadcastNotification[]) {
+function writeFileBroadcasts(data: BroadcastNotification[]) {
   try {
     ensureDir();
     fs.writeFileSync(BROADCAST_FILE, JSON.stringify(data, null, 2), "utf8");
@@ -58,10 +58,67 @@ function writeBroadcasts(data: BroadcastNotification[]) {
   }
 }
 
+async function getSupabaseBroadcasts(): Promise<BroadcastNotification[]> {
+  try {
+    const admin = getAdminClient() as any;
+    if (!admin?.from) return [];
+    const { data, error } = await admin
+      .from("Resume")
+      .select("*")
+      .eq("jobTitle", "ADMIN_BROADCAST")
+      .order("createdAt", { ascending: false });
+
+    if (error || !Array.isArray(data)) return [];
+
+    return data.map((row: any) => {
+      try {
+        const meta = JSON.parse(row.jobDescription || "{}");
+        return {
+          id: row.id,
+          category: meta.category || "general",
+          title: row.originalText || "Broadcast",
+          message: row.optimizedText || "",
+          tag: meta.tag,
+          highlightNumber: meta.highlightNumber,
+          actionText: meta.actionText,
+          actionHref: meta.actionHref,
+          expiresAt: meta.expiresAt || null,
+          createdAt: row.createdAt,
+          active: meta.active !== false,
+        };
+      } catch {
+        return {
+          id: row.id,
+          category: "general",
+          title: row.originalText || "Broadcast",
+          message: row.optimizedText || "",
+          createdAt: row.createdAt,
+          active: true,
+        };
+      }
+    });
+  } catch (err) {
+    logger.warn("[broadcasts] Supabase fetch warning:", err);
+    return [];
+  }
+}
+
+async function getAllBroadcasts(): Promise<BroadcastNotification[]> {
+  const fileList = readFileBroadcasts();
+  const dbList = await getSupabaseBroadcasts();
+  const map = new Map<string, BroadcastNotification>();
+  // DB broadcasts take priority, merged with file fallback
+  for (const b of fileList) map.set(b.id, b);
+  for (const b of dbList) map.set(b.id, b);
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
+}
+
 // GET: Returns all active broadcasts for users, or all broadcasts for admin
 export async function GET(request: NextRequest) {
   try {
-    const broadcasts = readBroadcasts();
+    const broadcasts = await getAllBroadcasts();
     const now = new Date();
 
     // Check if requester is admin (via query param ?admin=true & session check)
@@ -164,9 +221,36 @@ export async function POST(request: NextRequest) {
       active: true,
     };
 
-    const currentList = readBroadcasts();
+    // 1. Persist to local JSON cache
+    const currentList = readFileBroadcasts();
     currentList.unshift(newBroadcast);
-    writeBroadcasts(currentList);
+    writeFileBroadcasts(currentList);
+
+    // 2. Persist to Supabase Resume table (jobTitle = "ADMIN_BROADCAST")
+    const admin = getAdminClient() as any;
+    if (admin?.from) {
+      try {
+        await admin.from("Resume").insert({
+          id: newBroadcast.id,
+          userId: currentUser.id || "00000000-0000-0000-0000-000000000000",
+          jobTitle: "ADMIN_BROADCAST",
+          originalText: newBroadcast.title,
+          optimizedText: newBroadcast.message,
+          jobDescription: JSON.stringify({
+            category: newBroadcast.category,
+            tag: newBroadcast.tag,
+            highlightNumber: newBroadcast.highlightNumber,
+            actionText: newBroadcast.actionText,
+            actionHref: newBroadcast.actionHref,
+            expiresAt: newBroadcast.expiresAt,
+            active: true,
+          }),
+          createdAt: newBroadcast.createdAt,
+        });
+      } catch (dbErr) {
+        logger.warn("[broadcasts] Supabase insert notice:", dbErr);
+      }
+    }
 
     logger.info(`[broadcasts] New broadcast "${newBroadcast.title}" published by ${currentUser.email}`);
 
@@ -177,7 +261,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE: Admin removes or toggles a broadcast
+// DELETE: Admin removes a broadcast
 export async function DELETE(request: NextRequest) {
   try {
     let currentUser: any = null;
@@ -213,9 +297,20 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Broadcast ID is required." }, { status: 400 });
     }
 
-    const currentList = readBroadcasts();
+    // 1. Delete from local JSON cache
+    const currentList = readFileBroadcasts();
     const filtered = currentList.filter((b) => b.id !== id);
-    writeBroadcasts(filtered);
+    writeFileBroadcasts(filtered);
+
+    // 2. Delete from Supabase
+    const admin = getAdminClient() as any;
+    if (admin?.from) {
+      try {
+        await admin.from("Resume").delete().eq("id", id);
+      } catch (dbErr) {
+        logger.warn("[broadcasts] Supabase delete notice:", dbErr);
+      }
+    }
 
     return NextResponse.json({ success: true, id });
   } catch (error: any) {
@@ -223,4 +318,3 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: error.message || "Failed to delete broadcast" }, { status: 500 });
   }
 }
-
