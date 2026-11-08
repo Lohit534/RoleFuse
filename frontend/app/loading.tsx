@@ -1,6 +1,5 @@
-import { LandingSkeleton } from "@/components/SkeletonShimmer";
+import { DashboardSkeleton } from "@/components/SkeletonShimmer";
 
 export default function RootLoading() {
-  return <LandingSkeleton />;
+  return <DashboardSkeleton />;
 }
-

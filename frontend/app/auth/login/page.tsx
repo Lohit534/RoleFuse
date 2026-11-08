@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { DashboardSkeleton } from "@/components/SkeletonShimmer";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ function LoginFormContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     const errorParam = searchParams.get("error");
@@ -37,6 +39,7 @@ function LoginFormContent() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
+          setIsRedirecting(true);
           const isSample = searchParams.get("sample") === "true" || localStorage.getItem("fastHire_pendingSample") === "true";
           const nextParam = searchParams.get("next") || searchParams.get("redirect");
           const target = nextParam || (isSample ? "/dashboard?sample=true" : "/dashboard");
@@ -51,6 +54,7 @@ function LoginFormContent() {
     // Listen for auth state changes (e.g. successful login)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
       if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        setIsRedirecting(true);
         const isSample = searchParams.get("sample") === "true" || localStorage.getItem("fastHire_pendingSample") === "true";
         const nextParam = searchParams.get("next") || searchParams.get("redirect");
         const target = nextParam || (isSample ? "/dashboard?sample=true" : "/dashboard");
@@ -95,6 +99,10 @@ function LoginFormContent() {
       setLoading(false);
     }
   };
+
+  if (isRedirecting) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-white text-[#111827] font-sans">
@@ -291,11 +299,7 @@ function LoginFormContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FCFB]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#087F6E]" />
-      </div>
-    }>
+    <Suspense fallback={<DashboardSkeleton />}>
       <LoginFormContent />
     </Suspense>
   );
