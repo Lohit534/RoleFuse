@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {}
 
-    // 2. Fallback: Save to Supabase Resume table with jobTitle = "ADMIN_BROADCAST"
+    // 2. Fallback / Direct: Save to Supabase Resume table with jobTitle = "ADMIN_BROADCAST"
     const adminClient = getAdminClient(auth.token) as any;
     const newId = `bc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const meta = {
@@ -136,18 +136,39 @@ export async function POST(request: NextRequest) {
       active: true,
     };
 
+    // Ensure we have a valid userId matching the User foreign key constraint
+    let targetUserId = auth.user?.id;
+    if (targetUserId) {
+      const { data: userExists } = await adminClient.from("User").select("id").eq("id", targetUserId).maybeSingle();
+      if (!userExists) {
+        const { data: anyUser } = await adminClient.from("User").select("id").limit(1).maybeSingle();
+        if (anyUser?.id) targetUserId = anyUser.id;
+      }
+    } else {
+      const { data: anyUser } = await adminClient.from("User").select("id").limit(1).maybeSingle();
+      if (anyUser?.id) targetUserId = anyUser.id;
+    }
+
     const { error: insErr } = await adminClient.from("Resume").insert({
       id: newId,
-      userId: auth.user.id,
+      userId: targetUserId,
       jobTitle: "ADMIN_BROADCAST",
       originalText: title.trim(),
       optimizedText: message.trim(),
       jobDescription: JSON.stringify(meta),
+      scoreBefore: 100,
+      scoreAfter: 100,
+      keywordsBefore: 0,
+      keywordsAfter: 0,
+      impactBefore: 100,
+      impactAfter: 100,
+      keywordsAdded: [],
       createdAt: new Date().toISOString(),
     });
 
     if (insErr) {
       console.error("[broadcasts/POST] Supabase insert error:", insErr.message);
+      return NextResponse.json({ error: `Database insert failed: ${insErr.message}` }, { status: 500 });
     }
 
     const createdBroadcast: BroadcastNotification = {

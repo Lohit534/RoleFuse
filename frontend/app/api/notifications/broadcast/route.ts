@@ -230,9 +230,21 @@ export async function POST(request: NextRequest) {
     const admin = getAdminClient() as any;
     if (admin?.from) {
       try {
-        await admin.from("Resume").insert({
+        let targetUserId = currentUser?.id;
+        if (targetUserId) {
+          const { data: userExists } = await admin.from("User").select("id").eq("id", targetUserId).maybeSingle();
+          if (!userExists) {
+            const { data: anyUser } = await admin.from("User").select("id").limit(1).maybeSingle();
+            if (anyUser?.id) targetUserId = anyUser.id;
+          }
+        } else {
+          const { data: anyUser } = await admin.from("User").select("id").limit(1).maybeSingle();
+          if (anyUser?.id) targetUserId = anyUser.id;
+        }
+
+        const { error: dbErr } = await admin.from("Resume").insert({
           id: newBroadcast.id,
-          userId: currentUser.id || "00000000-0000-0000-0000-000000000000",
+          userId: targetUserId,
           jobTitle: "ADMIN_BROADCAST",
           originalText: newBroadcast.title,
           optimizedText: newBroadcast.message,
@@ -245,10 +257,21 @@ export async function POST(request: NextRequest) {
             expiresAt: newBroadcast.expiresAt,
             active: true,
           }),
+          scoreBefore: 100,
+          scoreAfter: 100,
+          keywordsBefore: 0,
+          keywordsAfter: 0,
+          impactBefore: 100,
+          impactAfter: 100,
+          keywordsAdded: [],
           createdAt: newBroadcast.createdAt,
         });
-      } catch (dbErr) {
-        logger.warn("[broadcasts] Supabase insert notice:", dbErr);
+
+        if (dbErr) {
+          logger.warn("[broadcasts] Supabase insert notice:", dbErr.message);
+        }
+      } catch (dbErr: any) {
+        logger.warn("[broadcasts] Supabase insert notice:", dbErr?.message || dbErr);
       }
     }
 
