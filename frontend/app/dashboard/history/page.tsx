@@ -411,7 +411,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
   };
 
   const shareText = `Check out my resume ATS score improvement on RoleFuse: from ${resume.scoreBefore} to ${resume.scoreAfter} (+${delta} pts)! 🚀`;
-  const linkedinShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://rolefuse.vercel.app")}`;
+  const linkedinShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://rolefuse.in")}`;
   const whatsappShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
   return (
@@ -864,7 +864,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
               </h3>
 
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-slate-600 leading-relaxed font-sans select-text">
-                &ldquo;Took my resume from {resume.scoreBefore}% to {resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.vercel.app&rdquo;
+                &ldquo;Took my resume from {resume.scoreBefore}% to {resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.in&rdquo;
               </div>
 
               <div className="grid grid-cols-3 gap-2">
@@ -890,7 +890,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      `Took my resume from ${resume.scoreBefore}% to ${resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.vercel.app`
+                      `Took my resume from ${resume.scoreBefore}% to ${resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.in`
                     );
                   }}
                   className="flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors shadow-xs cursor-pointer"
@@ -1435,7 +1435,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
             </div>
 
             <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-700 font-sans">
-              &ldquo;Took my resume from {resume.scoreBefore}% to {resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.vercel.app&rdquo;
+              &ldquo;Took my resume from {resume.scoreBefore}% to {resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.in&rdquo;
             </div>
 
             <div className="grid grid-cols-3 gap-2.5 pt-2">
@@ -1463,7 +1463,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                 type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    `Took my resume from ${resume.scoreBefore}% to ${resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.vercel.app`
+                    `Took my resume from ${resume.scoreBefore}% to ${resume.scoreAfter}% ATS match with RoleFuse — took under a minute: https://rolefuse.in`
                   );
                   setShowShareModal(false);
                 }}

@@ -1515,12 +1515,13 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
         </div>
       )}
 
-      {/* Mobile Floating Capsule Navigation Bar (Frosted Glassmorphic Capsule matching reference) */}
+      {/* Mobile Floating Capsule Navigation Bar (Frosted Glassmorphic Capsule matching reference dock) */}
       {user && !hideNav && (
         <div className="sm:hidden fixed bottom-[max(12px,env(safe-area-inset-bottom))] left-0 right-0 z-[100] flex justify-center pointer-events-none px-3">
           <nav
             aria-label="Mobile Navigation"
-            className="pointer-events-auto w-full max-w-[316px] bg-white/60 backdrop-blur-3xl border border-white/80 rounded-full px-2 py-1.5 flex items-center justify-around shadow-[0_12px_36px_rgba(0,0,0,0.08),0_2px_10px_rgba(8,127,110,0.06)] ring-1 ring-black/[0.04]"
+            style={{ WebkitBackdropFilter: "blur(20px)", backdropFilter: "blur(20px)" }}
+            className="pointer-events-auto w-full max-w-[280px] bg-white/55 backdrop-blur-2xl border border-white/80 rounded-full px-1.5 py-1.5 flex items-center justify-around shadow-[0_10px_32px_rgba(0,0,0,0.09),0_1px_2px_rgba(255,255,255,0.9)_inset] ring-1 ring-black/[0.04]"
           >
             {/* 1. Optimize Tab */}
             <Link
@@ -1533,17 +1534,18 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               className="flex-1 flex flex-col items-center justify-center py-0.5 transition-all group"
             >
               <div
-                className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
-                  pathname === "/dashboard"
-                    ? "bg-[#087F6E]/12 text-[#087F6E] ring-1 ring-[#087F6E]/25 shadow-xs"
-                    : "bg-white/40 text-slate-500 border border-white/50 group-hover:bg-white/70 group-hover:text-slate-700"
+                style={{ WebkitBackdropFilter: "blur(12px)", backdropFilter: "blur(12px)" }}
+                className={`h-[35px] w-[35px] rounded-full flex items-center justify-center transition-all duration-200 ${
+                  pathname === "/dashboard" || pathname === "/"
+                    ? "bg-gradient-to-tr from-[#087F6E] to-[#14B8A6] text-white shadow-md shadow-[#087F6E]/35 ring-2 ring-white/80 scale-105"
+                    : "bg-white/50 text-slate-600 border border-white/70 shadow-xs group-hover:bg-white/80 group-hover:text-slate-800"
                 }`}
               >
                 <GeminiIcon className="h-4 w-4" />
               </div>
               <span
-                className={`text-[9.5px] mt-0.5 font-bold tracking-tight transition-colors ${
-                  pathname === "/dashboard" ? "text-[#087F6E]" : "text-slate-500 group-hover:text-slate-700"
+                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
+                  pathname === "/dashboard" || pathname === "/" ? "text-[#087F6E]" : "text-slate-500 group-hover:text-slate-700"
                 }`}
               >
                 Optimize
@@ -1556,16 +1558,17 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               className="flex-1 flex flex-col items-center justify-center py-0.5 transition-all group"
             >
               <div
-                className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
+                style={{ WebkitBackdropFilter: "blur(12px)", backdropFilter: "blur(12px)" }}
+                className={`h-[35px] w-[35px] rounded-full flex items-center justify-center transition-all duration-200 ${
                   pathname === "/dashboard/resumes"
-                    ? "bg-[#087F6E]/12 text-[#087F6E] ring-1 ring-[#087F6E]/25 shadow-xs"
-                    : "bg-white/40 text-slate-500 border border-white/50 group-hover:bg-white/70 group-hover:text-slate-700"
+                    ? "bg-gradient-to-tr from-[#087F6E] to-[#14B8A6] text-white shadow-md shadow-[#087F6E]/35 ring-2 ring-white/80 scale-105"
+                    : "bg-white/50 text-slate-600 border border-white/70 shadow-xs group-hover:bg-white/80 group-hover:text-slate-800"
                 }`}
               >
                 <FileText className="h-4 w-4" />
               </div>
               <span
-                className={`text-[9.5px] mt-0.5 font-bold tracking-tight transition-colors ${
+                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
                   pathname === "/dashboard/resumes" ? "text-[#087F6E]" : "text-slate-500 group-hover:text-slate-700"
                 }`}
               >
@@ -1579,16 +1582,17 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               className="flex-1 flex flex-col items-center justify-center py-0.5 transition-all group"
             >
               <div
-                className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
+                style={{ WebkitBackdropFilter: "blur(12px)", backdropFilter: "blur(12px)" }}
+                className={`h-[35px] w-[35px] rounded-full flex items-center justify-center transition-all duration-200 ${
                   pathname === "/dashboard/job-tracker"
-                    ? "bg-[#087F6E]/12 text-[#087F6E] ring-1 ring-[#087F6E]/25 shadow-xs"
-                    : "bg-white/40 text-slate-500 border border-white/50 group-hover:bg-white/70 group-hover:text-slate-700"
+                    ? "bg-gradient-to-tr from-[#087F6E] to-[#14B8A6] text-white shadow-md shadow-[#087F6E]/35 ring-2 ring-white/80 scale-105"
+                    : "bg-white/50 text-slate-600 border border-white/70 shadow-xs group-hover:bg-white/80 group-hover:text-slate-800"
                 }`}
               >
                 <Briefcase className="h-4 w-4" />
               </div>
               <span
-                className={`text-[9.5px] mt-0.5 font-bold tracking-tight transition-colors ${
+                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
                   pathname === "/dashboard/job-tracker" ? "text-[#087F6E]" : "text-slate-500 group-hover:text-slate-700"
                 }`}
               >
@@ -1602,16 +1606,17 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               className="flex-1 flex flex-col items-center justify-center py-0.5 transition-all group"
             >
               <div
-                className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
+                style={{ WebkitBackdropFilter: "blur(12px)", backdropFilter: "blur(12px)" }}
+                className={`h-[35px] w-[35px] rounded-full flex items-center justify-center transition-all duration-200 ${
                   pathname === "/dashboard/history"
-                    ? "bg-[#087F6E]/12 text-[#087F6E] ring-1 ring-[#087F6E]/25 shadow-xs"
-                    : "bg-white/40 text-slate-500 border border-white/50 group-hover:bg-white/70 group-hover:text-slate-700"
+                    ? "bg-gradient-to-tr from-[#087F6E] to-[#14B8A6] text-white shadow-md shadow-[#087F6E]/35 ring-2 ring-white/80 scale-105"
+                    : "bg-white/50 text-slate-600 border border-white/70 shadow-xs group-hover:bg-white/80 group-hover:text-slate-800"
                 }`}
               >
                 <History className="h-4 w-4" />
               </div>
               <span
-                className={`text-[9.5px] mt-0.5 font-bold tracking-tight transition-colors ${
+                className={`text-[9px] mt-0.5 font-bold tracking-tight transition-colors ${
                   pathname === "/dashboard/history" ? "text-[#087F6E]" : "text-slate-500 group-hover:text-slate-700"
                 }`}
               >

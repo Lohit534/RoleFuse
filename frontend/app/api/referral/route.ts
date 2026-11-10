@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     const referralCode = generateReferralCode(activeUserId);
-    const origin = request.nextUrl.origin || "https://fasthireai.vercel.app";
+    const origin = request.nextUrl.origin || "https://rolefuse.in";
     const referralLink = `${origin}/auth/signup?ref=${referralCode}`;
 
     let totalReferrals = 0;

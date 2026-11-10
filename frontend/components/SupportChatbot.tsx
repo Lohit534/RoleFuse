@@ -315,8 +315,14 @@ export default function SupportChatbot() {
         />
       )}
 
-      <div className={`fixed select-none ${isOpen ? "bottom-3 right-3 sm:bottom-6 sm:right-6 z-[110]" : "bottom-4 right-4 sm:bottom-6 sm:right-6 z-40"}`}>
-        {/* Floating Help Center Launcher Button */}
+      <div
+        className={`fixed select-none transition-all duration-200 ${
+          isOpen
+            ? "bottom-3 sm:bottom-6 right-3 sm:right-6 z-[110]"
+            : "bottom-[max(74px,calc(env(safe-area-inset-bottom)+66px))] right-3.5 sm:bottom-6 sm:right-6 z-40"
+        }`}
+      >
+        {/* Floating Help Center Launcher Button (Positioned statically above mobile navbar dock) */}
         {!isOpen && (
           <div className="relative group/help">
             <button
@@ -325,7 +331,7 @@ export default function SupportChatbot() {
                 setIsOpen(true);
                 setView("help-center");
               }}
-              className="flex h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-white hover:bg-slate-50 text-[#087F6E] shadow-md sm:shadow-lg items-center justify-center border border-slate-200/90 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer pointer-events-auto"
+              className="flex h-10 w-10 sm:h-11 sm:w-11 rounded-full bg-white/95 backdrop-blur-md hover:bg-white text-[#087F6E] shadow-[0_4px_16px_rgba(0,0,0,0.1)] sm:shadow-lg items-center justify-center border border-slate-200/90 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer pointer-events-auto ring-1 ring-black/[0.04]"
               title="Open Help Center"
               aria-label="Open Help Center"
             >
@@ -349,7 +355,7 @@ export default function SupportChatbot() {
 
         {/* Main Container Widget */}
         {isOpen && (
-          <Card className="w-[calc(100vw-24px)] sm:w-[400px] h-[80vh] sm:h-[560px] max-h-[760px] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative pointer-events-auto text-left">
+          <Card className="w-[calc(100vw-24px)] sm:w-[400px] h-[calc(100dvh-96px)] sm:h-[560px] max-h-[760px] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative pointer-events-auto text-left">
           
           {/* ============================================================ */}
           {/* VIEW 1: HELP CENTER FAQS                                      */}

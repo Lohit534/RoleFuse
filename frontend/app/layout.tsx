@@ -34,7 +34,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.in"),
   manifest: "/manifest.json",
   title: {
     default: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",
@@ -43,6 +43,10 @@ export const metadata: Metadata = {
   description: "RoleFuse is the leading free AI ATS resume optimization platform and free ATS resume scanner. Match missing keywords against any job description, optimize formatting for Workday, Taleo, & Greenhouse, and score 90+ on recruiter ATS filters in under 30 seconds.",
   keywords: [
     "rolefuse",
+    "rolefuse.in",
+    "www.rolefuse.in",
+    "https://rolefuse.in",
+    "rolefuse india",
     "rolefuse ai",
     "rolefuse ats",
     "rolefuse resume",
@@ -70,12 +74,12 @@ export const metadata: Metadata = {
     "rolefuse ats score"
   ],
   alternates: {
-    canonical: "/",
+    canonical: "https://rolefuse.in",
   },
   openGraph: {
     title: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",
     description: "Score 90+ on recruiter ATS filters in 30 seconds. Scan against any job description, uncover missing keywords, and build recruiter-ready resumes 100% free.",
-    url: process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.vercel.app",
+    url: process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.in",
     siteName: "RoleFuse",
     images: [{ url: "/logo.png", width: 1024, height: 1024, alt: "RoleFuse AI - Free ATS Resume Optimization & Scanner" }],
     type: "website",
@@ -112,7 +116,7 @@ export const metadata: Metadata = {
   },
 };
 
-const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.vercel.app";
+const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.in";
 
 const structuredData = {
   "@context": "https://schema.org",
