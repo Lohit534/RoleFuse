@@ -164,6 +164,11 @@ export function hasUnreadNotifications(credits: CreditInfo | null, userEmail?: s
 }
 
 export function NotificationBell({ credits, userEmail, compact = false }: NotificationBellProps) {
+  // Only display the notification bell for logged-in users (never for visitors before login)
+  if (!userEmail && !credits) {
+    return null;
+  }
+
   const [isOpen, setIsOpen] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
   const [broadcasts, setBroadcasts] = useState<AppNotification[]>([]);

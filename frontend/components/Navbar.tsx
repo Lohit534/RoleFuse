@@ -1081,8 +1081,8 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                     </button>
                   )}
 
-                  {/* Broadcast & App Notification Bell directly accessible on top navbar */}
-                  <NotificationBell credits={credits} userEmail={user?.email} />
+                  {/* Broadcast & App Notification Bell - strictly for logged-in users */}
+                  {user && <NotificationBell credits={credits} userEmail={user?.email} />}
 
                   {/* Profile Button with Google Avatar & Credits Ring */}
                   <div className="relative" ref={dropdownRef}>
