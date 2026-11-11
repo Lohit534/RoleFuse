@@ -25,21 +25,28 @@ export interface BroadcastNotification {
 }
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const BROADCAST_FILE = path.join(DATA_DIR, "broadcasts.json");
 
-function ensureDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    try {
+function getBroadcastFilePath(): string {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    return path.join(DATA_DIR, "broadcasts.json");
+  } catch {
+    // If process.cwd() is read-only (e.g. serverless on Vercel), fall back to /tmp
+    const tmpDir = path.join("/tmp", "rolefuse-data");
+    try {
+      if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
     } catch {}
+    return path.join(tmpDir, "broadcasts.json");
   }
 }
 
 function readFileBroadcasts(): BroadcastNotification[] {
   try {
-    ensureDir();
-    if (fs.existsSync(BROADCAST_FILE)) {
-      const content = fs.readFileSync(BROADCAST_FILE, "utf8");
+    const filePath = getBroadcastFilePath();
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, "utf8");
       const list = JSON.parse(content || "[]");
       if (Array.isArray(list)) return list;
     }
@@ -51,8 +58,8 @@ function readFileBroadcasts(): BroadcastNotification[] {
 
 function writeFileBroadcasts(data: BroadcastNotification[]) {
   try {
-    ensureDir();
-    fs.writeFileSync(BROADCAST_FILE, JSON.stringify(data, null, 2), "utf8");
+    const filePath = getBroadcastFilePath();
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
   } catch (e) {
     logger.error("[broadcasts] File write error:", e);
   }
@@ -103,13 +110,31 @@ async function getSupabaseBroadcasts(): Promise<BroadcastNotification[]> {
   }
 }
 
+const DEFAULT_BROADCASTS: BroadcastNotification[] = [
+  {
+    id: "bc_rolefuse_welcome",
+    category: "update",
+    title: "Welcome to RoleFuse 2.0!",
+    message: "Experience next-generation AI Resume tailoring, genuine bullet enhancements, ATS precision scores, and mock interview prep.",
+    tag: "NEW UPDATE",
+    highlightNumber: "v2.0",
+    actionText: "Explore Now",
+    actionHref: "/dashboard",
+    createdAt: new Date().toISOString(),
+    active: true,
+  },
+];
+
 async function getAllBroadcasts(): Promise<BroadcastNotification[]> {
   const fileList = readFileBroadcasts();
   const dbList = await getSupabaseBroadcasts();
   const map = new Map<string, BroadcastNotification>();
-  // DB broadcasts take priority, merged with file fallback
+  // DB broadcasts take priority, followed by file, and defaults as fallback if none exist
   for (const b of fileList) map.set(b.id, b);
   for (const b of dbList) map.set(b.id, b);
+  if (map.size === 0) {
+    for (const b of DEFAULT_BROADCASTS) map.set(b.id, b);
+  }
   return Array.from(map.values()).sort(
     (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
   );
@@ -156,10 +181,10 @@ export async function GET(request: NextRequest) {
 
     // Public / User view: return only active, non-expired broadcasts
     const activeBroadcasts = broadcasts.filter((b) => {
-      if (!b.active) return false;
-      if (b.expiresAt) {
+      if (b.active === false) return false;
+      if (b.expiresAt && typeof b.expiresAt === "string" && b.expiresAt.trim() !== "") {
         const exp = new Date(b.expiresAt);
-        if (exp.getTime() < now.getTime()) return false;
+        if (!isNaN(exp.getTime()) && exp.getTime() < now.getTime()) return false;
       }
       return true;
     });
@@ -231,13 +256,26 @@ export async function POST(request: NextRequest) {
     if (admin?.from) {
       try {
         let targetUserId = currentUser?.id;
-        if (targetUserId) {
-          const { data: userExists } = await admin.from("User").select("id").eq("id", targetUserId).maybeSingle();
-          if (!userExists) {
-            const { data: anyUser } = await admin.from("User").select("id").limit(1).maybeSingle();
-            if (anyUser?.id) targetUserId = anyUser.id;
+        if (currentUser?.email) {
+          const { data: existingUser } = await admin
+            .from("User")
+            .select("id")
+            .eq("email", currentUser.email.toLowerCase().trim())
+            .maybeSingle();
+
+          if (existingUser?.id) {
+            targetUserId = existingUser.id;
+          } else if (currentUser.id) {
+            await admin.from("User").upsert({
+              id: currentUser.id,
+              email: currentUser.email.toLowerCase().trim(),
+              name: currentUser.user_metadata?.full_name || "Admin",
+              createdAt: new Date().toISOString(),
+            }, { onConflict: "id" });
+            targetUserId = currentUser.id;
           }
-        } else {
+        }
+        if (!targetUserId) {
           const { data: anyUser } = await admin.from("User").select("id").limit(1).maybeSingle();
           if (anyUser?.id) targetUserId = anyUser.id;
         }

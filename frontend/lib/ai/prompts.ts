@@ -115,18 +115,22 @@ export function buildOptimizationPrompt(
     "React.js Vue.js GraphQL FastAPI Django Kubernetes Docker TensorFlow PyTorch\n" +
     "GitHub GitLab VS Code Power BI CI/CD Machine Learning Deep Learning DevOps\n" +
     "REST API Microservices Cloud Native\n\n" +
-    "EXACT SECTION ORDER (follow dynamically based on candidate's background):\n" +
+    "ATS-STANDARD TAILORED RESUME ORDER (Format as the gold-standard ATS tailored resume):\n" +
     sectionOrderStr +
     "EXACT LINE FORMAT FOR EACH SECTION:\n\n" +
     "NAME LINE:\n" +
     "  Candidate full name -- e.g. DINESH KAARTHIK MOODE\n\n" +
     "CONTACT LINE (single line, | separator):\n" +
-    "  Format: phone | email | LinkedIn URL | GitHub URL | portfolio URL | location (ONLY if present in original resume)\n" +
+    "  Format: phone | email | LinkedIn URL | GitHub URL | portfolio URL\n" +
+    "  ⚠️  LOCATION / CITY / COUNTRY — ABSOLUTE PROHIBITION:\n" +
+    "  - NEVER add, infer, assume, or fabricate a city, state, country, or any geographic location.\n" +
+    "  - If a location does NOT explicitly appear in the original resume text, it MUST NOT appear in the output.\n" +
+    "  - Candidates often intentionally omit location for privacy — do NOT second-guess this.\n" +
+    "  - Scan the original resume: if the word (Hyderabad, India, Bangalore, Remote, etc.) is NOT present, do NOT write it.\n" +
     "  CRITICAL CONTACT RULES:\n" +
-    "  - ONLY include contact details that ACTUALLY exist in the candidate's original resume: Phone number, Email address, LinkedIn profile, GitHub profile, Portfolio/Website, Location.\n" +
-    "  - NEVER invent, assume, or fabricate a location/city/country if the candidate did not explicitly write one in their original resume! If there is no location in the original resume, do NOT add any location.\n" +
+    "  - ONLY include contact details that ACTUALLY exist in the candidate's original resume: Phone, Email, LinkedIn, GitHub, Portfolio, Location (only if present).\n" +
     "  - NEVER drop or omit candidate phone number, email, or LinkedIn/GitHub links that were provided in the original resume.\n" +
-    "  - DO NOT add a target job title, job name, or domain subtitle line under the name or inside the contact details line. Place the contact line directly beneath candidate name.\n" +
+    "  - DO NOT add a target job title, job name, or domain subtitle line under the name or inside the contact details line.\n" +
     "  - Preserve ALL URLs exactly as in original resume.\n\n" +
     (includeSummary
       ? "PROFESSIONAL SUMMARY:\n" +
@@ -230,10 +234,17 @@ export function buildOptimizationPrompt(
     "- Match EXACT casing from the JD (e.g., React.js not ReactJS)\n" +
     "- Rewrite the Professional Summary to include 5+ top JD keywords\n\n" +
     sep + "\n" +
-    "STEP 3 — BULLET REWRITING (Experience and Projects ONLY)\n" +
+    "STEP 3 — BULLET REWRITING (Experience / Internship / Projects ONLY)\n" +
     sep + "\n\n" +
     "Formula: [Strong Verb] + [Specific Task / Technology] + [Quantified Result with Scale or Percentage]\n\n" +
-    "CRITICAL: Apply this formula ONLY to Professional Experience and Projects sections. NEVER apply this to Languages, Education, or Certifications. Leave those sections purely factual and unchanged.\n\n" +
+    "⚠️  SCOPE — STRICTLY ONLY THESE SECTIONS:\n" +
+    "  Apply bullet rewrites ONLY to: Professional Experience, Internship Experience, Work Experience, Projects.\n" +
+    "  NEVER touch: Education, Certifications, Achievements, Languages, Skills, Summary.\n" +
+    "  Leave those sections exactly as the candidate wrote them (only add missing keywords to Skills).\n\n" +
+    "⚠️  DO NOT FABRICATE OR INFLATE:\n" +
+    "  - Only use metrics the candidate provided (via answers or in the original resume).\n" +
+    "  - For bullets missing numbers, add realistic contextual estimates in brackets (e.g. 'reducing latency by ~35%').\n" +
+    "  - Never invent company sizes, team sizes, or revenue numbers that the candidate did not mention.\n\n" +
     "MANDATORY BULLET STANDARDS:\n" +
     "- Every bullet MUST start with a strong past-tense action verb (no gerunds, no adverbs, no I/We)\n" +
     "- Every bullet MUST include a specific quantified outcome (%, count, scale, speed, cost)\n" +
@@ -280,15 +291,17 @@ export function buildOptimizationPrompt(
     sep + "\n\n" +
     "✓ KEEP all company names exactly as written\n" +
     "✓ KEEP all dates exactly as written\n" +
-    "✓ KEEP all education details exactly\n" +
+    "✓ KEEP all education details exactly — do NOT add, remove, or change education entries\n" +
     "✓ KEEP all URLs and links exactly\n" +
     "✓ KEEP all certifications exactly\n" +
     "✓ KEEP all project names exactly\n" +
     "✓ EXACT RESUME CONTENT FIDELITY: Parse, preserve, and reflect every single piece of information from the candidate's original resume exactly as written (all roles, titles, schools, GPAs, dates, projects, skills, and languages). Never drop or omit candidate data.\n" +
-    "✓ DO NOT ADD EXTRA OR UNREQUESTED TEXT: Do NOT invent commentary, explanations, side notes, or fake filler text. Just adjust and optimize the formatting, structure, metrics, and alignment of the candidate's actual qualifications.\n" +
+    "✓ DO NOT ADD EXTRA OR UNREQUESTED TEXT: Do NOT invent commentary, explanations, side notes, or fake filler text.\n" +
     "✓ NEVER fabricate companies, employers, universities, or degrees\n" +
     "✓ NEVER change employment dates\n" +
     "✓ NEVER remove any section from the original (you may tighten wording to respect the PAGE BUDGET)\n" +
+    "✓ NEVER add a location, city, country, or state that is not in the original resume — not even as 'India', 'Remote', or 'Hyderabad'\n" +
+    "✓ ATS STANDARD FORMAT: Structure the resume into the clean, ATS-standard tailored layout (Name, Contact, Summary, Technical Skills, Experience/Internships, Projects, Education, Certifications) so ATS screening parsers score it at 90%+.\n" +
     "✓ Respect the PAGE BUDGET below -- it overrides any desire to add more text\n\n" +
     sep + "\n" +
     "PAGE BUDGET (decided dynamically from the candidate's experience)\n" +
@@ -301,12 +314,14 @@ export function buildOptimizationPrompt(
     "PRE-FLIGHT CHECKLIST (verify ALL before outputting):\n" +
     sep + "\n" +
     "[ ] Name is ALL CAPS on line 1\n" +
-    "[ ] Contact line contains ONLY contact items provided in the original resume -- zero fabricated locations or fields\n" +
-    (includeSummary ? "[ ] Professional Summary is a concise 2-3 sentence executive paragraph\n" : "[ ] No artificial professional summary added for fresher (jump straight to Technical Skills and Projects)\n") +
+    "[ ] Contact line contains ONLY contact items from original resume — ZERO fabricated locations, cities, or countries\n" +
+    "[ ] Location/city/state is NOT added if it was not in the original resume — this is a hard rule\n" +
+    (includeSummary ? "[ ] Professional Summary is a concise 2-3 sentence executive paragraph\n" : "[ ] No artificial professional summary added — keep original structure\n") +
     "[ ] TECHNICAL SKILLS appears exactly ONCE with ZERO bullet points (•, -, *) anywhere in the skills section\n" +
     "[ ] No extra or invented commentary text added beyond candidate facts and target JD keywords\n" +
-    "[ ] Every experience AND project bullet starts with a strong past-tense verb AND contains a number/metric\n" +
-    "[ ] Education contains all candidate stages including SSC (10th) and Intermediate (12th) if in original resume -- zero dropped education entries\n" +
+    "[ ] Only Experience/Internship/Project bullets were rewritten — Education, Certifications, Languages are UNTOUCHED\n" +
+    "[ ] Education section preserved exactly as in original — no entries added, removed, or changed\n" +
+    "[ ] Follows ATS-standard tailored layout for maximum recruiter and ATS parser score\n" +
     "[ ] Resume fits the PAGE BUDGET (" + pageBudget.maxPages + " page" + (pageBudget.maxPages > 1 ? "s" : "") + " max)\n" +
     "[ ] Zero fabricated or invented dates/years/months for internships, projects, or certifications\n" +
     "[ ] Every internship entry follows Line 1 (Title | Dates) + Line 2 (Company | Tech Stack) format\n" +

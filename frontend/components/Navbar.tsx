@@ -52,7 +52,6 @@ import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 import {
   NotificationBell,
   MonthlyNotificationModal,
-  hasUnreadNotifications,
 } from "@/components/NotificationCenter";
 
 interface NavbarProps {
@@ -115,6 +114,23 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
     setIsDropdownOpen(false);
     setActiveMenu(null);
   }, [pathname]);
+
+  // Listen for global popup events so only one menu / widget / dialog is open at a time
+  useEffect(() => {
+    const handleClosePopups = (e: any) => {
+      if (e.detail?.source !== "profile") {
+        setIsDropdownOpen(false);
+      }
+      if (e.detail?.source !== "mobile-menu") {
+        setIsMobileMenuOpen(false);
+      }
+      if (e.detail?.source !== "feedback") {
+        setIsFeedbackOpen(false);
+      }
+    };
+    window.addEventListener("rolefuse_close_popups", handleClosePopups);
+    return () => window.removeEventListener("rolefuse_close_popups", handleClosePopups);
+  }, []);
 
   // Lock body scroll when mobile menu open
   useEffect(() => {
@@ -352,6 +368,20 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
   const creditsDisplay = isOwner ? "Unlimited" : `${freeRemaining} left`;
 
+  // Filter out features not accessible for Free and Pro users (e.g. LinkedIn Optimizer, Cover Letter Studio, AI Coach)
+  // Only Pro Max and Owner can access and view these tools in the dashboard navigation bar.
+  const visibleDashboardLinks = dashboardLinks.filter((link) => {
+    if (isOwner || isProMax) return true;
+    if (
+      link.href === "/dashboard/linkedin-optimizer" ||
+      link.href === "/dashboard/cover-letter" ||
+      link.href === "/dashboard/mock-interview"
+    ) {
+      return false;
+    }
+    return true;
+  });
+
   const handleNavbarUpgradeClick = () => {
     if (isPremium) {
       useUpgradeModalStore.getState().openModal({
@@ -394,7 +424,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               {/* Inside Dashboard: Direct subpage tabs */}
               {isDashboardSubpage && user && !hideNav && (
                 <div className="hidden md:flex items-center gap-1 h-16 ml-1 overflow-x-auto no-scrollbar">
-                  {dashboardLinks.map((link) => {
+                  {visibleDashboardLinks.map((link) => {
                     const isActive = pathname === link.href;
                     return (
                       <Link
@@ -530,94 +560,99 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                             </div>
                           </button>
 
-                          <button
-                            onClick={() => handleProtectedNavigate("/dashboard/cover-letter")}
-                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
-                          >
-                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
-                              <FileCheck className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                AI Cover Letter Studio
-                              </div>
-                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
-                                One-click personalized tailored letters.
-                              </div>
-                            </div>
-                          </button>
+                          {/* Pro Max exclusive features: only shown if visitor or Pro Max/Owner */}
+                          {(!user || isOwner || isProMax) && (
+                            <>
+                              <button
+                                onClick={() => handleProtectedNavigate("/dashboard/cover-letter")}
+                                className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                              >
+                                <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                                  <FileCheck className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                    AI Cover Letter Studio
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                    One-click personalized tailored letters.
+                                  </div>
+                                </div>
+                              </button>
 
-                          <button
-                            onClick={() => {
-                              if (!isOwner && !isProMax) {
-                                setActiveMenu(null);
-                                useUpgradeModalStore.getState().openModal({
-                                  badge: "PRO MAX",
-                                  title: "Unlock AI Mock Interview Coach",
-                                  description:
-                                    "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
-                                });
-                                return;
-                              }
-                              handleProtectedNavigate("/dashboard/mock-interview");
-                            }}
-                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
-                          >
-                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
-                              <Target className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1.5">
-                                <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                  AI Mock Interview Coach
-                                </span>
-                                {!isOwner && !isProMax && (
-                                  <span className="text-[10px] font-normal text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
-                                    MAX
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
-                                Practice questions with STAR scoring.
-                              </div>
-                            </div>
-                          </button>
+                              <button
+                                onClick={() => {
+                                  if (!isOwner && !isProMax) {
+                                    setActiveMenu(null);
+                                    useUpgradeModalStore.getState().openModal({
+                                      badge: "PRO MAX",
+                                      title: "Unlock AI Mock Interview Coach",
+                                      description:
+                                        "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
+                                    });
+                                    return;
+                                  }
+                                  handleProtectedNavigate("/dashboard/mock-interview");
+                                }}
+                                className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                              >
+                                <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                                  <Target className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-1.5">
+                                    <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                      AI Mock Interview Coach
+                                    </span>
+                                    {!isOwner && !isProMax && (
+                                      <span className="text-[10px] font-normal text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
+                                        MAX
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                    Practice questions with STAR scoring.
+                                  </div>
+                                </div>
+                              </button>
 
-                          <button
-                            onClick={() => {
-                              if (!isOwner && !isProMax) {
-                                setActiveMenu(null);
-                                useUpgradeModalStore.getState().openModal({
-                                  badge: "MAX",
-                                  title: "Unlock LinkedIn Profile Optimizer",
-                                  description:
-                                    "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
-                                });
-                                return;
-                              }
-                              handleProtectedNavigate("/dashboard/linkedin-optimizer");
-                            }}
-                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
-                          >
-                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
-                              <LinkedInIcon className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-1.5">
-                                <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                  LinkedIn Profile Optimizer
-                                </span>
-                                {!isOwner && !isProMax && (
-                                  <span className="text-[10px] font-normal text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
-                                    MAX
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
-                                Headlines, All-Star bio &amp; recruiter SEO.
-                              </div>
-                            </div>
-                          </button>
+                              <button
+                                onClick={() => {
+                                  if (!isOwner && !isProMax) {
+                                    setActiveMenu(null);
+                                    useUpgradeModalStore.getState().openModal({
+                                      badge: "MAX",
+                                      title: "Unlock LinkedIn Profile Optimizer",
+                                      description:
+                                        "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
+                                    });
+                                    return;
+                                  }
+                                  handleProtectedNavigate("/dashboard/linkedin-optimizer");
+                                }}
+                                className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                              >
+                                <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                                  <LinkedInIcon className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center justify-between gap-1.5">
+                                    <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                      LinkedIn Profile Optimizer
+                                    </span>
+                                    {!isOwner && !isProMax && (
+                                      <span className="text-[10px] font-normal text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
+                                        MAX
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                    Headlines, All-Star bio &amp; recruiter SEO.
+                                  </div>
+                                </div>
+                              </button>
+                            </>
+                          )}
 
                           <button
                             onClick={() => handleProtectedNavigate("/dashboard/job-tracker")}
@@ -1051,20 +1086,21 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                     </button>
                   )}
 
+                  {/* Broadcast & App Notification Bell directly accessible on top navbar */}
+                  <NotificationBell credits={credits} userEmail={user?.email} />
+
                   {/* Profile Button with Google Avatar & Credits Ring */}
                   <div className="relative" ref={dropdownRef}>
                     <button
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      onClick={() => {
+                        if (!isDropdownOpen) {
+                          window.dispatchEvent(new CustomEvent("rolefuse_close_popups", { detail: { source: "profile" } }));
+                        }
+                        setIsDropdownOpen(!isDropdownOpen);
+                      }}
                       aria-label="Open profile menu"
                       className="relative p-1 rounded-full hover:scale-105 transition-all focus:outline-none cursor-pointer group flex items-center justify-center"
                     >
-                      {/* Red indicator dot if unread notification */}
-                      {hasUnreadNotifications(credits, user.email) && (
-                        <span className="absolute top-0.5 right-0.5 z-10 pointer-events-none flex items-center justify-center">
-                          <span className="h-1.5 w-1.5 rounded-full bg-red-500 ring-1 ring-white shadow-xs" />
-                        </span>
-                      )}
-
                       {/* Continuous teal circular credits range around circular avatar */}
                       <div className="relative flex items-center justify-center">
                         {(() => {
@@ -1156,7 +1192,6 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                               </div>
                             </div>
                           </div>
-                          <NotificationBell credits={credits} userEmail={user.email} compact />
                         </div>
 
                         {/* 2. Credits Box */}
@@ -1357,7 +1392,10 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                 </>
               ) : (
                 /* Logged-Out Public Auth Buttons in Teal, Black & White */
-                <div className="flex items-center gap-3 select-none">
+                <div className="flex items-center gap-2 sm:gap-3 select-none">
+                  {/* Public Broadcast Notification Bell */}
+                  <NotificationBell credits={null} userEmail={null} />
+
                   <div className="hidden sm:flex items-center gap-4">
                     <Link
                       href="/auth/login"

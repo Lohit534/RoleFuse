@@ -400,9 +400,16 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
 export function preserveCandidateContactDetails(optimized: string, original: string): string {
   if (!optimized || !original) return optimized;
 
-  // Search across first 45 lines of original for complete contact profile
-  const originalLines = original.split(/\r?\n/).slice(0, 45);
-  const originalHeader = originalLines.join("\n");
+  // Search strictly the candidate's top contact block (lines before the first section header, max 6 lines)
+  const allOrigLines = original.split(/\r?\n/);
+  const contactHeaderLines: string[] = [];
+  for (let i = 0; i < Math.min(allOrigLines.length, 8); i++) {
+    const l = allOrigLines[i].trim();
+    if (l && detectSectionHeader(l)) break;
+    contactHeaderLines.push(l);
+  }
+  const originalContactBlock = contactHeaderLines.join("\n");
+  const originalHeader = allOrigLines.slice(0, 45).join("\n");
 
   // Extract phone number from original (Indian +91, 10-digit mobile, international)
   const phoneMatch = originalHeader.match(/(?:\+?91[\s-]?)?[6-9]\d{9}|(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\b\d{10}\b/);
@@ -428,17 +435,26 @@ export function preserveCandidateContactDetails(optimized: string, original: str
     originalGithub = `github.com/${originalGithub.replace(/^https?:\/\/(?:www\.)?github\.com\//i, "")}`;
   }
 
-  // Extract location from original
-  const locationMatch = originalHeader.match(/\b([A-Z][a-zA-Z\s.-]+,\s*(?:India|USA|UK|Canada|Telangana|Andhra Pradesh|Karnataka|Maharashtra|Tamil Nadu|Delhi|California|New York|Texas|WA|NY|CA|TX|IL|FL))\b/i);
+  // Extract location ONLY from the actual contact block (top 6 lines before any section), NEVER from education/body!
+  const locationMatch = originalContactBlock.match(/\b([A-Z][a-zA-Z\s.-]+,\s*(?:India|USA|UK|Canada|Telangana|Andhra Pradesh|Karnataka|Maharashtra|Tamil Nadu|Delhi|California|New York|Texas|WA|NY|CA|TX|IL|FL))\b/i);
   const originalLocation = locationMatch ? locationMatch[1].trim() : null;
 
   const lines = optimized.split(/\r?\n/);
   if (lines.length < 2) return optimized;
 
-  // Clean any leading bullet markers from all lines before the first section header
-  for (let i = 0; i < Math.min(lines.length, 10); i++) {
-    if (detectSectionHeader(lines[i])) break;
+  // Clean any leading bullet markers and drop hallucinated standalone location/subtitle lines before first section header
+  let firstHeaderIdx = lines.findIndex((l) => detectSectionHeader(l) !== null);
+  if (firstHeaderIdx === -1) firstHeaderIdx = Math.min(lines.length, 10);
+
+  for (let i = firstHeaderIdx - 1; i >= 1; i--) {
+    const l = lines[i].trim();
     lines[i] = lines[i].replace(/^[•\-\*–—\u2022+]\s*/, "");
+    // If a standalone line is not phone, email, or profile URL, and was not in original contact block, drop it
+    if (l && !l.includes("@") && !/\d{7,}/.test(l) && !l.includes("linkedin") && !l.includes("github") && !l.includes("http") && !l.includes("|")) {
+      if (!originalContactBlock.toLowerCase().includes(l.toLowerCase())) {
+        lines.splice(i, 1);
+      }
+    }
   }
 
   // Find contact line (first non-empty line after candidate name that comes before any section header)
@@ -467,19 +483,20 @@ export function preserveCandidateContactDetails(optimized: string, original: str
     if (originalEmail && !topHeaderSlice.includes(originalEmail.toLowerCase())) {
       contactParts.splice(contactParts.length > 0 ? 1 : 0, 0, originalEmail);
     }
-    // Ensure location is present only if in original, otherwise strip hallucinated location
+    // Ensure location is present only if explicitly in candidate's original contact block, otherwise strip all hallucinated locations
     if (originalLocation && !topHeaderSlice.includes(originalLocation.toLowerCase())) {
       contactParts.push(originalLocation);
-    } else if (!originalLocation) {
-      for (let i = contactParts.length - 1; i >= 0; i--) {
-        const p = contactParts[i];
-        const isPhone = /\d{7,}/.test(p);
-        const isEmail = /@/.test(p);
-        const isUrl = /(?:http|www|\.com|\.in|\.org|\.io|linkedin|github)/i.test(p);
-        if (!isPhone && !isEmail && !isUrl) {
-          if (!originalHeader.toLowerCase().includes(p.toLowerCase())) {
-            contactParts.splice(i, 1);
-          }
+    }
+    // Clean up any non-phone, non-email, non-URL segments (locations, titles, subtitles) that are not in originalContactBlock
+    for (let i = contactParts.length - 1; i >= 0; i--) {
+      const p = contactParts[i];
+      const isPhone = /\d{7,}/.test(p);
+      const isEmail = /@/.test(p);
+      const isUrl = /(?:http|www|\.com|\.in|\.org|\.io|linkedin|github)/i.test(p);
+      if (!isPhone && !isEmail && !isUrl) {
+        // If this segment is not explicitly in the candidate's original contact block, drop it completely!
+        if (!originalContactBlock.toLowerCase().includes(p.toLowerCase())) {
+          contactParts.splice(i, 1);
         }
       }
     }
@@ -498,7 +515,9 @@ export function preserveCandidateContactDetails(optimized: string, original: str
     const contactParts: string[] = [];
     if (originalPhone) contactParts.push(originalPhone);
     if (originalEmail) contactParts.push(originalEmail);
-    if (originalLocation) contactParts.push(originalLocation);
+    if (originalLocation && originalContactBlock.toLowerCase().includes(originalLocation.toLowerCase())) {
+      contactParts.push(originalLocation);
+    }
     if (originalLinkedin) contactParts.push(originalLinkedin);
     if (originalGithub) contactParts.push(originalGithub);
 

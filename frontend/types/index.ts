@@ -57,6 +57,14 @@ export interface CreditInfo {
   planId?: string;
   billingCycle?: string;
   expiresAt?: Date | string | null;
+  latestPayment?: {
+    id: string;
+    amount: number;
+    planId: string;
+    billingCycle: string;
+    createdAt: string;
+    razorpayPaymentId?: string;
+  } | null;
 }
 
 export interface ApiResponse<T> {
@@ -81,14 +89,11 @@ export const MAX_JD_CHARS = 6000;
 export const MIN_RESUME_CHARS = 100;
 export const MIN_JD_CHARS = 50;
 
-// Owner email configuration with environment variable and fallback
-export const OWNER_EMAIL = process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.NEXT_PUBLIC_OWNER_EMAIL || "lohithpeyyala@gmail.com";
+// Owner email configuration strictly from environment variables (secured)
+export const OWNER_EMAIL = process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
 export const isOwnerEmail = (email?: string): boolean => {
   if (!email) return false;
-  const rawOwners = process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.NEXT_PUBLIC_OWNER_EMAIL || "lohithpeyyala@gmail.com";
+  const rawOwners = process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || process.env.NEXT_PUBLIC_OWNER_EMAIL || "";
   const ownerEmails = rawOwners.split(",").map(e => e.toLowerCase().trim()).filter(Boolean);
-  if (!ownerEmails.includes("lohithpeyyala@gmail.com")) {
-    ownerEmails.push("lohithpeyyala@gmail.com");
-  }
   return ownerEmails.includes(email.toLowerCase().trim());
 };

@@ -277,6 +277,54 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
       .map(l => l.replace(/^[•\-\*–—+o\u2022\u25cf\u2043▸►→]\s*/, "").trim());
   }, [resume.optimizedText]);
 
+  /**
+   * Smart before/after bullet pairing:
+   * - Pairs each original bullet with its closest matching optimized bullet
+   *   (by shared word overlap), so the diff is meaningful even when lengths differ.
+   * - Only returns pairs where the text actually changed (genuine rewrites).
+   * - Caps at 12 pairs to avoid an overwhelming list.
+   */
+  const bulletChangePairs = React.useMemo<{ before: string; after: string }[]>(() => {
+    if (!originalBullets.length || !optimizedBullets.length) return [];
+
+    function wordSet(s: string): Set<string> {
+      return new Set(s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean));
+    }
+    function similarity(a: string, b: string): number {
+      const wa = wordSet(a);
+      const wb = wordSet(b);
+      let shared = 0;
+      wa.forEach(w => { if (wb.has(w)) shared++; });
+      return shared / Math.max(wa.size, wb.size, 1);
+    }
+
+    const usedOptIdx = new Set<number>();
+    const pairs: { before: string; after: string }[] = [];
+
+    for (const orig of originalBullets) {
+      // Find the best matching optimized bullet not yet paired
+      let bestIdx = -1;
+      let bestScore = 0;
+      optimizedBullets.forEach((opt, i) => {
+        if (usedOptIdx.has(i)) return;
+        const s = similarity(orig, opt);
+        if (s > bestScore) { bestScore = s; bestIdx = i; }
+      });
+
+      if (bestIdx !== -1) {
+        const after = optimizedBullets[bestIdx];
+        usedOptIdx.add(bestIdx);
+        // Only show if the text genuinely changed (not identical / trivially same)
+        const normalise = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (normalise(orig) !== normalise(after)) {
+          pairs.push({ before: orig, after });
+        }
+      }
+      if (pairs.length >= 12) break;
+    }
+    return pairs;
+  }, [originalBullets, optimizedBullets]);
+
   const handleCopy = () => {
     navigator.clipboard.writeText(resume.optimizedText || "");
     setCopied(true);
@@ -1000,53 +1048,51 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                   Rewritten Bullet Points (Before &amp; After)
                 </span>
                 <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                  Direct line-by-line comparison of weak original bullets transformed into quantified achievements
+                  Genuine before/after comparison — only bullets that were actually rewritten by AI are shown
                 </p>
               </div>
               <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-                {Math.max(originalBullets.length, optimizedBullets.length)} bullets compared
+                {bulletChangePairs.length} rewrites
               </span>
             </div>
 
             <div className="space-y-3">
-              {Array.from({ length: Math.max(originalBullets.length, optimizedBullets.length) }).map((_, idx) => {
-                const before = originalBullets[idx];
-                const after = optimizedBullets[idx];
-                if (!before && !after) return null;
-
-                return (
+              {bulletChangePairs.length === 0 ? (
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+                  <p className="text-xs text-slate-500 font-medium">
+                    No bullet-level changes detected — the optimization may have focused on keyword injection and summary improvements.
+                  </p>
+                </div>
+              ) : (
+                bulletChangePairs.map((pair, idx) => (
                   <div
                     key={idx}
                     className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 space-y-3 shadow-xs"
                   >
                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
-                      <span>Bullet Point #{idx + 1}</span>
+                      <span>Rewrite #{idx + 1}</span>
                     </div>
 
                     {/* BEFORE - RED */}
-                    {before && (
-                      <div className="bg-red-50/80 border border-red-200 rounded-xl p-3 sm:p-3.5 text-xs leading-relaxed text-red-950 space-y-1.5">
-                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-red-700">
-                          <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
-                          Before (Original Bullet)
-                        </div>
-                        <p className="font-normal font-sans text-red-900">&ldquo;{before}&rdquo;</p>
+                    <div className="bg-red-50/80 border border-red-200 rounded-xl p-3 sm:p-3.5 text-xs leading-relaxed text-red-950 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-red-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-600" />
+                        Before (Original Bullet)
                       </div>
-                    )}
+                      <p className="font-normal font-sans text-red-900">&ldquo;{pair.before}&rdquo;</p>
+                    </div>
 
                     {/* AFTER - GREEN */}
-                    {after && (
-                      <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 sm:p-3.5 text-xs leading-relaxed text-emerald-950 space-y-1.5">
-                        <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                          After (Optimized with Action Verbs &amp; Metrics)
-                        </div>
-                        <p className="font-semibold font-sans text-emerald-900">&ldquo;{after}&rdquo;</p>
+                    <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-3 sm:p-3.5 text-xs leading-relaxed text-emerald-950 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                        After (Optimized with Action Verbs &amp; Metrics)
                       </div>
-                    )}
+                      <p className="font-semibold font-sans text-emerald-900">&ldquo;{pair.after}&rdquo;</p>
+                    </div>
                   </div>
-                );
-              })}
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -1641,7 +1687,6 @@ export default function HistoryPage() {
               (creditsData.planId === "promax" ||
                 cachedPlan === "promax" ||
                 creditsData.billingCycle === "admin_promax" ||
-                userEmail === "payyalajyothika333@gmail.com" ||
                 (creditsData.paidCredits >= 90 && creditsData.paidCredits < 900000));
             const isPremium =
               !isOwner &&
@@ -1675,11 +1720,22 @@ export default function HistoryPage() {
 
         if (!active) return;
 
-        setResumes(dbData as any[]);
+        // Clean out any broadcasts or internal system records
+        const cleanResumes = (dbData as any[]).filter(
+          (r: any) =>
+            r &&
+            r.jobTitle !== "ADMIN_BROADCAST" &&
+            !r.jobTitle?.startsWith("ADMIN_BROADCAST") &&
+            r.jobTitle !== "SUPPORT_TICKET" &&
+            r.jobTitle !== "USER_FEEDBACK" &&
+            (!r.id || !String(r.id).startsWith("bc_"))
+        );
+
+        setResumes(cleanResumes);
         // Always update cache with fresh data (clears stale/deleted records)
         if (typeof window !== "undefined") {
-          if (dbData.length > 0) {
-            localStorage.setItem(`fastHire_history_cache_${user.id}`, JSON.stringify(dbData));
+          if (cleanResumes.length > 0) {
+            localStorage.setItem(`fastHire_history_cache_${user.id}`, JSON.stringify(cleanResumes));
           } else {
             localStorage.removeItem(`fastHire_history_cache_${user.id}`);
           }

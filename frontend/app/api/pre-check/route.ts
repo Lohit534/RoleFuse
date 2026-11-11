@@ -139,57 +139,11 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
     });
   }
 
-  // 2c. Certification Provider & Year Detection
-  const hasCerts = /(?:CERTIFICATIONS?|ACHIEVEMENTS?|AWARDS?)\b/i.test(upperText);
-  const certMatch = text.match(/(?:CERTIFICATIONS?|ACHIEVEMENTS?|AWARDS?)[\s\S]*?(?=(?:EDUCATION|EXPERIENCE|PROJECTS?|SKILLS|LANGUAGES?|$))/i);
-  const certSectionText = certMatch ? certMatch[0] : "";
-  const hasCertYearOrOrg = certSectionText ? (/\b(?:19|20)\d{2}\b/.test(certSectionText) || /[–—\-]\s*[A-Z]/i.test(certSectionText)) : false;
-  if (hasCerts && !hasCertYearOrOrg) {
-    questions.push({
-      id: "certification_year",
-      category: "year_date",
-      title: "Certification Issuing Provider & Year",
-      question: "What is the issuing organization and year for your certification(s)?",
-      hint: "e.g., Oracle (2025), HackerRank (2024), AWS (2023)",
-    });
-  }
+  // NOTE: Education questions (SSC 10th, college GPA, certification year) are intentionally
+  // NOT asked. Education is not mandatory for ATS optimization — the AI preserves whatever
+  // the candidate already has. Pre-check focuses only on experience, projects, and metrics.
 
-  // 3. SSC (10th) School Education Detection
-  const hasEducation =
-    upperText.includes("EDUCATION") ||
-    upperText.includes("B.TECH") ||
-    upperText.includes("BACHELOR") ||
-    upperText.includes("COLLEGE") ||
-    upperText.includes("UNIVERSITY") ||
-    upperText.includes("ACADEMIC");
-
-  const hasSSC = /\b(ssc|10th|class\s*x\b|secondary\s*school|matriculation|high\s*school)\b/i.test(text);
-
-  if (hasEducation && !hasSSC) {
-    questions.push({
-      id: "ssc_education",
-      category: "education",
-      title: "SSC (10th) School & Education Details",
-      question: "What is your SSC / 10th school name, education board, passing year, and CGPA or percentage?",
-      hint: "e.g., Z.P. High School | State Board | 2018 | CGPA: 9.2 or 88%",
-    });
-  }
-
-  // 4. College Graduation Year & CGPA/GPA
-  const hasGPA = /(GPA|CGPA|%)\s*:?\s*[\d.]+/i.test(text);
-  const hasGradYear = /\b20\d{2}\b/.test(text);
-
-  if (hasEducation && (!hasGPA || !hasGradYear)) {
-    questions.push({
-      id: "education_details",
-      category: "education",
-      title: "College Graduation Year & GPA / CGPA",
-      question: "What is your college graduation year and GPA/CGPA or percentage?",
-      hint: "e.g., 2021 – 2025 | CGPA: 8.5 / 10",
-    });
-  }
-
-  // 5. Missing target Job Description skills
+  // 4. Missing target Job Description skills
   if (jobDescription && jobDescription.length > 50) {
     const score = localScore(resumeText, jobDescription);
     const topMissing = score.missingKeywords.slice(0, 3);
@@ -204,7 +158,7 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
     }
   }
 
-  // 6. Weak experience / project bullets missing quantifiable metrics
+  // 5. Weak experience / project bullets missing quantifiable metrics
   const weakBullets = findWeakBulletsLocally(resumeText);
   for (const b of weakBullets) {
     questions.push({

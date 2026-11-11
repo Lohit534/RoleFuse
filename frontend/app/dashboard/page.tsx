@@ -1355,11 +1355,8 @@ export default function DashboardPage() {
           /* RESULTS WORKSPACE ROW */
           <div ref={resultsRef} className="space-y-6">
 
-            {/* ATS Optimization Complete banner — no reset button */}
+            {/* ATS Optimization Complete banner */}
             <div className="bg-white border border-slate-200 p-4 sm:p-5 rounded-xl flex items-center gap-3 select-none shadow-sm">
-              <div className="h-9 w-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-                <TrendingUp className="h-4 w-4 text-emerald-600" />
-              </div>
               <div>
                 <h2 className="text-sm font-black text-slate-900 tracking-tight">
                   ATS Optimization Complete
@@ -1381,8 +1378,7 @@ export default function DashboardPage() {
                 {/* Score circular gauges (like in History DetailView) */}
                 <Card className="border-slate-200 bg-white shadow-sm rounded-xl overflow-hidden">
                   <CardContent className="p-3.5 sm:p-6 space-y-4 sm:space-y-5">
-                    <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-2 select-none">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider select-none">
                       ATS Match Score Comparison
                     </h3>
 
@@ -1452,9 +1448,6 @@ export default function DashboardPage() {
             {/* Interactive Bullet Point Improver (Prominently displayed below columns) */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
               <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                <div className="h-9 w-9 rounded-md bg-[#087F6E] flex items-center justify-center text-white shadow-xs shrink-0">
-                  <TrendingUp className="h-5 w-5 text-white" />
-                </div>
                 <div>
                   <h3 className="text-base font-black text-slate-900">
                     Interactive Bullet Point Improver
@@ -1607,7 +1600,6 @@ export default function DashboardPage() {
                       : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
                 >
-                  <GraduationCap className="h-4 w-4" />
                   <span>Skills Learning Roadmap</span>
                 </button>
 
@@ -1620,7 +1612,6 @@ export default function DashboardPage() {
                       : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
                 >
-                  <FileText className="h-4 w-4" />
                   <span>Tailored Cover Letter</span>
                 </button>
               </div>
@@ -1629,23 +1620,18 @@ export default function DashboardPage() {
               {resultsSubTab === "roadmap" && (
                 <div className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-md bg-[#0d6e5a] flex items-center justify-center text-white shadow-xs shrink-0">
-                        <GraduationCap className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                          Skills Learning Roadmap
-                          {userPlan === "free" && (
-                            <span className="text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal inline-flex items-center">
-                              PRO
-                            </span>
-                          )}
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Select up to 3 skills to build a complete 90-day learning curriculum
-                        </p>
-                      </div>
+                    <div>
+                      <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                        Skills Learning Roadmap
+                        {userPlan === "free" && (
+                          <span className="text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal inline-flex items-center">
+                            PRO
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Select up to 3 skills to build a complete 90-day learning curriculum
+                      </p>
                     </div>
                     <span className="text-xs font-mono font-bold text-[#0d6e5a] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
                       {selectedRoadmapSkills.length}/3 Selected
@@ -1734,16 +1720,11 @@ export default function DashboardPage() {
               {resultsSubTab === "cover_letter" && (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-md bg-[#0d6e5a] flex items-center justify-center text-white shadow-xs shrink-0">
-                        <FileText className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-black text-slate-900">Tailored Cover Letter Generator</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Generate a personalized cover letter aligned with this job specification
-                        </p>
-                      </div>
+                    <div>
+                      <h3 className="text-base font-black text-slate-900">Tailored Cover Letter Generator</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Generate a personalized cover letter aligned with this job specification
+                      </p>
                     </div>
                   </div>
 
@@ -1825,7 +1806,6 @@ export default function DashboardPage() {
             {/* Custom optimization instructions card */}
             <div className="bg-white border border-[#DCE7E9] rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xs">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#087F6E]" />
                 <h4 className="font-heading font-bold text-xs sm:text-sm text-[#111827]">
                   Custom Guidance{" "}
                   <span className="text-[#526176] font-normal">(Optional)</span>
@@ -1843,7 +1823,6 @@ export default function DashboardPage() {
             {/* Resume Length card */}
             <div className="bg-white border border-[#DCE7E9] rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xs">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-[#087F6E]" />
                 <h4 className="font-heading font-bold text-xs sm:text-sm text-[#111827]">
                   Resume Length
                 </h4>
@@ -2178,19 +2157,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Trust badges (Placed below overview boxes) */}
-            <div className="flex flex-wrap justify-center items-center gap-x-6 sm:gap-x-8 gap-y-2.5 pt-6 text-[10px] sm:text-xs text-slate-600 font-semibold select-none">
-              <span className="flex items-center gap-1.5">
-                <Shield className="h-3.5 w-3.5 text-slate-700 shrink-0" /> No data sold
-              </span>
-              <span className="flex items-center gap-1.5">
-                <GeminiIcon className="h-3.5 w-3.5 text-slate-700 shrink-0" /> ~ 30s results
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Target className="h-3.5 w-3.5 text-slate-700 shrink-0" /> ATS Tested
-              </span>
-              <span className="flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-slate-700 shrink-0" /> Score improvement guaranteed
-              </span>
+            <div className="flex flex-wrap justify-center items-center gap-x-6 sm:gap-x-8 gap-y-2.5 pt-6 text-[10px] sm:text-xs text-slate-500 font-medium select-none">
+              <span>No data sold</span>
+              <span className="text-slate-300">|</span>
+              <span>Results in ~30s</span>
+              <span className="text-slate-300">|</span>
+              <span>ATS Tested</span>
+              <span className="text-slate-300">|</span>
+              <span>Score improvement guaranteed</span>
             </div>
           </div>
         )}

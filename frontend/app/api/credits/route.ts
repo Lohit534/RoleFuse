@@ -179,13 +179,13 @@ export async function GET(request: NextRequest) {
     }
 
     const userEmail = (user.email || "").toLowerCase().trim();
-    const isProMaxPurchasedUser = userEmail === "payyalajyothika333@gmail.com";
 
     // 3b. Verify active paid subscription from Razorpay PaymentLog (promax or premium)
     let isPaidProMax = false;
     let isPaidPremium = false;
     let paymentValidUntil: Date | null = null;
     let paidPlanFromPayment: string | null = null;
+    let latestPaymentRecord: any = null;
 
     try {
       const { data: latestPayment } = await admin
@@ -198,6 +198,7 @@ export async function GET(request: NextRequest) {
         .maybeSingle();
 
       if (latestPayment) {
+        latestPaymentRecord = latestPayment;
         paidPlanFromPayment = latestPayment.planId;
         const payDate = new Date(latestPayment.createdAt);
         const isYearly = latestPayment.billingCycle === "yearly" && (latestPayment.amount > 300);
@@ -401,6 +402,14 @@ export async function GET(request: NextRequest) {
       planId,
       billingCycle,
       expiresAt: expiresAt ? expiresAt.toISOString() : null,
+      latestPayment: latestPaymentRecord ? {
+        id: latestPaymentRecord.id,
+        amount: latestPaymentRecord.amount,
+        planId: latestPaymentRecord.planId,
+        billingCycle: latestPaymentRecord.billingCycle,
+        createdAt: latestPaymentRecord.createdAt,
+        razorpayPaymentId: latestPaymentRecord.razorpayPaymentId || latestPaymentRecord.id,
+      } : null,
     });
   } catch (error: any) {
     logger.error("[credits] GET Unhandled error:", error?.message);

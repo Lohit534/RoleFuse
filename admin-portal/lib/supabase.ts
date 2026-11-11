@@ -7,7 +7,7 @@ export function getBackendUrl(): string {
   return (
     process.env.USER_APP_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    "https://fasthireai.com"
+    "https://rolefuse.in"
   ).replace(/\/$/, "");
 }
 

@@ -131,10 +131,13 @@ export function getActiveNotifications(
 }
 
 export function hasUnreadNotifications(credits: CreditInfo | null, userEmail?: string | null): boolean {
-  if (!credits) return false;
   let dismissedIds: string[] = [];
   try {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("fastHire_dismissed_notifications") : null;
+    const stored =
+      typeof window !== "undefined"
+        ? localStorage.getItem("rolefuse_dismissed_notifications") ||
+          localStorage.getItem("fastHire_dismissed_notifications")
+        : null;
     if (stored) dismissedIds = JSON.parse(stored);
   } catch {
     // Ignore
@@ -143,7 +146,11 @@ export function hasUnreadNotifications(credits: CreditInfo | null, userEmail?: s
   // Check cached broadcasts count
   let unreadBroadcastCount = 0;
   try {
-    const cachedBc = typeof window !== "undefined" ? localStorage.getItem("fastHire_cached_broadcasts") : null;
+    const cachedBc =
+      typeof window !== "undefined"
+        ? localStorage.getItem("rolefuse_cached_broadcasts") ||
+          localStorage.getItem("fastHire_cached_broadcasts")
+        : null;
     if (cachedBc) {
       const list = JSON.parse(cachedBc);
       if (Array.isArray(list)) {
@@ -152,7 +159,8 @@ export function hasUnreadNotifications(credits: CreditInfo | null, userEmail?: s
     }
   } catch {}
 
-  return getActiveNotifications(credits, userEmail, dismissedIds).length + unreadBroadcastCount > 0;
+  const planCount = credits ? getActiveNotifications(credits, userEmail, dismissedIds).length : 0;
+  return planCount + unreadBroadcastCount > 0;
 }
 
 export function NotificationBell({ credits, userEmail, compact = false }: NotificationBellProps) {
@@ -164,7 +172,9 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
   // Load dismissed notifications from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("fastHire_dismissed_notifications");
+      const stored =
+        localStorage.getItem("rolefuse_dismissed_notifications") ||
+        localStorage.getItem("fastHire_dismissed_notifications");
       if (stored) {
         setDismissedIds(JSON.parse(stored));
       }
@@ -196,6 +206,7 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
           }));
           setBroadcasts(mapped);
           try {
+            localStorage.setItem("rolefuse_cached_broadcasts", JSON.stringify(mapped));
             localStorage.setItem("fastHire_cached_broadcasts", JSON.stringify(mapped));
           } catch {}
         }
@@ -247,11 +258,18 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
         setIsOpen(false);
       }
     }
+    const handleClose = (e: any) => {
+      if (e.detail?.source !== "notifications") {
+        setIsOpen(false);
+      }
+    };
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
+    window.addEventListener("rolefuse_close_popups", handleClose);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("rolefuse_close_popups", handleClose);
     };
   }, [isOpen]);
 
@@ -265,6 +283,7 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
     const updated = [...dismissedIds, id];
     setDismissedIds(updated);
     try {
+      localStorage.setItem("rolefuse_dismissed_notifications", JSON.stringify(updated));
       localStorage.setItem("fastHire_dismissed_notifications", JSON.stringify(updated));
     } catch {
       // Ignore
@@ -276,6 +295,7 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
     const updated = [...dismissedIds, ...allNotifications.map((n) => n.id)];
     setDismissedIds(updated);
     try {
+      localStorage.setItem("rolefuse_dismissed_notifications", JSON.stringify(updated));
       localStorage.setItem("fastHire_dismissed_notifications", JSON.stringify(updated));
     } catch {
       // Ignore
@@ -287,7 +307,13 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
       {/* Bell Button */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isOpen) {
+            window.dispatchEvent(new CustomEvent("rolefuse_close_popups", { detail: { source: "notifications" } }));
+          }
+          setIsOpen(!isOpen);
+        }}
         aria-label="View notifications"
         className={`relative rounded-xl flex items-center justify-center transition-all cursor-pointer ${
           compact
@@ -307,7 +333,10 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
 
       {/* Notifications Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-[320px] sm:w-[360px] bg-white text-slate-800 border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 select-none z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-[360px] max-w-[360px] bg-white text-slate-800 border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 select-none z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+        >
           {/* Header */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-1.5">

@@ -18,14 +18,12 @@ import {
   Lock, 
   ChevronRight, 
   TrendingUp, 
-  Sparkles,
   Zap,
   ShieldCheck,
   Download,
   HelpCircle,
   Clock,
-  Receipt,
-  ArrowUpRight
+  Receipt
 } from "lucide-react";
 import { CreditInfo } from "@/types";
 import { toast } from "react-hot-toast";
@@ -76,68 +74,92 @@ export default function BillingPage() {
 
         // 1. Plan Tier & Credits Loading directly from DB
         let currentPlan = "free";
+        let loadedCredits: CreditInfo | null = null;
+        let detectedCycle = "monthly";
 
         try {
           const res = await fetch("/api/credits");
           if (res.ok) {
             const apiCredits = await res.json();
+            loadedCredits = apiCredits;
             setCredits(apiCredits);
             currentPlan = apiCredits.planId || "free";
             localStorage.setItem(`fastHire_plan_${user.id}`, currentPlan);
 
             // Use authentic billingCycle from database/API
-            const cycle = apiCredits.billingCycle || "monthly";
-            setBillingCycle(cycle);
-            localStorage.setItem(`fastHire_billingCycle_${user.id}`, cycle);
+            detectedCycle = apiCredits.billingCycle || "monthly";
+            setBillingCycle(detectedCycle);
+            localStorage.setItem(`fastHire_billingCycle_${user.id}`, detectedCycle);
           } else {
             throw new Error("Failed to fetch credits");
           }
         } catch (err) {
           // Fallback to local storage mock values
           currentPlan = localStorage.getItem(`fastHire_plan_${user.id}`) || "free";
-          const currentCycle = localStorage.getItem(`fastHire_billingCycle_${user.id}`) || "monthly";
-          setBillingCycle(currentCycle);
-          const creditsData = localStorage.getItem(`fastHire_mockCredits_${user.id}`);
-          if (creditsData) {
+          detectedCycle = localStorage.getItem(`fastHire_billingCycle_${user.id}`) || "monthly";
+          setBillingCycle(detectedCycle);
+          const rawCredits = localStorage.getItem(`fastHire_mockCredits_${user.id}`);
+          if (rawCredits) {
             try {
-              setCredits(JSON.parse(creditsData));
+              loadedCredits = JSON.parse(rawCredits);
+              setCredits(loadedCredits);
             } catch (e) {
-              setCredits({
+              loadedCredits = {
                 freeUsed: 0,
                 paidCredits: 2,
                 freeRemaining: 2,
                 resetAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
-              });
+              };
+              setCredits(loadedCredits);
             }
           } else {
-            setCredits({
+            loadedCredits = {
               freeUsed: 0,
               paidCredits: 2,
               freeRemaining: 2,
               resetAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
-            });
+            };
+            setCredits(loadedCredits);
           }
         }
 
         setActivePlan(currentPlan);
 
-        // Invoices list creation
-        const isJyothika = (user.email || "").toLowerCase().trim() === "payyalajyothika333@gmail.com";
+        // Invoices list creation:
+        // - Free users: No receipts ("No Invoices Yet")
+        // - Paid Monthly users: EXACTLY ONE receipt for active monthly subscription (no multiple months)
+        // - Paid Yearly users: EXACTLY ONE single-page annual receipt for the full year (no each-month breakdown)
         const invoiceHistory: Invoice[] = [];
+        const isPaid = currentPlan === "premium" || currentPlan === "promax" || currentPlan === "team";
+        const effectiveCycle = (loadedCredits?.billingCycle || detectedCycle || "monthly").toLowerCase();
+        const isYearly = effectiveCycle === "yearly";
+        const isProMax = currentPlan === "promax" || currentPlan === "team";
 
-        if (currentPlan === "team" || currentPlan === "promax" || isJyothika) {
-          invoiceHistory.push({
-            id: "INV-PROMAX-SEP12", 
-            date: "2026-09-12", 
-            description: "FastHire Pro Max (1 Month)", 
-            amount: "₹199.00", 
-            status: "paid"
-          });
-        } else if (currentPlan !== "free") {
-          invoiceHistory.push(
-            { id: "INV-84920", date: "2026-06-15", description: "FastHire Premium Pro Monthly", amount: "₹99.00", status: "paid" },
-            { id: "INV-73819", date: "2026-05-15", description: "FastHire Premium Pro Monthly", amount: "₹99.00", status: "paid" }
-          );
+        if (isPaid) {
+          const paymentRecord = loadedCredits?.latestPayment;
+          const payDate = paymentRecord?.createdAt 
+            ? new Date(paymentRecord.createdAt).toISOString().split("T")[0]
+            : (loadedCredits?.resetAt ? new Date(loadedCredits.resetAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]);
+          
+          if (isYearly) {
+            // Yearly subscription: 1 comprehensive single-page invoice for the entire year
+            invoiceHistory.push({
+              id: paymentRecord?.razorpayPaymentId || `INV-${isProMax ? "PROMAX" : "PRO"}-YEARLY`,
+              date: payDate,
+              description: `RoleFuse ${isProMax ? "Pro Max" : "Premium Pro"} Annual Subscription (1 Year Access)`,
+              amount: isProMax ? "₹2,507.00" : "₹1,247.00",
+              status: "paid"
+            });
+          } else {
+            // Monthly subscription: ONLY 1 receipt for the paid monthly subscription
+            invoiceHistory.push({
+              id: paymentRecord?.razorpayPaymentId || `INV-${isProMax ? "PROMAX" : "PRO"}-MONTHLY`,
+              date: payDate,
+              description: `RoleFuse ${isProMax ? "Pro Max" : "Premium Pro"} Monthly Subscription`,
+              amount: isProMax ? "₹209.00" : "₹104.00",
+              status: "paid"
+            });
+          }
         }
 
         setInvoices(invoiceHistory);
@@ -152,7 +174,7 @@ export default function BillingPage() {
 
   const handlePrintReceipt = (invoice: Invoice) => {
     const isProMax = activePlan === "promax" || activePlan === "team" || invoice.description.includes("Pro Max");
-    const isYear = billingCycle === "yearly";
+    const isYear = billingCycle === "yearly" || invoice.description.toLowerCase().includes("annual") || invoice.description.toLowerCase().includes("1 year");
     const base = isProMax ? (isYear ? 2388 : 199) : (isYear ? 1188 : 99);
     const gst = isProMax ? (isYear ? 119 : 10) : (isYear ? 59 : 5);
     const total = isProMax ? (isYear ? 2507 : 209) : (isYear ? 1247 : 104);
@@ -161,13 +183,15 @@ export default function BillingPage() {
       invoiceNumber: invoice.id.toUpperCase(),
       date: invoice.date,
       userName: "RoleFuse Subscriber",
-      userEmail: userEmail || "subscriber@rolefuse.ai",
-      planName: isProMax ? "RoleFuse Pro Max (1 Year Access)" : "RoleFuse Premium Pro",
+      userEmail: userEmail || "subscriber@rolefuse.in",
+      planName: isProMax 
+        ? (isYear ? "RoleFuse Pro Max Annual Plan (1 Year Access)" : "RoleFuse Pro Max Monthly Plan") 
+        : (isYear ? "RoleFuse Premium Pro Annual Plan (1 Year Access)" : "RoleFuse Premium Pro Monthly Plan"),
       billingCycle: (isYear ? "yearly" : "monthly") as any,
       basePrice: base,
       gstAmount: gst,
       totalAmount: total,
-      paymentId: invoice.id.includes("PROMAX") ? "pay_Tb1mEnnxYp9Ddc" : `rzp_live_${invoice.id}`,
+      paymentId: invoice.id.startsWith("pay_") ? invoice.id : `rzp_live_${invoice.id.toLowerCase().replace(/[^a-z0-9]/g, "")}`,
     });
     setIsInvoiceOpen(true);
   };
@@ -244,10 +268,8 @@ export default function BillingPage() {
           </div>
 
           <Link href="/dashboard/pricing" className="w-full sm:w-auto">
-            <Button className="w-full sm:w-auto bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs h-9 rounded-xl px-4 shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-              <Sparkles className="h-3.5 w-3.5" />
-              {activePlan === "free" ? "Upgrade to Pro" : "View All Plans"}
-              <ArrowUpRight className="h-3.5 w-3.5" />
+            <Button className="w-full sm:w-auto bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs h-9 rounded-md px-4 shadow-xs flex items-center justify-center transition-colors cursor-pointer">
+              View All Prices
             </Button>
           </Link>
         </ScrollFadeIn>
@@ -417,8 +439,8 @@ export default function BillingPage() {
                     {activePlan === "free" ? "Upgrade anytime to unlock 20 monthly optimizations or 90 with Pro Max." : "Need to upgrade or switch plans?"}
                   </span>
                   <Link href="/dashboard/pricing" className="w-full sm:w-auto">
-                    <Button className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 rounded-xl px-5 shadow-sm transition-colors cursor-pointer">
-                      {activePlan === "free" ? "Upgrade Plan" : "Change Plan"}
+                    <Button className="w-full sm:w-auto bg-[#087F6E] hover:bg-[#075E53] text-white font-bold text-xs h-9 rounded-md px-5 shadow-xs transition-colors cursor-pointer">
+                      {activePlan === "free" ? "View All Prices" : "Change Plan"}
                     </Button>
                   </Link>
                 </div>
@@ -501,7 +523,7 @@ export default function BillingPage() {
                 <p className="text-[10px] text-slate-500">Questions about payments, plans, or custom invoices?</p>
               </div>
               <a
-                href="mailto:rolefuse.ai@gmail.com?subject=RoleFuse%20Support"
+                href="mailto:support@rolefuse.in?subject=RoleFuse%20Support"
                 className="w-full sm:w-auto bg-[#0d6e5a] hover:bg-[#094d3f] text-white text-[10px] font-bold h-8 rounded-lg px-3.5 transition-all cursor-pointer shrink-0 inline-flex items-center justify-center text-center"
               >
                 Contact Us

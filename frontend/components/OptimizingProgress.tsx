@@ -200,7 +200,7 @@ export default function OptimizingProgress({
   useEffect(() => {
     let cancelled = false;
     const abortCtrl = new AbortController();
-    // Hard 55s timeout — surface error clearly instead of hanging forever
+    // Hard 110s timeout — surface error clearly instead of hanging forever
     const hardTimeout = setTimeout(() => {
       if (!backendResultRef.current && !awaitingInputRef.current) {
         abortCtrl.abort();
@@ -208,7 +208,7 @@ export default function OptimizingProgress({
           onError("Optimization is taking too long. Please try again.");
         }
       }
-    }, 55000);
+    }, 110000);
 
     const startPipeline = async () => {
       try {
@@ -331,7 +331,7 @@ export default function OptimizingProgress({
           onError("Optimization is taking too long. Please try again.");
         }
       }
-    }, 55000);
+    }, 110000);
 
     try {
       const res = await fetch("/api/optimize", {

@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
+import { sendPurchaseReceiptEmail } from "@/lib/email";
 import crypto from "crypto";
 
 // Plan → paidCredits mapping
@@ -204,6 +205,20 @@ export async function POST(request: NextRequest) {
       logger.warn("[payment/verify] PaymentLog insert failed (non-fatal):", logErr.message);
     } else {
       logger.info(`[payment/verify] PaymentLog recorded: ₹${amount} from ${user.email} (${verifiedPlanId} ${cycle})`);
+    }
+
+    // ── 5. Automated Purchase Receipt Email ──────────────────────────────────
+    if (user.email) {
+      sendPurchaseReceiptEmail({
+        userEmail: user.email,
+        userName: user.user_metadata?.full_name || undefined,
+        planName: verifiedPlanId === "promax" ? "Pro Max" : "Pro",
+        amount,
+        paymentId: razorpay_payment_id,
+        creditsAdded: paidCredits,
+      }).catch((emailErr: any) => {
+        logger.warn("[payment/verify] Receipt email error (non-fatal):", emailErr?.message);
+      });
     }
 
     return NextResponse.json({

@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       usersList.unshift({
         id: currentUser.id || "owner-lohit",
         email: currentUser.email,
-        name: currentUser.user_metadata?.full_name || "Lohith (Owner)",
+        name: currentUser.user_metadata?.full_name || "Administrator (Owner)",
         createdAt: currentUser.created_at || new Date().toISOString(),
       });
     }
@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
     const { count: totalOptimizations } = await admin
       .from("Resume")
       .select("id", { count: "exact", head: true })
-      .neq("jobTitle", "SUPPORT_TICKET");
+      .not("jobTitle", "in", '("SUPPORT_TICKET","USER_FEEDBACK","ADMIN_BROADCAST")');
 
     // Fetch tickets count
     const { count: totalTickets } = await admin

@@ -49,7 +49,7 @@ const FAQS: FAQItem[] = [
     id: "payment-visibility",
     category: "billing",
     question: "Why is my payment not visible on the dashboard?",
-    answer: "Payments are verified securely in real-time via Razorpay. If your credits haven't refreshed immediately, please check your Billing & Subscription page, click 'Refresh', or create a support ticket with your Payment ID or email rolefuse.ai@gmail.com."
+    answer: "Payments are verified securely in real-time via Razorpay. If your credits haven't refreshed immediately, please check your Billing & Subscription page, click 'Refresh', or create a support ticket with your Payment ID or email support@rolefuse.in."
   },
   {
     id: "credits-reset",
@@ -159,6 +159,29 @@ export default function SupportChatbot() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Listen for global popup events so only one widget / dropdown / modal is open at a time
+  useEffect(() => {
+    const handleOpenHelp = () => {
+      window.dispatchEvent(new CustomEvent("rolefuse_close_popups", { detail: { source: "help-center" } }));
+      setIsOpen(true);
+      setView("help-center");
+    };
+
+    const handleClosePopups = (e: any) => {
+      if (e.detail?.source !== "help-center") {
+        setIsOpen(false);
+      }
+    };
+
+    window.addEventListener("fastHire_openHelpCenter", handleOpenHelp);
+    window.addEventListener("rolefuse_close_popups", handleClosePopups);
+
+    return () => {
+      window.removeEventListener("fastHire_openHelpCenter", handleOpenHelp);
+      window.removeEventListener("rolefuse_close_popups", handleClosePopups);
+    };
+  }, []);
+
   // Auto-scroll messages to bottom
   useEffect(() => {
     if (view === "ticket") {
@@ -204,6 +227,7 @@ export default function SupportChatbot() {
     const handleOpenChat = (e: Event) => {
       const customEvent = e as CustomEvent;
       const targetMode = customEvent.detail?.mode || "help-center";
+      window.dispatchEvent(new CustomEvent("rolefuse_close_popups", { detail: { source: "help-center" } }));
       setIsDismissed(false);
       setIsOpen(true);
       if (targetMode === "admin" || targetMode === "ticket") {
@@ -286,7 +310,7 @@ export default function SupportChatbot() {
   };
 
   const copySupportEmail = () => {
-    navigator.clipboard.writeText("rolefuse.ai@gmail.com");
+    navigator.clipboard.writeText("support@rolefuse.in");
     setCopiedEmail(true);
     toast.success("Support email copied to clipboard!");
     setTimeout(() => setCopiedEmail(false), 2500);
@@ -310,7 +334,7 @@ export default function SupportChatbot() {
       {/* Mobile Backdrop when Help Center is open */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/25 sm:hidden z-[105] backdrop-blur-[1px] transition-opacity"
+          className="fixed inset-0 bg-black/20 sm:hidden z-[105] transition-opacity"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -328,6 +352,7 @@ export default function SupportChatbot() {
             <button
               type="button"
               onClick={() => {
+                window.dispatchEvent(new CustomEvent("rolefuse_close_popups", { detail: { source: "help-center" } }));
                 setIsOpen(true);
                 setView("help-center");
               }}
@@ -516,43 +541,47 @@ export default function SupportChatbot() {
 
               {/* Options */}
               <div className="p-4 space-y-3.5 flex-1 flex flex-col justify-center bg-slate-50/50">
-                {/* Option 1: Mail Support (Direct Email) */}
+                {/* Option 1: Mail Support (Email with Copy Icon) */}
                 <div className="p-4 bg-white border border-teal-200/80 rounded-2xl shadow-sm space-y-3">
                   <div className="flex items-start gap-3">
                     <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a] shrink-0">
                       <Mail className="h-5 w-5" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <h4 className="text-xs font-extrabold text-slate-900">Mail Support</h4>
                         <span className="text-[9px] font-bold text-[#0d6e5a] bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
                           Recommended
                         </span>
                       </div>
-                      <p className="text-[11px] font-mono text-slate-700 font-medium mt-0.5">
-                        rolefuse.ai@gmail.com
-                      </p>
                       <p className="text-[10px] text-slate-500 mt-0.5">
                         Guaranteed response within 24 hours
                       </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <a
-                      href="mailto:rolefuse.ai@gmail.com?subject=RoleFuse%20Support%20Request"
-                      className="inline-flex items-center justify-center gap-1.5 h-8.5 rounded-xl bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Open Mail
-                    </a>
+                  {/* Mail address with copy icon */}
+                  <div className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="text-xs font-mono font-semibold text-slate-800 truncate select-all">
+                      support@rolefuse.in
+                    </span>
                     <button
                       type="button"
                       onClick={copySupportEmail}
-                      className="inline-flex items-center justify-center gap-1.5 h-8.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-[11px] transition-colors cursor-pointer shadow-xs shrink-0"
+                      title="Copy email address"
                     >
-                      {copiedEmail ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copiedEmail ? "Copied!" : "Copy Email"}
+                      {copiedEmail ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          <span className="text-emerald-700">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5 text-slate-500" />
+                          <span>Copy</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -836,27 +865,20 @@ export default function SupportChatbot() {
 
                 <div className="w-full bg-white border border-slate-200 rounded-xl p-3 shadow-xs space-y-2">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Official Support Email</span>
-                  <div className="text-sm font-mono font-bold text-[#0d6e5a]">
-                    rolefuse.ai@gmail.com
+                  <div className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                    <span className="text-sm font-mono font-bold text-[#0d6e5a] truncate select-all">
+                      support@rolefuse.in
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copySupportEmail}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer shadow-xs shrink-0"
+                      title="Copy email address"
+                    >
+                      {copiedEmail ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4 text-slate-500" />}
+                      <span>{copiedEmail ? "Copied" : "Copy"}</span>
+                    </button>
                   </div>
-                </div>
-
-                <div className="w-full grid grid-cols-2 gap-2.5 pt-2">
-                  <a
-                    href="mailto:rolefuse.ai@gmail.com?subject=RoleFuse%20Support%20Inquiry"
-                    className="inline-flex items-center justify-center gap-2 h-10 rounded-xl bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs shadow-sm transition-colors cursor-pointer"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Open Mail App
-                  </a>
-                  <button
-                    type="button"
-                    onClick={copySupportEmail}
-                    className="inline-flex items-center justify-center gap-2 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
-                  >
-                    {copiedEmail ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                    {copiedEmail ? "Copied!" : "Copy Address"}
-                  </button>
                 </div>
               </div>
 

@@ -113,33 +113,8 @@ export function detectMissingFields(resumeText: string): MissingField[] {
     });
   }
 
-  // ── 5. Education missing CGPA / GPA ──────────────────────────────────
-  const hasEducation =
-    upperText.includes("EDUCATION") ||
-    upperText.includes("B.TECH") ||
-    upperText.includes("BTECH") ||
-    upperText.includes("BACHELOR") ||
-    upperText.includes("UNIVERSITY") ||
-    upperText.includes("COLLEGE");
-
-  if (hasEducation) {
-    const hasGPA = /(GPA|CGPA|%)\s*:?\s*[\d.]+/i.test(text);
-    const hasEduDates =
-      /\b(20\d{2})\s*[-–]\s*(20\d{2}|Present|Current)\b/i.test(text);
-
-    if (!hasGPA && !hasEduDates) {
-      fields.push({
-        id: "education_details",
-        label: "Education Details (GPA & Year)",
-        description:
-          'Add your GPA/CGPA and graduation year range (e.g. "CGPA: 8.5 | 2021 – 2025")',
-        placeholder: "e.g. CGPA: 8.5 | 2021 – 2025",
-        type: "text",
-        section: "Education",
-        required: false,
-      });
-    }
-  }
+  // NOTE: Education fields (GPA & Year) are not mandatory to ask.
+  // The system preserves whatever education credentials the candidate provided.
 
   // ── 6. No LinkedIn or GitHub ──────────────────────────────────────────
   const hasLinkedIn =

@@ -77,7 +77,13 @@ export async function GET(request: NextRequest) {
         if (!error && Array.isArray(data)) {
           for (const r of data) {
             if (!allResumes.some((item) => item.id === r.id)) {
-              if (r.jobTitle !== "SUPPORT_TICKET" && r.jobTitle !== "USER_FEEDBACK") {
+              if (
+                r.jobTitle !== "SUPPORT_TICKET" &&
+                r.jobTitle !== "USER_FEEDBACK" &&
+                r.jobTitle !== "ADMIN_BROADCAST" &&
+                !r.jobTitle?.startsWith("ADMIN_BROADCAST") &&
+                (!r.id || !String(r.id).startsWith("bc_"))
+              ) {
                 // Ensure text content is available
                 if (!r.originalText && !r.optimizedText && r.optimizedJson) {
                   try {
@@ -107,7 +113,13 @@ export async function GET(request: NextRequest) {
         if (Array.isArray(userClientData)) {
           for (const r of userClientData) {
             if (!allResumes.some((item) => item.id === r.id)) {
-              if (r.jobTitle !== "SUPPORT_TICKET" && r.jobTitle !== "USER_FEEDBACK") {
+              if (
+                r.jobTitle !== "SUPPORT_TICKET" &&
+                r.jobTitle !== "USER_FEEDBACK" &&
+                r.jobTitle !== "ADMIN_BROADCAST" &&
+                !r.jobTitle?.startsWith("ADMIN_BROADCAST") &&
+                (!r.id || !String(r.id).startsWith("bc_"))
+              ) {
                 allResumes.push(r);
               }
             }

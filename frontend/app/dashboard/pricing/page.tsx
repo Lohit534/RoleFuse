@@ -67,10 +67,10 @@ const PLANS: Plan[] = [
     id: "premium",
     name: "Premium Pro",
     priceMonthly: "₹99",
-    priceYearly: "₹99",
+    priceYearly: "₹1,188",
     periodMonthly: "month",
-    periodYearly: "month",
-    annualCharged: "₹1,188/yr",
+    periodYearly: "year",
+    annualCharged: "₹99/month equivalent",
     description: "For active job hunters targeting multiple roles.",
     features: [
       "20 AI resume optimizations per month",
@@ -91,10 +91,10 @@ const PLANS: Plan[] = [
     id: "promax",
     name: "Pro Max",
     priceMonthly: "₹199",
-    priceYearly: "₹199",
+    priceYearly: "₹2,388",
     periodMonthly: "month",
-    periodYearly: "month",
-    annualCharged: "₹2,388/yr",
+    periodYearly: "year",
+    annualCharged: "₹199/month equivalent",
     description: "For active career changers needing maximum optimization power, LinkedIn optimization, and AI cover letters.",
     features: [
       "90 AI resume optimizations per month",
@@ -388,7 +388,7 @@ export default function PricingPage() {
 
     const priceNum = billingCycle === "monthly"
       ? (selectedPlan.id === "premium" ? 99 : 199)
-      : (selectedPlan.id === "premium" ? 99 * 10 : 199 * 10); // 2 months discount
+      : (selectedPlan.id === "premium" ? 1188 : 2388);
 
     let userEmail = "";
     try {

@@ -101,7 +101,8 @@ export default function UpgradePaywallModal() {
       }
 
       // Check if user is owner
-      const isOwner = (user.email || "").toLowerCase().trim() === (process.env.NEXT_PUBLIC_OWNER_EMAIL || "lohit534@gmail.com").toLowerCase().trim();
+      const ownerEnv = (process.env.NEXT_PUBLIC_OWNER_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || "").toLowerCase().trim();
+      const isOwner = Boolean(ownerEnv && (user.email || "").toLowerCase().trim() === ownerEnv);
       if (isOwner) {
         try {
           await fetch("/api/credits", {

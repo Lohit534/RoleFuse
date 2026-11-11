@@ -99,7 +99,7 @@ export default function GstInvoiceModal({
               </div>
               <p className="text-[10px] sm:text-[11px] text-slate-600 print:text-slate-600 font-semibold">RoleFuse Cloud Technologies</p>
               <p className="text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">SAC Code: 998313 &bull; IT Software as a Service</p>
-              <p className="text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">rolefuse.ai@gmail.com</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 print:text-slate-500">support@rolefuse.in</p>
             </div>
 
             <div className="sm:text-right space-y-1 w-full sm:w-auto">
@@ -189,7 +189,7 @@ export default function GstInvoiceModal({
 
         {/* Modal Actions Bottom (Hidden on Print) */}
         <div className="px-4 sm:px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between print:hidden">
-          <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium">support@rolefuse.ai</span>
+          <span className="text-[10px] sm:text-[11px] text-slate-500 font-medium">support@rolefuse.in</span>
           <div className="flex gap-2">
             <Button
               variant="outline"

@@ -15,7 +15,7 @@ import { logger } from "@/lib/logger";
 import { isOwnerEmail } from "@/types";
 
 // Titles used for system/internal records — never show in user history
-const SYSTEM_TITLES = ["SUPPORT_TICKET", "USER_FEEDBACK"];
+const SYSTEM_TITLES = ["SUPPORT_TICKET", "USER_FEEDBACK", "ADMIN_BROADCAST"];
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,13 +65,27 @@ export async function GET(request: NextRequest) {
       if (isOwnerEmail(user.email)) {
         planTier = "owner";
       } else {
+        // Check first 50 early adopters (they get Premium Pro)
+        let isFirst50 = false;
+        try {
+          const { count: totalUsers } = await admin.from("User").select("id", { count: "exact", head: true });
+          if (totalUsers !== null && totalUsers <= 50) {
+            isFirst50 = true;
+          } else {
+            const { data: first50 } = await admin.from("User").select("id").order("createdAt", { ascending: true }).limit(50);
+            if (first50?.some((u: any) => u.id === activeUserId || u.id === user.id)) {
+              isFirst50 = true;
+            }
+          }
+        } catch (_e) {}
+
         const { data: creditRow } = await admin
           .from("Credit")
           .select("paidCredits, planId, billingCycle")
           .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
           .maybeSingle();
 
-        const isKnownProMax = userEmail === "payyalajyothika333@gmail.com";
+        const isKnownProMax = Boolean(process.env.PRO_MAX_EMAILS && process.env.PRO_MAX_EMAILS.toLowerCase().includes(userEmail));
 
         if (
           isKnownProMax ||
@@ -83,6 +97,9 @@ export async function GET(request: NextRequest) {
         } else if (
           creditRow?.planId === "premium" ||
           creditRow?.billingCycle === "admin_premium" ||
+          creditRow?.billingCycle === "yearly" ||
+          creditRow?.billingCycle === "monthly" ||
+          isFirst50 ||
           (creditRow?.paidCredits && creditRow.paidCredits > 0)
         ) {
           planTier = "premium";
@@ -120,6 +137,7 @@ export async function GET(request: NextRequest) {
     );
 
     // 1. Fetch from Supabase DB across all potential user IDs using .in() query & fallback loop
+    // Note: Do NOT use SQL .not("jobTitle", "in", ...) here because PostgreSQL drops rows with jobTitle IS NULL!
     let dbData: any[] = [];
     let inQuerySucceeded = false;
     try {
@@ -155,14 +173,41 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // JS-side filter: exclude system records, exclude normal manual resumes, AND apply retention window
+    // JS-side filter: exclude system records, broadcasts, and apply plan-based retention
     dbData = dbData.filter((r: any) => {
-      if (r.jobTitle && SYSTEM_TITLES.includes(r.jobTitle)) return false;
-      // Optimization history strictly requires a non-empty jobDescription
-      // Normal resumes created by the user without a JD belong to My Resumes / Saved Resumes
-      if (!r.jobDescription || r.jobDescription.trim() === "") return false;
-      // Retention: only show records within the allowed date window (owners skip this)
-      if (!isOwner && r.createdAt && new Date(r.createdAt) < cutoffDate) return false;
+      // 1. Exclude system internal records & admin broadcasts
+      if (r.jobTitle && (SYSTEM_TITLES.includes(r.jobTitle) || r.jobTitle.startsWith("ADMIN_BROADCAST"))) return false;
+      if (r.id && typeof r.id === "string" && r.id.startsWith("bc_")) return false;
+
+      // 2. Exclude broadcast JSON metadata stored in jobDescription
+      if (
+        r.jobDescription &&
+        typeof r.jobDescription === "string" &&
+        r.jobDescription.includes('"category"') &&
+        (r.jobDescription.includes('"highlightNumber"') || r.jobDescription.includes('"actionText"'))
+      ) {
+        return false;
+      }
+
+      // 3. Keep any actual optimization record (has scores, optimized text, keywords, or job description)
+      const hasOptimizationData =
+        (r.scoreBefore !== undefined && r.scoreBefore !== null) ||
+        (r.scoreAfter !== undefined && r.scoreAfter !== null) ||
+        Boolean(r.optimizedText && r.optimizedText.trim() !== "") ||
+        Boolean(r.jobDescription && r.jobDescription.trim() !== "") ||
+        Boolean(r.keywordsAdded && (Array.isArray(r.keywordsAdded) ? r.keywordsAdded.length > 0 : true));
+
+      if (!hasOptimizationData) return false;
+
+      // 4. Plan-based retention date window
+      // Owners have no cutoff. Valid optimizations without createdAt are kept.
+      if (!isOwner && r.createdAt) {
+        const itemDate = new Date(r.createdAt);
+        if (!isNaN(itemDate.getTime()) && itemDate < cutoffDate) {
+          return false;
+        }
+      }
+
       return true;
     });
 

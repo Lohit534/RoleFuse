@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       mergedUsers.unshift({
         id: auth.user.id || "owner-lohit",
         email: auth.user.email,
-        name: auth.user.user_metadata?.full_name || "Lohith (Owner)",
+        name: auth.user.user_metadata?.full_name || "Administrator (Owner)",
         createdAt: auth.user.created_at || now.toISOString(),
       });
     }
@@ -206,7 +206,7 @@ export async function GET(request: NextRequest) {
       const { count: optCount } = await adminClient
         .from("Resume")
         .select("id", { count: "exact", head: true })
-        .neq("jobTitle", "SUPPORT_TICKET");
+        .not("jobTitle", "in", '("SUPPORT_TICKET","USER_FEEDBACK","ADMIN_BROADCAST")');
       totalOptimizations = optCount || 0;
     } catch {}
 

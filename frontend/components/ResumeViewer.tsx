@@ -8,14 +8,10 @@ import {
   Check,
   FileText,
   ShieldCheck,
-  Phone,
-  Mail,
-  Globe,
   Maximize2,
   Minimize2,
   BookmarkPlus,
   BookmarkCheck,
-  Palette,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
@@ -28,22 +24,6 @@ import {
 } from "@/lib/export/pdf-document";
 import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 import { generateUUID } from "@/lib/utils";
-
-const LinkedInIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-  </svg>
-);
-
-const GitHubIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-    />
-  </svg>
-);
 
 function getPdfDownloadLimit(plan: string): number {
   if (plan === "promax" || plan === "owner") return 30;
@@ -90,7 +70,7 @@ export default function ResumeViewer({
   const [savingLibrary, setSavingLibrary] = useState(false);
   const [isSavedInLibrary, setIsSavedInLibrary] = useState(false);
 
-  // Layout & Template State (Defaults to scrollable preview container)
+  // Layout & Template State
   const [isFullLength, setIsFullLength] = useState(false);
   const [templateStyle, setTemplateStyle] = useState<"academic" | "modern" | "clean">("academic");
 
@@ -271,21 +251,36 @@ export default function ResumeViewer({
           headerBorder: "border-b-2 border-slate-900",
           headerCase: "font-black tracking-tight",
           nameStyle: "font-extrabold tracking-tight",
+          sectionSpacing: "mt-4 mb-1.5",
+          bodySize: "text-[10.5px] sm:text-[11px]",
+          nameSize: "text-[22px] sm:text-[27px]",
+          contactSize: "text-[10px] sm:text-[11px]",
+          sectionSize: "text-[11px] sm:text-[12.5px]",
         };
       case "clean":
         return {
           fontFamily: "Arial, Helvetica, sans-serif",
-          headerBorder: "border-b border-slate-400",
-          headerCase: "font-bold tracking-normal uppercase",
+          headerBorder: "border-b border-slate-500",
+          headerCase: "font-bold tracking-widest uppercase",
           nameStyle: "font-bold tracking-normal",
+          sectionSpacing: "mt-4 mb-1.5",
+          bodySize: "text-[10.5px] sm:text-[11px]",
+          nameSize: "text-[21px] sm:text-[26px]",
+          contactSize: "text-[10px] sm:text-[11px]",
+          sectionSize: "text-[11px] sm:text-[12.5px]",
         };
       case "academic":
       default:
         return {
           fontFamily: "'Times New Roman', Times, 'Liberation Serif', serif",
-          headerBorder: "border-b border-black",
+          headerBorder: "border-b-[1.5px] border-black",
           headerCase: "font-bold tracking-wide",
-          nameStyle: "font-normal tracking-wide",
+          nameStyle: "font-normal tracking-widest",
+          sectionSpacing: "mt-4 mb-1.5",
+          bodySize: "text-[10.5px] sm:text-[11px]",
+          nameSize: "text-[22px] sm:text-[27px]",
+          contactSize: "text-[10px] sm:text-[11px]",
+          sectionSize: "text-[11px] sm:text-[12.5px]",
         };
     }
   };
@@ -295,23 +290,28 @@ export default function ResumeViewer({
   return (
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col h-full">
       {/* Top Header Panel: Title & Primary Actions */}
-      <div className="bg-slate-50 px-3 sm:px-5 py-3 sm:py-3.5 border-b border-slate-200 flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center justify-between">
+      <div className="bg-gradient-to-r from-slate-50 to-white px-3 sm:px-5 py-3 border-b border-slate-200 flex flex-col sm:flex-row gap-2.5 sm:gap-4 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-4 w-4 text-[#0d6e5a] shrink-0" />
-          <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm">Optimized Resume Preview</h3>
+          <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm tracking-tight">
+            Optimized Resume Preview
+          </h3>
+          <span className="hidden sm:inline-flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[9px] font-bold text-emerald-700 uppercase tracking-wider">
+            ATS Ready
+          </span>
         </div>
 
         {/* Action Downloads / Saving / Copy */}
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {/* Clear Saving Option Button */}
+        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+          {/* Save to Library Button */}
           <Button
             onClick={handleSaveToLibrary}
             disabled={savingLibrary || isSavedInLibrary}
             size="sm"
-            className={`flex-1 sm:flex-initial text-xs h-8 sm:h-9 rounded-lg flex items-center justify-center gap-1.5 px-3 cursor-pointer font-bold transition-all ${
+            className={`flex-1 sm:flex-initial text-xs h-8 rounded-lg flex items-center justify-center gap-1.5 px-3 cursor-pointer font-semibold transition-all ${
               isSavedInLibrary
                 ? "bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100"
-                : "bg-white text-slate-700 hover:text-slate-900 border border-slate-300 hover:bg-slate-50 shadow-2xs"
+                : "bg-white text-slate-700 hover:text-slate-900 border border-slate-200 hover:bg-slate-50 shadow-sm"
             }`}
           >
             {savingLibrary ? (
@@ -321,30 +321,30 @@ export default function ResumeViewer({
             ) : (
               <BookmarkPlus className="h-3.5 w-3.5 text-[#0d6e5a]" />
             )}
-            <span>{isSavedInLibrary ? "Saved to Library" : "Save to Resumes"}</span>
+            <span>{isSavedInLibrary ? "Saved" : "Save"}</span>
           </Button>
 
           <button
             onClick={handleCopy}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900 border border-slate-200 bg-white h-8 sm:h-9"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900 border border-slate-200 bg-white h-8 shadow-sm hover:bg-slate-50"
           >
-            {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
             <span>{copied ? "Copied!" : "Copy"}</span>
           </button>
 
           <Button
             onClick={handleDownloadPDF}
             disabled={pdfLoading}
-            className={`flex-1 sm:flex-initial text-xs h-8 sm:h-9 rounded-lg flex items-center justify-center gap-1.5 px-3 sm:px-4 cursor-pointer font-bold ${
+            className={`flex-1 sm:flex-initial text-xs h-8 rounded-lg flex items-center justify-center gap-1.5 px-3 sm:px-4 cursor-pointer font-semibold shadow-sm transition-all ${
               userPlan === "free"
-                ? "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                ? "bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200"
                 : "bg-[#0d6e5a] hover:bg-[#0a5a49] text-white"
             }`}
           >
-            {pdfLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+            {pdfLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
             <span>PDF</span>
             {userPlan === "free" && (
-              <span className="bg-slate-200 text-slate-500 text-[8px] font-black uppercase px-1 rounded">
+              <span className="bg-slate-300/70 text-slate-500 text-[8px] font-black uppercase px-1 py-px rounded">
                 PRO
               </span>
             )}
@@ -354,16 +354,16 @@ export default function ResumeViewer({
             onClick={handleDownloadDOCX}
             disabled={docxLoading}
             variant={userPlan === "free" ? "ghost" : "outline"}
-            className={`flex-1 sm:flex-initial text-xs h-8 sm:h-9 rounded-lg flex items-center justify-center gap-1.5 px-3 sm:px-4 cursor-pointer font-bold ${
+            className={`flex-1 sm:flex-initial text-xs h-8 rounded-lg flex items-center justify-center gap-1.5 px-3 sm:px-4 cursor-pointer font-semibold transition-all ${
               userPlan === "free"
-                ? "bg-slate-100 text-slate-400 hover:bg-slate-200 border-none"
-                : "border-slate-200 text-slate-600 hover:bg-slate-50 bg-transparent"
+                ? "bg-slate-100 text-slate-400 hover:bg-slate-200 border border-slate-200"
+                : "border-slate-200 text-slate-600 hover:bg-slate-50 bg-transparent shadow-sm"
             }`}
           >
-            {docxLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+            {docxLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
             <span>DOCX</span>
             {userPlan === "free" && (
-              <span className="bg-slate-200 text-slate-500 text-[8px] font-black uppercase px-1 rounded">
+              <span className="bg-slate-300/70 text-slate-500 text-[8px] font-black uppercase px-1 py-px rounded">
                 PRO
               </span>
             )}
@@ -371,46 +371,45 @@ export default function ResumeViewer({
         </div>
       </div>
 
-      {/* Secondary Controls Bar: Template Style Connection & Full Length Toggle */}
-      <div className="bg-slate-100/80 px-3 sm:px-5 py-2 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+      {/* Secondary Controls Bar: Template Style & Full Length Toggle */}
+      <div className="bg-slate-50 px-3 sm:px-5 py-2 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
         {/* Template Style Selector */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1 mr-1">
-            <Palette className="h-3 w-3 text-[#0d6e5a]" />
-            Template:
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">
+            Template
           </span>
           <button
             type="button"
             onClick={() => setTemplateStyle("academic")}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md text-[10.5px] font-semibold transition-all cursor-pointer ${
               templateStyle === "academic"
-                ? "bg-[#0d6e5a] text-white shadow-2xs"
-                : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-200"
+                ? "bg-[#0d6e5a] text-white shadow-sm"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            Classic Academic (LaTeX)
+            Academic
           </button>
           <button
             type="button"
             onClick={() => setTemplateStyle("modern")}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md text-[10.5px] font-semibold transition-all cursor-pointer ${
               templateStyle === "modern"
-                ? "bg-[#0d6e5a] text-white shadow-2xs"
-                : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-200"
+                ? "bg-[#0d6e5a] text-white shadow-sm"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            Modern Tech
+            Modern
           </button>
           <button
             type="button"
             onClick={() => setTemplateStyle("clean")}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md text-[10.5px] font-semibold transition-all cursor-pointer ${
               templateStyle === "clean"
-                ? "bg-[#0d6e5a] text-white shadow-2xs"
-                : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-200"
+                ? "bg-[#0d6e5a] text-white shadow-sm"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
-            Clean Minimalist
+            Minimal
           </button>
         </div>
 
@@ -418,32 +417,32 @@ export default function ResumeViewer({
         <button
           type="button"
           onClick={() => setIsFullLength(!isFullLength)}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-white text-slate-700 hover:text-slate-900 border border-slate-200 shadow-2xs hover:bg-slate-50 transition-all cursor-pointer ml-auto"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10.5px] font-semibold bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-100 transition-all cursor-pointer ml-auto"
         >
           {isFullLength ? (
             <>
               <Minimize2 className="h-3 w-3 text-[#0d6e5a]" />
-              <span>Compact View</span>
+              <span>Compact</span>
             </>
           ) : (
             <>
               <Maximize2 className="h-3 w-3 text-[#0d6e5a]" />
-              <span>Expand Full Page</span>
+              <span>Full Page</span>
             </>
           )}
         </button>
       </div>
 
-      {/* Workspace Display Area: Responsive on Desktop & Mobile with Smooth Scrollable Option */}
+      {/* Resume Display Area */}
       <div
-        className={`flex-1 p-2 sm:p-4 md:p-6 bg-slate-50 select-text transition-all ${
-          isFullLength ? "overflow-visible min-h-[750px]" : "overflow-y-auto max-h-[720px] sm:max-h-[820px] overscroll-contain"
+        className={`flex-1 p-2 sm:p-5 md:p-8 bg-slate-100/60 select-text transition-all ${
+          isFullLength ? "overflow-visible min-h-[800px]" : "overflow-y-auto max-h-[720px] sm:max-h-[840px] overscroll-contain"
         }`}
       >
-        {/* Render visual styling matching the selected ATS template */}
+        {/* Paper-like resume card */}
         <div
-          className="w-full max-w-4xl mx-auto bg-white text-black border border-slate-200 rounded-lg sm:rounded-xl p-3 sm:p-6 md:p-10 shadow-md sm:shadow-2xl select-text relative leading-snug break-words transition-all"
-          style={{ fontFamily: styleConfig.fontFamily }}
+          className="w-full max-w-3xl mx-auto bg-white text-black rounded-sm sm:rounded-md p-5 sm:p-8 md:p-11 shadow-lg sm:shadow-2xl ring-1 ring-black/5 select-text relative break-words transition-all"
+          style={{ fontFamily: styleConfig.fontFamily, lineHeight: "1.45" }}
         >
           {blocks.map((block, idx) => {
             switch (block.type) {
@@ -451,8 +450,8 @@ export default function ResumeViewer({
                 return (
                   <h1
                     key={idx}
-                    className={`text-[19px] sm:text-[23px] text-center text-black mb-0 leading-tight select-text ${styleConfig.nameStyle}`}
-                    style={templateStyle === "academic" ? { fontVariant: "small-caps" } : undefined}
+                    className={`${styleConfig.nameSize} text-center text-black mb-0 leading-tight select-text ${styleConfig.nameStyle}`}
+                    style={templateStyle === "academic" ? { fontVariant: "small-caps", letterSpacing: "0.08em" } : undefined}
                   >
                     {block.text}
                   </h1>
@@ -465,16 +464,9 @@ export default function ResumeViewer({
                 return (
                   <div
                     key={idx}
-                    className="flex justify-center items-center flex-wrap gap-y-0.5 gap-x-2.5 sm:gap-x-4 text-[9px] sm:text-[10px] text-center text-black mt-0.5 mb-2 leading-normal select-text"
+                    className={`flex justify-center items-center flex-wrap gap-y-1 mt-1 mb-2.5 leading-normal select-text ${styleConfig.contactSize}`}
                   >
                     {cleanSegments.map((seg, sIdx) => {
-                      const lower = (seg.text || "").toLowerCase() + " " + (seg.url || "").toLowerCase();
-                      let IconComponent: React.ComponentType<{ className?: string }> = Globe;
-                      if (seg.text.includes("@") || lower.includes("@")) IconComponent = Mail;
-                      else if (/\+?\d[\d\s\-\(\)]{7,}/.test(seg.text)) IconComponent = Phone;
-                      else if (lower.includes("linkedin")) IconComponent = LinkedInIcon;
-                      else if (lower.includes("github")) IconComponent = GitHubIcon;
-
                       const cleanHandle = seg.text
                         .replace(/^https?:\/\/(www\.)?/i, "")
                         .replace(/\/$/, "")
@@ -484,23 +476,24 @@ export default function ResumeViewer({
                       const el =
                         seg.isLink && seg.url ? (
                           <a
-                            key={sIdx}
                             href={seg.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:underline text-slate-900"
+                            className="hover:underline text-black"
                           >
                             {cleanHandle}
                           </a>
                         ) : (
-                          <span key={sIdx}>{cleanHandle}</span>
+                          <span className="text-black">{cleanHandle}</span>
                         );
 
                       return (
-                        <div key={sIdx} className="inline-flex items-center gap-1">
-                          <IconComponent className="h-2.5 w-2.5 text-black shrink-0" />
+                        <React.Fragment key={sIdx}>
+                          {sIdx > 0 && (
+                            <span className="text-slate-400 mx-2 select-none font-light">|</span>
+                          )}
                           {el}
-                        </div>
+                        </React.Fragment>
                       );
                     })}
                   </div>
@@ -510,7 +503,7 @@ export default function ResumeViewer({
                 return (
                   <h2
                     key={idx}
-                    className={`text-[11.5px] sm:text-[12px] text-black mt-2.5 mb-1 pb-0 leading-snug select-text ${styleConfig.headerBorder} ${styleConfig.headerCase}`}
+                    className={`${styleConfig.sectionSize} text-black pb-0.5 leading-snug select-text ${styleConfig.sectionSpacing} ${styleConfig.headerBorder} ${styleConfig.headerCase}`}
                   >
                     {toSectionTitle(block.text)}
                   </h2>
@@ -520,7 +513,7 @@ export default function ResumeViewer({
                 return (
                   <p
                     key={idx}
-                    className="text-[9.5px] sm:text-[10px] mb-1 text-black leading-snug select-text text-justify w-full"
+                    className={`${styleConfig.bodySize} mb-1.5 mt-1 text-black leading-relaxed select-text`}
                     style={{ textAlign: "justify", textJustify: "inter-word", hyphens: "none" }}
                   >
                     {renderHighlightedText(cleanText)}
@@ -529,7 +522,7 @@ export default function ResumeViewer({
               }
               case "skillLine":
                 return (
-                  <div key={idx} className="text-[9.5px] sm:text-[10px] mb-0.5 leading-snug select-text">
+                  <div key={idx} className={`${styleConfig.bodySize} mb-0.5 leading-snug select-text`}>
                     <span className="font-bold text-black">{block.label}: </span>
                     <span className="text-black" style={{ hyphens: "none" }}>
                       {renderHighlightedText(block.value)}
@@ -538,12 +531,12 @@ export default function ResumeViewer({
                 );
               case "project":
                 return (
-                  <div key={idx} className="mb-1.5">
-                    <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] font-bold text-black mt-1 mb-0.5 leading-snug select-text">
+                  <div key={idx} className="mb-2">
+                    <div className={`flex flex-row flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} font-bold text-black mt-1.5 mb-0.5 leading-snug select-text`}>
                       <div className="flex items-baseline gap-1.5 flex-wrap flex-1 min-w-0">
                         <span>{block.name}</span>
                         {block.tech && (
-                          <span className="font-bold text-black">&nbsp;—&nbsp;{renderHighlightedText(block.tech)}</span>
+                          <span className="font-semibold text-black">&nbsp;—&nbsp;{renderHighlightedText(block.tech)}</span>
                         )}
                         {block.projectUrl && (
                           <a
@@ -557,7 +550,7 @@ export default function ResumeViewer({
                         )}
                       </div>
                       {(block as any).dates ? (
-                        <span className="font-bold text-black shrink-0 ml-auto">{(block as any).dates}</span>
+                        <span className="font-semibold text-black shrink-0 ml-auto">{(block as any).dates}</span>
                       ) : null}
                     </div>
                     {block.bullets.map((bullet, bIdx) => {
@@ -567,10 +560,12 @@ export default function ResumeViewer({
                       return (
                         <div
                           key={bIdx}
-                          className="flex items-start text-[9.5px] sm:text-[10px] mb-px pl-2 sm:pl-3 leading-snug select-text"
+                          className={`flex items-start ${styleConfig.bodySize} mb-px pl-3 leading-relaxed select-text`}
                         >
-                          <span className="w-2.5 sm:w-3 shrink-0 select-none text-black">•</span>
-                          <span className="flex-1 min-w-0 text-black text-justify">{renderHighlightedText(cleanBullet)}</span>
+                          <span className="w-3 shrink-0 select-none text-black mt-px">•</span>
+                          <span className="flex-1 min-w-0 text-black" style={{ textAlign: "justify", textJustify: "inter-word" }}>
+                            {renderHighlightedText(cleanBullet)}
+                          </span>
                         </div>
                       );
                     })}
@@ -579,16 +574,16 @@ export default function ResumeViewer({
 
               case "job":
                 return (
-                  <div key={idx} className="mb-1.5">
-                    <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] font-bold text-black mt-1 leading-snug select-text">
+                  <div key={idx} className="mb-2">
+                    <div className={`flex flex-row flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} font-bold text-black mt-1.5 leading-snug select-text`}>
                       <span className="flex-1 min-w-0">{renderHighlightedText(block.title)}</span>
-                      <span className="font-bold text-black shrink-0 ml-auto">{renderHighlightedText(block.dates)}</span>
+                      <span className="font-semibold text-black shrink-0 ml-auto">{renderHighlightedText(block.dates)}</span>
                     </div>
                     {block.company || (block as any).tech ? (
-                      <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] italic text-black mb-0.5 leading-snug select-text">
+                      <div className={`flex flex-row flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} italic text-black mb-0.5 leading-snug select-text`}>
                         <span className="min-w-0">{renderHighlightedText(block.company || "")}</span>
                         {(block as any).tech ? (
-                          <span className="ml-auto">{renderHighlightedText((block as any).tech)}</span>
+                          <span className="ml-auto not-italic font-normal">{renderHighlightedText((block as any).tech)}</span>
                         ) : null}
                       </div>
                     ) : null}
@@ -599,10 +594,12 @@ export default function ResumeViewer({
                       return (
                         <div
                           key={bIdx}
-                          className="flex items-start text-[9.5px] sm:text-[10px] mb-px pl-2 sm:pl-3 leading-snug select-text"
+                          className={`flex items-start ${styleConfig.bodySize} mb-px pl-3 leading-relaxed select-text`}
                         >
-                          <span className="w-2.5 sm:w-3 shrink-0 select-none text-black">•</span>
-                          <span className="flex-1 min-w-0 text-black text-justify">{renderHighlightedText(cleanBullet)}</span>
+                          <span className="w-3 shrink-0 select-none text-black mt-px">•</span>
+                          <span className="flex-1 min-w-0 text-black" style={{ textAlign: "justify", textJustify: "inter-word" }}>
+                            {renderHighlightedText(cleanBullet)}
+                          </span>
                         </div>
                       );
                     })}
@@ -610,30 +607,30 @@ export default function ResumeViewer({
                 );
               case "education":
                 return (
-                  <div key={idx} className="mb-1">
-                    <div className="flex flex-row flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] font-bold text-black leading-snug select-text">
+                  <div key={idx} className="mb-1.5">
+                    <div className={`flex flex-row flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} font-bold text-black leading-snug select-text`}>
                       <span className="min-w-0">{renderHighlightedText(block.degree)}</span>
-                      <span className="font-bold text-black ml-auto">{renderHighlightedText(block.dates)}</span>
+                      <span className="font-semibold text-black ml-auto">{renderHighlightedText(block.dates)}</span>
                     </div>
-                    <div className="flex flex-wrap justify-between items-baseline gap-x-2 text-[9.5px] sm:text-[10px] italic text-black leading-snug select-text">
+                    <div className={`flex flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} italic text-black leading-snug select-text`}>
                       <span className="min-w-0">{renderHighlightedText(block.school)}</span>
-                      <span className="ml-auto">{renderHighlightedText(block.gpa)}</span>
+                      <span className="ml-auto not-italic">{renderHighlightedText(block.gpa)}</span>
                     </div>
                   </div>
                 );
               case "bullet":
                 return (
-                  <div key={idx} className="flex items-start text-[9.5px] sm:text-[10px] mb-px pl-2 sm:pl-3 leading-snug select-text">
-                    <span className="w-2.5 sm:w-3 shrink-0 select-none text-black">•</span>
+                  <div key={idx} className={`flex items-start ${styleConfig.bodySize} mb-px pl-3 leading-relaxed select-text`}>
+                    <span className="w-3 shrink-0 select-none text-black mt-px">•</span>
                     <span className="flex-1 min-w-0 text-black">{renderHighlightedText(block.text)}</span>
                   </div>
                 );
               case "cert": {
                 const { title, rest } = splitCertText(block.text);
                 return (
-                  <div key={idx} className="flex items-start text-[9.5px] sm:text-[10px] mb-px pl-2 sm:pl-3 leading-snug">
-                    <span className="w-2.5 sm:w-3 shrink-0 select-none text-black">•</span>
-                    <span className="flex-1 min-w-0 text-black text-justify">
+                  <div key={idx} className={`flex items-start ${styleConfig.bodySize} mb-px pl-3 leading-relaxed`}>
+                    <span className="w-3 shrink-0 select-none text-black mt-px">•</span>
+                    <span className="flex-1 min-w-0 text-black" style={{ textAlign: "justify", textJustify: "inter-word" }}>
                       {title ? <span className="font-bold">{title}</span> : null}
                       {renderHighlightedText(rest)}
                     </span>
@@ -647,13 +644,13 @@ export default function ResumeViewer({
                     href={block.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[9.5px] sm:text-[10px] text-blue-600 underline mb-0.5 block leading-normal select-text"
+                    className={`${styleConfig.bodySize} text-blue-600 underline mb-0.5 block leading-normal select-text`}
                   >
                     {block.label}
                   </a>
                 );
               case "spacer":
-                return <div key={idx} className="h-1" />;
+                return <div key={idx} className="h-1.5" />;
               default:
                 return null;
             }

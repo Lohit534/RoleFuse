@@ -14,7 +14,7 @@ import { buildTrainingSample } from "@/lib/anonymizer";
 import { gatherAllMissingQuestions } from "@/app/api/pre-check/route";
 
 export const runtime = "nodejs";
-export const maxDuration = 60; // 60s timeout for AI optimization
+export const maxDuration = 120; // 120s timeout for AI optimization (Vercel Pro supports up to 300s)
 
 // ── Placeholder extraction ────────────────────────────────────────────────────
 // Scans optimized resume text for [ADD: ...] markers and returns structured list
@@ -366,11 +366,13 @@ export async function POST(request: NextRequest) {
     if (!skipDetection && !hasAnswers) {
       const missingList: Array<{ field: string; section: string; question: string; hint?: string; originalBullet?: string }> = [];
 
-      // 1. Structural missing questions (experience dates, graduation year/GPA, weak bullets lacking metrics, target skills)
+      // 1. Structural missing questions (internship/experience dates, tech stacks, weak bullets lacking metrics, target skills)
+      // NOTE: Education fields are NOT mandatory and must NEVER trigger user interrogation questions.
       try {
         const structuralQuestions = gatherAllMissingQuestions(resumeText, jobDescription);
         let metricCount = 0;
         for (const sq of structuralQuestions) {
+          if (sq.category === "education") continue;
           const fieldKey = sq.category === "metrics" 
             ? `Quantified Metric ${++metricCount}`
             : sq.title;
@@ -386,7 +388,7 @@ export async function POST(request: NextRequest) {
         logger.warn("[optimize] Error running gatherAllMissingQuestions:", e?.message);
       }
 
-      // 2. Explicit placeholders in resume text (Company Name, X.XX, [ADD: ...], etc.)
+      // 2. Explicit placeholders in resume text (Company Name, [ADD: ...], etc.)
       if (/\b(?:Company\s*Name|Employer\s*Name|\[Company(?:\s*Name)?\]|\[Employer\]|XYZ\s*Corp|ABC\s*Corp)\b/i.test(resumeText)) {
         if (!missingList.some(item => item.field.toLowerCase().includes("company"))) {
           missingList.push({
@@ -394,39 +396,6 @@ export async function POST(request: NextRequest) {
             section: "EXPERIENCE",
             question: "What company or employer did you work at?",
             hint: "e.g. Google, Infosys, Tech Corp",
-          });
-        }
-      }
-
-      if (/\bX\.XX\b|GPA:\s*X|CGPA:\s*X|\bX\/10\b|\bX%\b|\[CGPA\]|\[GPA\]|\b0\.00\b/i.test(resumeText)) {
-        if (!missingList.some(item => item.field.toLowerCase().includes("gpa"))) {
-          missingList.push({
-            field: "CGPA / GPA",
-            section: "EDUCATION",
-            question: "What is your CGPA or GPA score?",
-            hint: "e.g. 8.5/10 or 3.8/4.0",
-          });
-        }
-      }
-
-      if (/\b(?:College\s*Name|School\s*Name|University\s*Name|XYZ\s*Institute|XYZ\s*University|\[College\]|\[University\])\b/i.test(resumeText)) {
-        if (!missingList.some(item => item.field.toLowerCase().includes("college"))) {
-          missingList.push({
-            field: "College / University Name",
-            section: "EDUCATION",
-            question: "What is the name of your college or university?",
-            hint: "e.g. Stanford University, IIT Delhi",
-          });
-        }
-      }
-
-      if (/\bXXXX\b|\bYYYY\b|\[YEAR\]|\[DATE\]|\b20XX\b|\[Month\s*YYYY\]/i.test(resumeText)) {
-        if (!missingList.some(item => item.field.toLowerCase().includes("year") || item.field.toLowerCase().includes("date"))) {
-          missingList.push({
-            field: "Year / Date Range",
-            section: "GENERAL",
-            question: "What graduation year or employment dates should replace the placeholder?",
-            hint: "e.g. 2020 – 2024 or Jan 2023 – Present",
           });
         }
       }
@@ -444,10 +413,16 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Filter out LinkedIn / GitHub / portfolio / URL questions (resolved by regex URL extractor)
+      // Filter out education and profile link questions (focus only on experience, projects & metrics)
       const PROFILE_LINK_RE = /linkedin|github|gitlab|portfolio|website|profile.?link|personal.?site|social|twitter|behance|dribbble|\burl\b/i;
       const filteredList = missingList.filter(
         (item) =>
+          item.section !== "EDUCATION" &&
+          !item.field.toLowerCase().includes("gpa") &&
+          !item.field.toLowerCase().includes("college") &&
+          !item.field.toLowerCase().includes("university") &&
+          !item.field.toLowerCase().includes("school") &&
+          !item.field.toLowerCase().includes("education") &&
           !PROFILE_LINK_RE.test(item.field) &&
           !PROFILE_LINK_RE.test(item.question)
       );

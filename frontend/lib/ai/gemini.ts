@@ -1,14 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../logger";
 
-// Active supported Gemini models in priority order
+// Active supported Gemini models in priority order (verified model IDs)
 export const GEMINI_MODELS = [
-  "gemini-3.5-flash",
-  "gemini-3-flash-preview",
-  "gemini-flash-lite-latest",
-  "gemini-3.5-flash-lite",
-  "gemini-3.1-flash-lite",
-  "gemini-3.8-flash",
+  "gemini-2.0-flash",        // Best: fast, capable, free-tier friendly
+  "gemini-2.0-flash-lite",   // Fastest fallback
+  "gemini-1.5-flash",        // Stable fallback
+  "gemini-1.5-flash-8b",     // Lightest fallback
+  "gemini-1.5-pro",          // High-quality last resort
 ];
 
 // Helper to extract and clean JSON from AI output

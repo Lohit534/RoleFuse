@@ -283,18 +283,18 @@ export default function JobTrackerPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans">
+    <div className="flex flex-col min-h-screen bg-transparent text-slate-800 font-sans antialiased">
       <Navbar />
 
       <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-28 sm:pb-8 flex flex-col gap-6">
 
         {/* In-page Error Banner */}
         {pageError && (
-          <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center justify-between">
+          <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center justify-between">
             <span>{pageError}</span>
             <button
               onClick={() => setPageError(null)}
-              className="text-rose-600 hover:text-rose-800 font-bold ml-2 underline text-xs cursor-pointer"
+              className="text-rose-600 hover:text-rose-800 font-semibold ml-2 underline text-xs cursor-pointer"
             >
               Dismiss
             </button>
@@ -304,10 +304,10 @@ export default function JobTrackerPage() {
         {/* Title and Controls Header Row (Text-Only, Crisp Rectangular Design) */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-black text-[#111827] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-heading">
               Job Application Tracker
             </h1>
-            <p className="text-sm sm:text-base text-[#526176] font-normal mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
               Track your applications and never miss an opportunity.
             </p>
           </div>
@@ -318,12 +318,12 @@ export default function JobTrackerPage() {
                 placeholder="Search jobs or companies..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-3 h-9 text-xs border-[#DCE7E9] bg-white text-[#111827] placeholder:text-[#526176]/60 focus:border-[#087F6E] focus:ring-2 focus:ring-[#087F6E]/20 rounded-lg shadow-2xs"
+                className="px-3 h-9 text-xs border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#087F6E] focus:ring-1 focus:ring-[#087F6E]/30 rounded-md shadow-2xs"
               />
             </div>
             <Button
               onClick={() => openForm(null)}
-              className="bg-[#087F6E] hover:bg-[#075E53] text-white font-bold h-9 text-xs rounded-md px-3.5 shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
+              className="bg-[#087F6E] hover:bg-[#075E53] text-white font-medium h-9 text-xs rounded-md px-3.5 shadow-2xs transition-colors cursor-pointer inline-flex items-center gap-1.5"
             >
               <span>+</span>
               <span>Add Job</span>
@@ -332,68 +332,68 @@ export default function JobTrackerPage() {
         </div>
 
         {/* ── CRISP RECTANGLE PIPELINE PERFORMANCE ANALYSIS BAR (Text-Only) ── */}
-        <div className="border border-[#DCE7E9] bg-white rounded-lg shadow-2xs p-5 space-y-4">
+        <div className="border border-slate-200 bg-white rounded-lg shadow-2xs p-5 space-y-4">
           {/* Header Row: Title & Key Rates */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#EAF0F1] pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#087F6E]">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#087F6E] font-heading">
                 Pipeline Performance Analysis
               </span>
-              <p className="text-xs text-[#526176] font-medium">
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
                 Live recruitment conversion funnel, yield rates, and active pipeline velocity
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-[#E6F4F1] text-[#087F6E] border border-[#C2E4DD]">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-semibold bg-[#E6F4F1] text-[#087F6E] border border-[#C2E4DD]">
                 Active: {stats.total > 0 ? Math.round(((stats.applied + stats.interviews + stats.offers) / stats.total) * 100) : 0}%
               </span>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                 Interview Yield: {stats.applied > 0 ? Math.round((stats.interviews / stats.applied) * 100) : 0}%
               </span>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                 Offer Win Rate: {stats.interviews > 0 ? Math.round((stats.offers / stats.interviews) * 100) : (stats.offers > 0 ? 100 : 0)}%
               </span>
             </div>
           </div>
 
           {/* 4 Connected Metric Columns */}
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-[#EAF0F1] pt-1">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 pt-1">
             <div className="px-3 py-2 sm:py-0 first:pl-0">
-              <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Total Tracked</p>
+              <p className="text-[11px] uppercase font-semibold text-slate-500 tracking-wider">Total Tracked</p>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-black text-[#111827]">{stats.total}</span>
-                <span className="text-[10px] font-semibold text-[#526176]">roles</span>
+                <span className="text-2xl font-bold tracking-tight text-slate-900 font-heading">{stats.total}</span>
+                <span className="text-xs font-medium text-slate-500">roles</span>
               </div>
             </div>
 
             <div className="px-3 py-2 sm:py-0">
-              <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Applications</p>
+              <p className="text-[11px] uppercase font-semibold text-slate-500 tracking-wider">Applications</p>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-black text-[#087F6E]">{stats.applied}</span>
-                <span className="text-[10px] font-semibold text-[#526176]">submitted</span>
+                <span className="text-2xl font-bold tracking-tight text-[#087F6E] font-heading">{stats.applied}</span>
+                <span className="text-xs font-medium text-slate-500">submitted</span>
               </div>
             </div>
 
             <div className="px-3 py-2 sm:py-0">
-              <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Interviews</p>
+              <p className="text-[11px] uppercase font-semibold text-slate-500 tracking-wider">Interviews</p>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-black text-amber-600">{stats.interviews}</span>
-                <span className="text-[10px] font-semibold text-[#526176]">rounds</span>
+                <span className="text-2xl font-bold tracking-tight text-amber-600 font-heading">{stats.interviews}</span>
+                <span className="text-xs font-medium text-slate-500">rounds</span>
               </div>
             </div>
 
             <div className="px-3 py-2 sm:py-0 last:pr-0">
-              <p className="text-[10px] uppercase font-bold text-[#526176] tracking-wider">Offers Received</p>
+              <p className="text-[11px] uppercase font-semibold text-slate-500 tracking-wider">Offers Received</p>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-2xl font-black text-emerald-600">{stats.offers}</span>
-                <span className="text-[10px] font-semibold text-[#526176]">secured</span>
+                <span className="text-2xl font-bold tracking-tight text-emerald-600 font-heading">{stats.offers}</span>
+                <span className="text-xs font-medium text-slate-500">secured</span>
               </div>
             </div>
           </div>
 
           {/* Pipeline Stage Flow Distribution Bar */}
-          <div className="pt-2 border-t border-[#EAF0F1] space-y-1.5">
-            <div className="flex items-center justify-between text-[10px] font-semibold text-[#526176]">
+          <div className="pt-2 border-t border-slate-100 space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] font-medium text-slate-500">
               <span>Pipeline Stage Distribution</span>
               <span>{stats.total} total application{stats.total === 1 ? "" : "s"}</span>
             </div>
@@ -424,7 +424,7 @@ export default function JobTrackerPage() {
                 title={`Rejected: ${stats.rejected}`}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[#526176] pt-0.5">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 pt-0.5">
               <span>Wishlist: {stats.wishlist}</span>
               <span>Applied: {stats.applied}</span>
               <span>Interviewing: {stats.interviews}</span>
@@ -454,15 +454,15 @@ export default function JobTrackerPage() {
               >
                 {/* Column header title */}
                 <div className="flex items-center justify-between px-1 select-none">
-                  <span className="font-bold text-xs text-[#111827]">{col.label}</span>
-                  <Badge className={`text-[9px] font-bold border rounded-md ${col.color} ${col.border}`}>
+                  <span className="font-semibold text-xs text-slate-900 font-heading tracking-tight">{col.label}</span>
+                  <Badge className={`text-[10px] font-semibold border rounded-md ${col.color} ${col.border}`}>
                     {colJobs.length}
                   </Badge>
                 </div>
 
                 {/* Drop placeholder indicator when dragging over */}
                 {isColumnTargeted && draggedJobId && (
-                  <div className="border-2 border-dashed border-[#087F6E] rounded-lg p-2.5 text-center text-[10px] font-bold text-[#087F6E] bg-white/80 animate-pulse">
+                  <div className="border-2 border-dashed border-[#087F6E] rounded-lg p-2.5 text-center text-xs font-semibold text-[#087F6E] bg-white/80 animate-pulse">
                     Drop to move to {col.label}
                   </div>
                 )}
@@ -470,7 +470,7 @@ export default function JobTrackerPage() {
                 {/* Rectangle Job Cards (No dropdown, crisp rectangle box) */}
                 <div className="flex flex-col gap-2.5">
                   {colJobs.length === 0 ? (
-                    <div className="py-8 text-center text-[10px] text-slate-400 font-medium">
+                    <div className="py-8 text-center text-xs text-slate-400 font-normal">
                       No jobs in this stage
                     </div>
                   ) : (
@@ -484,7 +484,7 @@ export default function JobTrackerPage() {
                           draggable={true}
                           onDragStart={(e) => handleDragStart(e, job.id)}
                           onDragEnd={handleDragEnd}
-                          className={`group relative border border-[#DCE7E9] bg-white hover:border-[#087F6E]/50 hover:shadow-sm transition-all duration-200 rounded-lg shadow-2xs flex flex-col justify-between overflow-hidden cursor-grab active:cursor-grabbing select-none ${
+                          className={`group relative border border-slate-200 bg-white hover:border-[#087F6E]/50 hover:shadow-xs transition-all duration-200 rounded-lg shadow-2xs flex flex-col justify-between overflow-hidden cursor-grab active:cursor-grabbing select-none ${
                             isBeingDragged ? "opacity-30 scale-95 ring-2 ring-[#087F6E]" : ""
                           }`}
                         >
@@ -493,7 +493,7 @@ export default function JobTrackerPage() {
                             <div className="space-y-0.5">
                               <div className="flex justify-between items-start gap-1.5">
                                 <h4
-                                  className="font-bold text-xs text-[#111827] truncate max-w-[80%]"
+                                  className="font-semibold text-xs text-slate-900 truncate max-w-[80%] font-heading leading-snug tracking-tight"
                                   title={job.title}
                                 >
                                   {job.title}
@@ -503,7 +503,7 @@ export default function JobTrackerPage() {
                                     href={job.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-[10px] font-bold text-[#087F6E] hover:underline shrink-0"
+                                    className="text-[11px] font-medium text-[#087F6E] hover:underline shrink-0"
                                     title="Open Job Listing"
                                   >
                                     View Job
@@ -511,7 +511,7 @@ export default function JobTrackerPage() {
                                 )}
                               </div>
                               <p
-                                className="text-[11px] font-semibold text-[#087F6E] truncate"
+                                className="text-xs font-medium text-[#087F6E] truncate"
                                 title={job.company}
                               >
                                 {job.company}
@@ -521,33 +521,33 @@ export default function JobTrackerPage() {
                             {/* Details Row (Text-Only, No symbols) */}
                             <div className="space-y-1 pt-1.5 border-t border-slate-100">
                               {job.salary && (
-                                <div className="text-[10px] text-slate-700 font-semibold truncate">
-                                  Salary: <span className="text-[#087F6E]">{job.salary}</span>
+                                <div className="text-[11px] text-slate-600 font-medium truncate">
+                                  Salary: <span className="text-[#087F6E] font-semibold">{job.salary}</span>
                                 </div>
                               )}
-                              <div className="text-[10px] text-slate-500 font-medium truncate">
+                              <div className="text-[11px] text-slate-500 font-normal truncate">
                                 Date: {job.date}
                               </div>
                               {associatedResume && (
-                                <div className="text-[10px] font-semibold text-teal-800 bg-teal-50 border border-teal-200/60 px-2 py-0.5 rounded-md truncate">
+                                <div className="text-[10px] font-medium text-teal-800 bg-teal-50 border border-teal-200/60 px-2 py-0.5 rounded-md truncate">
                                   Resume: {associatedResume.jobTitle || "Custom Resume"}
                                 </div>
                               )}
                             </div>
 
                             {/* Action Buttons (Edit and Delete triggers popup modal) */}
-                            <div className="flex gap-1.5 items-center pt-2 border-t border-[#DCE7E9]">
+                            <div className="flex gap-1.5 items-center pt-2 border-t border-slate-100">
                               <Button
                                 onClick={() => openForm(job)}
                                 variant="ghost"
-                                className="flex-1 bg-[#F5FAFA] hover:bg-[#087F6E] text-[#111827] hover:text-white border border-[#DCE7E9] rounded-md h-7 text-[10px] font-bold transition-colors cursor-pointer"
+                                className="flex-1 bg-slate-50 hover:bg-[#087F6E] text-slate-700 hover:text-white border border-slate-200 rounded-md h-7 text-[11px] font-medium transition-colors cursor-pointer"
                               >
                                 Edit
                               </Button>
                               <Button
                                 onClick={() => setDeleteTargetJob(job)}
                                 variant="ghost"
-                                className="px-2.5 h-7 rounded-md hover:bg-rose-50 text-rose-600 border border-[#DCE7E9] text-[10px] font-bold cursor-pointer"
+                                className="px-2.5 h-7 rounded-md hover:bg-rose-50 text-rose-600 border border-slate-200 text-[11px] font-medium cursor-pointer"
                                 title="Remove Job"
                               >
                                 Delete
@@ -571,16 +571,16 @@ export default function JobTrackerPage() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-lg space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
             <div>
-              <h3 className="font-extrabold text-slate-900 text-sm">Delete Job Record</h3>
+              <h3 className="font-semibold text-slate-900 text-sm font-heading">Delete Job Record</h3>
               <p className="text-xs text-slate-500 mt-0.5">Are you sure you want to delete this job application record?</p>
             </div>
 
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-700">
-              <span className="font-bold text-slate-900 block truncate">{deleteTargetJob.title}</span>
-              <span className="text-[11px] text-[#087F6E] font-semibold">{deleteTargetJob.company}</span>
+            <div className="bg-slate-50 p-3 rounded-md border border-slate-200 text-xs text-slate-700">
+              <span className="font-semibold text-slate-900 block truncate">{deleteTargetJob.title}</span>
+              <span className="text-xs text-[#087F6E] font-medium">{deleteTargetJob.company}</span>
             </div>
 
-            <p className="text-[11px] text-red-600 font-medium">
+            <p className="text-xs text-rose-600 font-normal">
               This action cannot be undone and will permanently remove this record from your pipeline.
             </p>
 
@@ -589,7 +589,7 @@ export default function JobTrackerPage() {
                 type="button"
                 variant="ghost"
                 onClick={() => setDeleteTargetJob(null)}
-                className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                className="text-slate-600 hover:text-slate-900 text-xs font-medium px-4 h-9 rounded-md border border-slate-200 hover:bg-slate-50 cursor-pointer"
               >
                 Cancel
               </Button>
@@ -600,7 +600,7 @@ export default function JobTrackerPage() {
                   saveJobsToLocalStorage(updated);
                   setDeleteTargetJob(null);
                 }}
-                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 h-9 rounded-lg shadow-sm transition-colors cursor-pointer"
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 h-9 rounded-md shadow-xs transition-colors cursor-pointer"
               >
                 Delete
               </Button>
@@ -614,12 +614,12 @@ export default function JobTrackerPage() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-lg space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <h3 className="font-extrabold text-slate-900 text-base">
+              <h3 className="font-semibold text-slate-900 text-base font-heading">
                 {editingJob ? "Edit Tracked Job" : "Add Job to Pipeline"}
               </h3>
               <button
                 onClick={() => setIsFormOpen(false)}
-                className="text-slate-400 hover:text-slate-700 font-bold text-xs cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 font-medium text-xs cursor-pointer"
               >
                 Cancel
               </button>
@@ -627,7 +627,7 @@ export default function JobTrackerPage() {
 
             {/* In-Modal Error Notification */}
             {formError && (
-              <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+              <div className="p-2.5 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
                 {formError}
               </div>
             )}
@@ -635,54 +635,54 @@ export default function JobTrackerPage() {
             <form onSubmit={handleSubmitJob} autoComplete="off" className="space-y-3 text-xs select-none">
               {/* Company input */}
               <div className="space-y-1">
-                <label className="text-slate-600 font-bold uppercase text-[9px] tracking-wider">Company Name (Required)</label>
+                <label className="text-slate-700 font-medium text-xs">Company Name (Required)</label>
                 <Input
                   required
                   placeholder="e.g. Google, Stripe"
                   value={formCompany}
                   onChange={(e) => setFormCompany(e.target.value)}
-                  className="h-9 border-slate-200 bg-white text-slate-900 rounded-lg focus:border-[#0d6e5a] focus:ring-[#0d6e5a]"
+                  className="h-9 border-slate-200 bg-white text-slate-900 rounded-md focus:border-[#087F6E] focus:ring-1 focus:ring-[#087F6E]/30 text-xs"
                 />
               </div>
 
               {/* Title input */}
               <div className="space-y-1">
-                <label className="text-slate-600 font-bold uppercase text-[9px] tracking-wider">Role Title (Required)</label>
+                <label className="text-slate-700 font-medium text-xs">Role Title (Required)</label>
                 <Input
                   required
                   placeholder="e.g. Senior Frontend Engineer"
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  className="h-9 border-slate-200 bg-white text-slate-900 rounded-lg focus:border-[#0d6e5a] focus:ring-[#0d6e5a]"
+                  className="h-9 border-slate-200 bg-white text-slate-900 rounded-md focus:border-[#087F6E] focus:ring-1 focus:ring-[#087F6E]/30 text-xs"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 {/* Salary */}
                 <div className="space-y-1">
-                  <label className="text-slate-600 font-bold uppercase text-[9px] tracking-wider">Salary Comp</label>
+                  <label className="text-slate-700 font-medium text-xs">Salary Comp</label>
                   <Input
                     placeholder="e.g. $140k - $160k"
                     value={formSalary}
                     onChange={(e) => setFormSalary(e.target.value)}
-                    className="h-9 border-slate-200 bg-white text-slate-900 rounded-lg focus:border-[#0d6e5a] focus:ring-[#0d6e5a]"
+                    className="h-9 border-slate-200 bg-white text-slate-900 rounded-md focus:border-[#087F6E] focus:ring-1 focus:ring-[#087F6E]/30 text-xs"
                   />
                 </div>
                 {/* Application Date */}
                 <div className="space-y-1">
-                  <label className="text-slate-600 font-bold uppercase text-[9px] tracking-wider">Date Tracked</label>
+                  <label className="text-slate-700 font-medium text-xs">Date Tracked</label>
                   <Input
                     type="date"
                     value={formDate}
                     onChange={(e) => setFormDate(e.target.value)}
-                    className="h-9 border-slate-200 bg-white text-slate-900 rounded-lg focus:border-[#0d6e5a] focus:ring-[#0d6e5a]"
+                    className="h-9 border-slate-200 bg-white text-slate-900 rounded-md focus:border-[#087F6E] focus:ring-1 focus:ring-[#087F6E]/30 text-xs"
                   />
                 </div>
               </div>
 
               {/* Job URL */}
               <div className="space-y-1">
-                <label className="text-slate-600 font-bold uppercase text-[9px] tracking-wider">Job Listing URL</label>
+                <label className="text-slate-700 font-medium text-xs">Job Listing URL</label>
                 <Input
                   type="url"
                   placeholder="https://jobs.lever.co/company/role"
@@ -693,7 +693,7 @@ export default function JobTrackerPage() {
                   autoCapitalize="off"
                   spellCheck={false}
                   data-lpignore="true"
-                  className="h-9 border-slate-200 bg-white text-slate-900 rounded-lg focus:border-[#0d6e5a] focus:ring-[#0d6e5a]"
+                  className="h-9 border-slate-200 bg-white text-slate-900 rounded-md focus:border-[#087F6E] focus:ring-1 focus:ring-[#087F6E]/30 text-xs"
                 />
               </div>
 

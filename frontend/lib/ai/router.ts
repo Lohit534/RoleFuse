@@ -694,12 +694,11 @@ export async function callAI(prompt: string, rawText = ""): Promise<AIResult> {
 
 const GROQ_MODELS = [
   process.env.GROQ_MODEL,
-  "llama-3.3-70b-versatile", // Best Groq model for structured JSON tasks
-  "llama-3.3-70b-specdec", // Speculative decoding — fast + accurate
-  "qwen-2.5-32b", // Strong instruction-following
-  "deepseek-r1-distill-llama-70b", // Reasoning model for complex rewrites
-  "llama-3.1-8b-instant", // Last resort only — small model
-  "gemma2-9b-it",
+  "llama-3.3-70b-versatile",          // Best Groq model for structured JSON tasks
+  "llama-3.3-70b-specdec",            // Speculative decoding — fast + accurate
+  "llama-3.1-70b-versatile",          // Stable fallback
+  "deepseek-r1-distill-llama-70b",    // Reasoning model for complex rewrites
+  "llama-3.1-8b-instant",             // Last resort only — small model
 ].filter(Boolean) as string[];
 
 export async function callAIText(prompt: string): Promise<string> {
