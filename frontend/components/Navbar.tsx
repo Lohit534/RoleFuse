@@ -1070,7 +1070,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               {user ? (
                 <>
                   {/* Dynamic Plan-based Upgrade Text Link (No box) */}
-                  {!isOwner && !isProMax && (
+                  {!isOwner && !isProMax && pathname.startsWith("/dashboard") && (
                     <button
                       type="button"
                       onClick={handleNavbarUpgradeClick}
@@ -1081,8 +1081,10 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                     </button>
                   )}
 
-                  {/* Broadcast & App Notification Bell - strictly for logged-in users */}
-                  {user && <NotificationBell credits={credits} userEmail={user?.email} />}
+                  {/* Broadcast & App Notification Bell - strictly for logged-in users after login inside dashboard */}
+                  {user && pathname.startsWith("/dashboard") && (
+                    <NotificationBell credits={credits} userEmail={user?.email} />
+                  )}
 
                   {/* Profile Button with Google Avatar & Credits Ring */}
                   <div className="relative" ref={dropdownRef}>

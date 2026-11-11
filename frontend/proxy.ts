@@ -2,6 +2,28 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function proxy(request: NextRequest) {
+  const host = request.headers.get("host") || "";
+
+  // 1. Force 301 Permanent Redirect from any *.vercel.app domain to canonical production https://rolefuse.in
+  if (host.endsWith(".vercel.app")) {
+    const url = new URL(
+      request.nextUrl.pathname + request.nextUrl.search,
+      "https://rolefuse.in"
+    );
+    const redirectResponse = NextResponse.redirect(url, { status: 301 });
+    redirectResponse.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    return redirectResponse;
+  }
+
+  // 2. Canonicalize www.rolefuse.in to rolefuse.in
+  if (host === "www.rolefuse.in") {
+    const url = new URL(
+      request.nextUrl.pathname + request.nextUrl.search,
+      "https://rolefuse.in"
+    );
+    return NextResponse.redirect(url, { status: 301 });
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -66,5 +88,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  ],
 };
