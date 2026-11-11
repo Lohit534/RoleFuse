@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 
 export default function HomescreenPrompt() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -12,10 +14,37 @@ export default function HomescreenPrompt() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasTriggeredRef = useRef<boolean>(false);
 
+  // Helper to extract logged-in user synchronously from localStorage
+  const getSyncUserId = (): string | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("sb-") && key.endsWith("-auth-token")) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed?.user?.id) return parsed.user.id;
+          }
+        }
+      }
+    } catch {}
+    return null;
+  };
+
   useEffect(() => {
     setMounted(true);
 
     if (typeof window === "undefined") return;
+
+    // Check if app is already running as installed standalone PWA
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+
+    if (isStandalone) {
+      return;
+    }
 
     // Capture browser install prompt event
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -30,23 +59,20 @@ export default function HomescreenPrompt() {
       setDeferredPrompt((window as any).__rolefuse_deferred_prompt);
     }
 
-    // Trigger prompt when a user session is active
+    // Trigger prompt when a user is logged in
     const triggerPromptForUser = (userId: string) => {
       if (!userId) return;
       setActiveUserId(userId);
 
-      // Permanently check if user already clicked "Not now" or installed across all tabs
-      const isInstalled = localStorage.getItem("rolefuse_homescreen_installed") === "true";
-      const isDismissed =
-        localStorage.getItem("rolefuse_homescreen_dismissed") === "true" ||
-        localStorage.getItem(`rolefuse_homescreen_dismissed_${userId}`) === "true";
+      // Dismissed in current browser session? If so, don't nag again this session
+      const isSessionDismissed =
+        sessionStorage.getItem("rolefuse_homescreen_dismissed") === "true";
 
-      // If user clicked "Not now", do NOT show again even when switching tabs or returning
-      if (isInstalled || isDismissed) {
+      if (isSessionDismissed) {
         return;
       }
 
-      // Ensure it displays only once
+      // Ensure it displays only once per page cycle
       if (hasTriggeredRef.current) {
         return;
       }
@@ -57,13 +83,19 @@ export default function HomescreenPrompt() {
         clearTimeout(timerRef.current);
       }
 
-      // Smooth gentle fade-in 1 second after user logs in
+      // Gentle fade-in 1.2s after user is confirmed logged in
       timerRef.current = setTimeout(() => {
         setVisible(true);
-      }, 1000);
+      }, 1200);
     };
 
-    // 1. Check existing active session immediately on mount
+    // 1. Immediate synchronous check from cached auth token
+    const cachedUserId = getSyncUserId();
+    if (cachedUserId) {
+      triggerPromptForUser(cachedUserId);
+    }
+
+    // 2. Check active Supabase session
     const checkActiveSession = async () => {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
@@ -84,7 +116,7 @@ export default function HomescreenPrompt() {
 
     checkActiveSession();
 
-    // 2. Real-time auth listener
+    // 3. Real-time auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event: string, session: any) => {
         const sessionUserId = session?.user?.id;
@@ -108,24 +140,37 @@ export default function HomescreenPrompt() {
     };
   }, []);
 
-  // When user clicks "Not now", permanently save in localStorage so it NEVER re-appears across tabs
+  // When pathname changes (e.g. user just navigated into /dashboard after logging in)
+  useEffect(() => {
+    if (visible || hasTriggeredRef.current) return;
+    const isSessionDismissed =
+      typeof window !== "undefined" &&
+      sessionStorage.getItem("rolefuse_homescreen_dismissed") === "true";
+
+    if (isSessionDismissed) return;
+
+    const userId = getSyncUserId();
+    if (userId) {
+      setActiveUserId(userId);
+      hasTriggeredRef.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        setVisible(true);
+      }, 1200);
+    }
+  }, [pathname, visible]);
+
+  // When user clicks "Not now", dismiss for this browser session
   const handleDismiss = () => {
     try {
-      localStorage.setItem("rolefuse_homescreen_dismissed", "true");
-      if (activeUserId) {
-        localStorage.setItem(`rolefuse_homescreen_dismissed_${activeUserId}`, "true");
-      }
+      sessionStorage.setItem("rolefuse_homescreen_dismissed", "true");
     } catch {}
     setVisible(false);
   };
 
   const handleAddToHomeScreen = async () => {
     try {
-      localStorage.setItem("rolefuse_homescreen_dismissed", "true");
-      localStorage.setItem("rolefuse_homescreen_installed", "true");
-      if (activeUserId) {
-        localStorage.setItem(`rolefuse_homescreen_dismissed_${activeUserId}`, "true");
-      }
+      sessionStorage.setItem("rolefuse_homescreen_dismissed", "true");
     } catch {}
 
     const installPrompt =
@@ -141,7 +186,7 @@ export default function HomescreenPrompt() {
           return;
         }
       } catch {
-        // Fall back to instructions
+        // Fall back to instructions below
       }
     }
 
@@ -175,7 +220,7 @@ export default function HomescreenPrompt() {
       role="dialog"
       aria-modal="true"
       aria-label="Add RoleFuse to Home Screen"
-      className="fixed bottom-18 sm:bottom-7 left-1/2 -translate-x-1/2 z-[110] w-[calc(100%-1.5rem)] max-w-sm sm:max-w-md transition-all duration-500 animate-in fade-in slide-in-from-bottom-5"
+      className="fixed bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 z-[120] w-[calc(100%-1.5rem)] max-w-sm sm:max-w-md transition-all duration-500 animate-in fade-in slide-in-from-bottom-5"
     >
       <div className="bg-white border border-slate-200/90 rounded-sm p-3.5 sm:p-6 shadow-2xl shadow-slate-900/15 space-y-2.5 sm:space-y-4 select-none relative">
         <div className="space-y-0.5 sm:space-y-1">

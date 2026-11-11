@@ -12,6 +12,30 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-parse", "mammoth"],
   async redirects() {
     return [
+      // 1. Force 301 Permanent Redirect from any *.vercel.app domain to canonical https://rolefuse.in
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "(?<subdomain>.*)\\.vercel\\.app",
+          },
+        ],
+        destination: "https://rolefuse.in/:path*",
+        permanent: true,
+      },
+      // 2. Force 301 Permanent Redirect from www.rolefuse.in to canonical https://rolefuse.in
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "www\\.rolefuse\\.in",
+          },
+        ],
+        destination: "https://rolefuse.in/:path*",
+        permanent: true,
+      },
       {
         source: "/admin",
         destination: "/dashboard/admin",
@@ -21,6 +45,22 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Never allow search engines to index any *.vercel.app deployment URL
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "(?<subdomain>.*)\\.vercel\\.app",
+          },
+        ],
+        headers: [
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow, noarchive",
+          },
+        ],
+      },
       {
         source: "/(.*)",
         headers: [

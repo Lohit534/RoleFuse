@@ -34,7 +34,11 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.in"),
+  metadataBase: new URL(
+    process.env.NODE_ENV === "production"
+      ? "https://rolefuse.in"
+      : process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.in"
+  ),
   manifest: "/manifest.json",
   title: {
     default: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",

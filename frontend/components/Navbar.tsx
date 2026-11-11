@@ -1388,9 +1388,6 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
               ) : (
                 /* Logged-Out Public Auth Buttons in Teal, Black & White */
                 <div className="flex items-center gap-2 sm:gap-3 select-none">
-                  {/* Public Broadcast Notification Bell */}
-                  <NotificationBell credits={null} userEmail={null} />
-
                   <div className="hidden sm:flex items-center gap-4">
                     <Link
                       href="/auth/login"

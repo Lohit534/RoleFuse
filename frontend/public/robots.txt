@@ -1,5 +1,10 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /auth/callback
+Disallow: /auth/confirm
 
+Host: https://rolefuse.in
 Sitemap: https://rolefuse.in/sitemap.xml
