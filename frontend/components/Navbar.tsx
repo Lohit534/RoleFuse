@@ -560,99 +560,94 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                             </div>
                           </button>
 
-                          {/* Pro Max exclusive features: only shown if visitor or Pro Max/Owner */}
-                          {(!user || isOwner || isProMax) && (
-                            <>
-                              <button
-                                onClick={() => handleProtectedNavigate("/dashboard/cover-letter")}
-                                className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
-                              >
-                                <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
-                                  <FileCheck className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                    AI Cover Letter Studio
-                                  </div>
-                                  <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
-                                    One-click personalized tailored letters.
-                                  </div>
-                                </div>
-                              </button>
+                          <button
+                            onClick={() => handleProtectedNavigate("/dashboard/cover-letter")}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <FileCheck className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                AI Cover Letter Studio
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                One-click personalized tailored letters.
+                              </div>
+                            </div>
+                          </button>
 
-                              <button
-                                onClick={() => {
-                                  if (!isOwner && !isProMax) {
-                                    setActiveMenu(null);
-                                    useUpgradeModalStore.getState().openModal({
-                                      badge: "PRO MAX",
-                                      title: "Unlock AI Mock Interview Coach",
-                                      description:
-                                        "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
-                                    });
-                                    return;
-                                  }
-                                  handleProtectedNavigate("/dashboard/mock-interview");
-                                }}
-                                className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
-                              >
-                                <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
-                                  <Target className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center justify-between gap-1.5">
-                                    <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                      AI Mock Interview Coach
-                                    </span>
-                                    {!isOwner && !isProMax && (
-                                      <span className="text-[10px] font-normal text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
-                                        MAX
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
-                                    Practice questions with STAR scoring.
-                                  </div>
-                                </div>
-                              </button>
+                          <button
+                            onClick={() => {
+                              if (!isOwner && !isProMax) {
+                                setActiveMenu(null);
+                                useUpgradeModalStore.getState().openModal({
+                                  badge: "PRO MAX",
+                                  title: "Unlock AI Mock Interview Coach",
+                                  description:
+                                    "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
+                                });
+                                return;
+                              }
+                              handleProtectedNavigate("/dashboard/mock-interview");
+                            }}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <Target className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                  AI Mock Interview Coach
+                                </span>
+                                {!isOwner && !isProMax && (
+                                  <span className="text-[10px] font-semibold text-slate-800 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
+                                    MAX
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Practice questions with STAR scoring.
+                              </div>
+                            </div>
+                          </button>
 
-                              <button
-                                onClick={() => {
-                                  if (!isOwner && !isProMax) {
-                                    setActiveMenu(null);
-                                    useUpgradeModalStore.getState().openModal({
-                                      badge: "MAX",
-                                      title: "Unlock LinkedIn Profile Optimizer",
-                                      description:
-                                        "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
-                                    });
-                                    return;
-                                  }
-                                  handleProtectedNavigate("/dashboard/linkedin-optimizer");
-                                }}
-                                className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
-                              >
-                                <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
-                                  <LinkedInIcon className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center justify-between gap-1.5">
-                                    <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
-                                      LinkedIn Profile Optimizer
-                                    </span>
-                                    {!isOwner && !isProMax && (
-                                      <span className="text-[10px] font-normal text-slate-800 bg-slate-100 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
-                                        MAX
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
-                                    Headlines, All-Star bio &amp; recruiter SEO.
-                                  </div>
-                                </div>
-                              </button>
-                            </>
-                          )}
+                          <button
+                            onClick={() => {
+                              if (!isOwner && !isProMax) {
+                                setActiveMenu(null);
+                                useUpgradeModalStore.getState().openModal({
+                                  badge: "MAX",
+                                  title: "Unlock LinkedIn Profile Optimizer",
+                                  description:
+                                    "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
+                                });
+                                return;
+                              }
+                              handleProtectedNavigate("/dashboard/linkedin-optimizer");
+                            }}
+                            className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-teal-50/70 transition-colors text-left group cursor-pointer"
+                          >
+                            <div className="h-7 w-7 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0 group-hover:bg-[#087F6E] transition-colors">
+                              <LinkedInIcon className="h-3.5 w-3.5 text-[#087F6E] group-hover:text-white transition-colors" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="text-xs font-bold text-slate-900 group-hover:text-[#087F6E] transition-colors line-clamp-1">
+                                  LinkedIn Profile Optimizer
+                                </span>
+                                {!isOwner && !isProMax && (
+                                  <span className="text-[10px] font-semibold text-slate-800 bg-slate-100 border border-slate-200/80 px-2 py-0.5 rounded-full shrink-0 tracking-normal inline-flex items-center">
+                                    MAX
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-500 line-clamp-1 leading-snug">
+                                Headlines, All-Star bio &amp; recruiter SEO.
+                              </div>
+                            </div>
+                          </button>
 
                           <button
                             onClick={() => handleProtectedNavigate("/dashboard/job-tracker")}
