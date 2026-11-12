@@ -647,16 +647,22 @@ export default function PricingPage() {
                     <div className="pt-1">
                       <div className="flex items-baseline">
                         <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                          {price}
+                          {plan.priceMonthly}
                         </span>
                         <span className="text-xs text-slate-500 font-semibold ml-1.5 uppercase tracking-wider">
-                          / {period}
+                          / {plan.periodMonthly}
                         </span>
                       </div>
-                      {billingCycle === "yearly" && (plan as any).annualCharged && (
+                      {billingCycle === "yearly" && plan.id !== "free" ? (
                         <p className="text-[11px] text-slate-500 font-medium mt-1">
-                          {(plan as any).annualCharged} · <span className="text-emerald-600 font-semibold">charged annually</span>
+                          {plan.priceYearly}/yr · <span className="text-emerald-600 font-semibold">charged annually</span>
                         </p>
+                      ) : (
+                        billingCycle === "monthly" && plan.id !== "free" && (
+                          <p className="text-[11px] text-slate-400 font-medium mt-1">
+                            Billed monthly
+                          </p>
+                        )
                       )}
                     </div>
 
