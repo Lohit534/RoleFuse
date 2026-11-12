@@ -127,9 +127,19 @@ export function getPageBudget(resumeText: string): PageBudget {
 const PLACEHOLDER_SEGMENT = /^(?:university name|institution name|college name|school name|company name|city,?\s*country|city|country|location|n\/a|na|tbd|\[[^\]]*\]|_+)$/i;
 
 /** Removes hallucinated / unwanted text the AI may add (all exporters read this text). */
-export function sanitizeOptimizedResume(optimized: string, original: string): string {
+export function sanitizeOptimizedResume(
+  optimized: string,
+  original: string,
+  userAnswers?: Record<string, string>
+): string {
   if (!optimized) return optimized;
-  const originalLower = (original || "").toLowerCase();
+  // If user provided verified answers (dates, company, tech stack, years), include them in allowed source
+  // so their legitimate answers are NEVER stripped as AI hallucinations.
+  const userAnswersText = userAnswers && typeof userAnswers === "object"
+    ? Object.values(userAnswers).filter((v) => typeof v === "string" && v.trim()).join(" ")
+    : "";
+  const allowedSource = `${original || ""} ${userAnswersText}`.trim();
+  const originalLower = allowedSource.toLowerCase();
   const lines = optimized.split(/\r?\n/);
   const out: string[] = [];
   // FIX: Track section header object directly — not just name string — so isEducation / isCert
@@ -171,8 +181,8 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
       const isDateLine = /^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\b(19\d{2}|20\d{2})\b\s*[-–—]\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?(?:\b(19\d{2}|20\d{2})\b|Present)(?:\s*\([^)]*\))?$/i.test(line.trim());
       if (isDateLine) {
         const yearsInLine = Array.from(line.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => m[1]);
-        const anyYearInOriginal = yearsInLine.length === 0 || yearsInLine.some((yr) => original.includes(yr));
-        const durationInOriginal = /\b(?:months?|weeks?|duration)\b/i.test(line) && /\b(?:months?|weeks?|duration)\b/i.test(original);
+        const anyYearInOriginal = yearsInLine.length === 0 || yearsInLine.some((yr) => allowedSource.includes(yr));
+        const durationInOriginal = /\b(?:months?|weeks?|duration)\b/i.test(line) && /\b(?:months?|weeks?|duration)\b/i.test(allowedSource);
         if (!anyYearInOriginal && !durationInOriginal) {
           // AI fabricated this internship date range without user stating it — drop the fake date line
           continue;
@@ -213,7 +223,7 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
     if (isCert && line.trim()) {
       const yearMatches = Array.from(line.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => m[1]);
       for (const yr of yearMatches) {
-        if (!original.includes(yr)) {
+        if (!allowedSource.includes(yr)) {
           line = line
             .replace(new RegExp(`\\s*\\(?${yr}\\)?`, "g"), "")
             .replace(/\s*-\s*:\s*/g, ": ")
@@ -536,4 +546,169 @@ export function preserveCandidateContactDetails(optimized: string, original: str
   }
 
   return lines.join("\n");
+}
+
+/**
+ * Ensures that every user-verified detail answered during the interactive Q&A
+ * (Company name, internship duration/dates, tech stack, project year, quantified metrics)
+ * is deterministically integrated into the optimized resume, so the candidate's answers
+ * are never dropped or omitted.
+ */
+export function ensureUserAnswersInResume(
+  resume: string,
+  userAnswers?: Record<string, string>
+): string {
+  if (!resume || !userAnswers || typeof userAnswers !== "object" || Object.keys(userAnswers).length === 0) {
+    return resume;
+  }
+
+  let out = resume;
+
+  const findUserAnswer = (keywords: string[]): string | undefined => {
+    for (const [k, v] of Object.entries(userAnswers)) {
+      if (typeof v === "string" && v.trim()) {
+        const kLow = k.toLowerCase();
+        if (keywords.some((kw) => kLow.includes(kw.toLowerCase()))) {
+          return v.trim();
+        }
+      }
+    }
+    return undefined;
+  };
+
+  // 1. Company Name: replace placeholders and ensure presence in Experience section
+  const compVal = findUserAnswer(["company", "employer"]);
+  if (compVal) {
+    out = out.replace(/\b(?:Company\s*Name|Employer\s*Name|XYZ\s*Corp|ABC\s*Corp|\[Company(?:\s*Name)?\]|\[Employer\])\b/gi, compVal);
+    if (!out.toLowerCase().includes(compVal.toLowerCase())) {
+      const expRegex = /\n(PROFESSIONAL EXPERIENCE|INTERNSHIP EXPERIENCE|WORK EXPERIENCE|EXPERIENCE)\n([\s\S]*?)(?=\n[A-Z\s&]{4,}|\n*$)/i;
+      const expMatch = out.match(expRegex);
+      if (expMatch) {
+        const expBlock = expMatch[2];
+        const lines = expBlock.split("\n");
+        let injected = false;
+        for (let i = 0; i < lines.length; i++) {
+          const l = lines[i].trim();
+          if (l && !l.startsWith("•") && !l.startsWith("-") && !l.startsWith("*")) {
+            if (i + 1 < lines.length && !lines[i + 1].trim().startsWith("•")) {
+              if (!lines[i + 1].toLowerCase().includes(compVal.toLowerCase())) {
+                lines[i + 1] = `${compVal} | ${lines[i + 1].trim()}`;
+                injected = true;
+              }
+            } else {
+              lines.splice(i + 1, 0, compVal);
+              injected = true;
+            }
+            break;
+          }
+        }
+        if (injected) {
+          out = out.replace(expBlock, lines.join("\n"));
+        }
+      }
+    }
+  }
+
+  // 2. Internship / Work Duration & Dates
+  const datesVal = findUserAnswer(["internship_duration", "duration", "period", "dates", "work / internship"]);
+  if (datesVal) {
+    const expRegex = /\n(PROFESSIONAL EXPERIENCE|INTERNSHIP EXPERIENCE|WORK EXPERIENCE|EXPERIENCE)\n([\s\S]*?)(?=\n[A-Z\s&]{4,}|\n*$)/i;
+    const expMatch = out.match(expRegex);
+    if (expMatch) {
+      const expBlock = expMatch[2];
+      const hasDateInExp = /\b(19\d{2}|20\d{2})\b/.test(expBlock) || expBlock.toLowerCase().includes(datesVal.toLowerCase());
+      if (!hasDateInExp) {
+        const expLines = expBlock.split("\n");
+        for (let i = 0; i < expLines.length; i++) {
+          const l = expLines[i].trim();
+          if (l && !l.startsWith("•") && !l.startsWith("-") && !l.startsWith("*")) {
+            if (!l.includes("|")) {
+              expLines[i] = `${expLines[i]} | ${datesVal}`;
+            } else if (!/\b(19\d{2}|20\d{2})\b/.test(l)) {
+              expLines[i] = `${expLines[i]} | ${datesVal}`;
+            }
+            break;
+          }
+        }
+        out = out.replace(expBlock, expLines.join("\n"));
+      }
+    }
+  }
+
+  // 3. Tech Stack
+  const techVal = findUserAnswer(["tech_stack", "technologies", "tools", "stack"]);
+  if (techVal) {
+    const cleanTech = techVal
+      .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, "")
+      .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ", ")
+      .trim();
+    const skillsRegex = /\n(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS)\n([\s\S]*?)(?=\n[A-Z\s&]{4,}|\n*$)/i;
+    const skillsMatch = out.match(skillsRegex);
+    if (skillsMatch) {
+      const skillsBlock = skillsMatch[2];
+      const terms = cleanTech.split(/,\s*/).map((t) => t.trim()).filter(Boolean);
+      const missingTerms = terms.filter((t) => !skillsBlock.toLowerCase().includes(t.toLowerCase()));
+      if (missingTerms.length > 0) {
+        const newSkillsLine = `Core Technologies: ${missingTerms.join(", ")}`;
+        const updatedSkillsBlock = `${skillsBlock.trimEnd()}\n${newSkillsLine}\n`;
+        out = out.replace(skillsBlock, updatedSkillsBlock);
+      }
+    } else {
+      out = `${out.trimEnd()}\n\nTECHNICAL SKILLS\nCore Technologies: ${cleanTech}\n`;
+    }
+  }
+
+  // 4. Project Year(s)
+  const projYearVal = findUserAnswer(["project_year", "projects year", "project dates"]);
+  if (projYearVal) {
+    const projRegex = /\n(PROJECTS|KEY PROJECTS|ACADEMIC PROJECTS)\n([\s\S]*?)(?=\n[A-Z\s&]{4,}|\n*$)/i;
+    const projMatch = out.match(projRegex);
+    if (projMatch) {
+      const projBlock = projMatch[2];
+      const hasYearInProj = /\b(19\d{2}|20\d{2})\b/.test(projBlock);
+      if (!hasYearInProj) {
+        const pLines = projBlock.split("\n");
+        for (let i = 0; i < pLines.length; i++) {
+          const l = pLines[i].trim();
+          if (l && !l.startsWith("•") && !l.startsWith("-") && !l.startsWith("*")) {
+            if (!l.includes(projYearVal)) {
+              pLines[i] = `${pLines[i]} | ${projYearVal}`;
+            }
+          }
+        }
+        out = out.replace(projBlock, pLines.join("\n"));
+      }
+    }
+  }
+
+  // 5. Quantified Metrics
+  for (const [k, v] of Object.entries(userAnswers)) {
+    if (typeof v === "string" && v.trim()) {
+      const kLow = k.toLowerCase();
+      if (kLow.includes("metric") || kLow.includes("value") || kLow.includes("quantified")) {
+        const cleanMetric = v.trim();
+        const hasMetric =
+          out.includes(cleanMetric) ||
+          (/\b\d+%\b|\b\d+\+\b/.test(cleanMetric) &&
+            (cleanMetric.match(/\b\d+%\b|\b\d+\+\b/g) || []).every((m) => out.includes(m)));
+        if (!hasMetric) {
+          const lines = out.split("\n");
+          let attached = false;
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (/^[•\-\*]\s+[A-Za-z]/.test(line.trim()) && !/\d+%|\d+\+|\b\d+\s*users\b|\$\d+/i.test(line)) {
+              lines[i] = `${line.trim().replace(/\.$/, "")}, ${cleanMetric}.`;
+              attached = true;
+              break;
+            }
+          }
+          if (attached) {
+            out = lines.join("\n");
+          }
+        }
+      }
+    }
+  }
+
+  return out;
 }

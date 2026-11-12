@@ -43,6 +43,31 @@ function getReadableLinkLabel(url: string, fallback?: string): string {
   return fallback || url;
 }
 
+function renderContactIcon(type: "phone" | "email" | "linkedin" | "github" | "globe") {
+  let path = "";
+  if (type === "phone") {
+    path = "M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1v3.5a1 1 0 01-1 1A19.93 19.93 0 012 3a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.21 2.2z";
+  } else if (type === "email") {
+    path = "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z";
+  } else if (type === "linkedin") {
+    path = "M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v7.6h2.79v-7.6H6.46M7.86 6.5a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z";
+  } else if (type === "github") {
+    path = "M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z";
+  } else {
+    path = "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z";
+  }
+  return (
+    <svg
+      className="w-3 h-3 inline-block mr-1 text-black shrink-0 align-middle"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
 interface ResumeViewerProps {
   text: string;
   originalText?: string;
@@ -273,14 +298,14 @@ export default function ResumeViewer({
       default:
         return {
           fontFamily: "'Times New Roman', Times, 'Liberation Serif', serif",
-          headerBorder: "border-b-[1.5px] border-black",
-          headerCase: "font-bold tracking-wide",
-          nameStyle: "font-normal tracking-widest",
-          sectionSpacing: "mt-4 mb-1.5",
-          bodySize: "text-[10.5px] sm:text-[11px]",
-          nameSize: "text-[22px] sm:text-[27px]",
-          contactSize: "text-[10px] sm:text-[11px]",
-          sectionSize: "text-[11px] sm:text-[12.5px]",
+          headerBorder: "border-b border-black",
+          headerCase: "font-bold tracking-normal",
+          nameStyle: "font-bold tracking-normal",
+          sectionSpacing: "mt-3.5 mb-1",
+          bodySize: "text-[10px] sm:text-[10.5px]",
+          nameSize: "text-2xl sm:text-[27px]",
+          contactSize: "text-[9.5px] sm:text-[10px]",
+          sectionSize: "text-xs sm:text-[12.5px]",
         };
     }
   };
@@ -441,8 +466,8 @@ export default function ResumeViewer({
       >
         {/* Paper-like resume card */}
         <div
-          className="w-full max-w-3xl mx-auto bg-white text-black rounded-sm sm:rounded-md p-5 sm:p-8 md:p-11 shadow-lg sm:shadow-2xl ring-1 ring-black/5 select-text relative break-words transition-all"
-          style={{ fontFamily: styleConfig.fontFamily, lineHeight: "1.45" }}
+          className="w-full max-w-3xl mx-auto bg-white text-black rounded-sm sm:rounded-md p-5 sm:p-8 md:p-11 shadow-lg sm:shadow-2xl ring-1 ring-black/5 select-text relative break-words transition-all font-serif"
+          style={{ fontFamily: styleConfig.fontFamily, lineHeight: "1.35" }}
         >
           {blocks.map((block, idx) => {
             switch (block.type) {
@@ -451,27 +476,52 @@ export default function ResumeViewer({
                   <h1
                     key={idx}
                     className={`${styleConfig.nameSize} text-center text-black mb-0 leading-tight select-text ${styleConfig.nameStyle}`}
-                    style={templateStyle === "academic" ? { fontVariant: "small-caps", letterSpacing: "0.08em" } : undefined}
+                    style={{
+                      fontFamily: styleConfig.fontFamily,
+                      fontVariant: templateStyle === "academic" ? "small-caps" : undefined,
+                      letterSpacing: templateStyle === "academic" ? "0.04em" : undefined,
+                    }}
                   >
                     {block.text}
                   </h1>
                 );
               case "subtitle":
-                return null;
+                return (
+                  <div
+                    key={idx}
+                    className="text-center font-bold text-black text-xs sm:text-[13px] mt-0.5 mb-1.5 tracking-tight select-text"
+                    style={{ fontFamily: styleConfig.fontFamily }}
+                  >
+                    {block.text}
+                  </div>
+                );
               case "contact": {
                 const cleanSegments = block.segments.filter((seg) => !isRoleOrTitle(seg.text));
                 if (cleanSegments.length === 0) return null;
                 return (
                   <div
                     key={idx}
-                    className={`flex justify-center items-center flex-wrap gap-y-1 mt-1 mb-2.5 leading-normal select-text ${styleConfig.contactSize}`}
+                    className={`flex justify-center items-center flex-wrap gap-x-3.5 sm:gap-x-4 gap-y-1 mt-0.5 mb-2 leading-normal select-text ${styleConfig.contactSize}`}
+                    style={{ fontFamily: styleConfig.fontFamily }}
                   >
                     {cleanSegments.map((seg, sIdx) => {
-                      const cleanHandle = seg.text
+                      const lower = (seg.text || "").toLowerCase() + " " + (seg.url || "").toLowerCase();
+                      let iconType: "phone" | "email" | "linkedin" | "github" | "globe" = "globe";
+                      if (seg.text.includes("@") || lower.includes("@")) iconType = "email";
+                      else if (/\+?\d[\d\s\-\(\)]{7,}/.test(seg.text)) iconType = "phone";
+                      else if (lower.includes("linkedin")) iconType = "linkedin";
+                      else if (lower.includes("github")) iconType = "github";
+
+                      let cleanHandle = seg.text
                         .replace(/^https?:\/\/(www\.)?/i, "")
+                        .replace(/^(?:linkedin profile|github profile|portfolio|linkedin|github|email|phone|mobile|tel|cell|location|address)\s*[:\-]?\s*/i, "")
                         .replace(/\/$/, "")
                         .replace(/^mailto:/, "")
-                        .replace(/^tel:/, "");
+                        .replace(/^tel:/, "")
+                        .trim();
+                      if (!cleanHandle) {
+                        cleanHandle = iconType === "linkedin" ? "LinkedIn" : (iconType === "github" ? "GitHub" : (seg.url || "Link"));
+                      }
 
                       const el =
                         seg.isLink && seg.url ? (
@@ -488,12 +538,10 @@ export default function ResumeViewer({
                         );
 
                       return (
-                        <React.Fragment key={sIdx}>
-                          {sIdx > 0 && (
-                            <span className="text-slate-400 mx-2 select-none font-light">|</span>
-                          )}
+                        <span key={sIdx} className="inline-flex items-center">
+                          {renderContactIcon(iconType)}
                           {el}
-                        </React.Fragment>
+                        </span>
                       );
                     })}
                   </div>

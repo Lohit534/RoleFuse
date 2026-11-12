@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import { buildOptimizationPrompt } from "@/lib/ai/prompts";
 import { callAI, callAIText } from "@/lib/ai/router";
 import { scoreResume } from "@/lib/ats/scorer";
-import { sanitizeOptimizedResume } from "@/lib/resume-format";
+import { sanitizeOptimizedResume, ensureUserAnswersInResume } from "@/lib/resume-format";
 import { enrichResumeATSQuality } from "@/lib/ats/bullets";
 import { extractTechTerms, isTechnicalKeyword } from "@/lib/ats/keywords";
 import { generateUUID } from "@/lib/utils";
@@ -482,6 +482,9 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+      // Ensure all user-provided details (company, dates, tech stack, project year, metrics)
+      // are woven into preparedResumeText before scoring and sending to the AI model
+      preparedResumeText = ensureUserAnswersInResume(preparedResumeText, userAnswers);
     }
 
     const scoreBefore = await scoreResume(preparedResumeText, jobDescription);
@@ -653,7 +656,8 @@ export async function POST(request: NextRequest) {
       });
 
       // Remove hallucinated university names, literal placeholders and leaked internal text
-      aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText);
+      // Pass userAnswers so verified dates, years, and details are NEVER stripped
+      aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText, userAnswers);
     }
 
     // ── ATS QUALITY & ACCURACY GUARANTEE (Target Genuine Score 75–92+) ──
@@ -669,8 +673,14 @@ export async function POST(request: NextRequest) {
       jobTitle
     );
 
-    // Sanitize once more to ensure clean structure
-    aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText);
+    // Sanitize once more to ensure clean structure (never strip user answers)
+    aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText, userAnswers);
+
+    // DETERMINISTIC GUARANTEE: Ensure every single user-verified answer (company, internship dates,
+    // tech stack, project year, metrics) is 100% present in the final resume
+    if (userAnswers && typeof userAnswers === "object") {
+      aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
+    }
 
     await send(4, 'done');
     await send(5, 'running');
@@ -704,6 +714,10 @@ export async function POST(request: NextRequest) {
       scoreAfter = await scoreResume(aiResult.resume, jobDescription);
       scoreAfter.missingKeywords = (scoreAfter.missingKeywords || []).filter(isTechnicalKeyword);
       scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
+    }
+
+    if (userAnswers && typeof userAnswers === "object") {
+      aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
     }
     const resumeTech = extractTechTerms(resumeText || "");
     const jdLower = (jobDescription || "").toLowerCase();

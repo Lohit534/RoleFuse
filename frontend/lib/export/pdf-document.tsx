@@ -466,12 +466,14 @@ function cleanEducationText(value: string): string {
 }
 
 const SECTION_NAMES = [
-  'PROFESSIONAL SUMMARY', 'SUMMARY', 'OBJECTIVE', 'PROFILE',
-  'TECHNICAL SKILLS', 'SKILLS', 'CORE SKILLS', 'SOFT SKILLS', 'SKILLS & COMPETENCIES', 'KEY SKILLS',
-  'EXPERIENCE', 'WORK EXPERIENCE', 'PROFESSIONAL EXPERIENCE', 'EMPLOYMENT HISTORY', 'INTERNSHIP', 'WORK HISTORY', 'INTERNSHIPS',
-  'PROJECTS', 'PERSONAL PROJECTS', 'KEY PROJECTS', 'ACADEMIC PROJECTS',
-  'EDUCATION', 'ACADEMIC BACKGROUND', 'QUALIFICATIONS', 'ACADEMICS',
-  'CERTIFICATIONS', 'CERTIFICATIONS & ACHIEVEMENTS', 'ACHIEVEMENTS', 'AWARDS', 'HONORS', 'CERTIFICATES',
+  'PROFESSIONAL SUMMARY', 'SUMMARY', 'OBJECTIVE', 'PROFILE', 'CAREER OBJECTIVE', 'EXECUTIVE SUMMARY',
+  'TECHNICAL SKILLS', 'SKILLS', 'CORE SKILLS', 'SOFT SKILLS', 'SKILLS & COMPETENCIES', 'KEY SKILLS', 'CORE COMPETENCIES', 'AREAS OF EXPERTISE',
+  'EXPERIENCE', 'WORK EXPERIENCE', 'PROFESSIONAL EXPERIENCE', 'EMPLOYMENT HISTORY', 'INTERNSHIP', 'WORK HISTORY', 'INTERNSHIPS', 'INTERNSHIP EXPERIENCE', 'RELEVANT EXPERIENCE',
+  'PROJECTS', 'PERSONAL PROJECTS', 'KEY PROJECTS', 'ACADEMIC PROJECTS', 'TECHNICAL PROJECTS',
+  'AWARDS & CERTIFICATIONS', 'AWARDS AND CERTIFICATIONS', 'CERTIFICATIONS & AWARDS', 'CERTIFICATIONS AND AWARDS',
+  'CERTIFICATIONS & ACHIEVEMENTS', 'CERTIFICATIONS AND ACHIEVEMENTS', 'ACHIEVEMENTS & CERTIFICATIONS', 'ACHIEVEMENTS AND CERTIFICATIONS',
+  'CERTIFICATIONS', 'ACHIEVEMENTS', 'AWARDS', 'HONORS', 'CERTIFICATES', 'LICENSES & CERTIFICATIONS',
+  'EDUCATION', 'ACADEMIC BACKGROUND', 'QUALIFICATIONS', 'ACADEMICS', 'EDUCATION & TRAINING',
   'LANGUAGES', 'LANGUAGES SPOKEN', 'LANGUAGES KNOWN', 'INTERESTS', 'VOLUNTEER',
   'PUBLICATIONS', 'PUBLICATIONS & ACHIEVEMENTS', 'ACTIVITIES', 'EXTRA-CURRICULAR ACTIVITIES'
 ];
@@ -682,7 +684,10 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
   const SECTION_NAMES_LIST = [
     'PROFESSIONAL SUMMARY', 'TECHNICAL SKILLS', 'PROFESSIONAL EXPERIENCE', 'WORK EXPERIENCE', 'EMPLOYMENT HISTORY',
     'PERSONAL PROJECTS', 'ACADEMIC PROJECTS', 'ACADEMIC BACKGROUND', 'CORE SKILLS', 'KEY SKILLS', 'SUMMARY', 'OBJECTIVE', 'SKILLS',
-    'EXPERIENCE', 'INTERNSHIP', 'INTERNSHIPS', 'PROJECTS', 'EDUCATION', 'CERTIFICATIONS & ACHIEVEMENTS', 'CERTIFICATIONS AND ACHIEVEMENTS', 'CERTIFICATIONS', 'ACHIEVEMENTS', 'KEY ACHIEVEMENTS', 'EXTRA-CURRICULAR', 'AWARDS', 'LANGUAGES'
+    'EXPERIENCE', 'INTERNSHIP', 'INTERNSHIPS', 'INTERNSHIP EXPERIENCE', 'PROJECTS', 'EDUCATION',
+    'AWARDS & CERTIFICATIONS', 'AWARDS AND CERTIFICATIONS', 'CERTIFICATIONS & AWARDS', 'CERTIFICATIONS AND AWARDS',
+    'CERTIFICATIONS & ACHIEVEMENTS', 'CERTIFICATIONS AND ACHIEVEMENTS', 'ACHIEVEMENTS & CERTIFICATIONS', 'ACHIEVEMENTS AND CERTIFICATIONS',
+    'CERTIFICATIONS', 'ACHIEVEMENTS', 'KEY ACHIEVEMENTS', 'EXTRA-CURRICULAR', 'AWARDS', 'LANGUAGES'
   ];
 
   let cleanInput = (text || "");
@@ -751,8 +756,12 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
 
     // 2. Subtitle / Target Role below Name (omit per user request)
     const hasAnySection = blocks.some(b => b.type === 'section');
-    const upperLine = line.toUpperCase().replace(/[^A-Z ]/g, '').trim();
-    const isSection = SECTION_NAMES.includes(upperLine);
+    const upperLine = line.toUpperCase().replace(/&/g, ' AND ').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+    const rawUpper = line.toUpperCase().trim();
+    const isSection = SECTION_NAMES.some(s => {
+      const normS = s.toUpperCase().replace(/&/g, ' AND ').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+      return upperLine === normS || rawUpper === s.toUpperCase().trim();
+    });
     const isContactLine = 
       line.includes('@') || 
       /\+?\d[\d\s\-\(\)]{7,}/.test(line) ||
@@ -1051,9 +1060,13 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
             // Look ahead for Line 2: Company Name & Tech Stack
             if (idx + 1 < rawLines.length) {
               const nextLine = stripMarkdownAsterisks(rawLines[idx + 1]);
-              const nextUpper = nextLine.toUpperCase().replace(/[^A-Z ]/g, '').trim();
+              const nextUpper = nextLine.toUpperCase().replace(/&/g, ' AND ').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+              const nextRaw = nextLine.toUpperCase().trim();
               const isNextBullet = /^\s*([•\-\*–—+•\u2022\u25cf\u2043▸►→]|\d+\.)\s*/.test(rawLines[idx + 1]);
-              const isNextSection = SECTION_NAMES.includes(nextUpper);
+              const isNextSection = SECTION_NAMES.some(s => {
+                const normS = s.toUpperCase().replace(/&/g, ' AND ').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+                return nextUpper === normS || nextRaw === s.toUpperCase().trim();
+              });
 
               if (!isNextBullet && !isNextSection && nextLine) {
                 const nextDateMatch = nextLine.match(/\b\d{4}\b/);
@@ -1353,8 +1366,13 @@ export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
       continue;
     }
 
-    if (currentSection === 'CERTIFICATIONS' || currentSection === 'ACHIEVEMENTS' || currentSection === 'AWARDS' ||
-        currentSection === 'CERTIFICATIONS & ACHIEVEMENTS' || currentSection === 'HONORS' || currentSection === 'CERTIFICATES') {
+    if (
+      currentSection.includes('CERTIF') ||
+      currentSection.includes('ACHIEVE') ||
+      currentSection.includes('AWARD') ||
+      currentSection.includes('HONOR') ||
+      currentSection.includes('LICENSE')
+    ) {
       const cleanCertLine = stripMarkdownAsterisks(line.replace(/^[•\-\*–\s\u2022]+/, ''));
       if (cleanCertLine) {
         const isAchievementLine =
