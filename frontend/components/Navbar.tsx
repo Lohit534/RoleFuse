@@ -1155,11 +1155,11 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
                     {/* PROFILE DROPDOWN MENU */}
                     {isDropdownOpen && (
-                      <div className="absolute right-0 mt-2 w-[280px] max-w-[calc(100vw-1.5rem)] bg-white text-slate-800 border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2.5 select-none animate-in fade-in slide-in-from-top-2 duration-150 z-50">
+                      <div className="absolute right-0 mt-2 w-[245px] sm:w-[280px] max-w-[calc(100vw-1.5rem)] bg-white text-slate-800 border border-slate-200 rounded-2xl shadow-xl p-2.5 sm:p-3 space-y-2 sm:space-y-2.5 select-none animate-in fade-in slide-in-from-top-2 duration-150 z-50 max-h-[82vh] overflow-y-auto">
                         {/* 1. User Header with Google Profile Picture */}
-                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="h-8 w-8 rounded-full bg-emerald-50 border-2 border-[#087F6E] ring-2 ring-[#087F6E]/25 flex items-center justify-center text-[#087F6E] font-black text-xs shrink-0 overflow-hidden">
+                        <div className="flex items-center justify-between pb-1.5 sm:pb-2 border-b border-slate-100">
+                          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                            <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-emerald-50 border-2 border-[#087F6E] ring-2 ring-[#087F6E]/25 flex items-center justify-center text-[#087F6E] font-black text-xs shrink-0 overflow-hidden">
                               {userAvatarUrl ? (
                                 <img
                                   src={userAvatarUrl}
@@ -1191,17 +1191,29 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                           </div>
                         </div>
 
+                        {/* Owner Admin Portal Shortcut */}
+                        {isOwner && (
+                          <Link
+                            href="/dashboard/admin"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100/90 border border-amber-200 transition-colors"
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                            <span>Admin Portal</span>
+                          </Link>
+                        )}
+
                         {/* 2. Credits Box */}
-                        <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-2.5 space-y-2">
+                        <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-2 sm:p-2.5 space-y-1.5 sm:space-y-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1 text-xs font-bold text-slate-800">
+                            <div className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-slate-800">
                               <span>Credits</span>
                               <HelpCircle className="h-3 w-3 text-slate-400" />
                             </div>
                             <Link
                               href="/dashboard/billing"
                               onClick={() => setIsDropdownOpen(false)}
-                              className="text-xs font-black text-[#087F6E] hover:text-[#065F53] flex items-center gap-0.5 transition-colors"
+                              className="text-[11px] sm:text-xs font-black text-[#087F6E] hover:text-[#065F53] flex items-center gap-0.5 transition-colors"
                             >
                               <span>{creditsDisplay}</span>
                             </Link>
@@ -1229,15 +1241,15 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
                           {/* Upgrades */}
                           {!isProMax && !isOwner ? (
-                            <div className="space-y-1.5 pt-1 border-t border-slate-200/80">
+                            <div className="space-y-1 sm:space-y-1.5 pt-1 border-t border-slate-200/80">
                               {!isPremium && (
-                                <div className="flex items-center justify-between gap-1.5 pb-1.5 border-b border-slate-100/50">
+                                <div className="flex items-center justify-between gap-1 pb-1 sm:pb-1.5 border-b border-slate-100/50">
                                   <div className="flex items-center gap-1.5 min-w-0">
-                                    <div className="h-5 w-5 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
-                                      <Sparkles className="h-3 w-3 text-[#087F6E]" />
+                                    <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">
+                                      <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#087F6E]" />
                                     </div>
-                                    <span className="text-[11px] font-bold text-slate-700 truncate">
-                                      Upgrade Pro (20/mo)
+                                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 truncate">
+                                      Pro (20/mo)
                                     </span>
                                   </div>
                                   <button
@@ -1251,19 +1263,19 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                                           "Get 20 AI resume optimizations/month, unlimited PDF & DOCX downloads, and priority features.",
                                       });
                                     }}
-                                    className="bg-[#087F6E] hover:bg-[#065F53] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-xs transition-all cursor-pointer shrink-0"
+                                    className="bg-[#087F6E] hover:bg-[#065F53] text-white text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 rounded-full shadow-xs transition-all cursor-pointer shrink-0"
                                   >
                                     Get
                                   </button>
                                 </div>
                               )}
 
-                              <div className="flex items-center justify-between gap-1.5">
+                              <div className="flex items-center justify-between gap-1">
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                  <div className="h-5 w-5 rounded-full bg-teal-100 border border-teal-200 flex items-center justify-center shrink-0">
-                                    <Zap className="h-3 w-3 text-[#087F6E]" />
+                                  <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-teal-100 border border-teal-200 flex items-center justify-center shrink-0">
+                                    <Zap className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#087F6E]" />
                                   </div>
-                                  <span className="text-[11px] font-bold text-slate-700 truncate">
+                                  <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 truncate">
                                     Pro Max (90/mo)
                                   </span>
                                 </div>
@@ -1278,15 +1290,15 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                                         "Unlock 90 AI optimizations every month, priority ATS scoring, and high-performance resume analysis.",
                                     });
                                   }}
-                                  className="bg-[#087F6E] hover:bg-[#065F53] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-xs transition-all cursor-pointer shrink-0"
+                                  className="bg-[#087F6E] hover:bg-[#065F53] text-white text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-0.5 rounded-full shadow-xs transition-all cursor-pointer shrink-0"
                                 >
                                   Get
                                 </button>
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/80 text-[11px] font-bold text-[#087F6E]">
-                              <Zap className="h-3.5 w-3.5 text-[#087F6E]" />
+                            <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/80 text-[10px] sm:text-[11px] font-bold text-[#087F6E]">
+                              <Zap className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-[#087F6E]" />
                               <span>Pro Max Plan Active &bull; 90 / mo</span>
                             </div>
                           )}
@@ -1297,17 +1309,17 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                           <Link
                             href="/dashboard/pricing"
                             onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
+                            className="flex items-center gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
                           >
-                            <DollarSign className="h-3.5 w-3.5 text-slate-400" />
+                            <DollarSign className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400 shrink-0" />
                             <span>Pricing Plans</span>
                           </Link>
                           <Link
                             href="/dashboard/billing"
                             onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
+                            className="flex items-center gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors"
                           >
-                            <CreditCard className="h-3.5 w-3.5 text-slate-400" />
+                            <CreditCard className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400 shrink-0" />
                             <span>Billing &amp; Usage</span>
                           </Link>
                           <button
@@ -1316,10 +1328,10 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                               setIsDropdownOpen(false);
                               setIsReferralOpen(true);
                             }}
-                            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
+                            className="w-full flex items-center justify-between px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
                           >
                             <div className="flex items-center gap-2">
-                              <Gift className="h-3.5 w-3.5 text-slate-400" />
+                              <Gift className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400 shrink-0" />
                               <span>Refer a Friend</span>
                             </div>
                             <span className="bg-emerald-50 border border-emerald-200 text-[#087F6E] text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full">
@@ -1344,9 +1356,9 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                                 })
                               );
                             }}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
+                            className="w-full flex items-center gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
                           >
-                            <HelpCircle className="h-3.5 w-3.5 text-slate-400" />
+                            <HelpCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400 shrink-0" />
                             <span>Help &amp; Support</span>
                           </button>
                           <button
@@ -1354,9 +1366,9 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                               setIsDropdownOpen(false);
                               setIsFeedbackOpen(true);
                             }}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
+                            className="w-full flex items-center gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
                           >
-                            <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
+                            <MessageSquare className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400 shrink-0" />
                             <span>Feedback</span>
                           </button>
                           <button
@@ -1365,9 +1377,9 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                               setIsDropdownOpen(false);
                               setIsDataPreferencesOpen(true);
                             }}
-                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
+                            className="w-full flex items-center gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100/70 transition-colors text-left cursor-pointer"
                           >
-                            <Lock className="h-3.5 w-3.5 text-slate-400" />
+                            <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400 shrink-0" />
                             <span>Data Preferences</span>
                           </button>
                         </div>
@@ -1378,9 +1390,9 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                         {/* 5. Sign Out */}
                         <button
                           onClick={handleSignOut}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors text-left cursor-pointer"
+                          className="w-full flex items-center gap-2 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors text-left cursor-pointer"
                         >
-                          <LogOut className="h-3.5 w-3.5 text-rose-500" />
+                          <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-rose-500 shrink-0" />
                           <span>Sign Out</span>
                         </button>
                       </div>

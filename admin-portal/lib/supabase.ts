@@ -4,11 +4,11 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 let _client: SupabaseClient | null = null;
 
 export function getBackendUrl(): string {
-  return (
-    process.env.USER_APP_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "https://rolefuse.in"
-  ).replace(/\/$/, "");
+  const envUrl = process.env.USER_APP_URL || process.env.NEXT_PUBLIC_APP_URL;
+  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+    return envUrl.replace(/\/$/, "");
+  }
+  return "https://rolefuse.in";
 }
 
 export function getSupabase(): SupabaseClient {

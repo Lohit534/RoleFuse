@@ -380,7 +380,7 @@ export default function SupportChatbot() {
 
         {/* Main Container Widget */}
         {isOpen && (
-          <Card className="w-[calc(100vw-24px)] sm:w-[400px] h-[calc(100dvh-96px)] sm:h-[560px] max-h-[760px] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative pointer-events-auto text-left">
+          <Card className="w-[calc(100vw-24px)] max-w-[335px] sm:max-w-none sm:w-[400px] h-[470px] sm:h-[560px] max-h-[72dvh] bg-white border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 relative pointer-events-auto text-left">
           
           {/* ============================================================ */}
           {/* VIEW 1: HELP CENTER FAQS                                      */}
@@ -388,14 +388,14 @@ export default function SupportChatbot() {
           {view === "help-center" && (
             <div className="flex flex-col h-full bg-white">
               {/* Header */}
-              <div className="bg-white border-b border-slate-100 p-4 sm:p-4.5 flex items-start justify-between select-none">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a] shrink-0">
-                    <HelpCircle className="h-5 w-5" />
+              <div className="bg-white border-b border-slate-100 p-3 sm:p-4.5 flex items-start justify-between select-none">
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg sm:rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a] shrink-0">
+                    <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight">Help Center</h3>
-                    <p className="text-[11px] text-slate-500 font-medium">How can we help you today?</p>
+                    <h3 className="font-extrabold text-slate-900 text-xs sm:text-base tracking-tight">Help Center</h3>
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium">How can we help you today?</p>
                   </div>
                 </div>
                 <button
@@ -408,14 +408,14 @@ export default function SupportChatbot() {
               </div>
 
               {/* Search input */}
-              <div className="p-3 border-b border-slate-100 bg-slate-50/50">
+              <div className="p-2.5 sm:p-3 border-b border-slate-100 bg-slate-50/50">
                 <div className="relative">
                   <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
                   <Input
                     placeholder="Search answers..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 text-xs bg-white border-slate-200 focus:border-[#0d6e5a] h-8.5 rounded-xl"
+                    className="pl-8 text-[11px] sm:text-xs bg-white border-slate-200 focus:border-[#0d6e5a] h-7.5 sm:h-8.5 rounded-xl"
                   />
                   {searchQuery && (
                     <button
@@ -428,7 +428,7 @@ export default function SupportChatbot() {
                 </div>
 
                 {/* Category Pills */}
-                <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar pb-0.5">
+                <div className="flex items-center gap-1 sm:gap-1.5 mt-2 sm:mt-2.5 overflow-x-auto no-scrollbar pb-0.5">
                   {[
                     { id: "all", label: "All" },
                     { id: "billing", label: "Billing" },
@@ -439,7 +439,7 @@ export default function SupportChatbot() {
                     <button
                       key={cat.id}
                       onClick={() => setSelectedCategory(cat.id as any)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer border ${
+                      className={`text-[9px] sm:text-[10px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full whitespace-nowrap transition-colors cursor-pointer border ${
                         selectedCategory === cat.id
                           ? "bg-[#0d6e5a] text-white border-[#0d6e5a]"
                           : "bg-white text-slate-600 hover:bg-slate-100 border-slate-200"
@@ -452,7 +452,7 @@ export default function SupportChatbot() {
               </div>
 
               {/* FAQ Accordion List */}
-              <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-slate-50/40">
+              <div className="flex-1 overflow-y-auto p-2.5 sm:p-3.5 space-y-2 sm:space-y-2.5 bg-slate-50/40">
                 {filteredFaqs.length === 0 ? (
                   <div className="py-12 text-center text-slate-400 space-y-2">
                     <HelpCircle className="h-8 w-8 mx-auto opacity-40" />
@@ -475,17 +475,17 @@ export default function SupportChatbot() {
                         <button
                           type="button"
                           onClick={() => setExpandedFaq(isExpanded ? null : faq.id)}
-                          className="w-full p-3 text-left flex items-center justify-between gap-2.5 hover:bg-slate-50/80 transition-colors"
+                          className="w-full p-2.5 sm:p-3 text-left flex items-center justify-between gap-2 hover:bg-slate-50/80 transition-colors"
                         >
-                          <span className="text-xs font-bold text-slate-800 leading-snug">
+                          <span className="text-[11px] sm:text-xs font-bold text-slate-800 leading-snug">
                             {faq.question}
                           </span>
                           <span className="shrink-0 text-slate-400">
-                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            {isExpanded ? <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                           </span>
                         </button>
                         {isExpanded && (
-                          <div className="px-3 pb-3 pt-0 text-[11px] leading-relaxed text-slate-600 border-t border-slate-100 bg-slate-50/50">
+                          <div className="px-2.5 pb-2.5 pt-0 text-[10px] sm:text-[11px] leading-relaxed text-slate-600 border-t border-slate-100 bg-slate-50/50">
                             {faq.answer}
                           </div>
                         )}
@@ -496,11 +496,11 @@ export default function SupportChatbot() {
               </div>
 
               {/* Bottom "Need more help? -> Contact Us" Footer */}
-              <div className="p-3.5 bg-slate-50 border-t border-slate-200 space-y-2 text-center select-none">
-                <p className="text-[11px] text-slate-500 font-semibold">Still need help?</p>
+              <div className="p-2.5 sm:p-3.5 bg-slate-50 border-t border-slate-200 space-y-1.5 sm:space-y-2 text-center select-none">
+                <p className="text-[10px] sm:text-[11px] text-slate-500 font-semibold">Still need help?</p>
                 <Button
                   onClick={() => setView("contact-options")}
-                  className="w-full bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9.5 rounded-xl flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-colors"
+                  className="w-full bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-[11px] sm:text-xs h-8 sm:h-9.5 rounded-xl flex items-center justify-center gap-1.5 sm:gap-2 shadow-sm cursor-pointer transition-colors"
                 >
                   <HeadphonesIcon className="h-3.5 w-3.5" />
                   Contact Support Team
@@ -540,45 +540,45 @@ export default function SupportChatbot() {
               </div>
 
               {/* Options */}
-              <div className="p-4 space-y-3.5 flex-1 flex flex-col justify-center bg-slate-50/50">
+              <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3.5 flex-1 flex flex-col justify-center bg-slate-50/50">
                 {/* Option 1: Mail Support (Email with Copy Icon) */}
-                <div className="p-4 bg-white border border-teal-200/80 rounded-2xl shadow-sm space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a] shrink-0">
-                      <Mail className="h-5 w-5" />
+                <div className="p-3 sm:p-4 bg-white border border-teal-200/80 rounded-2xl shadow-sm space-y-2.5 sm:space-y-3">
+                  <div className="flex items-start gap-2.5 sm:gap-3">
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-[#0d6e5a] shrink-0">
+                      <Mail className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <h4 className="text-xs font-extrabold text-slate-900">Mail Support</h4>
-                        <span className="text-[9px] font-bold text-[#0d6e5a] bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
+                        <span className="text-[8px] sm:text-[9px] font-bold text-[#0d6e5a] bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
                           Recommended
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-0.5">
+                      <p className="text-[9px] sm:text-[10px] text-slate-500 mt-0.5">
                         Guaranteed response within 24 hours
                       </p>
                     </div>
                   </div>
 
                   {/* Mail address with copy icon */}
-                  <div className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-xs font-mono font-semibold text-slate-800 truncate select-all">
+                  <div className="flex items-center justify-between gap-2 p-2 sm:p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-800 truncate select-all">
                       support@rolefuse.in
                     </span>
                     <button
                       type="button"
                       onClick={copySupportEmail}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-[11px] transition-colors cursor-pointer shadow-xs shrink-0"
+                      className="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold text-[10px] sm:text-[11px] transition-colors cursor-pointer shadow-xs shrink-0"
                       title="Copy email address"
                     >
                       {copiedEmail ? (
                         <>
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-600" />
                           <span className="text-emerald-700">Copied</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="h-3.5 w-3.5 text-slate-500" />
+                          <Copy className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-500" />
                           <span>Copy</span>
                         </>
                       )}
@@ -593,22 +593,22 @@ export default function SupportChatbot() {
                     setView("ticket");
                     if (userId) loadAdminTickets(false);
                   }}
-                  className="w-full p-4 bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0d6e5a]/40 rounded-2xl flex items-center justify-between gap-3 text-left transition-all shadow-sm cursor-pointer group"
+                  className="w-full p-3 sm:p-4 bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0d6e5a]/40 rounded-2xl flex items-center justify-between gap-2.5 sm:gap-3 text-left transition-all shadow-sm cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 group-hover:scale-105 transition-transform shrink-0">
-                      <HeadphonesIcon className="h-5 w-5" />
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 group-hover:scale-105 transition-transform shrink-0">
+                      <HeadphonesIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div>
                       <h4 className="text-xs font-extrabold text-slate-900 group-hover:text-[#0d6e5a] transition-colors">
                         Admin Support Ticket
                       </h4>
-                      <p className="text-[10px] text-slate-500 mt-0.5 font-medium">
+                      <p className="text-[9px] sm:text-[10px] text-slate-500 mt-0.5 font-medium">
                         Submit a direct message &bull; Track replies here
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#0d6e5a] group-hover:translate-x-0.5 transition-all shrink-0" />
+                  <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400 group-hover:text-[#0d6e5a] group-hover:translate-x-0.5 transition-all shrink-0" />
                 </button>
               </div>
 

@@ -338,155 +338,163 @@ export function NotificationBell({ credits, userEmail, compact = false }: Notifi
 
       {/* Notifications Popover Dropdown */}
       {isOpen && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-[360px] max-w-[360px] bg-white text-slate-800 border border-slate-200 rounded-2xl shadow-xl p-3 space-y-2 select-none z-50 animate-in fade-in slide-in-from-top-2 duration-150"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-black text-slate-900">Notifications</span>
+        <>
+          {/* Mobile backdrop for clean dismiss (no blur) */}
+          <div
+            className="fixed inset-0 sm:hidden z-40"
+            onClick={() => setIsOpen(false)}
+          />
+
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="fixed left-3 right-3 top-16 mx-auto w-auto max-w-[315px] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:mx-0 sm:w-[380px] sm:max-w-[380px] bg-white text-slate-800 border border-slate-200/90 rounded-2xl shadow-xl sm:shadow-2xl p-2.5 sm:p-3.5 space-y-2 sm:space-y-2.5 select-none z-50 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[70vh] sm:max-h-[82vh] flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-1.5 sm:pb-2.5 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-[11px] sm:text-sm font-black text-slate-900">Notifications</span>
+                {unreadCount > 0 && (
+                  <span className="bg-teal-50 border border-teal-200 text-[#0d6e5a] text-[8px] sm:text-[10px] font-extrabold px-1.5 sm:px-2 py-0.2 rounded-full">
+                    {unreadCount} new
+                  </span>
+                )}
+              </div>
               {unreadCount > 0 && (
-                <span className="bg-teal-50 border border-teal-200 text-[#0d6e5a] text-[9px] font-extrabold px-1.5 py-0.2 rounded-full">
-                  {unreadCount} new
-                </span>
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="text-[9px] sm:text-xs text-slate-400 hover:text-slate-700 font-semibold transition-colors cursor-pointer"
+                >
+                  Clear all
+                </button>
               )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={handleClearAll}
-                className="text-[10px] text-slate-400 hover:text-slate-700 font-semibold transition-colors cursor-pointer"
-              >
-                Clear all
-              </button>
-            )}
-          </div>
 
-          {/* Notifications List */}
-          {allNotifications.length === 0 ? (
-            <div className="py-6 text-center space-y-1">
-              <div className="h-8 w-8 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center mx-auto text-[#0d6e5a]">
-                <CheckCircle2 className="h-4 w-4" />
+            {/* Notifications List */}
+            {allNotifications.length === 0 ? (
+              <div className="py-6 sm:py-8 text-center space-y-1.5">
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center mx-auto text-[#0d6e5a]">
+                  <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+                <p className="text-[11px] sm:text-sm font-bold text-slate-800">You're all caught up!</p>
+                <p className="text-[9px] sm:text-xs text-slate-400">No unread notifications at this time.</p>
               </div>
-              <p className="text-xs font-bold text-slate-800">You're all caught up!</p>
-              <p className="text-[10px] text-slate-400">No unread notifications at this time.</p>
-            </div>
-          ) : (
-            <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-0.5">
-              {allNotifications.map((notif) => {
-                const isOffer = notif.type === "offer";
-                const isUpdate = notif.type === "update";
-                const isAlert = notif.type === "alert" || notif.type === "expiring";
+            ) : (
+              <div className="space-y-2 sm:space-y-3 max-h-[260px] sm:max-h-[380px] overflow-y-auto pr-0.5">
+                {allNotifications.map((notif) => {
+                  const isOffer = notif.type === "offer";
+                  const isUpdate = notif.type === "update";
+                  const isAlert = notif.type === "alert" || notif.type === "expiring";
 
-                return (
-                  <div
-                    key={notif.id}
-                    className={`p-3 rounded-xl border transition-all relative ${
-                      isOffer
-                        ? "bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-50/40 border-amber-300/80 shadow-2xs"
-                        : isUpdate
-                        ? "bg-gradient-to-br from-teal-50/90 via-emerald-50/40 to-teal-50/30 border-teal-300/80 shadow-2xs"
-                        : isAlert
-                        ? "bg-rose-50/70 border-rose-200/80 text-rose-950"
-                        : "bg-slate-50 border-slate-200 text-slate-900"
-                    }`}
-                  >
-                    {/* Delete (X) button */}
-                    <button
-                      type="button"
-                      onClick={(e) => handleDismiss(notif.id, e)}
-                      aria-label="Delete message"
-                      className="absolute top-2 right-2 text-slate-400 hover:text-slate-700 p-0.5 rounded-md hover:bg-slate-200/50 transition-colors cursor-pointer"
+                  return (
+                    <div
+                      key={notif.id}
+                      className={`p-2.5 sm:p-3.5 rounded-xl border transition-all relative ${
+                        isOffer
+                          ? "bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-amber-50/40 border-amber-300/80 shadow-2xs"
+                          : isUpdate
+                          ? "bg-gradient-to-br from-teal-50/90 via-emerald-50/40 to-teal-50/30 border-teal-300/80 shadow-2xs"
+                          : isAlert
+                          ? "bg-rose-50/70 border-rose-200/80 text-rose-950"
+                          : "bg-slate-50 border-slate-200 text-slate-900"
+                      }`}
                     >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-
-                    <div className="flex items-start gap-2.5 pr-5">
-                      <div
-                        className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                          isOffer
-                            ? "bg-amber-100 text-amber-800 shadow-2xs"
-                            : isUpdate
-                            ? "bg-[#087F6E] text-white shadow-2xs"
-                            : isAlert
-                            ? "bg-rose-100 text-rose-700"
-                            : "bg-slate-200 text-slate-700"
-                        }`}
+                      {/* Delete (X) button */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleDismiss(notif.id, e)}
+                        aria-label="Delete message"
+                        className="absolute top-2 right-2 text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-black/5 transition-colors cursor-pointer"
                       >
-                        {isOffer ? (
-                          <Tag className="h-3.5 w-3.5" />
-                        ) : isUpdate ? (
-                          <Zap className="h-3.5 w-3.5" />
-                        ) : isAlert ? (
-                          <AlertTriangle className="h-3.5 w-3.5" />
-                        ) : (
-                          <Info className="h-3.5 w-3.5" />
-                        )}
-                      </div>
+                        <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      </button>
 
-                      <div className="min-w-0 flex-1 space-y-1.5">
-                        {/* Header Tags & Highlight */}
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {notif.tag && (
-                            <span
-                              className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
-                                isOffer
-                                  ? "bg-amber-200/80 text-amber-900"
-                                  : isUpdate
-                                  ? "bg-teal-100 text-[#087F6E]"
-                                  : "bg-slate-200 text-slate-800"
-                              }`}
-                            >
-                              {notif.tag}
-                            </span>
-                          )}
-                          {notif.highlightNumber && (
-                            <span className="text-[10px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-md">
-                              {notif.highlightNumber}
-                            </span>
-                          )}
-                          {notif.dateStr && (
-                            <span className="text-[9px] text-slate-400 font-semibold ml-auto">
-                              {notif.dateStr}
-                            </span>
+                      <div className="flex items-start gap-2.5 sm:gap-3 pr-5">
+                        <div
+                          className={`h-6 w-6 sm:h-8 sm:w-8 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                            isOffer
+                              ? "bg-amber-100 text-amber-800 shadow-2xs"
+                              : isUpdate
+                              ? "bg-[#087F6E] text-white shadow-2xs"
+                              : isAlert
+                              ? "bg-rose-100 text-rose-700"
+                              : "bg-slate-200 text-slate-700"
+                          }`}
+                        >
+                          {isOffer ? (
+                            <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          ) : isUpdate ? (
+                            <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          ) : isAlert ? (
+                            <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          ) : (
+                            <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           )}
                         </div>
 
-                        <div className="text-xs font-black text-slate-900 leading-snug">
-                          {notif.title}
-                        </div>
-
-                        <p className="text-[11px] text-slate-600 leading-relaxed font-normal">
-                          {notif.message}
-                        </p>
-
-                        {notif.actionText && notif.actionHref && (
-                          <div className="pt-1">
-                            <Link
-                              href={notif.actionHref}
-                              onClick={() => setIsOpen(false)}
-                              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                                isOffer
-                                  ? "bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
-                                  : isUpdate
-                                  ? "bg-[#087F6E] hover:bg-[#065F53] text-white shadow-2xs"
-                                  : "bg-slate-900 hover:bg-slate-800 text-white"
-                              }`}
-                            >
-                              <span>{notif.actionText}</span>
-                              <ArrowRight className="h-3 w-3" />
-                            </Link>
+                        <div className="min-w-0 flex-1 space-y-1 sm:space-y-1.5">
+                          {/* Header Tags & Highlight */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {notif.tag && (
+                              <span
+                                className={`text-[8px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-md ${
+                                  isOffer
+                                    ? "bg-amber-200/80 text-amber-900"
+                                    : isUpdate
+                                    ? "bg-teal-100 text-[#087F6E]"
+                                    : "bg-slate-200 text-slate-800"
+                                }`}
+                              >
+                                {notif.tag}
+                              </span>
+                            )}
+                            {notif.highlightNumber && (
+                              <span className="text-[9px] sm:text-[11px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-md">
+                                {notif.highlightNumber}
+                              </span>
+                            )}
+                            {notif.dateStr && (
+                              <span className="text-[8px] sm:text-xs text-slate-400 font-semibold ml-auto">
+                                {notif.dateStr}
+                              </span>
+                            )}
                           </div>
-                        )}
+
+                          <div className="text-[11px] sm:text-[13px] font-black text-slate-900 leading-snug">
+                            {notif.title}
+                          </div>
+
+                          <p className="text-[10px] sm:text-xs text-slate-600 leading-relaxed font-normal">
+                            {notif.message}
+                          </p>
+
+                          {notif.actionText && notif.actionHref && (
+                            <div className="pt-1">
+                              <Link
+                                href={notif.actionHref}
+                                onClick={() => setIsOpen(false)}
+                                className={`inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg transition-all cursor-pointer ${
+                                  isOffer
+                                    ? "bg-amber-600 hover:bg-amber-700 text-white shadow-2xs"
+                                    : isUpdate
+                                    ? "bg-[#087F6E] hover:bg-[#065F53] text-white shadow-2xs"
+                                    : "bg-slate-900 hover:bg-slate-800 text-white"
+                                }`}
+                              >
+                                <span>{notif.actionText}</span>
+                                <ArrowRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                              </Link>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

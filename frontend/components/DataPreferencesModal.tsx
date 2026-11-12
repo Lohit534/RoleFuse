@@ -82,52 +82,52 @@ export function DataPreferencesModal({ isOpen, onClose }: DataPreferencesModalPr
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[480px] bg-white rounded-3xl p-7 shadow-2xl border border-slate-100 flex flex-col gap-6"
+        className="relative w-[calc(100vw-24px)] max-w-[420px] bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-slate-100 flex flex-col gap-3.5 sm:gap-5 max-h-[88vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors rounded-full p-1 hover:bg-slate-100 cursor-pointer"
+          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 text-slate-400 hover:text-slate-700 transition-colors rounded-full p-1 hover:bg-slate-100 cursor-pointer"
           aria-label="Close"
         >
           <X className="h-4 w-4" />
         </button>
 
         {/* Header */}
-        <div className="space-y-1 select-none">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">
+        <div className="space-y-0.5 sm:space-y-1 select-none pr-6">
+          <h2 className="text-base sm:text-xl font-bold tracking-tight text-slate-900">
             Data preferences
           </h2>
-          <p className="text-sm text-slate-500 font-normal">
+          <p className="text-xs sm:text-sm text-slate-500 font-normal">
             Control how your data is used to improve RoleFuse.
           </p>
         </div>
 
         {/* Main preference card */}
-        <div className="border border-slate-200/90 rounded-2xl p-5 flex items-start justify-between gap-4 bg-white hover:border-slate-300 transition-colors">
-          <div className="space-y-1 select-none flex-1">
-            <h3 className="text-sm font-bold text-slate-900">
+        <div className="border border-slate-200/90 rounded-xl sm:rounded-2xl p-3 sm:p-5 flex items-start justify-between gap-3 sm:gap-4 bg-white hover:border-slate-300 transition-colors">
+          <div className="space-y-1 select-none flex-1 min-w-0">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900">
               Help improve RoleFuse's AI
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-[10px] sm:text-xs text-slate-500 leading-relaxed">
               Share anonymized resume &amp; job data for model training. Never sold, never attached to your name.
             </p>
 
             {/* Bullet guarantees */}
-            <ul className="mt-3 space-y-1.5">
+            <ul className="mt-2 sm:mt-3 space-y-1 sm:space-y-1.5">
               {[
                 "All names, emails & phone numbers stripped before storage",
                 "Never sold to third parties or recruiters",
                 "Used only to improve RoleFuse's keyword matching accuracy",
                 "You can withdraw consent at any time — takes effect immediately",
               ].map((line) => (
-                <li key={line} className="flex items-start gap-1.5 text-[11px] text-slate-500 font-medium">
+                <li key={line} className="flex items-start gap-1.5 text-[9px] sm:text-[11px] text-slate-500 font-medium">
                   <ShieldCheck className="h-3 w-3 text-[#0d6e5a] mt-0.5 shrink-0" />
                   <span>{line}</span>
                 </li>
@@ -141,12 +141,12 @@ export function DataPreferencesModal({ isOpen, onClose }: DataPreferencesModalPr
             role="switch"
             aria-checked={enabled}
             onClick={() => setEnabled((v) => !v)}
-            className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none mt-0.5 ${
+            className={`relative inline-flex h-6 w-11 sm:h-7 sm:w-12 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none mt-0.5 ${
               enabled ? "bg-[#0d6e5a]" : "bg-slate-300"
             }`}
           >
             <span
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out mt-1 ${
+              className={`pointer-events-none inline-block h-4 w-4 sm:h-5 sm:w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out mt-1 ${
                 enabled ? "translate-x-6" : "translate-x-1"
               }`}
             />
@@ -155,7 +155,7 @@ export function DataPreferencesModal({ isOpen, onClose }: DataPreferencesModalPr
 
         {/* Current status pill */}
         <div
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-semibold select-none transition-colors ${
+          className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-semibold select-none transition-colors ${
             enabled
               ? "bg-emerald-50 border-emerald-200 text-emerald-800"
               : "bg-slate-50 border-slate-200 text-slate-600"
@@ -164,14 +164,16 @@ export function DataPreferencesModal({ isOpen, onClose }: DataPreferencesModalPr
           <span
             className={`h-2 w-2 rounded-full shrink-0 ${enabled ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`}
           />
-          {enabled
-            ? "Your anonymized data helps train RoleFuse's AI. Thank you!"
-            : "You have opted out. Your data will not be used for training."}
+          <span className="leading-snug">
+            {enabled
+              ? "Your anonymized data helps train RoleFuse's AI. Thank you!"
+              : "You have opted out. Your data will not be used for training."}
+          </span>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-0 select-none">
-          <span className="text-xs font-mono text-slate-400">
+          <span className="text-[10px] sm:text-xs font-mono text-slate-400">
             {saving
               ? "saving…"
               : saved
@@ -181,7 +183,7 @@ export function DataPreferencesModal({ isOpen, onClose }: DataPreferencesModalPr
           <button
             type="button"
             onClick={onClose}
-            className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold px-6 py-2 rounded-xl text-xs shadow-sm transition-colors cursor-pointer"
+            className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold px-4 py-1.5 sm:px-6 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs shadow-xs transition-colors cursor-pointer"
           >
             Done
           </button>
