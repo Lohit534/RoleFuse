@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "frontend",
+    "Rolefuse",
     "admin-portal"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspace=frontend",
-    "start": "npm run start --workspace=frontend",
-    "lint": "npm run lint --workspace=frontend"
+    "dev": "npm run dev --workspace=Rolefuse",
+    "build": "npm run build --workspace=Rolefuse",
+    "start": "npm run start --workspace=Rolefuse",
+    "lint": "npm run lint --workspace=Rolefuse"
   },
   "dependencies": {
     "enhanced-resolve": "^5.26.1",

@@ -114,8 +114,9 @@ export async function GET(request: NextRequest) {
       creditMap[c.userId] = c;
     }
 
-    // 4b. Fetch PaymentLog to cross-reference payment expiration dates
+    // 4b. Fetch PaymentLog to cross-reference payment expiration dates and analytics
     const paymentMap: Record<string, any> = {};
+    let dbPaymentLogs: any[] = [];
     try {
       const { data: dbPayments } = await adminClient
         .from("PaymentLog")
@@ -123,6 +124,7 @@ export async function GET(request: NextRequest) {
         .order("createdAt", { ascending: false });
 
       if (Array.isArray(dbPayments)) {
+        dbPaymentLogs = dbPayments;
         for (const p of dbPayments) {
           if (p.userId && !paymentMap[p.userId]) paymentMap[p.userId] = p;
           if (p.email && !paymentMap[p.email.toLowerCase().trim()]) paymentMap[p.email.toLowerCase().trim()] = p;
@@ -218,9 +220,25 @@ export async function GET(request: NextRequest) {
       totalTickets = tickCount || 0;
     } catch {}
 
+    // Revenue & Paid Users Analytics
+    const totalRevenue = dbPaymentLogs.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+    const uniquePayers = new Set(dbPaymentLogs.map((p: any) => p.userId || p.email).filter(Boolean));
+    const paidCount = uniquePayers.size;
+    const recentPayments = dbPaymentLogs.slice(0, 20).map((p: any) => ({
+      id: p.razorpayPaymentId || p.id,
+      email: p.email,
+      planId: p.planId,
+      billingCycle: p.billingCycle,
+      amount: p.amount,
+      createdAt: p.createdAt,
+    }));
+
     const analytics = {
       totalOptimizations,
       totalTickets,
+      totalRevenue,
+      paidCount,
+      recentPayments,
     };
 
     return NextResponse.json(

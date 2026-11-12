@@ -10,7 +10,8 @@ import {
   Trash2, CheckCircle2, RefreshCw, Menu, X,
   Bell, ChevronRight, Activity, BarChart3,
   ArrowUpRight, ArrowDownRight, ArrowRight, Filter, Eye, Send,
-  Shield, CreditCard, ShieldCheck, Radio, Tag, Zap, Plus
+  Shield, CreditCard, ShieldCheck, Radio, Tag, Zap, Plus,
+  Download, UserPlus, Copy, Check
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -96,6 +97,15 @@ export default function AdminDashboard() {
   const [deleteTargetFeedbackId, setDeleteTargetFeedbackId] = useState<string | null>(null);
 
   const [refreshing, setRefreshing] = useState(false);
+
+  // Invite User state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [invitePlan, setInvitePlan] = useState<"free" | "premium" | "promax" | "owner">("promax");
+  const [inviting, setInviting] = useState(false);
+  const [inviteResult, setInviteResult] = useState<{ emailSent: boolean; inviteLink?: string; message: string; email: string } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -447,7 +457,149 @@ export default function AdminDashboard() {
   const payingUsers = post50UsersList.filter(u => u.plan === "premium" || u.plan === "promax");
   const paidPremium = payingUsers.filter(u => u.plan === "premium").length;
   const paidProMax = payingUsers.filter(u => u.plan === "promax").length;
-  const totalRevenue = paidPremium * 99 + paidProMax * 199;
+  const totalRevenue = (analytics?.totalRevenue && analytics.totalRevenue > 0)
+    ? analytics.totalRevenue
+    : (paidPremium * 104 + paidProMax * 209);
+
+  const realPaidCount = analytics?.paidCount || payingUsers.length;
+  const conversionRate = totalUsers > 0 ? (((realPaidCount) / totalUsers) * 100).toFixed(1) : "0.0";
+
+  // User registration growth data over last 14 days
+  const userGrowthData = React.useMemo(() => {
+    const dayMap = new Map<string, number>();
+    const now = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      dayMap.set(key, 0);
+    }
+    for (const u of users) {
+      if (!u.createdAt) continue;
+      const key = new Date(u.createdAt).toISOString().slice(0, 10);
+      if (dayMap.has(key)) {
+        dayMap.set(key, (dayMap.get(key) || 0) + 1);
+      }
+    }
+    let running = 0;
+    return Array.from(dayMap.entries()).map(([dateStr, count]) => {
+      running += count;
+      const [, m, d] = dateStr.split("-");
+      return {
+        date: `${m}/${d}`,
+        fullDate: dateStr,
+        daily: count,
+        cumulative: running,
+      };
+    });
+  }, [users]);
+
+  // Monthly revenue & order trends over the last 4 months
+  const revenueTrendsData = React.useMemo(() => {
+    const monthMap = new Map<string, { revenue: number; orders: number }>();
+    const now = new Date();
+    for (let i = 3; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toISOString().slice(0, 7);
+      monthMap.set(key, { revenue: 0, orders: 0 });
+    }
+
+    const payments = analytics?.recentPayments || [];
+    for (const p of payments) {
+      const pDate = p.createdAt ? new Date(p.createdAt) : now;
+      const key = pDate.toISOString().slice(0, 7);
+      if (monthMap.has(key)) {
+        const prev = monthMap.get(key)!;
+        const amt = Number(p.amount) || (p.planId === "promax" ? 209 : 104);
+        monthMap.set(key, {
+          revenue: prev.revenue + amt,
+          orders: prev.orders + 1,
+        });
+      }
+    }
+
+    if (payments.length === 0 && (analytics?.totalRevenue || 0) > 0) {
+      const curKey = now.toISOString().slice(0, 7);
+      monthMap.set(curKey, {
+        revenue: analytics.totalRevenue,
+        orders: analytics.paidCount || 1,
+      });
+    }
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return Array.from(monthMap.entries()).map(([mStr, item]) => {
+      const [y, m] = mStr.split("-");
+      const label = `${monthNames[parseInt(m, 10) - 1]} '${y.slice(2)}`;
+      return {
+        month: label,
+        revenue: item.revenue,
+        orders: item.orders,
+      };
+    });
+  }, [analytics]);
+
+  const exportUsersToCSV = () => {
+    if (users.length === 0) {
+      toast.error("No users to export");
+      return;
+    }
+    const headers = ["ID", "Email", "Name", "Plan", "Paid Credits", "Free Used", "Created At"];
+    const rows = users.map(u => [
+      `"${u.id}"`,
+      `"${u.email}"`,
+      `"${u.name || ""}"`,
+      `"${u.plan}"`,
+      u.paidCredits,
+      u.freeUsed,
+      `"${new Date(u.createdAt).toISOString()}"`,
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `rolefuse_users_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Users CSV exported!");
+  };
+
+  const handleInviteUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail || !inviteEmail.includes("@")) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    setInviting(true);
+    try {
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: authHeaders(accessToken),
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          name: inviteName.trim(),
+          planId: invitePlan,
+          origin: "https://rolefuse.in",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setInviteResult({
+          emailSent: Boolean(data.emailSent),
+          inviteLink: data.inviteLink,
+          message: data.message,
+          email: inviteEmail.trim(),
+        });
+        toast.success(data.emailSent ? "Invitation dispatched to email!" : "Invitation link generated!");
+        loadUsers(accessToken);
+      } else {
+        toast.error(data.error || "Failed to invite user.");
+      }
+    } catch {
+      toast.error("Connection error while sending invitation.");
+    } finally {
+      setInviting(false);
+    }
+  };
 
   const filteredUsers = users.filter(u => {
     const q = userSearch.toLowerCase();
@@ -777,6 +929,209 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Financial Health Summary strip */}
+              <div className="admin-card p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-[#0d6e5a] bg-gradient-to-r from-emerald-50/50 via-white to-teal-50/30">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-[#0d6e5a]/10 flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-5 w-5 text-[#0d6e5a]" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Financial & Conversion Health</h3>
+                    <p className="text-[11px] text-slate-500">Live platform SaaS metrics based on registered user records</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-600 font-medium">
+                  <span>Collected: <strong className="text-slate-900 font-extrabold">₹{totalRevenue.toLocaleString()}</strong></span>
+                  <span className="text-slate-300">·</span>
+                  <span>Paying Users: <strong className="text-[#0d6e5a] font-extrabold">{realPaidCount}</strong></span>
+                  <span className="text-slate-300">·</span>
+                  <span>Total Users: <strong className="text-slate-900 font-extrabold">{totalUsers}</strong></span>
+                  <span className="text-slate-300">·</span>
+                  <span>Conversion: <strong className="text-emerald-700 font-extrabold">{conversionRate}%</strong></span>
+                </div>
+              </div>
+
+              {/* Dynamic Visual Analytics Charts Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Chart 1: Daily User Registration Growth */}
+                <div className="admin-card p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <Users className="h-4 w-4 text-[#0d6e5a]" />
+                        User Registration Growth (Last 14 Days)
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Daily candidate signups and cumulative growth curve</p>
+                    </div>
+                    <span className="text-xs font-black text-[#0d6e5a] bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-100">
+                      +{userGrowthData.reduce((a, b) => a + b.daily, 0)} new
+                    </span>
+                  </div>
+
+                  <div className="h-48 w-full pt-4">
+                    {(() => {
+                      const maxVal = Math.max(...userGrowthData.map(d => d.cumulative), 5);
+                      const points = userGrowthData.map((d, i) => {
+                        const x = (i / (userGrowthData.length - 1 || 1)) * 100;
+                        const y = 100 - (d.cumulative / maxVal) * 85;
+                        return `${x},${y}`;
+                      }).join(" ");
+
+                      return (
+                        <div className="relative h-full w-full">
+                          <svg className="h-full w-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <defs>
+                              <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#0d6e5a" stopOpacity="0.25" />
+                                <stop offset="100%" stopColor="#0d6e5a" stopOpacity="0.0" />
+                              </linearGradient>
+                            </defs>
+                            <line x1="0" y1="20" x2="100" y2="20" stroke="#f1f5f9" strokeDasharray="2,2" vectorEffect="non-scaling-stroke" />
+                            <line x1="0" y1="60" x2="100" y2="60" stroke="#f1f5f9" strokeDasharray="2,2" vectorEffect="non-scaling-stroke" />
+                            <line x1="0" y1="100" x2="100" y2="100" stroke="#e2e8f0" vectorEffect="non-scaling-stroke" />
+
+                            <polygon
+                              points={`0,100 ${points} 100,100`}
+                              fill="url(#growthGrad)"
+                            />
+
+                            <polyline
+                              fill="none"
+                              stroke="#0d6e5a"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              points={points}
+                              vectorEffect="non-scaling-stroke"
+                            />
+
+                            {userGrowthData.map((d, i) => {
+                              const cx = (i / (userGrowthData.length - 1 || 1)) * 100;
+                              const cy = 100 - (d.cumulative / maxVal) * 85;
+                              return (
+                                <circle
+                                  key={i}
+                                  cx={cx}
+                                  cy={cy}
+                                  r="2"
+                                  className="fill-[#0d6e5a] stroke-white stroke-[1.5]"
+                                  vectorEffect="non-scaling-stroke"
+                                />
+                              );
+                            })}
+                          </svg>
+
+                          <div className="flex justify-between text-[10px] text-slate-400 mt-2 select-none">
+                            {userGrowthData.filter((_, i) => i % 3 === 0 || i === userGrowthData.length - 1).map((d, i) => (
+                              <span key={i}>{d.date}</span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Chart 2: Monthly Revenue Trends */}
+                <div className="admin-card p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-[#0d6e5a]" />
+                        Monthly Revenue & Orders
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Razorpay transaction volume over past 4 months</p>
+                    </div>
+                    <span className="text-xs font-black text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg">
+                      ₹{totalRevenue.toLocaleString()} Total
+                    </span>
+                  </div>
+
+                  <div className="h-48 w-full pt-4">
+                    {(() => {
+                      const maxRev = Math.max(...revenueTrendsData.map(d => d.revenue), 1000);
+                      return (
+                        <div className="h-full flex flex-col justify-end">
+                          <div className="grid grid-cols-4 gap-4 h-36 items-end pb-2 border-b border-slate-100">
+                            {revenueTrendsData.map((d, i) => {
+                              const hPct = Math.max(Math.round((d.revenue / maxRev) * 100), 8);
+                              return (
+                                <div key={i} className="flex flex-col items-center gap-1.5 h-full justify-end group">
+                                  <span className="text-[10px] font-black text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    ₹{d.revenue}
+                                  </span>
+                                  <div
+                                    style={{ height: `${hPct}%` }}
+                                    className="w-full max-w-[48px] bg-gradient-to-t from-[#0d6e5a] to-[#14b8a6] rounded-t-lg transition-all duration-500 group-hover:brightness-110 shadow-xs"
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="grid grid-cols-4 gap-4 text-center text-[10px] text-slate-500 font-bold pt-2">
+                            {revenueTrendsData.map((d, i) => (
+                              <div key={i} className="flex flex-col">
+                                <span>{d.month}</span>
+                                <span className="text-[9px] text-slate-400 font-normal">{d.orders} orders</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Real Payments Feed */}
+              {Array.isArray(analytics?.recentPayments) && analytics.recentPayments.length > 0 && (
+                <div className="admin-card p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-[#0d6e5a]" />
+                        Recent Live Transactions
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Verified payment captures from Razorpay</p>
+                    </div>
+                    <span className="text-xs font-bold text-slate-500">
+                      {analytics.recentPayments.length} transactions
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100 bg-slate-50/50">
+                        <tr>
+                          <th className="py-2.5 px-3">Transaction ID</th>
+                          <th className="py-2.5 px-3">Candidate</th>
+                          <th className="py-2.5 px-3">Plan</th>
+                          <th className="py-2.5 px-3">Amount</th>
+                          <th className="py-2.5 px-3">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {analytics.recentPayments.slice(0, 10).map((p: any, i: number) => (
+                          <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-2.5 px-3 font-mono text-[10px] text-slate-500">{p.id || "tx_direct"}</td>
+                            <td className="py-2.5 px-3 font-bold text-slate-900">{p.email}</td>
+                            <td className="py-2.5 px-3">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-50 text-[#0d6e5a] border border-teal-200">
+                                {p.planId || "Pro"}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-extrabold text-slate-900">₹{p.amount || 0}</td>
+                            <td className="py-2.5 px-3 text-slate-400 text-[10px]">
+                              {p.createdAt ? new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Recent"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Quick actions */}
               <div className="admin-card p-6">
                 <h3 className="text-sm font-bold text-slate-900 mb-4">Quick Actions</h3>
@@ -808,6 +1163,27 @@ export default function AdminDashboard() {
                 <div>
                   <h1 className="text-xl font-black text-slate-900">Users & Billing</h1>
                   <p className="text-xs text-slate-500 mt-0.5">Search and manage all registered users and their subscription tiers.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={exportUsersToCSV}
+                    className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5 text-slate-500" />
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={() => {
+                      setInviteResult(null);
+                      setInviteEmail("");
+                      setInviteName("");
+                      setShowInviteModal(true);
+                    }}
+                    className="flex items-center gap-2 px-3.5 py-2 bg-[#0d6e5a] hover:bg-[#0b5c4b] text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Invite User
+                  </button>
                 </div>
               </div>
 
@@ -1688,6 +2064,139 @@ export default function AdminDashboard() {
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CENTERED INVITE USER MODAL */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-[#0d6e5a]/10 flex items-center justify-center text-[#0d6e5a] shrink-0">
+                  <UserPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Invite Candidate / Admin</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Generate an onboarding link with pre-assigned subscription tier.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {inviteResult ? (
+              <div className="space-y-4 pt-2">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-800 font-bold">
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                    <span>{inviteResult.emailSent ? "Invitation Dispatched" : "Invite Link Generated"}</span>
+                  </div>
+                  <p className="text-emerald-700 leading-relaxed">{inviteResult.message}</p>
+                </div>
+
+                {inviteResult.inviteLink && (
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-700">Direct Invitation Link</label>
+                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-2">
+                      <input
+                        readOnly
+                        value={inviteResult.inviteLink}
+                        className="bg-transparent text-xs text-slate-600 w-full outline-none font-mono truncate"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(inviteResult.inviteLink || "");
+                          setCopiedLink(true);
+                          toast.success("Link copied to clipboard!");
+                          setTimeout(() => setCopiedLink(false), 2000);
+                        }}
+                        className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1 shrink-0 cursor-pointer"
+                      >
+                        {copiedLink ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                        <span>{copiedLink ? "Copied" : "Copy"}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => {
+                      setInviteResult(null);
+                      setInviteEmail("");
+                      setInviteName("");
+                    }}
+                    className="text-xs font-bold text-[#0d6e5a] hover:underline cursor-pointer"
+                  >
+                    Invite Another User
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleInviteUser} className="space-y-3.5 pt-2">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="user@example.com"
+                    className="w-full h-10 px-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-[#0d6e5a] transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Full Name (Optional)</label>
+                  <input
+                    type="text"
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    placeholder="Jane Doe"
+                    className="w-full h-10 px-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-[#0d6e5a] transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Subscription Tier</label>
+                  <select
+                    value={invitePlan}
+                    onChange={(e: any) => setInvitePlan(e.target.value)}
+                    className="w-full h-10 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-[#0d6e5a] transition-all font-semibold"
+                  >
+                    <option value="promax">Pro Max (90 credits/mo)</option>
+                    <option value="premium">Premium Pro (20 credits/mo)</option>
+                    <option value="free">Free Tier (1 credit)</option>
+                    <option value="owner">Owner / Co-Admin</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteModal(false)}
+                    className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={inviting}
+                    className="bg-[#0d6e5a] hover:bg-[#0b5c4b] text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {inviting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <span>{inviting ? "Sending..." : "Send Invitation"}</span>
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

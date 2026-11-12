@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/admin",
-        destination: "/dashboard/admin",
+        destination: "https://rolefuseadmin.vercel.app",
         permanent: false,
       },
     ];

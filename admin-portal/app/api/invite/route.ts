@@ -42,13 +42,13 @@ function getBaseAppUrl(request: NextRequest, bodyOrigin?: string): string {
     return headerOrigin.replace(/\/$/, "");
   }
 
-  return "https://fasthireai.com";
+  return "https://rolefuse.in";
 }
 
 function sanitizeInviteLink(link: string | null, targetBaseUrl: string): string | null {
   if (!link) return null;
   const safeBase = (!targetBaseUrl || targetBaseUrl.includes("localhost") || targetBaseUrl.includes("127.0.0.1"))
-    ? "https://fasthireai.com"
+    ? "https://rolefuse.in"
     : targetBaseUrl.replace(/\/$/, "");
 
   try {
