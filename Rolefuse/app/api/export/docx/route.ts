@@ -46,18 +46,19 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse Request Body
     const body = await request.json();
-    const { resumeId, text } = body;
+    const { resumeId, text, jobTitle: bodyJobTitle } = body;
     if (!resumeId && !text) {
       return NextResponse.json({ error: "Missing resumeId or text content" }, { status: 400 });
     }
 
     let textToExport = text || "";
+    let exportJobTitle = bodyJobTitle;
 
     if (!textToExport && resumeId) {
       // 3. Fetch Resume and Verify Ownership
       const { data: resume, error: fetchErr } = await admin
         .from("Resume")
-        .select("id, userId, optimizedText")
+        .select("id, userId, optimizedText, jobTitle")
         .eq("id", resumeId)
         .maybeSingle();
 
@@ -78,6 +79,9 @@ export async function POST(request: NextRequest) {
       }
 
       textToExport = resume.optimizedText || "";
+      if (resume.jobTitle) {
+        exportJobTitle = resume.jobTitle;
+      }
     }
 
     // 4. Generate DOCX Document
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
     const docxBuffer = await generateDOCX(textToExport, watermarked);
 
     // 5. Return DOCX download response
-    const filename = getCleanExportFilename(textToExport, ".docx");
+    const filename = getCleanExportFilename(textToExport, ".docx", exportJobTitle);
     return new NextResponse(new Uint8Array(docxBuffer), {
       status: 200,
       headers: {

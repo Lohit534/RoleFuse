@@ -1,1866 +1,484 @@
 import React from "react";
-import { Font, Document, Page, Text, View, Link, StyleSheet, renderToBuffer, Svg, Path } from "@react-pdf/renderer";
+import {
+  Font,
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  renderToBuffer,
+  Svg,
+  Path,
+} from "@react-pdf/renderer";
 import { logger } from "../logger";
-import { estimateYearsOfExperience } from "../resume-format";
-import { looksLikeSentenceBullet } from "../ats/bullets";
-export { looksLikeSentenceBullet };
+import {
+  parseResume,
+  ParsedResume,
+  parseResumeIntoBlocks,
+  stripMarkdownAsterisks,
+  getCleanExportFilename,
+  toSectionTitle,
+  splitCertText,
+  isRoleOrTitle,
+  extractRoleFromResume,
+  cleanUrl,
+  computeDensityScale,
+  isFresherResume,
+  getMaxPages,
+  ParsedResumeBlock,
+  ResumeBlock,
+  ContactSegment,
+  SkillLine,
+  ProjectBlock,
+  JobBlock,
+  EducationBlock,
+  StandaloneLink,
+} from "../parser/resume-parser";
 
-// Register Times New Roman natively supported aliases
-Font.registerHyphenationCallback(word => [word]);
-
-const baseStyleDefs: Record<string, any> = {
-  page: {
-    fontFamily: 'Times-Roman',
-    fontSize: 10,
-    paddingTop: 34,
-    paddingBottom: 34,
-    paddingHorizontal: 44,
-    color: '#000000',
-    lineHeight: 1.22,
-    backgroundColor: '#FFFFFF',
-  },
-
-  // ── NAME (LaTeX \scshape small caps) ──
-  name: {
-    fontFamily: 'Times-Roman',
-    fontSize: 24,
-    textAlign: 'center',
-    marginBottom: 1,
-    letterSpacing: 0.6,
-    color: '#000000',
-    lineHeight: 1.1,
-  },
-  nameSmallCaps: {
-    fontFamily: 'Times-Roman',
-    fontSize: 19,
-  },
-
-  // ── SUBTITLE ROLE ──
-  subtitle: {
-    fontFamily: 'Times-Bold',
-    fontSize: 12.5,
-    textAlign: 'center',
-    marginBottom: 5,
-    color: '#000000',
-  },
-
-  // ── CONTACT LINE ──
-  contactRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    marginTop: 0,
-    marginBottom: 6,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 7,
-    marginVertical: 1,
-  },
-  contactText: {
-    fontFamily: 'Times-Roman',
-    fontSize: 9.5,
-    color: '#000000',
-  },
-  contactLink: {
-    fontFamily: 'Times-Roman',
-    fontSize: 9.5,
-    color: '#000000',
-    textDecoration: 'none',
-  },
-
-  // ── SECTION HEADER (bold, Title Case, full-width rule) ──
-  sectionHeaderWrapper: {
-    marginTop: 7,
-    marginBottom: 3,
-  },
-  sectionHeader: {
-    fontFamily: 'Times-Bold',
-    fontSize: 12,
-    color: '#000000',
-    marginBottom: 1,
-  },
-  sectionUnderline: {
-    borderBottomWidth: 0.6,
-    borderBottomColor: '#000000',
-    width: '100%',
-  },
-
-  // ── PROFESSIONAL SUMMARY ──
-  summaryText: {
-    fontFamily: 'Times-Roman',
-    fontSize: 10,
-    lineHeight: 1.25,
-    marginBottom: 2,
-    textAlign: 'justify',
-  },
-
-  // ── SKILLS ──
-  skillLine: {
-    fontFamily: 'Times-Roman',
-    fontSize: 10,
-    lineHeight: 1.25,
-    marginBottom: 1,
-  },
-  skillLabel: {
-    fontFamily: 'Times-Bold',
-    fontSize: 10,
-    color: '#000000',
-  },
-  skillValue: {
-    fontFamily: 'Times-Roman',
-    fontSize: 10,
-    color: '#000000',
-  },
-
-  // ── PROJECT TITLE (Name — Tech, all bold; year bold right) ──
-  projectTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: 3,
-    marginBottom: 1,
-  },
-  projectTitle: {
-    fontFamily: 'Times-Bold',
-    fontSize: 10,
-    flex: 1,
-  },
-  projectLink: {
-    fontFamily: 'Times-Roman',
-    fontSize: 9.5,
-    color: '#000000',
-    textDecoration: 'none',
-    marginLeft: 6,
-  },
-  projectTech: {
-    fontFamily: 'Times-Bold',
-    fontSize: 10,
-    color: '#000000',
-  },
-  projectDates: {
-    fontFamily: 'Times-Bold',
-    fontSize: 10,
-    color: '#000000',
-    textAlign: 'right',
-    marginLeft: 8,
-  },
-
-  // ── EXPERIENCE / INTERNSHIP ──
-  jobTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: 3,
-    marginBottom: 0,
-  },
-  jobTitle: {
-    fontFamily: 'Times-Bold',
-    fontSize: 10,
-    flex: 1,
-  },
-  jobDates: {
-    fontFamily: 'Times-Bold',
-    fontSize: 10,
-    color: '#000000',
-    textAlign: 'right',
-    marginLeft: 8,
-  },
-  jobSubRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 2,
-  },
-  jobCompany: {
-    fontFamily: 'Times-Italic',
-    fontSize: 10,
-    color: '#000000',
-    flex: 1,
-  },
-  jobTech: {
-    fontFamily: 'Times-Italic',
-    fontSize: 10,
-    color: '#000000',
-    textAlign: 'right',
-    marginLeft: 8,
-  },
-
-  // ── EDUCATION ──
-  educationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginTop: 2,
-    marginBottom: 0,
-  },
-  educationDegree: {
-    fontFamily: 'Times-Bold',
-    fontSize: 10,
-    flex: 1,
-  },
-  educationDates: {
-    fontFamily: 'Times-Bold',
-    fontSize: 10,
-    textAlign: 'right',
-    marginLeft: 8,
-  },
-  educationInstitution: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 2,
-  },
-  educationSchool: {
-    fontFamily: 'Times-Italic',
-    fontSize: 10,
-    color: '#000000',
-    flex: 1,
-  },
-  educationGPA: {
-    fontFamily: 'Times-Italic',
-    fontSize: 10,
-    textAlign: 'right',
-    marginLeft: 8,
-  },
-
-  // ── BULLET POINTS ──
-  bulletRow: {
-    flexDirection: 'row',
-    marginBottom: 1,
-    paddingLeft: 8,
-  },
-  bulletDot: {
-    width: 10,
-    fontSize: 10,
-    fontFamily: 'Times-Roman',
-  },
-  bulletText: {
-    flex: 1,
-    fontFamily: 'Times-Roman',
-    fontSize: 10,
-    lineHeight: 1.22,
-    textAlign: 'justify',
-  },
-  bulletBold: {
-    fontFamily: 'Times-Bold',
-  },
-
-  // ── CERTIFICATIONS / LANGUAGES ──
-  certItem: {
-    fontFamily: 'Times-Roman',
-    fontSize: 10,
-    marginBottom: 1,
-  },
-
-  // ── STANDALONE LINK ──
-  link: {
-    color: '#000000',
-    textDecoration: 'none',
-    fontFamily: 'Times-Roman',
-    fontSize: 10,
-    marginBottom: 1,
-  },
-  spacer: {
-    height: 1,
-  },
+// Re-export shared parser utilities for complete backward compatibility across the app
+export {
+  parseResume,
+  parseResumeIntoBlocks,
+  stripMarkdownAsterisks,
+  getCleanExportFilename,
+  toSectionTitle,
+  splitCertText,
+  isRoleOrTitle,
+  extractRoleFromResume,
+  cleanUrl,
+  computeDensityScale,
+  isFresherResume,
+  getMaxPages,
+};
+export type {
+  ParsedResume,
+  ParsedResumeBlock,
+  ResumeBlock,
+  ContactSegment,
+  SkillLine,
+  ProjectBlock,
+  JobBlock,
+  EducationBlock,
+  StandaloneLink,
 };
 
-const ContactIcon: React.FC<{ type: 'phone' | 'email' | 'linkedin' | 'github' | 'globe' }> = ({ type }) => {
+// Register hyphenation callback to prevent word breaks
+Font.registerHyphenationCallback((word) => [word]);
+
+// Contact icons (Vector SVGs)
+const ContactIcon: React.FC<{ type: string }> = ({ type }) => {
   let path = "";
-  if (type === 'phone') {
-    path = "M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1v3.5a1 1 0 01-1 1A19.93 19.93 0 012 3a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.21 2.2z";
-  } else if (type === 'email') {
-    path = "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z";
-  } else if (type === 'linkedin') {
-    path = "M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v7.6h2.79v-7.6H6.46M7.86 6.5a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z";
-  } else if (type === 'github') {
-    path = "M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z";
+  if (type === "phone") {
+    path =
+      "M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1v3.5a1 1 0 01-1 1A19.93 19.93 0 012 3a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.21 2.2z";
+  } else if (type === "email") {
+    path =
+      "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z";
+  } else if (type === "linkedin") {
+    path =
+      "M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v7.6h2.79v-7.6H6.46M7.86 6.5a1.63 1.63 0 1 0 0 3.26 1.63 1.63 0 0 0 0-3.26z";
+  } else if (type === "github") {
+    path =
+      "M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z";
   } else {
-    path = "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z";
+    // portfolio / globe
+    path =
+      "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z";
   }
 
   return (
     <Svg width={8} height={8} viewBox="0 0 24 24" style={{ marginRight: 3 }}>
-      <Path d={path} fill="#000000" />
+      <Path d={path} fill="#444444" />
     </Svg>
   );
 };
 
-const styles = StyleSheet.create(baseStyleDefs) as Record<string, any>;
-
-const SCALABLE_STYLE_KEYS = new Set([
-  'fontSize', 'marginTop', 'marginBottom', 'paddingTop', 'paddingBottom', 'height', 'width', 'paddingLeft',
-]);
-
-/** Returns a density-scaled copy of the universal template styles (1 = default). */
-function getScaledStyles(scale: number): Record<string, any> {
-  if (scale >= 0.999) return styles;
-  const scaled: Record<string, any> = {};
-  for (const [name, def] of Object.entries(baseStyleDefs)) {
-    const copy: Record<string, any> = { ...def };
-    for (const key of Object.keys(copy)) {
-      if (SCALABLE_STYLE_KEYS.has(key) && typeof copy[key] === 'number') {
-        copy[key] = Math.round(copy[key] * scale * 100) / 100;
-      }
-    }
-    scaled[name] = copy;
-  }
-  // Tighter page margins in compact mode
-  scaled.page = {
-    ...scaled.page,
-    paddingTop: Math.max(22, Math.round(34 * scale)),
-    paddingBottom: Math.max(22, Math.round(34 * scale)),
-    paddingHorizontal: Math.max(32, Math.round(44 * scale)),
-  };
-  return StyleSheet.create(scaled) as Record<string, any>;
-}
-
-/** Rough rendered height (pt) of the blocks at scale 1 on A4 with the default template. */
-function estimateContentHeight(blocks: ParsedResumeBlock[]): number {
-  const LINE = 12.2; // 10pt * 1.22 line height
-  const lines = (text: string, charsPerLine: number) => Math.max(1, Math.ceil((text || '').length / charsPerLine));
-  let h = 0;
-  for (const b of blocks) {
-    switch (b.type) {
-      case 'name': h += 28; break;
-      case 'subtitle': h += 20; break;
-      case 'contact': h += Math.ceil(b.segments.length / 3) * 13 + 6; break;
-      case 'section': h += 24; break;
-      case 'summary': case 'normal': h += lines(b.text, 112) * 12.5 + 2; break;
-      case 'skillLine': h += lines(`${b.label}: ${b.value}`, 110) * 12.5 + 1; break;
-      case 'project': h += 16 + b.bullets.reduce((s, x) => s + lines(x, 104) * LINE + 1, 0); break;
-      case 'job': h += 15 + (b.company || b.tech ? 14 : 0) + b.bullets.reduce((s, x) => s + lines(x, 104) * LINE + 1, 0); break;
-      case 'education': h += 30; break;
-      case 'bullet': case 'cert': h += lines(b.text, 104) * LINE + 1; break;
-      case 'link': h += 13; break;
-      case 'spacer': h += 1; break;
-    }
-  }
-  return h;
-}
-
-/** Fresher = less than 1 year of professional (non-internship) experience. */
-export function isFresherResume(text: string): boolean {
-  return estimateYearsOfExperience(text) < 1;
-}
-
-/** Max pages: fresher / <5 yrs => 1 page, 5+ yrs => up to 2 pages. */
-export function getMaxPages(text: string): 1 | 2 {
-  return estimateYearsOfExperience(text) >= 5 ? 2 : 1;
-}
-
-/** Minimum density scale allowed (single-page resumes may shrink more to stay on one page). */
-export const MIN_DENSITY_SCALE = 0.7;
-
-/**
- * Universal page-fit: fresher / <5 yrs => 1 page, 5+ yrs => up to 2 pages.
- * Height scales ~ scale² (smaller font => more chars per line AND shorter lines).
- */
-export function computeDensityScale(text: string, blocks: ParsedResumeBlock[]): number {
-  const maxPages = getMaxPages(text);
-  const capacity = 774 * maxPages; // A4 842pt - 68pt vertical padding
-  const height = estimateContentHeight(blocks);
-  if (height <= capacity) return 1;
-  const scale = Math.sqrt(capacity / height);
-  const floor = maxPages === 1 ? MIN_DENSITY_SCALE : 0.8;
-  return Math.max(floor, Math.min(1, Math.floor(scale * 100) / 100));
-}
-
-const SMALL_TITLE_WORDS = new Set(['and', 'or', 'of', 'the', 'in', 'on', 'for', 'to', 'a', 'an', 'with']);
-
-/** "AWARDS & CERTIFICATIONS" -> "Awards & Certifications" (LaTeX-style section titles). */
-export function toSectionTitle(text: string): string {
-  const clean = stripMarkdownAsterisks(text || '').replace(/^#+\s*/, '').replace(/:\s*$/, '').trim();
-  return clean
-    .toLowerCase()
-    .split(/\s+/)
-    .map((w, i) => (i > 0 && SMALL_TITLE_WORDS.has(w) ? w : w.replace(/(^|[-/(])([a-z])/g, (_m, p, c) => p + c.toUpperCase())))
-    .join(' ');
-}
-
-/** Splits a name into small-caps runs: [{ text, big }] where big = first letter of each word. */
-export function toSmallCapsRuns(name: string): { text: string; big: boolean }[] {
-  const runs: { text: string; big: boolean }[] = [];
-  (name || '').trim().split(/(\s+)/).forEach((part) => {
-    if (!part) return;
-    if (/^\s+$/.test(part)) { runs.push({ text: ' ', big: false }); return; }
-    runs.push({ text: part.charAt(0).toUpperCase(), big: true });
-    if (part.length > 1) runs.push({ text: part.slice(1).toUpperCase(), big: false });
-  });
-  return runs;
-}
-
-/**
- * Certification / award line => bold title + regular issuing company/remainder.
- * Simple certifications: "• Title – Provider (Year)" -> bold title, normal provider.
- * Achievements / sentences (e.g. "Solved 150+ LeetCode problems", "Winner of Hackathon"):
- * Return empty title so the entire achievement is rendered in regular Times-Roman font (NOT bold).
- */
-export function splitCertText(text: string): { title: string; rest: string } {
-  let clean = stripMarkdownAsterisks(text || '').replace(/^[•\-\*–\s\u2022]+/, '').trim();
-  if (!clean) return { title: '', rest: '' };
-
-  // Detect achievement bullets:
-  // Starts with an action verb, metric/count, or is a long sentence bullet
-  const isAchievement =
-    /^(?:solved|won|ranked|secured|awarded|built|developed|engineered|spearheaded|achieved|completed|published|selected|scored|earned|received|participated|finalist|winner|top|1st|2nd|3rd)\b/i.test(clean) ||
-    /^\d+\+?\s+(?:problems?|challenges?|questions?|algorithms?|projects?)\b/i.test(clean);
-
-  if (isAchievement) {
-    return { title: '', rest: clean };
-  }
-
-  // Strip unwanted trailing verbose descriptive sentences/paragraphs added by AI
-  clean = clean.replace(/:\s*(?:Demonstrated|Covered|Learned|Acquired|Hands-on|Focusing|Validating|Gained|In-depth|Proven|Comprehensive|Built|Applied|Mastered|Specialized|Engineered|Trained|Focused).+$/i, '');
-  clean = clean.replace(/\s+[–—\-]\s*(?:Demonstrated|Covered|Learned|Acquired|Hands-on|Focusing|Validating|Gained|In-depth|Proven|Comprehensive|Built|Applied|Mastered|Specialized|Engineered|Trained|Focused).+$/i, '');
-
-  // Match: "Cert Name – Org Name (Year)" or "Cert Name | Org Name" or "Cert Name by/from Org"
-  const sepMatch = clean.match(/^(.+?)\s*(?:[–—]|\||\s-\s|\bby\b|\bfrom\b)\s*([^–—\-|]+(?:\s*\(\d{4}\))?.*)$/i);
-  if (sepMatch && sepMatch[1].trim().length >= 2 && sepMatch[1].trim().length <= 90) {
-    const title = sepMatch[1].trim();
-    let rest = sepMatch[2].trim();
-    rest = ' – ' + rest.replace(/^[–—\-|]\s*/, '').trim();
-    return { title, rest };
-  }
-
-  // Fallback: match standard hyphen/dash/year
-  const m = clean.match(/^(.{2,90}?)(\s[–—-]\s.*|\s\(\d{4}\).*)$/);
-  if (m) return { title: m[1].trim(), rest: ' ' + m[2].trim() };
-
-  // If no clear provider separator exists, do NOT bold the whole line!
-  // Return regular text so achievements and plain bullets remain unbolded.
-  return { title: '', rest: clean };
-}
-
-/** Collapse runs of spacers and drop spacers directly after headers (prevents ballooning length). */
-function compactBlocks(blocks: ParsedResumeBlock[]): ParsedResumeBlock[] {
-  const out: ParsedResumeBlock[] = [];
-  for (const b of blocks) {
-    const prev = out[out.length - 1];
-    if (b.type === 'spacer' && (!prev || prev.type === 'spacer' || prev.type === 'section' || prev.type === 'name' || prev.type === 'subtitle' || prev.type === 'contact')) continue;
-    out.push(b);
-  }
-  while (out.length && out[out.length - 1].type === 'spacer') out.pop();
-  return out;
-}
-
-const EDU_PLACEHOLDER = /^(?:university name|institution name|college name|school name|city,?\s*country|location|n\/a|\[[^\]]*\]|_+(?:_+)?|graduated|graduation|batch|year|passed\s*out|passing\s*year|completion|expected)\s*[:\-]?$/i;
-
-/** Removes placeholder / duplicated comma segments from education text. */
-function cleanEducationText(value: string): string {
-  if (!value) return value;
-  const seen = new Set<string>();
-  return value
-    .split(/\s*,\s*/)
-    .map((s) => s.trim())
-    .filter((s) => {
-      const k = s.toLowerCase();
-      if (!s || EDU_PLACEHOLDER.test(s) || seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    })
-    .join(', ');
-}
-
-const SECTION_NAMES = [
-  'PROFESSIONAL SUMMARY', 'SUMMARY', 'OBJECTIVE', 'PROFILE', 'CAREER OBJECTIVE', 'EXECUTIVE SUMMARY',
-  'TECHNICAL SKILLS', 'SKILLS', 'CORE SKILLS', 'SOFT SKILLS', 'SKILLS & COMPETENCIES', 'KEY SKILLS', 'CORE COMPETENCIES', 'AREAS OF EXPERTISE',
-  'EXPERIENCE', 'WORK EXPERIENCE', 'PROFESSIONAL EXPERIENCE', 'EMPLOYMENT HISTORY', 'INTERNSHIP', 'WORK HISTORY', 'INTERNSHIPS', 'INTERNSHIP EXPERIENCE', 'RELEVANT EXPERIENCE',
-  'PROJECTS', 'PERSONAL PROJECTS', 'KEY PROJECTS', 'ACADEMIC PROJECTS', 'TECHNICAL PROJECTS',
-  'AWARDS & CERTIFICATIONS', 'AWARDS AND CERTIFICATIONS', 'CERTIFICATIONS & AWARDS', 'CERTIFICATIONS AND AWARDS',
-  'CERTIFICATIONS & ACHIEVEMENTS', 'CERTIFICATIONS AND ACHIEVEMENTS', 'ACHIEVEMENTS & CERTIFICATIONS', 'ACHIEVEMENTS AND CERTIFICATIONS',
-  'CERTIFICATIONS', 'ACHIEVEMENTS', 'AWARDS', 'HONORS', 'CERTIFICATES', 'LICENSES & CERTIFICATIONS',
-  'EDUCATION', 'ACADEMIC BACKGROUND', 'QUALIFICATIONS', 'ACADEMICS', 'EDUCATION & TRAINING',
-  'LANGUAGES', 'LANGUAGES SPOKEN', 'LANGUAGES KNOWN', 'INTERESTS', 'VOLUNTEER',
-  'PUBLICATIONS', 'PUBLICATIONS & ACHIEVEMENTS', 'ACTIVITIES', 'EXTRA-CURRICULAR ACTIVITIES'
-];
-
-const URL_REGEX_G = /https?:\/\/[^\s]+|www\.[^\s]+/g;
-const URL_REGEX = /https?:\/\/[^\s]+|www\.[^\s]+/i;
-const EMAIL_REGEX = /[\w\.-]+@[\w\.-]+\.\w+/i;
-
-export interface ContactSegment {
-  text: string;
-  url?: string;
-  isLink: boolean;
-}
-
-export interface SkillLine {
-  label: string;
-  value: string;
-}
-
-export interface ProjectBlock {
-  name: string;
-  tech?: string;
-  dates?: string;
-  projectUrl?: string;
-  bullets: string[];
-}
-
-export interface JobBlock {
-  title: string;
-  company: string;
-  dates: string;
-  tech?: string;
-  bullets: string[];
-}
-
-export interface EducationBlock {
-  degree: string;
-  dates: string;
-  school: string;
-  gpa: string;
-}
-
-export interface StandaloneLink {
-  label: string;
-  url: string;
-}
-
-export type ParsedResumeBlock =
-  | { type: 'name'; text: string }
-  | { type: 'subtitle'; text: string }
-  | { type: 'contact'; segments: ContactSegment[] }
-  | { type: 'section'; text: string }
-  | { type: 'summary'; text: string }
-  | { type: 'skillLine'; label: string; value: string }
-  | { type: 'project'; name: string; tech?: string; dates?: string; projectUrl?: string; bullets: string[] }
-  | { type: 'job'; title: string; company: string; dates: string; tech?: string; bullets: string[] }
-  | { type: 'education'; degree: string; dates: string; school: string; gpa: string }
-  | { type: 'bullet'; text: string }
-  | { type: 'link'; label: string; url: string }
-  | { type: 'cert'; text: string }
-  | { type: 'normal'; text: string }
-  | { type: 'spacer' };
-
-export type ResumeBlock = ParsedResumeBlock;
-
-export function getCleanExportFilename(text: string, ext = ".pdf", jobTitle?: string | null): string {
-  // 1. If job name is there, use job name as filename (e.g. "Java_Backend_Developer_Resume.pdf")
-  const isGenericJob = !jobTitle || /^(?:untitled\s*resume|resume\s*optimization|target\s*role(?:\s*application)?|optimized\s*resume|general\s*application|resume)$/i.test(jobTitle.trim());
-  if (!isGenericJob && jobTitle) {
-    const cleanRole = jobTitle.replace(/[^a-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, "_");
-    if (cleanRole && cleanRole.length > 2) {
-      return `${cleanRole}_Resume${ext}`;
-    }
-  }
-
-  // 2. If not mentioned, set the user's name from first line of resume text
-  let candidateName = "";
-  if (text) {
-    const firstLine = text.trim().split("\n")[0] || "";
-    candidateName = firstLine
-      .replace(/^[#*•\s]+/, "")
-      .replace(/[^a-zA-Z0-9\s_]/g, "")
-      .trim()
-      .replace(/\s+/g, "_");
-  }
-
-  if (!candidateName || candidateName.length < 2) {
-    candidateName = "Resume";
-  }
-
-  candidateName = candidateName.replace(/_?optimized/gi, "").replace(/_?fasthire/gi, "").replace(/_?rolefuse/gi, "").trim();
-  if (!candidateName) candidateName = "Resume";
-
-  if (!candidateName.toUpperCase().includes("RESUME")) {
-    return `${candidateName}_Resume${ext}`;
-  }
-  return `${candidateName}${ext}`;
-}
-
-export function cleanUrl(url: string): string {
-  let clean = url.trim();
-  if (clean.endsWith(')') || clean.endsWith(']') || clean.endsWith(',')) {
-    clean = clean.substring(0, clean.length - 1);
-  }
-  if (!/^https?:\/\//i.test(clean)) {
-    clean = 'https://' + clean;
-  }
-  return clean;
-}
-
-export function stripMarkdownAsterisks(str: string): string {
-  if (!str) return "";
-  return str
-    .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")
-    .replace(/\*/g, "")
-    .replace(/\s*\|\|\s*/g, " || ")
-    .replace(/[ \t]+/g, " ")
-    .trim();
-}
-
-function swapEducationAndSkillsIfNeeded(blocks: ParsedResumeBlock[], isFresher = false): ParsedResumeBlock[] {
-  const sectionGroups: { category: string; blocks: ParsedResumeBlock[] }[] = [];
-  let currentGroup: { category: string; blocks: ParsedResumeBlock[] } = { category: 'HEADER', blocks: [] };
-
-  const getCategory = (rawName: string): string => {
-    const name = rawName.toUpperCase().replace(/[^A-Z ]/g, '').trim();
-    if (['PROFESSIONAL SUMMARY', 'SUMMARY', 'OBJECTIVE', 'PROFILE'].includes(name)) return 'SUMMARY';
-    if (['EXPERIENCE', 'WORK EXPERIENCE', 'PROFESSIONAL EXPERIENCE', 'EMPLOYMENT HISTORY', 'INTERNSHIP', 'INTERNSHIPS', 'WORK HISTORY'].includes(name)) return 'EXPERIENCE';
-    if (['PROJECTS', 'PERSONAL PROJECTS', 'KEY PROJECTS', 'ACADEMIC PROJECTS'].includes(name)) return 'PROJECTS';
-    if (['TECHNICAL SKILLS', 'SKILLS', 'CORE SKILLS', 'SOFT SKILLS', 'SKILLS & COMPETENCIES', 'KEY SKILLS'].includes(name)) return 'SKILLS';
-    if (['EDUCATION', 'ACADEMIC BACKGROUND', 'QUALIFICATIONS', 'ACADEMICS'].includes(name)) return 'EDUCATION';
-    if (['CERTIFICATIONS', 'CERTIFICATES', 'ACHIEVEMENTS', 'KEY ACHIEVEMENTS', 'AWARDS', 'HONORS', 'CERTIFICATIONS & ACHIEVEMENTS', 'CERTIFICATIONS AND ACHIEVEMENTS'].includes(name)) return 'CERTIFICATIONS & ACHIEVEMENTS';
-    if (['LANGUAGES', 'LANGUAGES SPOKEN', 'LANGUAGES KNOWN'].includes(name)) return 'LANGUAGES';
-    return name;
-  };
-
-  for (const block of blocks) {
-    if (block.type === 'section') {
-      if (currentGroup.blocks.length > 0) {
-        sectionGroups.push(currentGroup);
-      }
-      currentGroup = { category: getCategory(block.text), blocks: [block] };
-    } else {
-      currentGroup.blocks.push(block);
-    }
-  }
-  if (currentGroup.blocks.length > 0) {
-    sectionGroups.push(currentGroup);
-  }
-
-  // Merge duplicate category groups (e.g. multiple SKILLS sections or CERTIFICATIONS & ACHIEVEMENTS) into a single clean group
-  const mergedGroups: { category: string; blocks: ParsedResumeBlock[] }[] = [];
-  for (const group of sectionGroups) {
-    const existing = mergedGroups.find(g => g.category === group.category);
-    if (existing && existing.category !== 'HEADER') {
-      if (existing.category === 'CERTIFICATIONS & ACHIEVEMENTS') {
-        const secHeader = existing.blocks.find(b => b.type === 'section');
-        if (secHeader && secHeader.type === 'section') {
-          secHeader.text = 'CERTIFICATIONS & ACHIEVEMENTS';
-        }
-      }
-      // Append non-section blocks from the duplicate group, skipping redundant section header
-      const contentBlocks = group.blocks.filter(b => b.type !== 'section');
-      existing.blocks.push(...contentBlocks);
-    } else {
-      if (group.category === 'CERTIFICATIONS & ACHIEVEMENTS') {
-        const secHeader = group.blocks.find(b => b.type === 'section');
-        if (secHeader && secHeader.type === 'section') {
-          secHeader.text = 'CERTIFICATIONS & ACHIEVEMENTS';
-        }
-      }
-      mergedGroups.push(group);
-    }
-  }
-
-  // Recommended resume structure:
-  //   Fresher:     Header -> Summary -> Skills -> (Internships) -> Projects -> Certifications & Achievements -> Education -> Languages
-  //   Experienced: Header -> Summary -> Experience -> Skills -> Projects -> Certifications & Achievements -> Education -> Languages
-  const priorityOrder = isFresher
-    ? ['HEADER', 'SUMMARY', 'SKILLS', 'EXPERIENCE', 'PROJECTS', 'CERTIFICATIONS & ACHIEVEMENTS', 'EDUCATION', 'LANGUAGES']
-    : ['HEADER', 'SUMMARY', 'EXPERIENCE', 'SKILLS', 'PROJECTS', 'CERTIFICATIONS & ACHIEVEMENTS', 'EDUCATION', 'LANGUAGES'];
-
-  mergedGroups.sort((a, b) => {
-    const idxA = priorityOrder.indexOf(a.category);
-    const idxB = priorityOrder.indexOf(b.category);
-    const posA = idxA !== -1 ? idxA : 99;
-    const posB = idxB !== -1 ? idxB : 99;
-    return posA - posB;
-  });
-
-  return mergedGroups.flatMap(g => g.blocks);
-}
-
-export function isRoleOrTitle(txt: string): boolean {
-  if (!txt) return false;
-  const clean = txt.trim().toLowerCase();
-  if (
-    /^(?:senior|junior|lead|principal|staff|associate|intern|trainee|full\s*stack|front\s*end|back\s*end|software|web|cloud|devops|data|ai|ml|mobile|android|ios|qa|test|ui\/?ux|product|project|java|python|react|node|javascript|c\+\+|golang)\b/i.test(clean) &&
-    /\b(engineer|developer|architect|designer|analyst|scientist|consultant|manager|specialist|programmer|lead|intern|trainee)\b/i.test(clean)
-  ) {
-    return true;
-  }
-  if (/^(?:engineer|developer|architect|designer|analyst|scientist|consultant|manager|specialist|programmer)$/i.test(clean)) {
-    return true;
-  }
-  return false;
-}
-
-export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
-  const SECTION_NAMES_LIST = [
-    'PROFESSIONAL SUMMARY', 'TECHNICAL SKILLS', 'PROFESSIONAL EXPERIENCE', 'WORK EXPERIENCE', 'EMPLOYMENT HISTORY',
-    'PERSONAL PROJECTS', 'ACADEMIC PROJECTS', 'ACADEMIC BACKGROUND', 'CORE SKILLS', 'KEY SKILLS', 'SUMMARY', 'OBJECTIVE', 'SKILLS',
-    'EXPERIENCE', 'INTERNSHIP', 'INTERNSHIPS', 'INTERNSHIP EXPERIENCE', 'PROJECTS', 'EDUCATION',
-    'AWARDS & CERTIFICATIONS', 'AWARDS AND CERTIFICATIONS', 'CERTIFICATIONS & AWARDS', 'CERTIFICATIONS AND AWARDS',
-    'CERTIFICATIONS & ACHIEVEMENTS', 'CERTIFICATIONS AND ACHIEVEMENTS', 'ACHIEVEMENTS & CERTIFICATIONS', 'ACHIEVEMENTS AND CERTIFICATIONS',
-    'CERTIFICATIONS', 'ACHIEVEMENTS', 'KEY ACHIEVEMENTS', 'EXTRA-CURRICULAR', 'AWARDS', 'LANGUAGES'
-  ];
-
-  let cleanInput = (text || "");
-
-  // Convert any unfilled [ADD: ...] placeholders to professional blank underlines.
-  // This fires only when user clicked "Skip All" — filled text has no [ADD:] markers.
-  cleanInput = cleanInput.replace(/\[ADD:[^\]]+\]/g, "_______________");
-
-  // Rejoin compound tech terms and unwrap hyphenated words broken across linebreaks
-  const COMPOUND_TERMS: [RegExp, string][] = [
-    [/(\b[A-Za-z]+)-\s*\r?\n+\s*([A-Za-z]+\b)/g, '$1$2'],
-    [/My\s*\n+\s*SQL/gi, 'MySQL'],
-    [/Type\s*\n+\s*Script/gi, 'TypeScript'],
-    [/Java\s*\n+\s*Script/gi, 'JavaScript'],
-    [/Post\s*\n+\s*gre\s*SQL/gi, 'PostgreSQL'],
-    [/Spring\s*\n+\s*Boot/gi, 'Spring Boot'],
-    [/Power\s*\n+\s*BI/gi, 'Power BI'],
-    [/Node\s*\n+\s*js/gi, 'Node.js'],
-    [/React\s*\n+\s*js/gi, 'React.js'],
-    [/Next\s*\n+\s*js/gi, 'Next.js'],
-    [/Mon\s*\n+\s*go\s*DB/gi, 'MongoDB'],
-    [/Kube\s*\n+\s*rnetes/gi, 'Kubernetes'],
-    [/Ten\s*\n+\s*sor\s*Flow/gi, 'TensorFlow'],
-    [/Git\s*\n+\s*Hub/gi, 'GitHub'],
-    [/VS\s*\n+\s*Code/gi, 'VS Code'],
-    [/Chat\s*\n+\s*GPT/gi, 'ChatGPT'],
-    [/CI\s*\n+\s*CD/gi, 'CI/CD'],
-    [/De\s*\n+\s*vOps/gi, 'DevOps'],
-  ];
-
-  for (const [pattern, replacement] of COMPOUND_TERMS) {
-    cleanInput = cleanInput.replace(pattern, replacement);
-  }
-
-  // Insert newlines before section headers ONLY when at boundary
-  for (const sec of SECTION_NAMES_LIST) {
-    const reg = new RegExp(`(^|\\n)\\s*(${sec})\\b`, 'gi');
-    cleanInput = cleanInput.replace(reg, '\n\n$2\n');
-  }
-
-  // Separate candidate name from contact info if on same line (e.g. PEYYALA LOHITIndia)
-  cleanInput = cleanInput.replace(/^([A-Z\s]{3,30})(India|\+?\d|[\w.-]+@)/m, '$1\n$2');
-
-  const rawLines = cleanInput.split('\n');
-  const blocks: ParsedResumeBlock[] = [];
-  
-  let isFirstLine = true;
-  let currentSection = "";
-  
-  for (let idx = 0; idx < rawLines.length; idx++) {
-    const rawLine = rawLines[idx].trim();
-    if (!rawLine) {
-      blocks.push({ type: 'spacer' });
-      continue;
-    }
-
-    const line = stripMarkdownAsterisks(rawLine);
-    if (!line) continue;
-
-    // 1. First Line Name detection
-    if (isFirstLine) {
-      blocks.push({ type: 'name', text: line });
-      isFirstLine = false;
-      continue;
-    }
-
-    // 2. Subtitle / Target Role below Name (omit per user request)
-    const hasAnySection = blocks.some(b => b.type === 'section');
-    const upperLine = line.toUpperCase().replace(/&/g, ' AND ').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-    const rawUpper = line.toUpperCase().trim();
-    const isSection = SECTION_NAMES.some(s => {
-      const normS = s.toUpperCase().replace(/&/g, ' AND ').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-      return upperLine === normS || rawUpper === s.toUpperCase().trim();
-    });
-    const isContactLine = 
-      line.includes('@') || 
-      /\+?\d[\d\s\-\(\)]{7,}/.test(line) ||
-      line.toLowerCase().includes('linkedin.com') ||
-      line.toLowerCase().includes('github.com') ||
-      line.toLowerCase().includes('linkedin') ||
-      line.toLowerCase().includes('github') ||
-      line.toLowerCase().includes('portfolio') ||
-      (!hasAnySection && !isSection && !isRoleOrTitle(line) && line.length < 80);
-
-    if (!hasAnySection && !isContactLine && !isSection) {
-      if (isRoleOrTitle(line) && !blocks.some(b => b.type === 'subtitle')) {
-        blocks.push({ type: 'subtitle', text: line });
-      }
-      continue;
-    }
-
-    // 3. Contact row detection (collect all contact rows before any section header)
-    if (isContactLine && blocks.filter(b => b.type === 'section').length === 0) {
-      const parts = line.split(/\s*(?:[|•\u2022—–]|\s+-\s+)\s*/);
-      const segments: ContactSegment[] = [];
-      
-      parts.forEach(part => {
-        const txt = stripMarkdownAsterisks(part.trim());
-        if (!txt) return;
-        // Strictly filter out job names / roles in contact details
-        if (isRoleOrTitle(txt)) return;
-
-        // 1. Check markdown link format: [Label](url)
-        const mdMatch = txt.match(/\[([^\]]+)\]\(([^)]+)\)/);
-        if (mdMatch) {
-          const rawLabel = mdMatch[1].trim();
-          const rawUrl = mdMatch[2].trim();
-          const cleanLink = cleanUrl(rawUrl);
-          const lowerUrl = cleanLink.toLowerCase();
-          const lowerLabel = rawLabel.toLowerCase();
-
-          let display = rawLabel;
-          if (lowerUrl.includes('linkedin.com') || lowerLabel.includes('linkedin')) {
-            const handleMatch = cleanLink.match(/linkedin\.com\/in\/([a-zA-Z0-9_\-\.%]+)/i);
-            display = handleMatch ? `linkedin.com/in/${handleMatch[1]}` : (lowerLabel === 'linkedin' || lowerLabel === 'linkedin profile' ? 'LinkedIn' : rawLabel);
-          } else if (lowerUrl.includes('github.com') || lowerLabel.includes('github')) {
-            const handleMatch = cleanLink.match(/github\.com\/([a-zA-Z0-9_\-\.%]+)/i);
-            display = handleMatch ? `github.com/${handleMatch[1]}` : (lowerLabel === 'github' || lowerLabel === 'github profile' ? 'GitHub' : rawLabel);
-          }
-          segments.push({ text: display, url: cleanLink, isLink: true });
-          return;
-        }
-
-        // 2. LinkedIn profile link / handle / label
-        if (txt.toLowerCase().includes('linkedin')) {
-          const matchedProfile = txt.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_\-\.%]+\/?/i)
-            || txt.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/[a-zA-Z0-9_\-\.%]+\/?/i);
-          if (matchedProfile) {
-            const fullUrl = cleanUrl(matchedProfile[0]);
-            const handle = fullUrl.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '').replace(/\/$/, '');
-            const display = handle ? `linkedin.com/in/${handle}` : 'LinkedIn';
-            segments.push({ text: display, url: fullUrl, isLink: true });
-          } else {
-            const candidate = txt.replace(/^(?:linkedin profile|linkedin)\s*[:\-]?\s*/i, '').trim();
-            const targetUrl = candidate.includes('.') ? cleanUrl(candidate) : 'https://linkedin.com';
-            segments.push({ text: 'LinkedIn', url: targetUrl, isLink: true });
-          }
-          return;
-        }
-
-        // 3. GitHub profile link / handle / label
-        if (txt.toLowerCase().includes('github')) {
-          const matchedProfile = txt.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_\-\.%]+(?:\/[a-zA-Z0-9_\-\.%]+)?\/?/i);
-          if (matchedProfile) {
-            const fullUrl = cleanUrl(matchedProfile[0]);
-            const handle = fullUrl.replace(/^https?:\/\/(www\.)?github\.com\//i, '').replace(/\/$/, '');
-            const display = handle ? `github.com/${handle}` : 'GitHub';
-            segments.push({ text: display, url: fullUrl, isLink: true });
-          } else {
-            const candidate = txt.replace(/^(?:github profile|github)\s*[:\-]?\s*/i, '').trim();
-            const targetUrl = candidate.includes('.') ? cleanUrl(candidate) : 'https://github.com';
-            segments.push({ text: 'GitHub', url: targetUrl, isLink: true });
-          }
-          return;
-        }
-
-        // 4. Email address
-        const emailMatch = txt.match(EMAIL_REGEX);
-        if (emailMatch) {
-          segments.push({ text: emailMatch[0].trim(), isLink: false });
-          return;
-        }
-
-        // 5. Generic URL / Portfolio
-        const urlMatch = txt.match(URL_REGEX);
-        if (urlMatch) {
-          const cleanLink = cleanUrl(urlMatch[0]);
-          const display = cleanLink.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
-          segments.push({ text: display, url: cleanLink, isLink: true });
-          return;
-        }
-
-        // 6. Phone number
-        if (/\+?\d[\d\s\-\(\)]{7,}/.test(txt) && !/[a-zA-Z]{3,}/.test(txt)) {
-          segments.push({ text: txt.replace(/^(?:phone|mobile|tel|cell)\s*[:\-]?\s*/i, '').trim(), isLink: false });
-          return;
-        }
-
-        // 7. Location or other clean contact segment
-        if (!isRoleOrTitle(txt)) {
-          const cleanOther = txt.replace(/^(?:location|address)\s*[:\-]?\s*/i, '').trim();
-          if (cleanOther) {
-            segments.push({ text: cleanOther, isLink: false });
-          }
-        }
-      });
-      
-      if (segments.length > 0) {
-        const existingContact = blocks.find(b => b.type === 'contact') as { type: 'contact'; segments: ContactSegment[] } | undefined;
-        if (existingContact) {
-          existingContact.segments.push(...segments);
-        } else {
-          blocks.push({ type: 'contact', segments });
-        }
-      }
-      continue;
-    }
-
-    // 3. Section Header check
-    if (isSection) {
-      const isSkillHeader = ['TECHNICAL SKILLS', 'SKILLS', 'CORE SKILLS', 'SOFT SKILLS', 'SKILLS & COMPETENCIES', 'KEY SKILLS'].includes(upperLine);
-      const hasExistingSkillSection = blocks.some(b => b.type === 'section' && ['TECHNICAL SKILLS', 'SKILLS', 'CORE SKILLS', 'SOFT SKILLS', 'SKILLS & COMPETENCIES', 'KEY SKILLS'].includes(b.text.toUpperCase().replace(/[^A-Z ]/g, '').trim()));
-
-      if (isSkillHeader && hasExistingSkillSection) {
-        // Consolidate into single skills section — do NOT emit a duplicate header with a second underline
-        currentSection = 'TECHNICAL SKILLS';
-        continue;
-      }
-
-      if (upperLine === currentSection) {
-        // Prevent immediate duplicate header
-        continue;
-      }
-
-      currentSection = upperLine;
-      blocks.push({ type: 'section', text: line });
-      continue;
-    }
-
-    // 4. Section dependent parsing
-    if (currentSection === 'PROFESSIONAL SUMMARY' || currentSection === 'SUMMARY' || currentSection === 'OBJECTIVE') {
-      const cleanLine = stripMarkdownAsterisks(line).trim();
-      if (cleanLine) {
-        const lastBlock = blocks[blocks.length - 1];
-        if (lastBlock && lastBlock.type === 'summary') {
-          lastBlock.text = `${lastBlock.text} ${cleanLine}`.replace(/\s+/g, ' ');
-        } else {
-          blocks.push({ type: 'summary', text: cleanLine });
-        }
-      }
-      continue;
-    }
-
-    if (currentSection === 'TECHNICAL SKILLS' || currentSection === 'SKILLS' || currentSection === 'CORE SKILLS' || currentSection === 'SOFT SKILLS' || currentSection === 'SKILLS & COMPETENCIES' || currentSection === 'KEY SKILLS') {
-      if (line.includes(':')) {
-        const colonIdx = line.indexOf(':');
-        let label = stripMarkdownAsterisks(line.substring(0, colonIdx))
-          .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
-          .replace(/:\s*$/, '')
-          .trim();
-        if (/^languages?$/i.test(label)) label = 'Programming Languages';
-        if (/^(?:technologies\s*&\s*tools|tools\s*&\s*technologies|tools|internship\s*tools)$/i.test(label)) label = 'Developer Tools';
-        let value = stripMarkdownAsterisks(line.substring(colonIdx + 1))
-          .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
-          .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ', ')
-          .replace(/,\s*,/g, ',')
-          .trim();
-        if (value) {
-          blocks.push({ type: 'skillLine', label: label || 'Technical Skills', value });
-        }
-      } else {
-        const cleanVal = stripMarkdownAsterisks(line)
-          .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
-          .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ', ')
-          .replace(/,\s*,/g, ',')
-          .trim();
-        if (cleanVal) {
-          // If the next line starts with a colon, merge them
-          if (idx + 1 < rawLines.length && rawLines[idx + 1].trim().startsWith(':')) {
-            const nextVal = stripMarkdownAsterisks(rawLines[idx + 1].replace(/^:\s*/, ''))
-              .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
-              .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ', ')
-              .trim();
-            let label = cleanVal.replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '').trim();
-            if (/^languages?$/i.test(label)) label = 'Programming Languages';
-            if (/^(?:technologies\s*&\s*tools|tools\s*&\s*technologies|tools|internship\s*tools)$/i.test(label)) label = 'Developer Tools';
-            blocks.push({ type: 'skillLine', label, value: nextVal });
-            idx++; // skip the colon line
-          } else {
-            // Check if previous block was a skillLine — append to it instead of creating duplicate Technical Skills heading
-            const lastBlock = blocks[blocks.length - 1];
-            if (lastBlock && lastBlock.type === 'skillLine') {
-              const sep = lastBlock.value.endsWith(',') || lastBlock.value.endsWith('-') ? ' ' : ', ';
-              lastBlock.value += sep + cleanVal;
-            } else {
-              blocks.push({ type: 'skillLine', label: currentSection === 'SOFT SKILLS' ? 'Soft Skills' : 'Technical Skills', value: cleanVal });
-            }
-          }
-        }
-      }
-      continue;
-    }
-
-    // Parse LANGUAGES as individual bullet items (• English, • Telugu)
-    if (currentSection === 'LANGUAGES' || currentSection === 'LANGUAGES SPOKEN' || currentSection === 'LANGUAGES KNOWN') {
-      const cleanVal = stripMarkdownAsterisks(line.replace(/^[•\-\*–\s\u2022]+/, ""));
-      if (!cleanVal || cleanVal.toUpperCase() === 'LANGUAGES') {
-        continue;
-      }
-      // Split by comma, pipe, en-dash, em-dash, or hyphen into individual language bullet items
-      const items = cleanVal
-        .split(/[,|–—\-\/]+\s*/)
-        .map(s => s.trim())
-        .filter(s => s && !s.toUpperCase().startsWith('LANGUAGE') && !/^(proficient|fluent|native|intermediate|basic|read|write|speak)$/i.test(s));
-
-      for (const lang of items) {
-        blocks.push({ type: 'bullet', text: lang });
-      }
-      continue;
-    }
-
-    // Experience entry
-    if (currentSection === 'EXPERIENCE' || currentSection === 'WORK EXPERIENCE' || currentSection === 'PROFESSIONAL EXPERIENCE' || currentSection === 'EMPLOYMENT HISTORY' || currentSection === 'INTERNSHIP' || currentSection === 'INTERNSHIPS' || currentSection === 'WORK HISTORY') {
-      const isBullet = /^\s*([•\-\*–—+•\u2022\u25cf\u2043]|\d+\.)\s*/.test(rawLine);
-      if (!isBullet) {
-        const dateMatch = line.match(/\b\d{4}\b/);
-        const hasDatePattern = (dateMatch && (line.toLowerCase().includes('present') || line.toLowerCase().includes('current') || line.includes('–') || line.includes('-'))) ||
-          /\b\d+\s*(?:months?|weeks?|yrs?|years?)\b/i.test(line) ||
-          /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*[–\-]\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*/i.test(line);
-        
-        let lastJobIdx = -1;
-        for (let i = blocks.length - 1; i >= 0; i--) {
-          if (blocks[i].type === 'job') {
-            lastJobIdx = i;
-            break;
-          }
-        }
-
-        if (hasDatePattern) {
-          if (lastJobIdx !== -1 && !(blocks[lastJobIdx] as JobBlock).dates) {
-            (blocks[lastJobIdx] as JobBlock).dates = line;
-          } else {
-            blocks.push({ type: 'bullet', text: line });
-          }
-        } else if (lastJobIdx !== -1 && looksLikeSentenceBullet(line)) {
-          // Bullet sentence that lost its "•" marker — attach to current role
-          (blocks[lastJobIdx] as JobBlock).bullets.push(line);
-        } else {
-          const lowerLine = line.toLowerCase();
-          const TITLE_KEYWORDS = ['developer', 'engineer', 'manager', 'lead', 'architect', 'consultant', 'analyst', 'designer', 'intern', 'specialist', 'associate', 'head', 'director', 'officer'];
-          const isActionSentence = /\b(developed|built|designed|implemented|created|engineered|spearheaded|managed|optimized|automated|accelerated|increased|reduced|improved|conducted|resolved|led|trained|achieved|maintained|deployed|shipped|orchestrated)\b/i.test(lowerLine);
-          const hasDateHere = /\b(?:19|20)\d{2}\b/.test(line) || /\bpresent|current\b/i.test(lowerLine);
-          const hasExplicitJobTitle = TITLE_KEYWORDS.some(kw => new RegExp(`\\b${kw}s?\\b`).test(lowerLine));
-          const looksLikeJobHeader = lastJobIdx === -1 || ((hasExplicitJobTitle || line.includes('|')) && hasDateHere && !isActionSentence);
-
-          if (looksLikeJobHeader) {
-            let title = "";
-            let company = "";
-            let tech = "";
-            let dates = "";
-
-            // Check if line has a pipe '|', tabs, or wide space separation
-            const pipeParts = line.split(/\s*\|\s*|\t+|\s{3,}/);
-            if (pipeParts.length >= 2) {
-              title = stripMarkdownAsterisks(pipeParts[0] || "");
-              const rightPart = stripMarkdownAsterisks(pipeParts[1] || "");
-              if (/\b\d{4}\b/.test(rightPart) || /present|current|duration/i.test(rightPart) || /\b(?:months?|weeks?|yrs?|years?)\b/i.test(rightPart)) {
-                dates = rightPart;
-                if (pipeParts.length >= 3) {
-                  company = stripMarkdownAsterisks(pipeParts[2] || "");
-                }
-              } else {
-                company = rightPart;
-                if (pipeParts.length >= 3) {
-                  dates = stripMarkdownAsterisks(pipeParts[2] || "");
-                }
-              }
-            } else {
-              // No pipe: extract date pattern from the end of the line if present
-              const dateRegex = /(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}|\d{1,2}\/\d{4}|\b\d{4}\b)\s*[-–—to]+\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}|\d{1,2}\/\d{4}|\b\d{4}\b|present|current)\s*$/i;
-              const dateMatch = line.match(dateRegex);
-              if (dateMatch) {
-                dates = dateMatch[0].trim();
-                title = stripMarkdownAsterisks(line.slice(0, dateMatch.index).trim().replace(/\s*[-–—|]\s*$/, ""));
-              } else {
-                title = stripMarkdownAsterisks(line);
-              }
-            }
-
-            // Look ahead for Line 2: Company Name & Tech Stack
-            if (idx + 1 < rawLines.length) {
-              const nextLine = stripMarkdownAsterisks(rawLines[idx + 1]);
-              const nextUpper = nextLine.toUpperCase().replace(/&/g, ' AND ').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-              const nextRaw = nextLine.toUpperCase().trim();
-              const isNextBullet = /^\s*([•\-\*–—+•\u2022\u25cf\u2043▸►→]|\d+\.)\s*/.test(rawLines[idx + 1]);
-              const isNextSection = SECTION_NAMES.some(s => {
-                const normS = s.toUpperCase().replace(/&/g, ' AND ').replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-                return nextUpper === normS || nextRaw === s.toUpperCase().trim();
-              });
-
-              if (!isNextBullet && !isNextSection && nextLine) {
-                const nextDateMatch = nextLine.match(/\b\d{4}\b/);
-                if (!dates && nextDateMatch && (nextLine.toLowerCase().includes('present') || nextLine.toLowerCase().includes('current') || nextLine.includes('–') || nextLine.includes('-'))) {
-                  dates = nextLine;
-                  idx++;
-                } else {
-                  // Line 2: Company Name | Tech Stack (e.g. "Company Name | Java, Spring Boot, MySQL" or "Company Name — Java, Spring Boot, MySQL")
-                  const nextParts = nextLine.split(/\s*\|\s*|\t+|\s{3,}|\s+[—–]\s+/);
-                  if (nextParts.length > 1) {
-                    if (!company) {
-                      company = nextParts[0].trim();
-                      tech = nextParts.slice(1).join(", ").trim();
-                    } else if (!tech) {
-                      tech = nextLine.trim();
-                    }
-                    idx++;
-                  } else {
-                    if (!company) {
-                      company = nextLine.trim();
-                      idx++;
-                    } else if (!tech) {
-                      tech = nextLine.trim();
-                      idx++;
-                    }
-                  }
-                }
-              }
-            }
-            
-            blocks.push({
-              type: 'job',
-              title,
-              company,
-              dates,
-              tech: tech || undefined,
-              bullets: []
-            });
-          } else {
-            if (lastJobIdx !== -1) {
-              (blocks[lastJobIdx] as JobBlock).bullets.push(line);
-            } else {
-              blocks.push({ type: 'summary', text: line });
-            }
-          }
-        }
-      } else {
-        const cleanBulletText = stripMarkdownAsterisks(rawLine.replace(/^\s*([•\-\*–—+•\u2022\u25cf\u2043]|\d+\.)\s*/, ''));
-        
-        let lastJobIdx = -1;
-        for (let i = blocks.length - 1; i >= 0; i--) {
-          if (blocks[i].type === 'job') {
-            lastJobIdx = i;
-            break;
-          }
-        }
-        if (lastJobIdx !== -1) {
-          (blocks[lastJobIdx] as JobBlock).bullets.push(cleanBulletText);
-        } else {
-          blocks.push({ type: 'bullet', text: cleanBulletText });
-        }
-      }
-      continue;
-    }
-
-    // Projects block
-    if (currentSection === 'PROJECTS' || currentSection === 'PERSONAL PROJECTS' || currentSection === 'KEY PROJECTS' || currentSection === 'ACADEMIC PROJECTS') {
-      const hasProject = blocks.some(b => b.type === 'project');
-      const isBullet = /^\s*([•\-\*–—+•\u2022\u25cf\u2043]|\d+\.)\s*/.test(rawLine) || (hasProject && looksLikeSentenceBullet(line));
-      if (!isBullet) {
-        let lineClean = line;
-        let dates = "";
-        const dateMatch = lineClean.match(/\s*(?:\|\s*)?(\b20\d{2}\b.*?|\b\d{4}\b)$/);
-        if (dateMatch) {
-          dates = dateMatch[1].trim();
-          lineClean = lineClean.substring(0, lineClean.length - dateMatch[0].length).trim();
-        }
-        lineClean = lineClean.replace(/[\s|–—\-]+$/, '').trim();
-
-        const parts = lineClean.split(/\s*(?:[|—–]|\s+-\s+)\s*/);
-        const name = stripMarkdownAsterisks(parts[0] || "Project");
-        const tech = stripMarkdownAsterisks(parts.slice(1).join(" — ") || "");
-        
-        let projectUrl: string | undefined;
-        const urlMatches = line.match(URL_REGEX);
-        if (urlMatches && urlMatches.length > 0) {
-          projectUrl = cleanUrl(urlMatches[0]);
-        }
-        
-        blocks.push({
-          type: 'project',
-          name,
-          tech: tech || undefined,
-          dates: dates || undefined,
-          projectUrl,
-          bullets: []
-        });
-      } else {
-        const cleanBulletText = stripMarkdownAsterisks(rawLine.replace(/^\s*([•\-\*–—+•\u2022\u25cf\u2043]|\d+\.)\s*/, ''));
-        
-        let lastProjIdx = -1;
-        for (let i = blocks.length - 1; i >= 0; i--) {
-          if (blocks[i].type === 'project') {
-            lastProjIdx = i;
-            break;
-          }
-        }
-        if (lastProjIdx !== -1) {
-          const proj = blocks[lastProjIdx];
-          if (proj.type === 'project') {
-            proj.bullets.push(cleanBulletText);
-          }
-        } else {
-          blocks.push({ type: 'bullet', text: cleanBulletText });
-        }
-      }
-      continue;
-    }
-
-    // Education block (Accurate degree, school, dates, and GPA separation)
-    if (currentSection === 'EDUCATION' || currentSection === 'ACADEMIC BACKGROUND' || currentSection === 'QUALIFICATIONS' || currentSection === 'ACADEMICS') {
-      const lowerLine = line.toLowerCase();
-      const DEGREE_KEYWORDS = [
-        'b.tech', 'btech', 'b.e.', 'be', 'b.s.', 'bs', 'b.sc', 'bsc', 'bca', 'b.com', 'bcom', 'bachelor',
-        'm.tech', 'mtech', 'm.s.', 'ms', 'm.sc', 'msc', 'mca', 'master', 'mba', 'ph.d', 'phd',
-        'class xii', 'class x', 'class 12', 'class 10', 'diploma', 'matriculation', 'secondary school certificate',
-        'secondary', 'hsc', 'cbse', 'board', '10th', '12th', 'senior secondary',
-        'higher secondary', 'intermediate', 'ssc', 'plus two', '+2', 'high school diploma'
-      ];
-
-      const STREAM_PATTERN = /^(?:mpc|bipc|mec|cec|hec|pcm|pcmb|science|commerce|arts)$/i;
-      const DATE_LABEL_PATTERN = /^(?:graduated|graduation|batch|year|passed\s*out|passing\s*year|completion|expected|tenure)\s*[:\-]?$/i;
-
-      let lastEdu: EducationBlock | undefined;
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        if (blocks[i].type === 'education') {
-          lastEdu = blocks[i] as EducationBlock;
-          break;
-        }
-      }
-
-      const gpaPattern = /(?:CGPA|GPA|Percentage|Grade)\s*[:\-]?\s*[\d\.]+(?:\s*\/\s*[\d\.]+)?%?|\b\d{1,2}(?:\.\d{1,2})?\s*\/\s*10\b|\b\d{1,2}(?:\.\d{1,2})?\s*CGPA\b|\b\d{2}(?:\.\d{1,2})?%/i;
-      const dateRangePattern = /\b(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\b(?:\s*[\-\u2013\u2014]\s*(?:(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s*)?(?:19|20)\d{2}\b|Present|Current))?/i;
-
-      // Handle multi-part education line:
-      // Supports pipe " | ", comma ", ", or dash " - " / " – "
-      let segParts = line.split(/\s*\|\s*/).map(p => stripMarkdownAsterisks(p).trim()).filter(Boolean);
-      if (segParts.length < 2) {
-        const altParts = line.split(/\s*,\s*|\s+[–—]\s+|\s+-\s+/).map(p => stripMarkdownAsterisks(p).trim()).filter(Boolean);
-        if (altParts.length >= 2) {
-          const hasDeg = altParts.some(p => DEGREE_KEYWORDS.some(kw => p.toLowerCase().includes(kw)));
-          const hasOther = altParts.some(p => dateRangePattern.test(p) || gpaPattern.test(p) || /college|university|institute|academy|school|vidyalaya|board/i.test(p));
-          if (hasDeg && hasOther) {
-            segParts = altParts;
-          }
-        }
-      }
-
-      if (segParts.length >= 2) {
-        let extractedDegree = "";
-        let extractedSchool = "";
-        let extractedDates = "";
-        let extractedGpa = "";
-        const remainingSegments: string[] = [];
-
-        for (const seg of segParts) {
-          const gMatch = seg.match(gpaPattern);
-          if (gMatch && !extractedGpa) {
-            extractedGpa = gMatch[0].trim();
-            const restOfSeg = seg.replace(gMatch[0], "").trim();
-            if (restOfSeg && !DATE_LABEL_PATTERN.test(restOfSeg)) remainingSegments.push(restOfSeg);
-            continue;
-          }
-
-          const dMatch = seg.match(dateRangePattern);
-          if (dMatch && !extractedDates) {
-            extractedDates = dMatch[0].trim();
-            const restOfSeg = seg.replace(dMatch[0], "").trim();
-            if (restOfSeg && !DATE_LABEL_PATTERN.test(restOfSeg)) remainingSegments.push(restOfSeg);
-            continue;
-          }
-
-          if (!DATE_LABEL_PATTERN.test(seg)) {
-            remainingSegments.push(seg);
-          }
-        }
-
-        for (const seg of remainingSegments) {
-          const segLower = seg.toLowerCase();
-          if (STREAM_PATTERN.test(segLower)) {
-            // Stream / Specialization belongs with the Degree
-            extractedDegree = extractedDegree ? `${extractedDegree} (${seg.toUpperCase()})` : seg.toUpperCase();
-            continue;
-          }
-          const isDegree = DEGREE_KEYWORDS.some(kw => segLower.includes(kw)) || segLower.startsWith('b.') || segLower.startsWith('m.');
-          const isSchool = /college|university|institute|academy|school|vidyalaya|board/i.test(segLower);
-          if (isDegree && !extractedDegree) {
-            extractedDegree = seg;
-          } else if (isSchool && !extractedSchool) {
-            extractedSchool = seg;
-          } else if (!extractedSchool) {
-            extractedSchool = seg;
-          } else if (!extractedDegree) {
-            extractedDegree = seg;
-          }
-        }
-
-        // If this multi-part line had a degree but no school, and previous block had no school, or vice-versa:
-        if (extractedDegree && !extractedSchool && lastEdu && !lastEdu.school && !extractedDates && !extractedGpa) {
-          lastEdu.school = extractedDegree;
-          continue;
-        }
-
-        if (extractedDegree || extractedSchool) {
-          blocks.push({
-            type: 'education',
-            degree: extractedDegree || "Degree",
-            school: extractedSchool || "",
-            dates: extractedDates || "",
-            gpa: extractedGpa || ""
-          });
-          continue;
-        }
-      }
-
-      // Handle multi-line education format:
-      let lineText = stripMarkdownAsterisks(line);
-      let extractedDates = "";
-      let extractedGpa = "";
-
-      const gMatch = lineText.match(gpaPattern);
-      if (gMatch) {
-        extractedGpa = gMatch[0].trim();
-        lineText = lineText.replace(gMatch[0], "").trim();
-      }
-
-      const dMatch = lineText.match(dateRangePattern);
-      if (dMatch) {
-        extractedDates = dMatch[0].trim();
-        lineText = lineText.replace(dMatch[0], "").trim();
-      }
-
-      // Strip date labels like "Graduated:", "Batch:", "Passing Year:"
-      lineText = lineText.replace(/\b(?:graduated|graduation|batch|year|passed\s*out|passing\s*year|completion|expected)\s*[:\-]?\s*/gi, "").trim();
-      lineText = lineText.replace(/^[\s\|\-\u2013\u2014\:]+|[\s\|\-\u2013\u2014\:]+$/g, "").trim();
-
-      // If line is just a stream name (MPC, BiPC, Science), append it to the degree of the active block
-      if (STREAM_PATTERN.test(lineText)) {
-        if (lastEdu) {
-          lastEdu.degree = `${lastEdu.degree} (${lineText.toUpperCase()})`;
-          if (extractedDates && !lastEdu.dates) lastEdu.dates = extractedDates;
-          if (extractedGpa && !lastEdu.gpa) lastEdu.gpa = extractedGpa;
-        }
-        continue;
-      }
-
-      // If line is empty or was just a date label, attach extracted dates/gpa to lastEdu
-      if (!lineText || DATE_LABEL_PATTERN.test(lineText)) {
-        if (lastEdu) {
-          if (extractedDates && !lastEdu.dates) lastEdu.dates = extractedDates;
-          if (extractedGpa && !lastEdu.gpa) lastEdu.gpa = extractedGpa;
-        }
-        continue;
-      }
-
-      const containsDegree = DEGREE_KEYWORDS.some(kw => lowerLine.includes(kw)) || lowerLine.startsWith('b.') || lowerLine.startsWith('m.');
-      const isSchool = (lowerLine.includes('school') ||
-                        lowerLine.includes('college') ||
-                        lowerLine.includes('university') ||
-                        lowerLine.includes('institute') ||
-                        lowerLine.includes('academy') ||
-                        lowerLine.includes('vidyalaya')) && !containsDegree;
-
-      if (containsDegree || !lastEdu || (lastEdu && lastEdu.school && containsDegree)) {
-        blocks.push({
-          type: 'education',
-          degree: lineText || "Degree",
-          school: "",
-          dates: extractedDates || "",
-          gpa: extractedGpa || ""
-        });
-      } else if (lastEdu) {
-        if (!lastEdu.school && (isSchool || !containsDegree)) {
-          lastEdu.school = lineText;
-        }
-        if (extractedDates && !lastEdu.dates) lastEdu.dates = extractedDates;
-        if (extractedGpa && !lastEdu.gpa) lastEdu.gpa = extractedGpa;
-      } else {
-        blocks.push({
-          type: 'education',
-          degree: lineText || "Degree",
-          school: "",
-          dates: extractedDates || "",
-          gpa: extractedGpa || ""
-        });
-      }
-      continue;
-    }
-
-    if (
-      currentSection.includes('CERTIF') ||
-      currentSection.includes('ACHIEVE') ||
-      currentSection.includes('AWARD') ||
-      currentSection.includes('HONOR') ||
-      currentSection.includes('LICENSE')
-    ) {
-      const cleanCertLine = stripMarkdownAsterisks(line.replace(/^[•\-\*–\s\u2022]+/, ''));
-      if (cleanCertLine) {
-        const isAchievementLine =
-          /^(?:solved|won|ranked|secured|awarded|built|developed|engineered|spearheaded|achieved|completed|published|selected|scored|earned|received|participated|finalist|winner|top|1st|2nd|3rd)\b/i.test(cleanCertLine) ||
-          /^\d+\+?\s+(?:problems?|challenges?|questions?|algorithms?|projects?)\b/i.test(cleanCertLine) ||
-          (cleanCertLine.split(' ').length > 10 && !/[–—|]|\sby\s|\sfrom\s/i.test(cleanCertLine));
-
-        if (isAchievementLine) {
-          blocks.push({ type: 'bullet', text: cleanCertLine });
-        } else {
-          blocks.push({ type: 'cert', text: cleanCertLine });
-        }
-      }
-      continue;
-    }
-
-    // Default standalone items
-    const isBullet = /^[•\-\*–—+•\u2022\u25cf\u2043▸►→]\s*/.test(rawLine);
-    if (isBullet) {
-      const cleanBulletText = stripMarkdownAsterisks(rawLine.replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→]\s*/, '')).trim();
-      blocks.push({ type: 'bullet', text: cleanBulletText });
-    } else {
-      const urlMatches = line.match(URL_REGEX);
-      if (urlMatches && urlMatches.length > 0 && line.length < 150) {
-        blocks.push({ type: 'link', label: line, url: cleanUrl(urlMatches[0]) });
-      } else {
-        blocks.push({ type: 'normal', text: line });
-      }
-    }
-  }
-
-  // Final cleanup of education entries (no placeholder / duplicated institution text)
-  for (const b of blocks) {
-    if (b.type === 'education') {
-      b.degree = cleanEducationText(b.degree);
-      b.school = cleanEducationText(b.school);
-      if (b.school && b.degree && b.school.toLowerCase() === b.degree.toLowerCase()) b.school = '';
-      if ((!b.degree || b.degree.toLowerCase() === 'degree') && b.school) {
-        b.degree = b.school;
-        b.school = '';
-      }
-
-      // If school is empty and degree contains comma/dash, split them into degree and institution
-      if (!b.school && b.degree) {
-        const sepMatch = b.degree.match(/^(.+?)\s*(?:,\s*|\s+[–—\-]\s+|\s+from\s+|\s+at\s+)(.+)$/i);
-        if (sepMatch) {
-          const p1 = sepMatch[1].trim();
-          const p2 = sepMatch[2].trim();
-          const isP1School = /college|university|institute|academy|school|vidyalaya|board/i.test(p1);
-          if (isP1School) {
-            b.school = p1;
-            b.degree = p2;
-          } else {
-            b.degree = p1;
-            b.school = p2;
-          }
-        }
-      }
-
-      // If degree contains institution name and school contains degree name, swap them to guarantee correct hierarchy
-      if (b.degree && b.school) {
-        const isDegreeSchool = /college|university|institute|academy|school|vidyalaya|board/i.test(b.degree);
-        const isSchoolDegree = /b\.tech|btech|bachelor|master|m\.tech|mtech|b\.e|b\.s|bca|mca|diploma|intermediate|10th|12th|ssc|degree|class/i.test(b.school);
-        if (isDegreeSchool && isSchoolDegree) {
-          const tmp = b.degree;
-          b.degree = b.school;
-          b.school = tmp;
-        }
-      }
-    }
-  }
-
-  // Merge adjacent education entries where entry 1 has degree with no school, and entry 2 is purely the school
-  const mergedBlocks: ParsedResumeBlock[] = [];
-  for (let i = 0; i < blocks.length; i++) {
-    const curr = blocks[i];
-    if (curr.type === 'education') {
-      const prev = mergedBlocks[mergedBlocks.length - 1];
-      if (prev && prev.type === 'education' && !prev.school) {
-        const isCurrSchool = /college|university|institute|academy|school|vidyalaya|board/i.test(curr.degree);
-        const isCurrDegree = /b\.tech|btech|bachelor|master|m\.tech|mtech|b\.e|b\.s|bca|mca|diploma|intermediate|10th|12th|ssc|degree|class/i.test(curr.degree);
-        if (isCurrSchool && !isCurrDegree) {
-          prev.school = curr.degree;
-          if (curr.gpa && !prev.gpa) prev.gpa = curr.gpa;
-          if (curr.dates && !prev.dates) prev.dates = curr.dates;
-          continue; // merged cleanly!
-        }
-      }
-    }
-    mergedBlocks.push(curr);
-  }
-
-  return compactBlocks(swapEducationAndSkillsIfNeeded(mergedBlocks, isFresherResume(text)));
-}
-
-interface BulletRowProps {
-  text: string;
-  s?: Record<string, any>;
-}
-
-const BulletRow: React.FC<BulletRowProps> = ({ text, s = styles }) => {
-  const clean = stripMarkdownAsterisks(text)
-    .replace(/^\s*([•\-\*–—+•\u2022\u25cf\u2043▸►→]|\d+\.)\s*/, "")
-    .trim();
-
-  const urlMatches = clean.match(URL_REGEX_G);
-  
-  if (urlMatches && urlMatches.length > 0) {
-    const segments: React.ReactNode[] = [];
-    let lastIdx = 0;
-    
-    urlMatches.forEach((match, idx) => {
-      const matchStart = clean.indexOf(match, lastIdx);
-      if (matchStart > lastIdx) {
-        segments.push(<Text key={`text-${idx}`}>{clean.substring(lastIdx, matchStart)}</Text>);
-      }
-      
-      const cleanLink = cleanUrl(match);
-      segments.push(
-        <Link key={`link-${idx}`} src={cleanLink} style={{ color: '#0000EE', textDecoration: 'underline' }}>
-          <Text style={{ color: '#0000EE', textDecoration: 'underline' }}>{match}</Text>
-        </Link>
-      );
-      
-      lastIdx = matchStart + match.length;
-    });
-    
-    if (lastIdx < clean.length) {
-      segments.push(<Text key="text-end">{clean.substring(lastIdx)}</Text>);
-    }
-    
-    return (
-      <View style={s.bulletRow}>
-        <Text style={s.bulletDot}>•</Text>
-        <Text style={s.bulletText}>{segments}</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={s.bulletRow}>
-      <Text style={s.bulletDot}>•</Text>
-      <Text style={s.bulletText}>{clean}</Text>
-    </View>
-  );
-};
+// Exact PDF Styles matching the ATS resume template specification
+const styles = StyleSheet.create({
+  page: {
+    fontFamily: "Times-Roman",
+    fontSize: 10.5,
+    lineHeight: 1.4,
+    paddingTop: 36,
+    paddingBottom: 36,
+    paddingHorizontal: 42,
+    color: "#000000",
+    backgroundColor: "#FFFFFF",
+  },
+  watermark: {
+    fontFamily: "Times-Bold",
+    fontSize: 9,
+    color: "#CC0000",
+    textAlign: "center",
+    marginBottom: 8,
+    textTransform: "uppercase",
+  },
+  // 1. Name: Times-Bold 20pt centered
+  name: {
+    fontFamily: "Times-Bold",
+    fontSize: 20,
+    textAlign: "center",
+    marginBottom: 2,
+    color: "#000000",
+  },
+  // Role: Times-Italic 11pt centered marginBottom 3
+  role: {
+    fontFamily: "Times-Italic",
+    fontSize: 11,
+    textAlign: "center",
+    marginBottom: 3,
+    color: "#000000",
+  },
+  // 2. Contact row: centered, icons before each, separated by spaces, all on one line
+  contactRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: 5,
+  },
+  contactItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 6,
+    marginVertical: 1,
+  },
+  contactText: {
+    fontFamily: "Times-Roman",
+    fontSize: 9.5,
+    color: "#444444",
+  },
+  // 3. Horizontal rule after contact
+  contactDivider: {
+    borderBottomWidth: 0.75,
+    borderBottomColor: "#000000",
+    width: "100%",
+    marginBottom: 6,
+  },
+  // SECTION HEADERS: Times-Bold 11pt uppercase, borderBottom 0.75pt solid black paddingBottom 2, 10pt margin top, 4pt margin bottom
+  sectionHeaderWrapper: {
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  sectionHeader: {
+    fontFamily: "Times-Bold",
+    fontSize: 11,
+    textTransform: "uppercase",
+    borderBottomWidth: 0.75,
+    borderBottomColor: "#000000",
+    paddingBottom: 2,
+    color: "#000000",
+  },
+  // Summary
+  summaryText: {
+    fontFamily: "Times-Roman",
+    fontSize: 10.5,
+    lineHeight: 1.4,
+    textAlign: "justify",
+    color: "#000000",
+  },
+  // Skills: "Bold Label: normal value" on each line, plain lines only (no bullets)
+  skillLine: {
+    flexDirection: "row",
+    marginBottom: 2,
+  },
+  skillLabel: {
+    fontFamily: "Times-Bold",
+    fontSize: 10.5,
+    color: "#000000",
+  },
+  skillValue: {
+    fontFamily: "Times-Roman",
+    fontSize: 10.5,
+    color: "#000000",
+  },
+  // Experience / Projects / Education common rows
+  twoColRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 1,
+  },
+  leftBold: {
+    fontFamily: "Times-Bold",
+    fontSize: 10.5,
+    color: "#000000",
+    flex: 1,
+  },
+  rightDate: {
+    fontFamily: "Times-Roman",
+    fontSize: 10,
+    color: "#555555",
+    textAlign: "right",
+    marginLeft: 8,
+  },
+  rightDateBold: {
+    fontFamily: "Times-Bold",
+    fontSize: 10,
+    color: "#000000",
+    textAlign: "right",
+    marginLeft: 8,
+  },
+  leftItalic: {
+    fontFamily: "Times-Italic",
+    fontSize: 10,
+    color: "#000000",
+    flex: 1,
+  },
+  techTagsItalic: {
+    fontFamily: "Times-Italic",
+    fontSize: 10,
+    color: "#666666",
+  },
+  rightGradeItalic: {
+    fontFamily: "Times-Italic",
+    fontSize: 10,
+    color: "#555555",
+    textAlign: "right",
+    marginLeft: 8,
+  },
+  // Bullets: flex row, • dot 10pt, text flex-1
+  bulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 1.5,
+    paddingLeft: 6,
+  },
+  bulletDot: {
+    width: 10,
+    fontSize: 10,
+    fontFamily: "Times-Roman",
+    color: "#000000",
+  },
+  bulletText: {
+    flex: 1,
+    fontFamily: "Times-Roman",
+    fontSize: 10.5,
+    lineHeight: 1.4,
+    textAlign: "justify",
+    color: "#000000",
+  },
+  boldInline: {
+    fontFamily: "Times-Bold",
+  },
+  // Education entry spacing: 4pt space between entries
+  eduEntry: {
+    marginBottom: 4,
+  },
+});
 
 interface ResumePDFProps {
   text: string;
   watermarked?: boolean;
-  /** Forces a specific density scale (used by the page-fit verification loop). */
-  scaleOverride?: number;
 }
 
-export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, scaleOverride }) => {
-  const blocks = parseResumeIntoBlocks(text);
-  // Universal page-fit (1 page for fresher / <5 yrs, up to 2 pages for 5+ yrs)
-  const densityScale = scaleOverride ?? computeDensityScale(text, blocks);
-  const styles = getScaledStyles(densityScale);
+export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked = false }) => {
+  const parsed = parseResume(text);
 
   return (
-    <Document>
+    <Document title={getCleanExportFilename(text, ".pdf")} author={parsed.name}>
       <Page size="A4" style={styles.page}>
-        {blocks.map((block, i) => {
-          switch (block.type) {
-            case 'name':
-              return (
-                <Text key={i} style={styles.name}>
-                  {toSmallCapsRuns(block.text).map((r, rIdx) =>
-                    r.big ? <Text key={rIdx}>{r.text}</Text> : <Text key={rIdx} style={styles.nameSmallCaps}>{r.text}</Text>
-                  )}
-                </Text>
-              );
-            case 'subtitle':
-              return <Text key={i} style={styles.subtitle}>{block.text}</Text>;
-            case 'contact': {
-              const cleanSegments = block.segments.filter(seg => !isRoleOrTitle(seg.text));
-              if (cleanSegments.length === 0) return null;
-              return (
-                <View key={i} style={styles.contactRow}>
-                  {cleanSegments.map((seg, sIdx) => {
-                    const lower = (seg.text || "").toLowerCase() + " " + (seg.url || "").toLowerCase();
-                    let iconType: 'phone' | 'email' | 'linkedin' | 'github' | 'globe' = 'globe';
-                    if (seg.text.includes('@') || lower.includes('@')) iconType = 'email';
-                    else if (/\+?\d[\d\s\-\(\)]{7,}/.test(seg.text)) iconType = 'phone';
-                    else if (lower.includes('linkedin')) iconType = 'linkedin';
-                    else if (lower.includes('github')) iconType = 'github';
+        {/* Optional Watermark */}
+        {watermarked && (
+          <Text style={styles.watermark}>
+            ROLEFUSE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)
+          </Text>
+        )}
 
-                    let displayLabel = seg.text
-                      .replace(/^https?:\/\/(www\.)?/i, '')
-                      .replace(/^(?:linkedin profile|github profile|portfolio|linkedin|github|email|phone|mobile|tel|cell|location|address)\s*[:\-]?\s*/i, '')
-                      .replace(/\/$/, '')
-                      .trim();
-                    if (displayLabel.startsWith('mailto:')) displayLabel = displayLabel.replace('mailto:', '');
-                    if (displayLabel.startsWith('tel:')) displayLabel = displayLabel.replace('tel:', '');
-                    if (!displayLabel) {
-                      displayLabel = iconType === 'linkedin' ? 'LinkedIn' : (iconType === 'github' ? 'GitHub' : (seg.url || 'Link'));
-                    }
+        {/* 1. Name — large centered bold (20pt) */}
+        {parsed.name ? <Text style={styles.name}>{parsed.name}</Text> : null}
 
-                    return (
-                      <View key={sIdx} style={styles.contactItem}>
-                        <ContactIcon type={iconType} />
-                        {seg.isLink && seg.url ? (
-                          <Link src={seg.url} style={styles.contactLink}>
-                            <Text style={styles.contactLink}>{displayLabel}</Text>
-                          </Link>
-                        ) : (
-                          <Text style={styles.contactText}>{displayLabel}</Text>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              );
-            }
-            case 'section':
-              return (
-                <View key={i} style={styles.sectionHeaderWrapper}>
-                  <Text style={styles.sectionHeader}>{toSectionTitle(block.text)}</Text>
-                  <View style={styles.sectionUnderline} />
-                </View>
-              );
-            case 'summary':
-              return (
-                <Text key={i} style={styles.summaryText}>
-                  {block.text}
+        {/* Role — Times-Italic 11pt centered marginBottom 3 */}
+        {parsed.role ? <Text style={styles.role}>{parsed.role}</Text> : null}
+
+        {/* 2. Contact row — centered, icons before each, separated by spaces, all on one line */}
+        {parsed.contacts.length > 0 && (
+          <View style={styles.contactRow}>
+            {parsed.contacts.map((c, i) => (
+              <View key={i} style={styles.contactItem}>
+                <ContactIcon type={c.type} />
+                <Text style={styles.contactText}>{c.text}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* 3. Horizontal rule after contact */}
+        <View style={styles.contactDivider} />
+
+        {/* 4. Sections in strict order:
+            SUMMARY → SKILLS → EXPERIENCE → PROJECTS → AWARDS & CERTIFICATIONS → EDUCATION → LANGUAGES */}
+
+        {/* SECTION 1: SUMMARY */}
+        {parsed.summary ? (
+          <View wrap={false}>
+            <View style={styles.sectionHeaderWrapper}>
+              <Text style={styles.sectionHeader}>SUMMARY</Text>
+            </View>
+            <Text style={styles.summaryText}>{parsed.summary}</Text>
+          </View>
+        ) : null}
+
+        {/* SECTION 2: SKILLS */}
+        {parsed.skills.length > 0 && (
+          <View wrap={false}>
+            <View style={styles.sectionHeaderWrapper}>
+              <Text style={styles.sectionHeader}>SKILLS</Text>
+            </View>
+            {parsed.skills.map((s, i) => (
+              <View key={i} style={styles.skillLine}>
+                <Text>
+                  <Text style={styles.skillLabel}>{s.label}: </Text>
+                  <Text style={styles.skillValue}>{s.skills}</Text>
                 </Text>
-              );
-            case 'skillLine': {
-              const cleanLabel = (block.label || 'Technical Skills')
-                .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
-                .replace(/:\s*$/, '')
-                .trim();
-              const cleanValue = (block.value || '')
-                .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
-                .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ', ')
-                .trim();
-              if (!cleanValue) return null;
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* SECTION 3: EXPERIENCE */}
+        {parsed.experience.length > 0 && (
+          <View>
+            <View style={styles.sectionHeaderWrapper}>
+              <Text style={styles.sectionHeader}>EXPERIENCE</Text>
+            </View>
+            {parsed.experience.map((exp, i) => {
+              const fullTitle = exp.company && !exp.title.includes(exp.company)
+                ? `${exp.title} – ${exp.company}`
+                : exp.title;
+
               return (
-                <Text key={i} style={styles.skillLine}>
-                  <Text style={styles.skillLabel}>{cleanLabel}: </Text>
-                  <Text style={styles.skillValue}>{cleanValue}</Text>
-                </Text>
-              );
-            }
-            case 'project': {
-              const hasName = Boolean(block.name && block.name.trim());
-              const hasTech = Boolean(block.tech && block.tech.trim());
-              return (
-                <View key={i} style={{ marginBottom: 3 }}>
-                  <View style={styles.projectTitleRow}>
-                    <Text style={styles.projectTitle}>
-                      {hasName ? block.name : "Project"}
-                      {hasTech ? <Text style={styles.projectTech}> — {block.tech}</Text> : null}
-                    </Text>
-                    {block.dates ? (
-                      <Text style={styles.projectDates}>{block.dates}</Text>
-                    ) : null}
+                <View key={i} style={{ marginBottom: 3 }} wrap={false}>
+                  {/* Line 1: "Job Title – Company" LEFT + "Date Range" RIGHT */}
+                  <View style={styles.twoColRow}>
+                    <Text style={styles.leftBold}>{fullTitle}</Text>
+                    {exp.dateRange ? <Text style={styles.rightDate}>{exp.dateRange}</Text> : null}
                   </View>
-                  {block.bullets.map((bullet, bIdx) => (
-                    <BulletRow key={bIdx} text={bullet} s={styles} />
+
+                  {/* Line 2: "Tech stack tags" left in gray italic */}
+                  {exp.techTags ? (
+                    <View style={{ marginBottom: 2 }}>
+                      <Text style={styles.techTagsItalic}>{exp.techTags}</Text>
+                    </View>
+                  ) : null}
+
+                  {/* Bullet points below */}
+                  {exp.bullets.map((b, bi) => (
+                    <View key={bi} style={styles.bulletRow}>
+                      <Text style={styles.bulletDot}>•</Text>
+                      <Text style={styles.bulletText}>{b}</Text>
+                    </View>
                   ))}
                 </View>
               );
-            }
+            })}
+          </View>
+        )}
 
-            case 'job': {
-              const hasTitle = Boolean(block.title && block.title.trim());
-              const hasCompany = Boolean(block.company && block.company.trim());
-              const primaryTitle = hasTitle ? block.title : (hasCompany ? block.company : "Experience");
-              const secondaryCompany = (hasTitle && hasCompany) ? block.company : "";
+        {/* SECTION 4: PROJECTS */}
+        {parsed.projects.length > 0 && (
+          <View>
+            <View style={styles.sectionHeaderWrapper}>
+              <Text style={styles.sectionHeader}>PROJECTS</Text>
+            </View>
+            {parsed.projects.map((proj, i) => {
+              const projectTitle = proj.techStack
+                ? `${proj.name} — ${proj.techStack}`
+                : proj.name;
 
               return (
-                <View key={i} style={{ marginBottom: 3 }}>
-                  <View style={styles.jobTitleRow}>
-                    <Text style={styles.jobTitle}>{primaryTitle}</Text>
-                    {block.dates ? <Text style={styles.jobDates}>{block.dates}</Text> : null}
+                <View key={i} style={{ marginBottom: 3 }} wrap={false}>
+                  {/* Line 1: "Project Name — Tech Stack" LEFT + "Year" RIGHT */}
+                  <View style={styles.twoColRow}>
+                    <Text style={styles.leftBold}>{projectTitle}</Text>
+                    {proj.year ? <Text style={styles.rightDateBold}>{proj.year}</Text> : null}
                   </View>
-                  {(secondaryCompany || block.tech) ? (
-                    <View style={styles.jobSubRow}>
-                      <Text style={styles.jobCompany}>{secondaryCompany}</Text>
-                      {block.tech ? <Text style={styles.jobTech}>{block.tech}</Text> : null}
+
+                  {/* Bullet points below */}
+                  {proj.bullets.map((b, bi) => (
+                    <View key={bi} style={styles.bulletRow}>
+                      <Text style={styles.bulletDot}>•</Text>
+                      <Text style={styles.bulletText}>{b}</Text>
                     </View>
-                  ) : null}
-                  {block.bullets.map((bullet, bIdx) => (
-                    <BulletRow key={bIdx} text={bullet} s={styles} />
                   ))}
                 </View>
               );
-            }
-            case 'education': {
-              let primaryDegree = (block.degree && block.degree.trim() && block.degree.toLowerCase() !== 'degree')
-                ? block.degree.trim()
-                : (block.school?.trim() || block.degree || "Education");
-              let secondarySchool = (block.degree && block.school && block.degree.toLowerCase() !== 'degree')
-                ? block.school.trim()
-                : "";
+            })}
+          </View>
+        )}
 
-              // If secondarySchool is empty and primaryDegree has degree + institution joined
-              if (!secondarySchool && primaryDegree) {
-                const sepMatch = primaryDegree.match(/^(.+?)\s*(?:,\s*|\s+[–—\-]\s+|\s+from\s+|\s+at\s+)(.+)$/i);
-                if (sepMatch) {
-                  const p1 = sepMatch[1].trim();
-                  const p2 = sepMatch[2].trim();
-                  const isP1School = /college|university|institute|academy|school|vidyalaya|board/i.test(p1);
-                  if (isP1School) {
-                    primaryDegree = p2;
-                    secondarySchool = p1;
-                  } else {
-                    primaryDegree = p1;
-                    secondarySchool = p2;
-                  }
-                }
-              }
-
-              return (
-                <View key={i} style={{ marginBottom: 3 }}>
-                  <View style={styles.educationRow}>
-                    <Text style={styles.educationDegree}>{primaryDegree}</Text>
-                    {block.dates ? <Text style={styles.educationDates}>{block.dates}</Text> : null}
-                  </View>
-                  {(secondarySchool || block.gpa) ? (
-                    <View style={styles.educationInstitution}>
-                      <Text style={styles.educationSchool}>{secondarySchool}</Text>
-                      {block.gpa ? <Text style={styles.educationGPA}>{block.gpa}</Text> : null}
-                    </View>
+        {/* SECTION 5: AWARDS & CERTIFICATIONS */}
+        {parsed.certifications.length > 0 && (
+          <View wrap={false}>
+            <View style={styles.sectionHeaderWrapper}>
+              <Text style={styles.sectionHeader}>AWARDS & CERTIFICATIONS</Text>
+            </View>
+            {parsed.certifications.map((cert, i) => (
+              <View key={i} style={styles.bulletRow}>
+                <Text style={styles.bulletDot}>•</Text>
+                <Text style={styles.bulletText}>
+                  {cert.boldPrefix ? (
+                    <Text style={styles.boldInline}>{cert.boldPrefix}</Text>
                   ) : null}
-                </View>
-              );
-            }
-            case 'bullet':
-              return <BulletRow key={i} text={block.text} s={styles} />;
-            case 'cert': {
-              const { title, rest } = splitCertText(block.text);
-              return (
-                <View key={i} style={styles.bulletRow}>
-                  <Text style={styles.bulletDot}>•</Text>
-                  <Text style={styles.bulletText}>
-                    {title ? <Text style={styles.bulletBold}>{title}</Text> : null}
-                    {rest}
-                  </Text>
-                </View>
-              );
-            }
-            case 'normal':
-              return (
-                <Text key={i} style={styles.summaryText}>
-                  {block.text}
+                  <Text>{cert.rest}</Text>
                 </Text>
-              );
-            case 'link':
-              return (
-                <Link key={i} src={block.url} style={styles.link}>
-                  <Text style={styles.link}>{block.label}</Text>
-                </Link>
-              );
-            case 'spacer':
-              return <View key={i} style={styles.spacer} />;
-            default:
-              return null;
-          }
-        })}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* SECTION 6: EDUCATION */}
+        {parsed.education.length > 0 && (
+          <View wrap={false}>
+            <View style={styles.sectionHeaderWrapper}>
+              <Text style={styles.sectionHeader}>EDUCATION</Text>
+            </View>
+            {parsed.education.map((edu, i) => (
+              <View key={i} style={styles.eduEntry}>
+                {/* Line 1: "Degree" LEFT + "Year" RIGHT */}
+                <View style={styles.twoColRow}>
+                  <Text style={styles.leftBold}>{edu.degree}</Text>
+                  {edu.yearOrDates ? <Text style={styles.rightDate}>{edu.yearOrDates}</Text> : null}
+                </View>
+
+                {/* Line 2: "Institution" LEFT + "CGPA/GPA" RIGHT */}
+                <View style={styles.twoColRow}>
+                  <Text style={styles.leftItalic}>{edu.institution}</Text>
+                  {edu.grade ? <Text style={styles.rightGradeItalic}>{edu.grade}</Text> : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* SECTION 7: LANGUAGES */}
+        {parsed.languages.length > 0 && (
+          <View wrap={false}>
+            <View style={styles.sectionHeaderWrapper}>
+              <Text style={styles.sectionHeader}>LANGUAGES</Text>
+            </View>
+            {parsed.languages.map((lang, i) => (
+              <View key={i} style={styles.bulletRow}>
+                <Text style={styles.bulletDot}>•</Text>
+                <Text style={styles.bulletText}>{lang}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </Page>
     </Document>
   );
 };
 
-/** Counts pages in a rendered PDF buffer ("/Type /Page" objects, excluding "/Pages"). */
-function countPdfPages(buffer: Buffer): number {
-  const matches = buffer.toString('latin1').match(/\/Type\s*\/Page(?!s)/g);
-  return matches ? matches.length : 1;
-}
-
 export async function generatePDF(resumeText: string, watermarked = false): Promise<Buffer> {
   try {
-    logger.info(`Generating react-pdf document (watermarked=${watermarked})...`);
-
-    const blocks = parseResumeIntoBlocks(resumeText);
-    const maxPages = getMaxPages(resumeText);
-    let scale = computeDensityScale(resumeText, blocks);
-    let buffer: Buffer = Buffer.alloc(0);
-
-    // Render, verify page count, and shrink until it fits the page budget
-    // (freshers / <5 yrs => exactly 1 page).
-    for (let attempt = 0; attempt < 6; attempt++) {
-      const element = React.createElement(ResumePDFDocument, {
-        text: resumeText,
-        watermarked,
-        scaleOverride: scale,
-      });
-      buffer = await renderToBuffer(element as any);
-      const pages = countPdfPages(buffer);
-      if (pages <= maxPages || scale <= MIN_DENSITY_SCALE) break;
-      scale = Math.max(MIN_DENSITY_SCALE, Math.round((scale - 0.05) * 100) / 100);
-      logger.info(`PDF overflowed to ${pages} pages (budget ${maxPages}); retrying at scale ${scale}`);
-    }
-
-    logger.info(`PDF generated successfully via react-pdf: ${buffer.length} bytes (scale=${scale})`);
+    logger.info(`Generating PDF matching ATS resume template (watermarked=${watermarked})...`);
+    const docElement = <ResumePDFDocument text={resumeText} watermarked={watermarked} />;
+    const buffer = await renderToBuffer(docElement);
+    logger.info("PDF generation completed successfully.");
     return buffer;
-  } catch (err: any) {
-    logger.error("react-pdf generation failed:", err.message);
-    throw new Error("PDF generation failed: " + err.message);
+  } catch (error) {
+    logger.error("Failed to generate PDF with @react-pdf/renderer:", error);
+    throw error;
   }
-}
-
-export function parseLaTeXToPlainText(latex: string): string {
-  const lines = latex.split('\n');
-  const resultLines: string[] = [];
-  
-  let name = "";
-  let contact = "";
-  
-  for (let line of lines) {
-    line = line.trim();
-    if (!line) continue;
-    
-    if (line.startsWith('%')) continue;
-    if (line.startsWith('\\documentclass') || line.startsWith('\\usepackage') || line.startsWith('\\pagestyle') || line.startsWith('\\fancy') || line.startsWith('\\addtolength') || line.startsWith('\\urlstyle') || line.startsWith('\\ragged') || line.startsWith('\\setlength') || line.startsWith('\\titleformat')) {
-      continue;
-    }
-    if (line.startsWith('\\begin{document}') || line.startsWith('\\end{document}') || line.startsWith('\\begin{center}') || line.startsWith('\\end{center}') || line.startsWith('\\begin{itemize}') || line.startsWith('\\end{itemize}')) {
-      continue;
-    }
-    
-    const nameMatch = line.match(/\\textbf\{\\Huge\s*([^\}]+)\}/);
-    if (nameMatch) {
-      name = nameMatch[1];
-      continue;
-    }
-    
-    if (line.startsWith('\\small ')) {
-      contact = line.substring(7).trim();
-      continue;
-    }
-    
-    const sectionMatch = line.match(/\\section\{([^\}]+)\}/);
-    if (sectionMatch) {
-      resultLines.push(sectionMatch[1].toUpperCase());
-      continue;
-    }
-    
-    const itemMatch = line.match(/\\item\s+(.+)/);
-    if (itemMatch) {
-      resultLines.push(`• ${itemMatch[1]}`);
-      continue;
-    }
-    
-    const boldMatch = line.match(/\\textbf\{([^\}]+)\}/);
-    if (boldMatch) {
-      resultLines.push(boldMatch[1]);
-      continue;
-    }
-    
-    const italicMatch = line.match(/\\textit\{([^\}]+)\}/);
-    if (italicMatch) {
-      resultLines.push(italicMatch[1]);
-      continue;
-    }
-    
-    const smallItalicMatch = line.match(/\{\\small\s*\\textit\{([^\}]+)\}\}/);
-    if (smallItalicMatch) {
-      resultLines.push(smallItalicMatch[1]);
-      continue;
-    }
-    
-    let cleanLine = line.replace(/\\\\\s*$/, '').trim();
-    cleanLine = cleanLine.replace(/^\{/, '').replace(/\}$/, '');
-    
-    if (cleanLine) {
-      resultLines.push(cleanLine);
-    }
-  }
-  
-  let plainText = [name, contact, ...resultLines]
-    .filter(Boolean)
-    .join('\n');
-    
-  plainText = plainText
-    .replace(/\\&/g, '&')
-    .replace(/\\%/g, '%')
-    .replace(/\\\$/g, '$')
-    .replace(/\\#/g, '#')
-    .replace(/\\_/g, '_')
-    .replace(/\\\{/g, '{')
-    .replace(/\\\}/g, '}')
-    .replace(/\\\\/g, '\\');
-    
-  return plainText;
 }

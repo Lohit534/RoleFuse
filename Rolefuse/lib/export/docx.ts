@@ -1,402 +1,335 @@
-import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, PageOrientation, convertInchesToTwip, ExternalHyperlink, TabStopType, Tab } from "docx";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  AlignmentType,
+  BorderStyle,
+  TabStopType,
+  Tab,
+} from "docx";
 import { logger } from "../logger";
-import { parseResumeIntoBlocks, computeDensityScale, stripMarkdownAsterisks, toSectionTitle, splitCertText, isRoleOrTitle } from "./pdf-document";
+import { parseResume, stripMarkdownAsterisks } from "../parser/resume-parser";
 
-function cleanText(str: string): string {
-  if (!str) return "";
-  return str
-    .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")
-    .replace(/\*/g, "")
-    .replace(/\s*\|\|\s*/g, " | ")
-    .replace(/[ \t]+/g, " ")
-    .trim();
+const FONT = "Calibri";
+const BODY_SIZE = 22; // 11pt Calibri throughout
+const RIGHT_TAB_POSITION = 9000; // 9000 twips as specified
+
+function run(text: string, opts: Record<string, any> = {}): TextRun {
+  return new TextRun({
+    text: stripMarkdownAsterisks(text || ""),
+    font: FONT,
+    size: BODY_SIZE,
+    ...opts,
+  });
 }
 
-function parseTextRuns(text: string, baseOptions: any = {}): TextRun[] {
-  const sanitized = cleanText(text);
-  if (!sanitized) return [];
-  return [
-    new TextRun({
-      font: "Times New Roman",
-      size: 21, // 10.5pt — matches PDF base
-      ...baseOptions,
-      text: sanitized,
-    })
-  ];
+function twoCol(
+  left: string,
+  right: string,
+  leftOpts: Record<string, any> = {},
+  rightOpts: Record<string, any> = {},
+  after = 30
+): Paragraph {
+  const children: (TextRun | Tab)[] = [run(left, leftOpts)];
+  if (right) {
+    children.push(new TextRun({ children: [new Tab()] }));
+    children.push(run(right, rightOpts));
+  }
+
+  return new Paragraph({
+    tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB_POSITION }],
+    children,
+    spacing: { after },
+  });
 }
 
-// Detect if a line is a section header (ALL CAPS, no bullets, length > 3 chars)
-function isAllCapsSection(line: string): boolean {
-  const stripped = line.replace(/[^A-Z\s&]/g, "").trim();
-  return (
-    line.length > 3 &&
-    line === line.toUpperCase() &&
-    stripped.length > 3 &&
-    !/^[•\-*\u2022]/.test(line) &&
-    !/^\d+\.?$/.test(line)
-  );
+function bullet(text: string, boldPrefix = "", rest = ""): Paragraph {
+  const children: TextRun[] = [];
+  if (boldPrefix) {
+    children.push(run(boldPrefix, { bold: true }));
+  }
+  if (rest) {
+    children.push(run(rest));
+  }
+  if (!boldPrefix && !rest) {
+    children.push(run(text.replace(/^[•\-*\u2022]\s*/, "")));
+  }
+
+  return new Paragraph({
+    bullet: { level: 0 },
+    children,
+    spacing: { after: 30 },
+  });
 }
 
-/** Legacy line-based DOCX renderer (kept as a safety fallback). */
-export async function generateDOCXFromLines(resumeText: string, watermarked = false): Promise<Buffer> {
+export async function generateDOCX(resumeText: string, watermarked = false): Promise<Buffer> {
   try {
-    logger.info(`Initializing DOCX generation (watermarked=${watermarked})...`);
-    const lines = resumeText.split(/\r?\n/).map(line => line.trim());
+    logger.info(`Generating DOCX matching ATS resume template (watermarked=${watermarked})...`);
+    const parsed = parseResume(resumeText);
     const children: Paragraph[] = [];
 
+    // Optional Watermark
     if (watermarked) {
       children.push(
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            new TextRun({
-              text: "ROLEFUSE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)",
-              font: "Times New Roman",
-              size: 20,
+            run("ROLEFUSE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)", {
               bold: true,
-              color: "CC0000"
-            })
+              color: "CC0000",
+              size: 20,
+            }),
           ],
-          spacing: { after: 120 }
+          spacing: { after: 120 },
         })
       );
     }
 
-    let nameWritten = false;
-    let headerEnded = false;
+    // 1. Name — 20pt bold centered
+    if (parsed.name) {
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: stripMarkdownAsterisks(parsed.name),
+              font: FONT,
+              size: 40, // 20pt
+              bold: true,
+            }),
+          ],
+          spacing: { after: 40 },
+        })
+      );
+    }
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    // Role — 11pt italic centered
+    if (parsed.role) {
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text: stripMarkdownAsterisks(parsed.role),
+              font: FONT,
+              size: 22, // 11pt
+              italics: true,
+            }),
+          ],
+          spacing: { after: 40 },
+        })
+      );
+    }
 
-      // 1. Empty line — small spacer
-      if (!line) {
-        children.push(new Paragraph({ spacing: { after: 60 } }));
-        continue;
-      }
-
-      const isDivider = /^[=\-_]{3,}$/.test(line);
-      if (isDivider) continue; // skip setext dividers
-
-      const nextLine = (i + 1 < lines.length) ? lines[i + 1].trim() : "";
-      const isSetextHeader = nextLine && /^[=\-_]{3,}$/.test(nextLine);
-      const isMarkdownHeader = line.startsWith("## ");
-      const isSection = isAllCapsSection(line) || isMarkdownHeader || isSetextHeader;
-
-      if (isSection) headerEnded = true;
-
-      // 2. Name line (first non-empty line before any section detected)
-      if (!nameWritten && !headerEnded) {
-        nameWritten = true;
-        children.push(
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [
-              new TextRun({
-                text: cleanText(line),
-                font: "Times New Roman",
-                size: 44, // 22pt — matches PDF name size
-                bold: true,
-              })
-            ],
-            spacing: { before: 0, after: 100 }
+    // 2. Contact row — 9.5pt centered gray, separated by spaces, all on one line
+    // 3. Horizontal rule after contact (bottom border single 6pt black)
+    if (parsed.contacts.length > 0) {
+      const contactRuns: TextRun[] = [];
+      parsed.contacts.forEach((c, idx) => {
+        contactRuns.push(
+          new TextRun({
+            text: c.text,
+            font: FONT,
+            size: 19, // 9.5pt
+            color: "444444",
           })
         );
-        continue;
-      }
+        if (idx < parsed.contacts.length - 1) {
+          contactRuns.push(
+            new TextRun({
+              text: "   •   ",
+              font: FONT,
+              size: 19,
+              color: "888888",
+            })
+          );
+        }
+      });
 
-      // 3. Contact / sub-header lines before first section
-      if (!headerEnded) {
-        children.push(
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [
-              new TextRun({
-                text: cleanText(line),
-                font: "Times New Roman",
-                size: 20, // 10pt — matches PDF contact row
-                color: "111111"
-              })
-            ],
-            spacing: { before: 40, after: 120 }
-          })
-        );
-        continue;
-      }
-
-      // 4. Section headers
-      if (isSection) {
-        let cleanHeader = line;
-        if (isMarkdownHeader) cleanHeader = line.substring(3).trim();
-        else if (line.endsWith(":")) cleanHeader = line.slice(0, -1);
-
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: cleanHeader,
-                font: "Times New Roman",
-                size: 24, // 12pt — matches PDF section header
-                bold: true,
-              })
-            ],
-            border: {
-              bottom: {
-                color: "000000",
-                space: 4,
-                style: BorderStyle.SINGLE,
-                size: 8 // 1pt line — matches PDF
-              }
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: contactRuns,
+          border: {
+            bottom: {
+              color: "000000",
+              space: 4,
+              style: BorderStyle.SINGLE,
+              size: 6, // 0.75pt line
             },
-            spacing: { before: 180, after: 80 }
+          },
+          spacing: { after: 120 },
+        })
+      );
+    }
+
+    // Helper for Section Headers: 11pt bold allCaps with bottom border single 6pt black
+    const addSectionHeader = (title: string) => {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: title.toUpperCase(),
+              font: FONT,
+              size: 22, // 11pt
+              bold: true,
+              allCaps: true,
+            }),
+          ],
+          border: {
+            bottom: {
+              color: "000000",
+              space: 2,
+              style: BorderStyle.SINGLE,
+              size: 6,
+            },
+          },
+          spacing: { before: 200, after: 80 }, // 10pt before, 4pt after
+        })
+      );
+    };
+
+    // 4. Sections in strict order:
+    // SUMMARY → SKILLS → EXPERIENCE → PROJECTS → AWARDS & CERTIFICATIONS → EDUCATION → LANGUAGES
+
+    // SECTION 1: SUMMARY
+    if (parsed.summary) {
+      addSectionHeader("SUMMARY");
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.JUSTIFIED,
+          children: [run(parsed.summary)],
+          spacing: { after: 60 },
+        })
+      );
+    }
+
+    // SECTION 2: SKILLS
+    if (parsed.skills.length > 0) {
+      addSectionHeader("SKILLS");
+      for (const s of parsed.skills) {
+        children.push(
+          new Paragraph({
+            children: [
+              run(`${s.label}: `, { bold: true }),
+              run(s.skills),
+            ],
+            spacing: { after: 40 },
           })
         );
-        if (isSetextHeader) i++; // skip underline row
-        continue;
       }
+    }
 
-      // 5. Skill lines with "Label: value" format
-      if (line.includes(":") && !line.startsWith("•") && !line.startsWith("-")) {
-        const colonIdx = line.indexOf(":");
-        const label = cleanText(line.substring(0, colonIdx)).trim();
-        const value = cleanText(line.substring(colonIdx + 1)).trim();
-        if (label && value && label.length < 40) {
+    // SECTION 3: EXPERIENCE
+    if (parsed.experience.length > 0) {
+      addSectionHeader("EXPERIENCE");
+      for (const exp of parsed.experience) {
+        const fullTitle = exp.company && !exp.title.includes(exp.company)
+          ? `${exp.title} – ${exp.company}`
+          : exp.title;
+
+        // Line 1: "Job Title – Company" LEFT + "Date Range" RIGHT
+        children.push(
+          twoCol(fullTitle, exp.dateRange, { bold: true }, { color: "555555" }, 20)
+        );
+
+        // Line 2: "Tech stack tags" left in gray italic
+        if (exp.techTags) {
           children.push(
             new Paragraph({
               children: [
-                new TextRun({ text: label + ": ", font: "Times New Roman", size: 21, bold: true }),
-                new TextRun({ text: value, font: "Times New Roman", size: 21 }),
+                new TextRun({
+                  text: exp.techTags,
+                  font: FONT,
+                  size: 20, // 10pt
+                  italics: true,
+                  color: "666666",
+                }),
               ],
-              spacing: { after: 60 }
+              spacing: { after: 30 },
             })
           );
-          continue;
+        }
+
+        // Bullets below
+        for (const b of exp.bullets) {
+          children.push(bullet(b));
         }
       }
-
-      // 6. Bullet points (•, -, *, en-dash, em-dash)
-      if (/^[•\-*\u2022\u2013\u2014]/.test(line)) {
-        const cleanBulletText = cleanText(line.replace(/^[•\-*\u2022\u2013\u2014]\s*/, ""));
-        children.push(
-          new Paragraph({
-            bullet: { level: 0 },
-            children: parseTextRuns(cleanBulletText),
-            spacing: { after: 40 }
-          })
-        );
-        continue;
-      }
-
-      // 7. Lines with dual column content (title + date, spaced 3+ chars apart)
-      const columns = line.split(/\s{3,}/);
-      if (columns.length > 1) {
-        children.push(
-          new Paragraph({
-            tabStops: [{ type: "right", position: 9360 }],
-            children: [
-              ...parseTextRuns(columns[0], { bold: true }),
-              new TextRun({ text: "\t" }),
-              ...parseTextRuns(columns[columns.length - 1]),
-            ],
-            spacing: { after: 60 },
-          })
-        );
-        continue;
-      }
-
-      // 8. Normal paragraph line
-      children.push(
-        new Paragraph({
-          children: parseTextRuns(line),
-          spacing: { after: 80 }
-        })
-      );
     }
 
+    // SECTION 4: PROJECTS
+    if (parsed.projects.length > 0) {
+      addSectionHeader("PROJECTS");
+      for (const proj of parsed.projects) {
+        const projectTitle = proj.techStack
+          ? `${proj.name} — ${proj.techStack}`
+          : proj.name;
+
+        // Line 1: "Project Name — Tech Stack" LEFT + "Year" RIGHT
+        children.push(
+          twoCol(projectTitle, proj.year, { bold: true }, { bold: true }, 20)
+        );
+
+        // Bullets below
+        for (const b of proj.bullets) {
+          children.push(bullet(b));
+        }
+      }
+    }
+
+    // SECTION 5: AWARDS & CERTIFICATIONS
+    if (parsed.certifications.length > 0) {
+      addSectionHeader("AWARDS & CERTIFICATIONS");
+      for (const cert of parsed.certifications) {
+        children.push(bullet(cert.raw, cert.boldPrefix, cert.rest));
+      }
+    }
+
+    // SECTION 6: EDUCATION
+    if (parsed.education.length > 0) {
+      addSectionHeader("EDUCATION");
+      for (const edu of parsed.education) {
+        // Line 1: "Degree" LEFT + "Year" RIGHT
+        children.push(
+          twoCol(edu.degree, edu.yearOrDates, { bold: true }, { color: "555555" }, 15)
+        );
+
+        // Line 2: "Institution" LEFT + "CGPA/GPA" RIGHT, separated by 4pt space (80 twips)
+        children.push(
+          twoCol(edu.institution, edu.grade, { italics: true }, { italics: true, color: "555555" }, 80)
+        );
+      }
+    }
+
+    // SECTION 7: LANGUAGES
+    if (parsed.languages.length > 0) {
+      addSectionHeader("LANGUAGES");
+      for (const lang of parsed.languages) {
+        children.push(bullet(lang));
+      }
+    }
+
+    // Document creation with 720 twips (0.5 inch) margins all sides
     const doc = new Document({
       styles: {
         default: {
           document: {
-            run: { font: "Times New Roman", size: 21 }
-          }
-        }
+            run: { font: FONT, size: BODY_SIZE },
+          },
+        },
       },
       sections: [
         {
           properties: {
             page: {
               margin: {
-                top: convertInchesToTwip(0.75),
-                bottom: convertInchesToTwip(0.75),
-                left: convertInchesToTwip(0.85),
-                right: convertInchesToTwip(0.85),
-              }
-            }
-          },
-          children
-        }
-      ]
-    });
-
-    const buffer = await Packer.toBuffer(doc);
-    logger.info("DOCX generation completed successfully.");
-    return buffer;
-  } catch (error) {
-    logger.error("DOCX generation failed. Returning basic fallback text.", error);
-    return Buffer.from("DOCX Fallback File Content:\n\n" + resumeText);
-  }
-}
-
-// ─── Universal template DOCX (same block model as PDF + live preview) ──────────
-const A4_WIDTH = 11906;
-const A4_HEIGHT = 16838;
-
-function linkLabel(url: string, text: string): string {
-  const l = `${url} ${text}`.toLowerCase();
-  if (l.includes("linkedin")) return "LinkedIn";
-  if (l.includes("github")) return "GitHub";
-  if (l.includes("portfolio")) return "Portfolio";
-  return text.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
-}
-
-export async function generateDOCX(resumeText: string, watermarked = false): Promise<Buffer> {
-  try {
-    const blocks = parseResumeIntoBlocks(resumeText);
-    if (!blocks.length) return generateDOCXFromLines(resumeText, watermarked);
-
-    const scale = computeDensityScale(resumeText, blocks);
-    const hp = (pt: number) => Math.max(14, Math.round(pt * 2 * scale)); // half-points
-    const sp = (tw: number) => Math.round(tw * scale); // spacing twips
-    const marginTw = Math.round(convertInchesToTwip(scale < 0.95 ? 0.45 : 0.55));
-    const sideTw = Math.round(convertInchesToTwip(scale < 0.95 ? 0.5 : 0.6));
-    const rightTab = A4_WIDTH - sideTw * 2;
-    const FONT = "Times New Roman";
-    const BODY = hp(10.5);
-    const run = (text: string, opts: Record<string, any> = {}) =>
-      new TextRun({ text: stripMarkdownAsterisks(text || ""), font: FONT, size: BODY, ...opts });
-
-    const twoCol = (left: string, right: string, leftOpts: Record<string, any> = {}, rightOpts: Record<string, any> = {}, after = 20) =>
-      new Paragraph({
-        tabStops: [{ type: TabStopType.RIGHT, position: rightTab }],
-        children: [run(left, leftOpts), ...(right ? [new TextRun({ children: [new Tab()] }), run(right, rightOpts)] : [])],
-        spacing: { after: sp(after) },
-      });
-
-    const bullet = (text: string) =>
-      new Paragraph({
-        bullet: { level: 0 },
-        children: [run(text.replace(/^\s*([•\-\*–—+\u2022\u25cf\u2043▸►→]|\d+\.)\s*/, ""))],
-        spacing: { after: sp(20) },
-      });
-
-    const children: Paragraph[] = [];
-    if (watermarked) {
-      children.push(
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [run("ROLEFUSE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)", { bold: true, color: "CC0000", size: hp(10) })],
-          spacing: { after: 120 },
-        }),
-      );
-    }
-
-    for (const b of blocks) {
-      switch (b.type) {
-        case "name":
-          children.push(
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [run(b.text, { smallCaps: true, size: hp(24) })],
-              spacing: { after: sp(20) },
-            }),
-          );
-          break;
-        case "subtitle":
-          // Omit subtitle/job name from DOCX
-          break;
-        case "contact": {
-          const cleanSegments = b.segments.filter(seg => !isRoleOrTitle(seg.text));
-          if (cleanSegments.length === 0) break;
-          const parts: (TextRun | ExternalHyperlink)[] = [];
-          cleanSegments.forEach((seg, i) => {
-            const label = (seg.text || "").replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
-            if (seg.isLink && seg.url) {
-              parts.push(new ExternalHyperlink({ link: seg.url, children: [run(label || linkLabel(seg.url, seg.text), { size: hp(9.5), color: "000000", underline: {} })] }));
-            } else {
-              parts.push(run(label, { size: hp(9.5) }));
-            }
-            if (i < cleanSegments.length - 1) parts.push(run("   ", { size: hp(9.5) }));
-          });
-          children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: parts, spacing: { after: sp(100) } }));
-          break;
-        }
-        case "section":
-          children.push(
-            new Paragraph({
-              children: [run(toSectionTitle(b.text), { bold: true, size: hp(12) })],
-              border: { bottom: { color: "000000", space: 2, style: BorderStyle.SINGLE, size: 6 } },
-              spacing: { before: sp(120), after: sp(40) },
-            }),
-          );
-          break;
-        case "summary":
-        case "normal":
-          children.push(new Paragraph({ alignment: AlignmentType.JUSTIFIED, children: [run(b.text)], spacing: { after: sp(30) } }));
-          break;
-        case "skillLine":
-          children.push(new Paragraph({ children: [run(`${b.label}: `, { bold: true }), run(b.value)], spacing: { after: sp(20) } }));
-          break;
-        case "project": {
-          const projTitle = b.name + (b.tech ? ` — ${b.tech}` : "");
-          children.push(twoCol(projTitle, b.dates || "", { bold: true }, { bold: true }, 10));
-          b.bullets.forEach((x) => children.push(bullet(x)));
-          break;
-        }
-        case "job":
-          children.push(twoCol(b.title, b.dates, { bold: true }, { bold: true }, 10));
-          if (b.company || b.tech) {
-            children.push(twoCol(b.company || "", b.tech || "", { italics: true }, { italics: true }, 15));
-          }
-          b.bullets.forEach((x) => children.push(bullet(x)));
-          break;
-        case "education":
-          children.push(twoCol(b.degree, b.dates, { bold: true }, { bold: true }, 10));
-          if (b.school || b.gpa) {
-            children.push(twoCol(b.school || "", b.gpa || "", { italics: true }, { italics: true }, 25));
-          }
-          break;
-        case "bullet":
-          children.push(bullet(b.text));
-          break;
-        case "cert": {
-          const { title, rest } = splitCertText(b.text);
-          children.push(
-            new Paragraph({
-              bullet: { level: 0 },
-              children: [
-                ...(title ? [run(title, { bold: true })] : []),
-                run(rest),
-              ],
-              spacing: { after: sp(15) },
-            }),
-          );
-          break;
-        }
-        case "link":
-          children.push(new Paragraph({ children: [new ExternalHyperlink({ link: b.url, children: [run(b.label, { color: "0000EE", underline: {} })] })], spacing: { after: sp(20) } }));
-          break;
-        case "spacer":
-          break;
-      }
-    }
-
-    const doc = new Document({
-      styles: { default: { document: { run: { font: FONT, size: BODY } } } },
-      sections: [
-        {
-          properties: {
-            page: {
-              size: { width: A4_WIDTH, height: A4_HEIGHT },
-              margin: { top: marginTw, bottom: marginTw, left: sideTw, right: sideTw },
+                top: 720,
+                bottom: 720,
+                left: 720,
+                right: 720,
+              },
             },
           },
           children,
@@ -405,10 +338,10 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
     });
 
     const buffer = await Packer.toBuffer(doc);
-    logger.info(`Universal DOCX generated (scale=${scale}).`);
+    logger.info("DOCX generation completed successfully.");
     return buffer;
   } catch (error) {
-    logger.error("Universal DOCX renderer failed, using legacy line renderer.", error);
-    return generateDOCXFromLines(resumeText, watermarked);
+    logger.error("Failed to generate DOCX:", error);
+    throw error;
   }
 }

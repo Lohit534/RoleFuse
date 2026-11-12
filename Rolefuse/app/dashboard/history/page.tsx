@@ -13,7 +13,7 @@ import { generateSkillRoadmap, generateMultiSkillRoadmap } from "@/lib/roadmap-g
 import { extractTechTerms, extractKeywords } from "@/lib/ats/keywords";
 import { extractScorableBullets } from "@/lib/ats/bullets";
 import { localScore } from "@/lib/ats/scorer";
-import { parseResumeIntoBlocks, toSectionTitle, splitCertText, isRoleOrTitle, getCleanExportFilename } from "@/lib/export/pdf-document";
+import { parseResumeIntoBlocks, toSectionTitle, splitCertText, isRoleOrTitle, getCleanExportFilename, extractRoleFromResume } from "@/lib/export/pdf-document";
 import { saveAs } from "file-saver";
 
 function getReadableLinkLabel(url: string, fallback?: string): string {
@@ -24,12 +24,11 @@ function getReadableLinkLabel(url: string, fallback?: string): string {
   return fallback || url;
 }
 
-function getResumeDisplayTitle(resume: any, fallbackName?: string): string {
-  if (!resume) return "Resume";
-  const raw = (resume.jobTitle || "").trim();
-  const isGeneric = !raw || /^(?:untitled\s*resume|resume\s*optimization|target\s*role(?:\s*application)?|optimized\s*resume|general\s*application|resume)$/i.test(raw);
-  if (!isGeneric) {
-    return raw;
+function getResumeDisplayTitle(resume: any, fallbackName = "Resume"): string {
+  if (!resume) return fallbackName;
+  const role = extractRoleFromResume(resume);
+  if (role) {
+    return role;
   }
   const text = resume.optimizedText || resume.originalText || "";
   if (text) {
@@ -38,7 +37,7 @@ function getResumeDisplayTitle(resume: any, fallbackName?: string): string {
       return firstLine;
     }
   }
-  return fallbackName || "Resume";
+  return fallbackName;
 }
 
 function ensureProfileLinks(optText?: string, origText?: string): string {
@@ -486,16 +485,28 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* ─── Top Header (Matching user's image) ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex flex-wrap items-center gap-2">
-            <span>Score improved</span>
-            <AnimatedScoreNumber value={resume.scoreBefore} className="text-slate-900" />
-            <span className="text-slate-400 font-semibold text-sm sm:text-base">to</span>
-            <AnimatedScoreNumber value={resume.scoreAfter} className="text-[#0d6e5a]" />
-          </h1>
-          <span className="inline-flex items-center bg-teal-50 border border-teal-200 text-[#0d6e5a] text-xs font-bold px-3 py-1 rounded-full shadow-xs">
-            +{delta} points
-          </span>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold bg-[#F5FAFA] text-[#087F6E] border border-[#DCE7E9]">
+              <Briefcase className="h-3.5 w-3.5" />
+              {getResumeDisplayTitle(resume)}
+            </span>
+            <span className="text-[11px] text-slate-400 font-medium">
+              {formatDate(resume.createdAt)}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight flex flex-wrap items-center gap-2">
+              <span>Score improved</span>
+              <AnimatedScoreNumber value={resume.scoreBefore} className="text-slate-900" />
+              <span className="text-slate-400 font-semibold text-sm sm:text-base">to</span>
+              <AnimatedScoreNumber value={resume.scoreAfter} className="text-[#0d6e5a]" />
+            </h1>
+            <span className="inline-flex items-center bg-teal-50 border border-teal-200 text-[#0d6e5a] text-xs font-bold px-3 py-1 rounded-full shadow-xs">
+              +{delta} points
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
