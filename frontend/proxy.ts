@@ -5,7 +5,14 @@ export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") || "";
 
   // 1. Force 301 Permanent Redirect from any *.vercel.app domain to canonical production https://rolefuse.in
+  // Allow Google Search Console HTML verification file (e.g. /google*.html) through without redirecting
   if (host.endsWith(".vercel.app")) {
+    if (
+      request.nextUrl.pathname.startsWith("/google") &&
+      request.nextUrl.pathname.endsWith(".html")
+    ) {
+      return NextResponse.next();
+    }
     const url = new URL(
       request.nextUrl.pathname + request.nextUrl.search,
       "https://rolefuse.in"

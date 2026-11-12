@@ -34,11 +34,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NODE_ENV === "production"
-      ? "https://rolefuse.in"
-      : process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.in"
-  ),
+  metadataBase: new URL("https://rolefuse.in"),
   manifest: "/manifest.json",
   title: {
     default: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",
@@ -83,7 +79,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",
     description: "Score 90+ on recruiter ATS filters in 30 seconds. Scan against any job description, uncover missing keywords, and build recruiter-ready resumes 100% free.",
-    url: process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.in",
+    url: "https://rolefuse.in",
     siteName: "RoleFuse",
     images: [{ url: "/logo.png", width: 1024, height: 1024, alt: "RoleFuse AI - Free ATS Resume Optimization & Scanner" }],
     type: "website",
@@ -108,10 +104,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon.png", sizes: "512x512", type: "image/png" },
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
     ],
     shortcut: "/favicon.ico",
     apple: [
@@ -120,7 +118,7 @@ export const metadata: Metadata = {
   },
 };
 
-const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://rolefuse.in";
+const appBaseUrl = "https://rolefuse.in";
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -182,7 +180,14 @@ const structuredData = {
       "@id": `${appBaseUrl}/#organization`,
       "name": "RoleFuse",
       "url": appBaseUrl,
-      "logo": `${appBaseUrl}/logo.png`,
+      "logo": {
+        "@type": "ImageObject",
+        "url": `${appBaseUrl}/logo.png`,
+        "width": 1024,
+        "height": 1024,
+        "caption": "RoleFuse AI Official Brand Logo"
+      },
+      "image": `${appBaseUrl}/logo.png`,
       "sameAs": [
         "https://twitter.com/rolefuse"
       ]
@@ -269,6 +274,13 @@ export default function RootLayout({
             `,
           }}
         />
+        <meta name="google-site-verification" content="googleba8a3a56d2cebf5c" />
+        <meta name="google-site-verification" content="ba8a3a56d2cebf5c" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="image_src" href="https://rolefuse.in/logo.png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

@@ -13,8 +13,9 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       // 1. Force 301 Permanent Redirect from any *.vercel.app domain to canonical https://rolefuse.in
+      // Excludes Google verification files (e.g. /google*.html) so Search Console can verify ownership
       {
-        source: "/:path*",
+        source: "/:path((?!google.*\\.html$).*)",
         has: [
           {
             type: "host",
