@@ -219,9 +219,9 @@ export async function sendPurchaseReceiptEmail({
 
   const content = `
     <div style="text-align: center; margin-bottom: 24px;">
-      <div style="display: inline-block; background-color: #e6f5f2; color: #087F6E; width: 52px; height: 52px; line-height: 52px; border-radius: 50%; font-size: 24px; font-weight: bold;">
-        ✓
-      </div>
+      <span style="display: inline-block; background-color: #e6f5f2; color: #087F6E; padding: 6px 16px; border-radius: 999px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+        Payment Confirmed
+      </span>
       <h2 style="margin: 12px 0 4px 0; font-size: 22px; font-weight: 800; color: #0f172a;">
         Payment Successful!
       </h2>
@@ -253,7 +253,7 @@ export async function sendPurchaseReceiptEmail({
 
     <div style="text-align: center; margin: 28px 0 16px 0;">
       <a href="https://rolefuse.in/dashboard" style="display: inline-block; background-color: #087F6E; color: #ffffff; padding: 14px 32px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 15px; box-shadow: 0 4px 12px rgba(8, 127, 110, 0.25);">
-        Start Optimizing Resumes &rarr;
+        Start Optimizing Resumes
       </a>
     </div>
 
@@ -306,13 +306,13 @@ export async function sendPlanExpirationReminderEmail({
 
     <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 14px 18px; margin: 20px 0;">
       <p style="margin: 0; font-size: 14px; color: #92400e;">
-        ⚠️ Renew before expiration to keep your resume scans active and continue passing recruiter ATS filters with a 90+ score.
+        <strong>Notice:</strong> Renew before expiration to keep your resume scans active and continue passing recruiter ATS filters with a 90+ score.
       </p>
     </div>
 
     <div style="text-align: center; margin: 28px 0 16px 0;">
       <a href="https://rolefuse.in/dashboard/pricing" style="display: inline-block; background-color: #087F6E; color: #ffffff; padding: 14px 32px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 15px; box-shadow: 0 4px 12px rgba(8, 127, 110, 0.25);">
-        Renew / Upgrade Plan &rarr;
+        Renew / Upgrade Plan
       </a>
     </div>
 
@@ -338,9 +338,9 @@ export async function sendTestEmail(recipientEmail: string) {
 
   const content = `
     <div style="text-align: center; margin-bottom: 20px;">
-      <div style="display: inline-block; background: #e6f5f2; color: #087F6E; width: 48px; height: 48px; line-height: 48px; border-radius: 50%; font-size: 22px;">
-        🚀
-      </div>
+      <span style="display: inline-block; background: #e6f5f2; color: #087F6E; padding: 6px 16px; border-radius: 999px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+        Automation Active
+      </span>
       <h2 style="margin: 12px 0 4px 0; color: #0f172a; font-size: 20px;">
         SMTP Setup Successful!
       </h2>
@@ -389,9 +389,9 @@ export async function sendAbandonedCheckoutEmail({
 
   const content = `
     <div style="text-align: center; margin-bottom: 24px;">
-      <div style="display: inline-block; background-color: #fef3c7; color: #b45309; width: 52px; height: 52px; line-height: 52px; border-radius: 50%; font-size: 24px;">
-        ⚡
-      </div>
+      <span style="display: inline-block; background-color: #fef3c7; color: #b45309; padding: 6px 16px; border-radius: 999px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+        Account Notice
+      </span>
       <h2 style="margin: 12px 0 4px 0; font-size: 22px; font-weight: 800; color: #0f172a;">
         Did something go wrong with your upgrade?
       </h2>
@@ -402,7 +402,7 @@ export async function sendAbandonedCheckoutEmail({
 
     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
       <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">
-        Here's what is waiting for you in ${planName}:
+        Here is what is waiting for you in ${planName}:
       </h3>
       <ul style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">
         <li><strong>AI ATS Resume Scans</strong> matching Workday, Taleo & Greenhouse algorithms</li>
@@ -413,12 +413,12 @@ export async function sendAbandonedCheckoutEmail({
     </div>
 
     <div style="background: #e6f5f2; border: 1px solid #bfe7de; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 13px; color: #087F6E;">
-      🛡️ <strong>100% RBI-Compliant & Secure:</strong> All payments are processed through Razorpay PCI-DSS Level 1. We support UPI (GPay, PhonePe, Paytm), Credit/Debit Cards, and NetBanking.
+      <strong>100% RBI-Compliant and Secure:</strong> All payments are processed through Razorpay PCI-DSS Level 1. We support UPI (GPay, PhonePe, Paytm), Credit/Debit Cards, and NetBanking.
     </div>
 
     <div style="text-align: center; margin: 28px 0 16px 0;">
       <a href="https://rolefuse.in/dashboard/pricing" style="display: inline-block; background-color: #087F6E; color: #ffffff; padding: 14px 32px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 15px; box-shadow: 0 4px 12px rgba(8, 127, 110, 0.25);">
-        Complete Your ${planName} Upgrade &rarr;
+        Complete Your ${planName} Upgrade
       </a>
     </div>
 
