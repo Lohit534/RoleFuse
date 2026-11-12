@@ -13,7 +13,7 @@ import { generateSkillRoadmap, generateMultiSkillRoadmap } from "@/lib/roadmap-g
 import { extractTechTerms, extractKeywords } from "@/lib/ats/keywords";
 import { extractScorableBullets } from "@/lib/ats/bullets";
 import { localScore } from "@/lib/ats/scorer";
-import { parseResumeIntoBlocks, toSectionTitle, splitCertText, isRoleOrTitle } from "@/lib/export/pdf-document";
+import { parseResumeIntoBlocks, toSectionTitle, splitCertText, isRoleOrTitle, getCleanExportFilename } from "@/lib/export/pdf-document";
 import { saveAs } from "file-saver";
 
 function getReadableLinkLabel(url: string, fallback?: string): string {
@@ -22,6 +22,23 @@ function getReadableLinkLabel(url: string, fallback?: string): string {
   if (lower.includes("linkedin.com")) return "LinkedIn";
   if (lower.includes("github.com")) return "GitHub";
   return fallback || url;
+}
+
+function getResumeDisplayTitle(resume: any, fallbackName?: string): string {
+  if (!resume) return "Resume";
+  const raw = (resume.jobTitle || "").trim();
+  const isGeneric = !raw || /^(?:untitled\s*resume|resume\s*optimization|target\s*role(?:\s*application)?|optimized\s*resume|general\s*application|resume)$/i.test(raw);
+  if (!isGeneric) {
+    return raw;
+  }
+  const text = resume.optimizedText || resume.originalText || "";
+  if (text) {
+    const firstLine = text.trim().split("\n")[0]?.replace(/^[#*•\s]+/, "").trim();
+    if (firstLine && firstLine.length > 1 && !firstLine.includes("@") && !/^\+?\d/.test(firstLine) && firstLine.length < 50) {
+      return firstLine;
+    }
+  }
+  return fallbackName || "Resume";
 }
 
 function ensureProfileLinks(optText?: string, origText?: string): string {
@@ -362,8 +379,11 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
       }
 
       const blob = await response.blob();
-      const safeTitle = resume.jobTitle?.replace(/[^a-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, "_");
-      const filename = safeTitle ? `${safeTitle}_Resume.${format}` : `Resume.${format}`;
+      const filename = getCleanExportFilename(
+        resume.optimizedText || resume.originalText || "",
+        `.${format}`,
+        resume.jobTitle || undefined
+      );
       saveAs(blob, filename);
     } catch (error: any) {
       toast.error(error.message || `An error occurred during ${format.toUpperCase()} download.`);
@@ -1192,7 +1212,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                   ? `+${afterScoreDetails.semanticMatch - beforeScoreDetails.semanticMatch}%`
                   : `${afterScoreDetails.semanticMatch - beforeScoreDetails.semanticMatch}%`,
                 description: "Contextual title alignment, industry terminology density, and responsibility relevance to the vacancy.",
-                verified: `Tailored for ${resume.jobTitle || "target role"}`
+                verified: `Tailored for ${getResumeDisplayTitle(resume)}`
               },
               {
                 id: "formatting",
@@ -1563,7 +1583,7 @@ function HistoryRow({
         {/* Title and metadata info */}
         <div className="min-w-0">
           <h3 className="text-xs sm:text-sm font-bold text-[#111827] truncate group-hover:text-[#087F6E] transition-colors">
-            {resume.jobTitle || "Resume Optimization"}
+            {getResumeDisplayTitle(resume)}
           </h3>
           <div className="flex items-center gap-2 text-[10px] text-[#526176] mt-0.5 font-medium">
             <span className="flex items-center gap-1">
@@ -1949,7 +1969,7 @@ export default function HistoryPage() {
             </div>
 
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-700">
-              <span className="font-bold text-slate-900 block truncate">{deleteTarget.jobTitle || "Resume Optimization"}</span>
+              <span className="font-bold text-slate-900 block truncate">{getResumeDisplayTitle(deleteTarget)}</span>
               <span className="text-[10px] text-slate-500">{formatDate(deleteTarget.createdAt)}</span>
             </div>
 

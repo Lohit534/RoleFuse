@@ -539,20 +539,22 @@ export type ParsedResumeBlock =
 
 export type ResumeBlock = ParsedResumeBlock;
 
-export function getCleanExportFilename(text: string, ext = ".pdf", jobTitle?: string): string {
-  // Prefer jobTitle as filename (e.g. "Java_Full_Stack_Developer_Resume.pdf")
-  if (jobTitle && jobTitle.trim() && jobTitle.toLowerCase() !== 'optimized resume' && jobTitle.toLowerCase() !== 'resume') {
+export function getCleanExportFilename(text: string, ext = ".pdf", jobTitle?: string | null): string {
+  // 1. If job name is there, use job name as filename (e.g. "Java_Backend_Developer_Resume.pdf")
+  const isGenericJob = !jobTitle || /^(?:untitled\s*resume|resume\s*optimization|target\s*role(?:\s*application)?|optimized\s*resume|general\s*application|resume)$/i.test(jobTitle.trim());
+  if (!isGenericJob && jobTitle) {
     const cleanRole = jobTitle.replace(/[^a-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, "_");
     if (cleanRole && cleanRole.length > 2) {
       return `${cleanRole}_Resume${ext}`;
     }
   }
 
-  // Fallback: use candidate name from first line
+  // 2. If not mentioned, set the user's name from first line of resume text
   let candidateName = "";
   if (text) {
     const firstLine = text.trim().split("\n")[0] || "";
     candidateName = firstLine
+      .replace(/^[#*•\s]+/, "")
       .replace(/[^a-zA-Z0-9\s_]/g, "")
       .trim()
       .replace(/\s+/g, "_");

@@ -6,5 +6,22 @@ Disallow: /dashboard/
 Disallow: /auth/callback
 Disallow: /auth/confirm
 
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /dashboard/
+
+User-agent: Googlebot-Image
+Allow: /
+Allow: /favicon.ico
+Allow: /icon-48.png
+Allow: /icon-96.png
+Allow: /icon-192.png
+Allow: /icon-512.png
+Allow: /icon.png
+Allow: /logo.png
+Disallow: /api/
+Disallow: /dashboard/
+
 Host: https://rolefuse.in
 Sitemap: https://rolefuse.in/sitemap.xml

@@ -823,7 +823,14 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    if (!finalJobTitle) finalJobTitle = "Target Role Application";
+    if (!finalJobTitle || /^(?:target\s*role(?:\s*application)?|untitled\s*resume|optimized\s*resume)$/i.test(finalJobTitle)) {
+      const candidateName = (resumeText || "").trim().split("\n")[0]?.replace(/^[#*•\s]+/, "").trim();
+      if (candidateName && candidateName.length > 2 && !candidateName.includes("@") && !/^\+?\d/.test(candidateName) && candidateName.length < 50) {
+        finalJobTitle = candidateName;
+      } else {
+        finalJobTitle = user.user_metadata?.full_name || "Resume";
+      }
+    }
     const finalCompany = aiResult.detectedCompany || company || "General Application";
 
     try {

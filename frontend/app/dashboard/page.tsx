@@ -12,7 +12,7 @@ import { extractTechTerms, isTechnicalKeyword } from "@/lib/ats/keywords";
 import ResumeViewer from "@/components/ResumeViewer";
 import BulletImprover from "@/components/BulletImprover";
 import { hasQuantifiedMetric } from "@/lib/ats/scorer";
-import { hasStrongActionVerb } from "@/lib/ats/bullets";
+import { hasStrongActionVerb, extractScorableBullets, cleanBulletText } from "@/lib/ats/bullets";
 // Removed LoadingOverlay import as user requested native background animation
 import BulletEnrichmentModal, {
   WeakBullet,
@@ -1229,6 +1229,23 @@ export default function DashboardPage() {
   const delta =
     afterScore && beforeScore ? afterScore.overall - beforeScore.overall : 0;
 
+  const currentResumeText = optimizeResult?.optimizedText || resumeText || "";
+  const scorableBullets = React.useMemo(() => {
+    return extractScorableBullets(currentResumeText);
+  }, [currentResumeText]);
+
+  const bulletsNeedingImprovementCount = React.useMemo(() => {
+    return scorableBullets.filter((b) => {
+      const clean = cleanBulletText(b.rawLine);
+      const hasVerb = hasStrongActionVerb(clean);
+      const hasMetric = hasQuantifiedMetric(clean);
+      return !hasVerb || !hasMetric;
+    }).length;
+  }, [scorableBullets]);
+
+  const isScoreLow = (afterScore?.overall ?? 0) < 75;
+  const shouldShowBulletImprover = bulletsNeedingImprovementCount > 0 || isScoreLow;
+
   return (
     <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans">
       <Navbar refreshKey={refreshKey} />
@@ -1445,39 +1462,41 @@ export default function DashboardPage() {
               </ScrollFadeIn>
             </div>
 
-            {/* Interactive Bullet Point Improver (Prominently displayed below columns) */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                <div>
-                  <h3 className="text-base font-black text-slate-900">
-                    Interactive Bullet Point Improver
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Scan and optimize individual bullet points on your resume text. We identify missing action verbs and metrics.
-                  </p>
+            {/* Interactive Bullet Point Improver (Hidden if all bullets pass and score is good, shown if low score or needs improvement) */}
+            {shouldShowBulletImprover && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-4">
+                <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-base font-black text-slate-900">
+                      Interactive Bullet Point Improver
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Scan and optimize individual bullet points on your resume text. We identify missing action verbs and metrics.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 sm:p-5">
+                  <BulletImprover
+                    resumeText={optimizeResult?.optimizedText || resumeText}
+                    jobDescription={jobDescription}
+                    userId={user?.id || ""}
+                    userPlan={userPlan}
+                    onChange={(newText, wasImproved) => {
+                      setOptimizeResult((prev: any) =>
+                        prev ? { ...prev, optimizedText: newText } : prev,
+                      );
+                      let newCount = bulletImprovementsCount;
+                      if (wasImproved) {
+                        newCount += 1;
+                        setBulletImprovementsCount(newCount);
+                      }
+                      handleReScoreBefore(newText, newCount);
+                    }}
+                  />
                 </div>
               </div>
-
-              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 sm:p-5">
-                <BulletImprover
-                  resumeText={optimizeResult?.optimizedText || resumeText}
-                  jobDescription={jobDescription}
-                  userId={user?.id || ""}
-                  userPlan={userPlan}
-                  onChange={(newText, wasImproved) => {
-                    setOptimizeResult((prev: any) =>
-                      prev ? { ...prev, optimizedText: newText } : prev,
-                    );
-                    let newCount = bulletImprovementsCount;
-                    if (wasImproved) {
-                      newCount += 1;
-                      setBulletImprovementsCount(newCount);
-                    }
-                    handleReScoreBefore(newText, newCount);
-                  }}
-                />
-              </div>
-            </div>
+            )}
 
             {/* ─── NEXT STEP CAREER ACCELERATORS ─── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
