@@ -79,18 +79,13 @@ export function buildOptimizationPrompt(
     sectionOrderStr += `${stepNum++}. PROFESSIONAL SUMMARY\n${stepNum++}. (blank line)\n`;
   }
 
-  if (isFresher) {
-    sectionOrderStr += `${stepNum++}. TECHNICAL SKILLS\n${stepNum++}. (blank line)\n`;
-    sectionOrderStr += `${stepNum++}. PROJECTS\n${stepNum++}. (blank line)\n`;
-    sectionOrderStr += `${stepNum++}. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n${stepNum++}. (blank line)\n`;
-    sectionOrderStr += `${stepNum++}. EDUCATION\n`;
-  } else {
+  sectionOrderStr += `${stepNum++}. TECHNICAL SKILLS\n${stepNum++}. (blank line)\n`;
+  if (hasOriginalExperience || hasOriginalInternship) {
     sectionOrderStr += `${stepNum++}. ${expSectionHeading}\n${stepNum++}. (blank line)\n`;
-    sectionOrderStr += `${stepNum++}. TECHNICAL SKILLS\n${stepNum++}. (blank line)\n`;
-    sectionOrderStr += `${stepNum++}. PROJECTS\n${stepNum++}. (blank line)\n`;
-    sectionOrderStr += `${stepNum++}. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n${stepNum++}. (blank line)\n`;
-    sectionOrderStr += `${stepNum++}. EDUCATION\n`;
   }
+  sectionOrderStr += `${stepNum++}. PROJECTS\n${stepNum++}. (blank line)\n`;
+  sectionOrderStr += `${stepNum++}. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n${stepNum++}. (blank line)\n`;
+  sectionOrderStr += `${stepNum++}. EDUCATION\n`;
 
   if (hasOriginalLanguages) {
     sectionOrderStr += `${stepNum++}. (blank line)\n${stepNum++}. LANGUAGES\n`;

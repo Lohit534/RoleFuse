@@ -578,9 +578,7 @@ export async function POST(request: NextRequest) {
           extraItems.push(`[Verified Graduation Year & GPA: ${eduVal}]`);
           combinedInstructions += `\n\n• VERIFIED COLLEGE GRADUATION YEAR & GPA: "${eduVal}"\n  MANDATORY: Ensure the college / university degree entry in the EDUCATION section includes this graduation year and GPA/percentage.`;
         }
-        if (extraItems.length > 0) {
-          enrichedResumeText = preparedResumeText + `\n\n--- USER VERIFIED DATES, YEARS & DETAILS ---\n${extraItems.join("\n")}`;
-        }
+        enrichedResumeText = preparedResumeText;
       }
     }
 

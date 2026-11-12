@@ -1,13 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../logger";
 
-// Active supported Gemini models in priority order (verified model IDs)
+// Active supported Gemini models in priority order (verified live with Google API)
 export const GEMINI_MODELS = [
-  "gemini-2.0-flash",        // Best: fast, capable, free-tier friendly
-  "gemini-2.0-flash-lite",   // Fastest fallback
-  "gemini-1.5-flash",        // Stable fallback
-  "gemini-1.5-flash-8b",     // Lightest fallback
-  "gemini-1.5-pro",          // High-quality last resort
+  "gemini-3-flash-preview",  // Fastest, verified working (200 OK) for ATS optimization
+  "gemini-3.1-flash-lite",   // Fast fallback
+  "gemini-3.8-flash",        // Google's recommended primary flash model
+  "gemini-3.7-flash",        // Stable fallback
+  "gemini-3.5-flash-lite",   // Lightweight fallback
+  "gemini-flash-latest",     // General latest alias
 ];
 
 // Helper to extract and clean JSON from AI output
@@ -132,6 +133,7 @@ export async function callGemini(
               `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
               {
                 method: "POST",
+                signal: AbortSignal.timeout(20000),
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   contents: [{ parts: [{ text: prompt }] }],

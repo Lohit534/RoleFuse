@@ -11,10 +11,15 @@ export const MAX_ATS_SCORE = 96;
 
 export const COMMON_TITLES = [
   "Software Engineer", "Frontend Engineer", "Backend Engineer", "Full Stack Developer",
-  "Developer", "Data Scientist", "Data Analyst", "Product Manager", "Project Manager",
-  "Business Analyst", "System Administrator", "DevOps Engineer", "QA Engineer",
-  "Mobile Developer", "UI/UX Designer", "Software Developer", "Web Developer",
-  "Android Developer", "iOS Developer", "Cloud Engineer", "Site Reliability Engineer"
+  "Full Stack Engineer", "Backend Developer", "Frontend Developer",
+  "Developer", "Data Scientist", "Data Analyst", "Data Engineer",
+  "Machine Learning Engineer", "Generative AI Engineer", "AI Engineer", "AI/ML Engineer",
+  "NLP Engineer", "Computer Vision Engineer", "Cloud Engineer", "Cloud Architect",
+  "Java Developer", "Java Backend Developer", "Python Developer", "Python Backend Developer",
+  "Product Manager", "Project Manager", "Business Analyst", "System Administrator",
+  "DevOps Engineer", "QA Engineer", "Mobile Developer", "UI/UX Designer",
+  "Software Developer", "Web Developer", "Android Developer", "iOS Developer",
+  "Site Reliability Engineer", "Security Engineer", "Solutions Architect"
 ];
 
 function normalizeWord(word: string): string {
@@ -40,9 +45,23 @@ const TECH_SYNONYMS: Record<string, string[]> = {
   "aws": ["amazon web services"],
   "gcp": ["google cloud", "google cloud platform"],
   "golang": ["go"],
-  "rest": ["restful", "rest api", "restful apis"],
+  "rest": ["restful", "rest api", "restful apis", "rest apis"],
+  "rest api": ["rest", "restful", "rest apis", "restful apis"],
+  "rest apis": ["rest", "rest api", "restful", "restful apis"],
   "ci/cd": ["cicd", "continuous integration", "continuous deployment"],
   "mongodb": ["mongo"],
+  "scikit-learn": ["scikitlearn", "sklearn"],
+  "scikitlearn": ["scikit-learn", "sklearn"],
+  "llm": ["llms", "large language models", "large language model", "generative ai"],
+  "llms": ["llm", "large language models", "large language model", "generative ai"],
+  "large language models": ["llm", "llms", "large language model"],
+  "generative ai": ["genai", "gen ai", "llms", "llm", "large language models"],
+  "prompt engineering": ["prompt optimization", "prompts", "prompt design"],
+  "neural network": ["neural networks", "ann", "cnn", "rnn", "lstm", "deep learning"],
+  "neural networks": ["neural network", "ann", "cnn", "rnn", "lstm", "deep learning"],
+  "django rest framework": ["drf", "django rest", "django"],
+  "version control": ["git", "github", "gitlab"],
+  "data structures": ["dsa", "algorithms", "leetcode"],
 };
 
 /** Closely related skills that earn PARTIAL (0.5) credit for a JD skill. */
@@ -70,19 +89,29 @@ const RELATED_SKILLS: Record<string, string[]> = {
   "ci/cd": ["jenkins", "github actions", "gitlab"],
   "jenkins": ["ci/cd", "github actions"],
   "rest": ["api", "apis", "graphql"],
-  "rest api": ["api", "apis"],
+  "rest api": ["api", "apis", "restful", "rest apis"],
+  "rest apis": ["api", "apis", "restful", "rest api"],
   "graphql": ["rest", "api"],
   "microservices": ["api", "backend", "distributed"],
   "jest": ["testing", "unit test", "mocha", "junit", "pytest"],
-  "java": ["kotlin", "spring"],
-  "spring boot": ["java", "spring"],
-  "python": ["django", "flask", "pandas"],
-  "django": ["python", "flask"],
+  "java": ["kotlin", "spring", "spring boot"],
+  "spring boot": ["java", "spring", "spring mvc"],
+  "spring mvc": ["spring", "spring boot", "java"],
+  "python": ["django", "flask", "pandas", "numpy"],
+  "django": ["python", "flask", "django rest framework"],
+  "django rest framework": ["django", "python", "rest api", "rest apis"],
   "flask": ["python", "django", "fastapi"],
   "fastapi": ["python", "flask"],
-  "tensorflow": ["pytorch", "keras", "machine learning"],
-  "pytorch": ["tensorflow", "keras", "machine learning"],
-  "machine learning": ["deep learning", "scikit-learn", "tensorflow", "pytorch"],
+  "tensorflow": ["pytorch", "keras", "machine learning", "deep learning"],
+  "pytorch": ["tensorflow", "keras", "machine learning", "deep learning"],
+  "machine learning": ["deep learning", "scikit-learn", "tensorflow", "pytorch", "supervised learning"],
+  "deep learning": ["neural networks", "tensorflow", "pytorch", "keras", "cnn", "lstm", "ann"],
+  "generative ai": ["llm", "llms", "prompt engineering", "rag", "deep learning", "machine learning", "nlp"],
+  "prompt engineering": ["llm", "llms", "generative ai", "rag"],
+  "rag": ["retrieval-augmented generation", "vector databases", "embeddings", "llm", "generative ai"],
+  "scikit-learn": ["machine learning", "pandas", "numpy", "supervised learning", "classification"],
+  "data structures": ["algorithms", "leetcode", "dsa", "problem solving"],
+  "algorithms": ["data structures", "leetcode", "dsa", "problem solving"],
   "html": ["css"],
   "css": ["html", "tailwind", "bootstrap"],
   "tailwind": ["css", "bootstrap"],
@@ -95,6 +124,7 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
 
   const resumeLower = (resumeText || "").toLowerCase();
   const jdLower = (jobDescription || "").toLowerCase();
+  const resumeCleanAlpha = resumeLower.replace(/[^a-z0-9]/g, "");
 
   // ── 1. DYNAMIC KEYWORD EXTRACTION & MATCHING ────────────────────────────
   const resumeKeywords = extractKeywords(resumeText);
@@ -111,9 +141,10 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
 
   for (const targetKw of allTargetKeywords) {
     const kwLower = targetKw.toLowerCase();
+    const cleanKw = kwLower.replace(/[^a-z0-9]/g, "");
     let isMatched = false;
 
-    if (resumeKeywords.has(targetKw) || resumeLower.includes(kwLower)) {
+    if (resumeKeywords.has(targetKw) || resumeLower.includes(kwLower) || (cleanKw.length > 2 && resumeCleanAlpha.includes(cleanKw))) {
       isMatched = true;
     } else {
       // Check stemming & aliases
@@ -124,7 +155,8 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
         // Check known tech synonyms
         const synonyms = TECH_SYNONYMS[kwLower] || [];
         for (const syn of synonyms) {
-          if (resumeLower.includes(syn)) {
+          const synClean = syn.replace(/[^a-z0-9]/g, "");
+          if (resumeLower.includes(syn) || (synClean.length > 2 && resumeCleanAlpha.includes(synClean))) {
             isMatched = true;
             break;
           }
@@ -182,19 +214,48 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
     }
   }
 
+  // Domain role matching if exact title string was not an identical match
+  if (titleScore < 25) {
+    const roleKeywordGroups = [
+      ["machine learning", "ml", "artificial intelligence"],
+      ["generative ai", "genai", "llm", "large language"],
+      ["data science", "data scientist", "data analyst", "data engineer"],
+      ["backend", "java developer", "python developer", "software developer"],
+      ["frontend", "react developer", "web developer", "ui engineer"],
+      ["full stack", "fullstack", "software engineer"],
+      ["devops", "cloud", "sre", "infrastructure"],
+    ];
+    for (const group of roleKeywordGroups) {
+      const inJd = group.some(k => jdLower.includes(k));
+      const inResume = group.some(k => resumeLower.includes(k));
+      if (inJd && inResume) {
+        titleScore = 22;
+        break;
+      }
+    }
+  }
+
   // Tech stack domain overlap
   const targetTechCount = Math.max(3, Math.min(10, jdTechTerms.length));
-  const techMatches = jdTechTerms.filter(t => resumeLower.includes(t.toLowerCase())).length;
+  const techMatches = jdTechTerms.filter(t => {
+    const tl = t.toLowerCase();
+    const tClean = tl.replace(/[^a-z0-9]/g, "");
+    return resumeLower.includes(tl) || (tClean.length > 2 && resumeCleanAlpha.includes(tClean));
+  }).length;
   const techRatio = Math.min(1.0, (techCredit || techMatches) / targetTechCount);
   const techScore = Math.round(Math.sqrt(techRatio) * 55);
 
-  // Summary & narrative alignment — a summary only earns full credit when it
-  // actually speaks to the JD (mentions 3+ of the JD's technical skills).
+  // Summary & narrative alignment
   const hasSummary = /\b(summary|objective|profile|about me)\b/i.test(resumeText);
-  const summaryMatch = resumeText.match(/(?:summary|objective|profile|about me)[^\n]*\n([\s\S]{0,700}?)(?:\n\s*\n|\n[A-Z][A-Z &]{3,}\n)/i);
+  const summaryMatch = resumeText.match(/(?:(?:professional\s+)?summary|career\s+objective|objective|profile|about me)[^\n]*\n([\s\S]{0,800}?)(?:\n\s*\n|\n[A-Z][A-Z &]{3,}\n|$)/i);
   const summaryText = (summaryMatch?.[1] || "").toLowerCase();
-  const summaryJdTerms = jdTechTerms.filter(t => summaryText.includes(t.toLowerCase())).length;
-  const summaryScore = !hasSummary ? 0 : summaryJdTerms >= 3 ? 20 : summaryJdTerms >= 1 ? 12 : 6;
+  const summaryClean = summaryText.replace(/[^a-z0-9]/g, "");
+  const summaryJdTerms = jdTechTerms.filter(t => {
+    const tl = t.toLowerCase();
+    const tClean = tl.replace(/[^a-z0-9]/g, "");
+    return summaryText.includes(tl) || (tClean.length > 2 && summaryClean.includes(tClean));
+  }).length;
+  const summaryScore = !hasSummary ? 0 : summaryJdTerms >= 2 ? 20 : summaryJdTerms >= 1 ? 16 : 12;
 
   const semanticMatch = Math.min(97, Math.max(10, Math.round(titleScore + techScore + summaryScore)));
 

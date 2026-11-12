@@ -133,6 +133,16 @@ export function sanitizeOptimizedResume(
   userAnswers?: Record<string, string>
 ): string {
   if (!optimized) return optimized;
+
+  // Pre-clean: strip leaked internal verification blocks and repair run-on punctuation
+  let preCleaned = optimized
+    .replace(/---+\s*USER[\s\S]*?---+/gi, "")
+    .replace(/\[Verified[\s\S]*?\]/gi, "")
+    .replace(/YEARS\s*&\s*DETAILS/gi, "")
+    .replace(/([.,;:!])([A-Za-z])/g, "$1 $2")
+    .replace(/\bPromptEngineering\b/g, "Prompt Engineering")
+    .replace(/\bandRAG\b/g, "and RAG");
+
   // If user provided verified answers (dates, company, tech stack, years), include them in allowed source
   // so their legitimate answers are NEVER stripped as AI hallucinations.
   const userAnswersText = userAnswers && typeof userAnswers === "object"
@@ -140,7 +150,7 @@ export function sanitizeOptimizedResume(
     : "";
   const allowedSource = `${original || ""} ${userAnswersText}`.trim();
   const originalLower = allowedSource.toLowerCase();
-  const lines = optimized.split(/\r?\n/);
+  const lines = preCleaned.split(/\r?\n/);
   const out: string[] = [];
   // FIX: Track section header object directly — not just name string — so isEducation / isCert
   // checks use the actual canonical header and never bleed across section boundaries.
@@ -150,7 +160,7 @@ export function sanitizeOptimizedResume(
     let line = rawLine;
 
     // Leaked internal blocks from the enrichment step
-    if (/USER[\s-]*VERIFIED|^\s*\[Verified [^\]]*\]\s*$|^-{3,}.*-{3,}$/i.test(line.trim())) continue;
+    if (/USER[\s-]*VERIFIED|^\s*\[Verified|\[.*Technologies.*\]|YEARS & DETAILS|^-{3,}.*-{3,}$/i.test(line.trim())) continue;
 
     const header = detectSectionHeader(line);
     if (header) currentHeader = header;
@@ -644,17 +654,33 @@ export function ensureUserAnswersInResume(
       .trim();
     const skillsRegex = /\n(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS)\n([\s\S]*?)(?=\n[A-Z\s&]{4,}|\n*$)/i;
     const skillsMatch = out.match(skillsRegex);
+    const terms = cleanTech
+      .split(/[,;\n\r|]+/)
+      .map((t) => t.replace(/^[•\-\*–—\s]+/, "").trim())
+      .filter((t) => t.length > 1 && !/^(and|with|the)$/i.test(t));
+
     if (skillsMatch) {
       const skillsBlock = skillsMatch[2];
-      const terms = cleanTech.split(/,\s*/).map((t) => t.trim()).filter(Boolean);
       const missingTerms = terms.filter((t) => !skillsBlock.toLowerCase().includes(t.toLowerCase()));
+
       if (missingTerms.length > 0) {
-        const newSkillsLine = `Core Technologies: ${missingTerms.join(", ")}`;
-        const updatedSkillsBlock = `${skillsBlock.trimEnd()}\n${newSkillsLine}\n`;
-        out = out.replace(skillsBlock, updatedSkillsBlock);
+        // If Core Technologies line already exists, merge terms into it; do NOT add duplicate line
+        const coreTechMatch = skillsBlock.match(/Core Technologies:\s*([^\n]+)/i);
+        if (coreTechMatch) {
+          const existingList = coreTechMatch[1].split(/,\s*/).map(t => t.trim().toLowerCase());
+          const actuallyNew = missingTerms.filter(t => !existingList.includes(t.toLowerCase()));
+          if (actuallyNew.length > 0) {
+            const updatedLine = `Core Technologies: ${coreTechMatch[1].trim()}, ${actuallyNew.join(", ")}`;
+            out = out.replace(coreTechMatch[0], updatedLine);
+          }
+        } else {
+          const newSkillsLine = `Core Technologies: ${missingTerms.join(", ")}`;
+          const updatedSkillsBlock = `${skillsBlock.trimEnd()}\n${newSkillsLine}\n`;
+          out = out.replace(skillsBlock, updatedSkillsBlock);
+        }
       }
-    } else {
-      out = `${out.trimEnd()}\n\nTECHNICAL SKILLS\nCore Technologies: ${cleanTech}\n`;
+    } else if (terms.length > 0) {
+      out = `${out.trimEnd()}\n\nTECHNICAL SKILLS\nCore Technologies: ${terms.join(", ")}\n`;
     }
   }
 

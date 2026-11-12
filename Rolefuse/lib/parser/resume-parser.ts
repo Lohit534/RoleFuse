@@ -643,29 +643,59 @@ export function parseResume(rawText: string): ParsedResume {
     }
   }
 
-  // Parse Education items
+  // Parse Education items with multi-line robustness
   const education: EducationItem[] = [];
   let currentEdu: EducationItem | null = null;
 
+  const isDegreeLine = (str: string): boolean => {
+    return /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|high\s*school|matriculation|secondary|diploma|phd|doctorate|degree)\b/i.test(str);
+  };
+
   for (let i = 0; i < rawEduLines.length; i++) {
-    const line = rawEduLines[i].trim();
-    if (!line) continue;
+    const rawLine = rawEduLines[i].trim();
+    if (!rawLine) continue;
 
-    const { left: degLeft, date } = extractRightDate(line);
+    const clean = stripMarkdownAsterisks(rawLine).replace(/^[•\-*\u2022]\s*/, '').trim();
+    if (!clean) continue;
 
-    if (!currentEdu) {
+    // Check if line is pure date
+    if (PURE_DATE_REGEX.test(clean) || /^\b(19|20)\d{2}\s*[\–\—\-]\s*(?:(19|20)\d{2}|Present)\b/i.test(clean)) {
+      if (currentEdu && !currentEdu.yearOrDates) {
+        currentEdu.yearOrDates = clean;
+        continue;
+      }
+    }
+
+    // Check if line is pure grade
+    if (PURE_GRADE_REGEX.test(clean) || /^(?:CGPA|GPA)\s*:\s*[\dX\.]+/i.test(clean)) {
+      if (currentEdu && !currentEdu.grade) {
+        currentEdu.grade = clean;
+        continue;
+      }
+    }
+
+    const { left: degLeft, date } = extractRightDate(rawLine);
+    const { left: instLeft, grade } = extractRightGrade(degLeft);
+
+    if (isDegreeLine(rawLine) || !currentEdu || (currentEdu.institution && !currentEdu.degree)) {
       currentEdu = {
-        degree: degLeft,
+        degree: stripMarkdownAsterisks(instLeft),
         institution: '',
         yearOrDates: date,
-        grade: ''
+        grade: grade
       };
       education.push(currentEdu);
     } else if (!currentEdu.institution) {
-      const { left: instLeft, grade } = extractRightGrade(line);
-      currentEdu.institution = instLeft;
-      if (grade) currentEdu.grade = grade;
-      currentEdu = null; // entry finished
+      currentEdu.institution = stripMarkdownAsterisks(instLeft);
+      if (date && !currentEdu.yearOrDates) currentEdu.yearOrDates = date;
+      if (grade && !currentEdu.grade) currentEdu.grade = grade;
+    } else {
+      // Third line of an entry (could be remaining date or grade)
+      if (date && !currentEdu.yearOrDates) currentEdu.yearOrDates = date;
+      if (grade && !currentEdu.grade) currentEdu.grade = grade;
+      else if (!currentEdu.institution.includes(clean)) {
+        currentEdu.institution += ', ' + clean;
+      }
     }
   }
 

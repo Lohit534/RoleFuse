@@ -16,10 +16,11 @@ const TECH_TERMS = [
   "WebSockets", "WebRTC", "PWA", "SPA", "SSR", "SSG",
 
   // Backend
-  "Node.js", "Nodejs", "Express", "FastAPI", "Django", "Flask", "Spring",
-  "Spring Boot", "NestJS", "Laravel", "Rails", "Gin", "Fiber", "gRPC",
-  "REST", "RESTful", "GraphQL", "Apollo", "tRPC", "OpenAPI", "Swagger",
-  "OAuth", "JWT", "WebSockets",
+  "Node.js", "Nodejs", "Express", "FastAPI", "Django", "Django REST Framework", "Flask", "Spring",
+  "Spring Boot", "Spring MVC", "Hibernate", "JPA", "Servlets", "JSP", "Maven", "Tomcat",
+  "NestJS", "Laravel", "Rails", "Gin", "Fiber", "gRPC", "REST", "RESTful", "REST API", "REST APIs",
+  "GraphQL", "Apollo", "tRPC", "OpenAPI", "Swagger", "OAuth", "JWT", "JWT Authentication",
+  "JDBC", "Multithreading", "Concurrency", "WebSockets",
 
   // Databases
   "PostgreSQL", "MySQL", "SQLite", "MariaDB", "MongoDB", "Redis", "Cassandra",
@@ -40,14 +41,19 @@ const TECH_TERMS = [
   "Vault", "Consul", "CI/CD", "DevOps", "SRE", "Linux", "Ubuntu",
 
   // AI / ML
-  "TensorFlow", "PyTorch", "Keras", "scikit-learn", "XGBoost", "LightGBM",
-  "CatBoost", "Hugging Face", "Transformers", "LangChain", "LlamaIndex",
-  "OpenAI", "Anthropic", "Claude", "GPT", "LLM", "RAG", "RLHF",
+  "TensorFlow", "PyTorch", "Keras", "scikit-learn", "Scikit-Learn", "Scikitlearn",
+  "XGBoost", "LightGBM", "CatBoost", "Hugging Face", "Transformers", "LangChain", "LlamaIndex",
+  "OpenAI", "Anthropic", "Claude", "GPT", "LLM", "LLMs", "RAG", "RLHF",
+  "Prompt Engineering", "Generative AI", "Large Language Models",
+  "Supervised Learning", "Unsupervised Learning", "Classification", "Regression",
+  "Model Validation", "Model Evaluation", "Model Training", "Model Tuning",
+  "Feature Engineering", "Data Preprocessing",
   "Stable Diffusion", "Diffusion", "BERT", "T5", "LoRA", "QLoRA",
   "FAISS", "Pandas", "NumPy", "Matplotlib", "Seaborn", "Plotly",
   "Spark", "PySpark", "Dask", "Airflow", "MLflow", "DVC", "Weights & Biases",
   "SageMaker", "Vertex AI", "Databricks", "DataRobot", "H2O",
-  "Computer Vision", "NLP", "OCR", "CNN", "RNN", "LSTM", "GAN",
+  "Computer Vision", "NLP", "OCR", "ANN", "CNN", "RNN", "LSTM", "SVM", "KNN", "GAN",
+  "Data Structures", "Algorithms", "LeetCode",
 
   // Data
   "Kafka", "RabbitMQ", "Celery", "dbt", "Fivetran", "Stitch", "Airbyte",
@@ -82,12 +88,14 @@ const TECH_TERMS = [
 const PHRASE_TERMS: string[] = [
   // AI/ML phrases
   "machine learning", "deep learning", "natural language processing",
-  "large language model", "reinforcement learning", "transfer learning",
-  "computer vision", "generative ai", "retrieval augmented generation",
-  "neural network", "feature engineering", "data pipeline", "data engineering",
-  "data science", "data analysis", "data visualization", "data modeling",
+  "large language model", "large language models", "reinforcement learning", "transfer learning",
+  "computer vision", "generative ai", "retrieval augmented generation", "retrieval-augmented generation",
+  "prompt engineering", "supervised learning", "unsupervised learning",
+  "neural network", "neural networks", "feature engineering", "data pipeline", "data engineering",
+  "data science", "data analysis", "data visualization", "data modeling", "data preprocessing",
   "time series", "recommendation system", "anomaly detection",
-  "model training", "model deployment", "model inference", "vector database",
+  "model training", "model deployment", "model inference", "model validation", "model evaluation",
+  "vector database", "vector databases",
 
   // Cloud phrases
   "cloud computing", "cloud infrastructure", "cloud native", "cloud migration",
@@ -99,8 +107,9 @@ const PHRASE_TERMS: string[] = [
   "full stack", "full-stack", "frontend development", "backend development",
   "software development", "software engineering", "system design",
   "distributed systems", "high availability", "fault tolerant",
-  "api development", "rest api", "microservices architecture",
-  "event driven", "object oriented", "functional programming",
+  "api development", "rest api", "rest apis", "microservices architecture",
+  "django rest framework", "spring mvc", "data structures", "algorithms",
+  "jwt authentication", "event driven", "object oriented", "functional programming",
   "test driven development", "agile methodology", "code review",
   "performance optimization", "database design", "schema design",
   "version control",
@@ -216,10 +225,20 @@ export function isTechnicalKeyword(term: string): boolean {
     "ml": true, "ai": true, "nlp": true, "llm": true, "llms": true, "genai": true,
     "rag": true, "nosql": true, "sql": true, "bi": true, "sre": true, "qa": true,
     "tdd": true, "bdd": true, "oop": true, "api": true, "apis": true,
-    "etl": true, "aws lambda": true, "docker container": true, "docker containers": true
+    "etl": true, "aws lambda": true, "docker container": true, "docker containers": true,
+    "scikitlearn": true, "scikit-learn": true, "drf": true, "ann": true, "cnn": true,
+    "rnn": true, "lstm": true, "svm": true, "knn": true, "gan": true, "dsa": true,
   };
 
   if (TECH_ALIASES[clean] || TECH_ALIASES[singular]) return true;
+
+  // Normalized alphanumeric match (handles hyphens like scikit-learn vs scikitlearn)
+  const normClean = clean.replace(/[^a-z0-9]/g, "");
+  if (normClean.length > 2) {
+    for (const t of ALL_TECH_LOWER) {
+      if (t.replace(/[^a-z0-9]/g, "") === normClean) return true;
+    }
+  }
 
   return false;
 }
