@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
           }
         }
       }
-    } catch (_authErr) {}
+    } catch (_authErr) { }
 
     let mergedUsers: any[] = dbUsers.map((u: any) => {
       const authMatch = authUsersMap.get(u.id) || (u.email ? authUsersMap.get(u.email.toLowerCase().trim()) : null);
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
           if (p.email && !paymentMap[p.email.toLowerCase().trim()]) paymentMap[p.email.toLowerCase().trim()] = p;
         }
       }
-    } catch (_pErr) {}
+    } catch (_pErr) { }
 
     // 5. Merge user profiles with exact database credits and official pricing plans
     const enriched = mergedUsers.map((u: any) => {
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
       if (isExpired && rawPaidCredits > 0 && !isRollover && !isAdminEmail(u.email)) {
         const leftover = rawPaidCredits;
         const rolloverStr = `rollover:${leftover}`;
-        adminClient.from("Credit").update({ paidCredits: 0, expiresAt: null, billingCycle: rolloverStr }).eq("userId", u.id).catch(() => {});
+        adminClient.from("Credit").update({ paidCredits: 0, expiresAt: null, billingCycle: rolloverStr }).eq("userId", u.id).catch(() => { });
       }
 
       let plan: "owner" | "promax" | "premium" | "free" = "free";
@@ -210,7 +210,7 @@ export async function GET(request: NextRequest) {
         .select("id", { count: "exact", head: true })
         .not("jobTitle", "in", '("SUPPORT_TICKET","USER_FEEDBACK","ADMIN_BROADCAST")');
       totalOptimizations = optCount || 0;
-    } catch {}
+    } catch { }
 
     try {
       const { count: tickCount } = await adminClient
@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
         .select("id", { count: "exact", head: true })
         .eq("jobTitle", "SUPPORT_TICKET");
       totalTickets = tickCount || 0;
-    } catch {}
+    } catch { }
 
     // Revenue & Paid Users Analytics
     const totalRevenue = dbPaymentLogs.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
@@ -280,7 +280,7 @@ export async function POST(request: NextRequest) {
         .eq("id", targetUserId)
         .maybeSingle();
       targetEmail = dbUser?.email || "";
-    } catch {}
+    } catch { }
 
     if (!targetEmail) {
       // Try auth admin
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
           const { data: authUser } = await adminClient.auth.admin.getUserById(targetUserId);
           targetEmail = authUser?.user?.email || "";
         }
-      } catch {}
+      } catch { }
     }
 
     if (isAdminEmail(targetEmail)) {
@@ -336,10 +336,10 @@ export async function POST(request: NextRequest) {
               email: authUser.user.email,
               name: authUser.user.user_metadata?.full_name || authUser.user.email?.split("@")[0] || null,
               createdAt: authUser.user.created_at || now.toISOString(),
-            }, { onConflict: "id" }).catch(() => {});
+            }, { onConflict: "id" }).catch(() => { });
           }
         }
-      } catch {}
+      } catch { }
     }
 
     const { data: existingCredit } = await adminClient
@@ -382,7 +382,7 @@ export async function POST(request: NextRequest) {
           user_metadata: { plan: planId },
         });
       }
-    } catch {}
+    } catch { }
 
     return NextResponse.json({ success: true, planId, paidCredits, billingCycle });
   } catch (e: any) {
@@ -420,16 +420,16 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete associated data from DB
-    await adminClient.from("Credit").delete().eq("userId", targetUserId).catch(() => {});
-    await adminClient.from("Resume").delete().eq("userId", targetUserId).catch(() => {});
-    await adminClient.from("User").delete().eq("id", targetUserId).catch(() => {});
+    await adminClient.from("Credit").delete().eq("userId", targetUserId).catch(() => { });
+    await adminClient.from("Resume").delete().eq("userId", targetUserId).catch(() => { });
+    await adminClient.from("User").delete().eq("id", targetUserId).catch(() => { });
 
     // Delete from auth.users as well so it's completely cleaned up
     try {
       if (adminClient?.auth?.admin?.deleteUser) {
         await adminClient.auth.admin.deleteUser(targetUserId);
       }
-    } catch (_e) {}
+    } catch (_e) { }
 
     return NextResponse.json({ success: true, deletedUserId: targetUserId });
   } catch (e: any) {
