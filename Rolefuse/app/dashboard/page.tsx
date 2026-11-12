@@ -1028,6 +1028,20 @@ export default function DashboardPage() {
       .slice(0, 16);
   }, [optimizeResult, afterScore, jobDescription]);
 
+  const currentResumeText = optimizeResult?.optimizedText || resumeText || "";
+  const scorableBullets = React.useMemo(() => {
+    return extractScorableBullets(currentResumeText);
+  }, [currentResumeText]);
+
+  const bulletsNeedingImprovementCount = React.useMemo(() => {
+    return scorableBullets.filter((b) => {
+      const clean = cleanBulletText(b.rawLine);
+      const hasVerb = hasStrongActionVerb(clean);
+      const hasMetric = hasQuantifiedMetric(clean);
+      return !hasVerb || !hasMetric;
+    }).length;
+  }, [scorableBullets]);
+
   const handleOptimizeAnother = () => {
     clearActiveSession();
     resetStore();
@@ -1228,20 +1242,6 @@ export default function DashboardPage() {
   const showResults = hasResults && optimizeResult && viewMode === "result";
   const delta =
     afterScore && beforeScore ? afterScore.overall - beforeScore.overall : 0;
-
-  const currentResumeText = optimizeResult?.optimizedText || resumeText || "";
-  const scorableBullets = React.useMemo(() => {
-    return extractScorableBullets(currentResumeText);
-  }, [currentResumeText]);
-
-  const bulletsNeedingImprovementCount = React.useMemo(() => {
-    return scorableBullets.filter((b) => {
-      const clean = cleanBulletText(b.rawLine);
-      const hasVerb = hasStrongActionVerb(clean);
-      const hasMetric = hasQuantifiedMetric(clean);
-      return !hasVerb || !hasMetric;
-    }).length;
-  }, [scorableBullets]);
 
   const isScoreLow = (afterScore?.overall ?? 0) < 75;
   const shouldShowBulletImprover = bulletsNeedingImprovementCount > 0 || isScoreLow;
