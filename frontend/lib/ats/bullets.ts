@@ -423,15 +423,19 @@ export function enrichResumeATSQuality(
     .slice(0, 10);
 
   if (techMissing.length > 0) {
+    // FIX: Inject keywords AFTER the section header line (not before it)
+    // so they appear inside the TECHNICAL SKILLS section — not above it
     const skillsHeaderRegex = /(?:^|\n)(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS)\n/i;
     const skillsMatch = text.match(skillsHeaderRegex);
 
     if (skillsMatch && skillsMatch.index !== undefined) {
-      const headerPos = skillsMatch.index + skillsMatch[0].length;
+      // Insert the new keyword line immediately after the header newline
+      const afterHeaderPos = skillsMatch.index + skillsMatch[0].length;
       const injectLine = `Core Competencies & Tools: ${techMissing.join(", ")}\n`;
-      text = text.slice(0, headerPos) + injectLine + text.slice(headerPos);
+      text = text.slice(0, afterHeaderPos) + injectLine + text.slice(afterHeaderPos);
     } else {
-      const insertBeforeRegex = /\n(PROJECTS|PROFESSIONAL EXPERIENCE|EXPERIENCE|EDUCATION)\n/i;
+      // No existing skills section — insert a new one before PROJECTS or EXPERIENCE or EDUCATION
+      const insertBeforeRegex = /\n(PROJECTS|PROFESSIONAL EXPERIENCE|INTERNSHIP EXPERIENCE|EXPERIENCE|EDUCATION)\n/i;
       const insertMatch = text.match(insertBeforeRegex);
       const skillsBlock = `\nTECHNICAL SKILLS\nCore Competencies: ${techMissing.join(", ")}\n\n`;
       if (insertMatch && insertMatch.index !== undefined) {

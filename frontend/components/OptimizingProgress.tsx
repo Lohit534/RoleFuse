@@ -57,6 +57,42 @@ const STEP_FLOORS: Record<number, number> = {
   7: 98,
 };
 
+/** Persist user's answered questions to localStorage so they are never asked again */
+const SAVED_ANSWERS_KEY = "rolefuse_saved_resume_answers";
+
+function getSavedAnswers(): Record<string, string> {
+  try {
+    const raw = typeof window !== "undefined" && localStorage.getItem(SAVED_ANSWERS_KEY);
+    if (raw) return JSON.parse(raw) as Record<string, string>;
+  } catch {}
+  return {};
+}
+
+function mergeAndSaveAnswers(newAnswers: Record<string, string>) {
+  try {
+    const existing = getSavedAnswers();
+    const merged = { ...existing, ...newAnswers };
+    localStorage.setItem(SAVED_ANSWERS_KEY, JSON.stringify(merged));
+    return merged;
+  } catch {}
+  return newAnswers;
+}
+
+/** Filter questions: skip those already answered and saved from a previous run */
+function filterUnansweredQuestions(questions: MissingQuestion[]): MissingQuestion[] {
+  const saved = getSavedAnswers();
+  return questions.filter((q) => {
+    const key = q.field;
+    return !saved[key] || saved[key].trim() === "";
+  });
+}
+
+/** Build a combined answers object: saved answers merged with new answers for this run */
+function buildFinalAnswers(collectedAnswers: Record<string, string>): Record<string, string> {
+  const saved = getSavedAnswers();
+  return { ...saved, ...collectedAnswers };
+}
+
 export default function OptimizingProgress({
   onComplete,
   onError,
@@ -253,11 +289,22 @@ export default function OptimizingProgress({
 
               if (data.needsInput && Array.isArray(data.questions) && data.questions.length > 0) {
                 clearTimeout(hardTimeout);
-                // Pause step animation and show the missing-details Q&A card
+
+                // FIX: Filter out questions whose answers were already saved in a previous run
+                const unanswered = filterUnansweredQuestions(data.questions);
+
+                if (unanswered.length === 0) {
+                  // All questions already answered — skip Q&A and proceed immediately with saved answers
+                  const savedAnswers = getSavedAnswers();
+                  proceedToOptimization(savedAnswers);
+                  return;
+                }
+
+                // Pause step animation and show only the NEW unanswered questions
                 if (stepTimerRef.current) clearTimeout(stepTimerRef.current);
                 awaitingInputRef.current = true;
                 setAwaitingInput(true);
-                setMissingQuestions(data.questions);
+                setMissingQuestions(unanswered);
                 setCurrentQuestionIndex(0);
                 setUserAnswers({});
                 return; // stop reading this stream — proceedToOptimization will start a new one
@@ -306,6 +353,18 @@ export default function OptimizingProgress({
     awaitingInputRef.current = false;
     setAwaitingInput(false);
 
+    // FIX: Merge new answers with all previously saved answers so the AI never needs to ask again
+    // Also persist the newly given answers so they carry over to future optimization runs
+    const finalAnswers = buildFinalAnswers(collectedAnswers);
+    // Save newly provided (non-empty) answers to localStorage for future runs
+    const toSave: Record<string, string> = {};
+    for (const [k, v] of Object.entries(collectedAnswers)) {
+      if (typeof v === "string" && v.trim()) toSave[k] = v.trim();
+    }
+    if (Object.keys(toSave).length > 0) {
+      mergeAndSaveAnswers(toSave);
+    }
+
     // Smoothly resume step progression at Step 4
     setSteps((prev) =>
       prev.map((s) => {
@@ -342,7 +401,7 @@ export default function OptimizingProgress({
           resumeText,
           jobDescription,
           instructions,
-          userAnswers: collectedAnswers,
+          userAnswers: finalAnswers,
           skipDetection: true,
         }),
       });
@@ -404,7 +463,7 @@ export default function OptimizingProgress({
   };
 
   const handleApplyAnswers = (skipMode = false) => {
-    const answersToSend = skipMode ? {} : userAnswers;
+    const answersToSend = skipMode ? getSavedAnswers() : { ...getSavedAnswers(), ...userAnswers };
     proceedToOptimization(answersToSend);
   };
 

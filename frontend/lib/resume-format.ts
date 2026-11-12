@@ -132,7 +132,9 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
   const originalLower = (original || "").toLowerCase();
   const lines = optimized.split(/\r?\n/);
   const out: string[] = [];
-  let section = "";
+  // FIX: Track section header object directly — not just name string — so isEducation / isCert
+  // checks use the actual canonical header and never bleed across section boundaries.
+  let currentHeader: { name: string; scorable: boolean } | null = null;
 
   for (const rawLine of lines) {
     let line = rawLine;
@@ -141,18 +143,20 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
     if (/USER[\s-]*VERIFIED|^\s*\[Verified [^\]]*\]\s*$|^-{3,}.*-{3,}$/i.test(line.trim())) continue;
 
     const header = detectSectionHeader(line);
-    if (header) section = header.name;
+    if (header) currentHeader = header;
+
+    const sectionName = currentHeader?.name ?? "";
 
     // Experience / Projects: restore missing "•" on bullet sentences
     if (!header) {
-      const sec = detectSectionHeader(section);
-      if (sec?.scorable && line.trim() && !BULLET_MARKER_REGEX.test(line) && looksLikeSentenceBullet(line)) {
+      if (currentHeader?.scorable && line.trim() && !BULLET_MARKER_REGEX.test(line) && looksLikeSentenceBullet(line)) {
         line = `• ${line.trim()}`;
       }
     }
 
     // Technical Skills: NEVER allow bullets in skills section
-    const isSkills = /TECHNICAL\s*SKILLS|SKILLS|CORE\s*COMPETENCIES|KEY\s*SKILLS/i.test(section) && !header;
+    // Use exact header name match so CERTIFICATIONS & ACHIEVEMENTS is never confused with SKILLS
+    const isSkills = !header && /^(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS|CORE SKILLS|AREAS OF EXPERTISE)$/.test(sectionName);
     if (isSkills && line.trim()) {
       line = line
         .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, '')
@@ -161,7 +165,8 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
     }
 
     // Experience / Internships: Strip fabricated date ranges the user did not specify in original resume
-    const isExp = /EXPERIENCE|INTERNSHIP|WORK HISTORY/.test(section) && !header;
+    // Use exact section name matching — INTERNSHIP EXPERIENCE must NOT match CERTIFICATIONS
+    const isExp = !header && /^(PROFESSIONAL EXPERIENCE|INTERNSHIP EXPERIENCE|WORK EXPERIENCE|EXPERIENCE|EMPLOYMENT HISTORY|WORK HISTORY|CAREER HISTORY|INTERNSHIP|INTERNSHIPS)$/.test(sectionName);
     if (isExp && line.trim()) {
       const isDateLine = /^(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?\b(19\d{2}|20\d{2})\b\s*[-–—]\s*(?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+)?(?:\b(19\d{2}|20\d{2})\b|Present)(?:\s*\([^)]*\))?$/i.test(line.trim());
       if (isDateLine) {
@@ -175,7 +180,8 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
       }
     }
 
-    const isEducation = /EDUCATION|ACADEM|QUALIFICATION/.test(section) && !header;
+    // Education: Only process lines when STRICTLY in an education section — not certifications or achievements
+    const isEducation = !header && /^(EDUCATION|ACADEMIC BACKGROUND|ACADEMICS|QUALIFICATIONS)$/.test(sectionName);
     if (isEducation && line.trim()) {
       // Split by commas but keep pipes (degree | dates) intact
       const [left, ...rest] = line.split(/\s+\|\s+/);
@@ -201,8 +207,9 @@ export function sanitizeOptimizedResume(optimized: string, original: string): st
       if (!line.trim()) continue;
     }
 
-    // Certifications: Strip fabricated years that the user did not provide in the original resume
-    const isCert = /CERTIFICAT|ACHIEVEMENT|LICENS/.test(section) && !header;
+    // Certifications: Strip fabricated years — ONLY when strictly inside a certifications/achievements section
+    // FIX: Use exact header name so education lines are NEVER processed as certifications
+    const isCert = !header && /^(CERTIFICATIONS|CERTIFICATIONS & ACHIEVEMENTS|CERTIFICATIONS AND ACHIEVEMENTS|ACHIEVEMENTS & CERTIFICATIONS|ACHIEVEMENTS AND CERTIFICATIONS|CERTIFICATES|LICENSES|AWARDS & CERTIFICATIONS|CERTIFICATIONS & AWARDS)$/.test(sectionName);
     if (isCert && line.trim()) {
       const yearMatches = Array.from(line.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => m[1]);
       for (const yr of yearMatches) {
