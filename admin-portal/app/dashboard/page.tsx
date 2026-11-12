@@ -11,7 +11,7 @@ import {
   Bell, ChevronRight, Activity, BarChart3,
   ArrowUpRight, ArrowDownRight, ArrowRight, Filter, Eye, Send,
   Shield, CreditCard, ShieldCheck, Radio, Tag, Zap, Plus,
-  Download, UserPlus, Copy, Check
+  Download
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -97,15 +97,6 @@ export default function AdminDashboard() {
   const [deleteTargetFeedbackId, setDeleteTargetFeedbackId] = useState<string | null>(null);
 
   const [refreshing, setRefreshing] = useState(false);
-
-  // Invite User state
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteName] = useState("");
-  const [invitePlan, setInvitePlan] = useState<"free" | "premium" | "promax" | "owner">("promax");
-  const [inviting, setInviting] = useState(false);
-  const [inviteResult, setInviteResult] = useState<{ emailSent: boolean; inviteLink?: string; message: string; email: string } | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -561,44 +552,6 @@ export default function AdminDashboard() {
     link.click();
     document.body.removeChild(link);
     toast.success("Users CSV exported!");
-  };
-
-  const handleInviteUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteEmail || !inviteEmail.includes("@")) {
-      toast.error("Please enter a valid email address.");
-      return;
-    }
-    setInviting(true);
-    try {
-      const res = await fetch("/api/invite", {
-        method: "POST",
-        headers: authHeaders(accessToken),
-        body: JSON.stringify({
-          email: inviteEmail.trim(),
-          name: inviteName.trim(),
-          planId: invitePlan,
-          origin: "https://rolefuse.in",
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setInviteResult({
-          emailSent: Boolean(data.emailSent),
-          inviteLink: data.inviteLink,
-          message: data.message,
-          email: inviteEmail.trim(),
-        });
-        toast.success(data.emailSent ? "Invitation dispatched to email!" : "Invitation link generated!");
-        loadUsers(accessToken);
-      } else {
-        toast.error(data.error || "Failed to invite user.");
-      }
-    } catch {
-      toast.error("Connection error while sending invitation.");
-    } finally {
-      setInviting(false);
-    }
   };
 
   const filteredUsers = users.filter(u => {
@@ -1171,18 +1124,6 @@ export default function AdminDashboard() {
                   >
                     <Download className="h-3.5 w-3.5 text-slate-500" />
                     Export CSV
-                  </button>
-                  <button
-                    onClick={() => {
-                      setInviteResult(null);
-                      setInviteEmail("");
-                      setInviteName("");
-                      setShowInviteModal(true);
-                    }}
-                    className="flex items-center gap-2 px-3.5 py-2 bg-[#0d6e5a] hover:bg-[#0b5c4b] text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Invite User
                   </button>
                 </div>
               </div>
@@ -2064,139 +2005,6 @@ export default function AdminDashboard() {
                 Delete
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* CENTERED INVITE USER MODAL */}
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white border border-slate-200 p-6 rounded-2xl space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150 select-none">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-[#0d6e5a]/10 flex items-center justify-center text-[#0d6e5a] shrink-0">
-                  <UserPlus className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-sm">Invite Candidate / Admin</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Generate an onboarding link with pre-assigned subscription tier.</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {inviteResult ? (
-              <div className="space-y-4 pt-2">
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-800 font-bold">
-                    <CheckCircle className="h-4 w-4 text-emerald-600" />
-                    <span>{inviteResult.emailSent ? "Invitation Dispatched" : "Invite Link Generated"}</span>
-                  </div>
-                  <p className="text-emerald-700 leading-relaxed">{inviteResult.message}</p>
-                </div>
-
-                {inviteResult.inviteLink && (
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-700">Direct Invitation Link</label>
-                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-2">
-                      <input
-                        readOnly
-                        value={inviteResult.inviteLink}
-                        className="bg-transparent text-xs text-slate-600 w-full outline-none font-mono truncate"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(inviteResult.inviteLink || "");
-                          setCopiedLink(true);
-                          toast.success("Link copied to clipboard!");
-                          setTimeout(() => setCopiedLink(false), 2000);
-                        }}
-                        className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1 shrink-0 cursor-pointer"
-                      >
-                        {copiedLink ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                        <span>{copiedLink ? "Copied" : "Copy"}</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-end pt-2">
-                  <button
-                    onClick={() => {
-                      setInviteResult(null);
-                      setInviteEmail("");
-                      setInviteName("");
-                    }}
-                    className="text-xs font-bold text-[#0d6e5a] hover:underline cursor-pointer"
-                  >
-                    Invite Another User
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleInviteUser} className="space-y-3.5 pt-2">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="user@example.com"
-                    className="w-full h-10 px-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-[#0d6e5a] transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Full Name (Optional)</label>
-                  <input
-                    type="text"
-                    value={inviteName}
-                    onChange={(e) => setInviteName(e.target.value)}
-                    placeholder="Jane Doe"
-                    className="w-full h-10 px-3.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-[#0d6e5a] transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Subscription Tier</label>
-                  <select
-                    value={invitePlan}
-                    onChange={(e: any) => setInvitePlan(e.target.value)}
-                    className="w-full h-10 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-[#0d6e5a] transition-all font-semibold"
-                  >
-                    <option value="promax">Pro Max (90 credits/mo)</option>
-                    <option value="premium">Premium Pro (20 credits/mo)</option>
-                    <option value="free">Free Tier (1 credit)</option>
-                    <option value="owner">Owner / Co-Admin</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setShowInviteModal(false)}
-                    className="text-slate-600 hover:text-slate-900 text-xs font-semibold px-4 h-9 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={inviting}
-                    className="bg-[#0d6e5a] hover:bg-[#0b5c4b] text-white text-xs font-bold px-4 h-9 rounded-xl shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    {inviting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    <span>{inviting ? "Sending..." : "Send Invitation"}</span>
-                  </button>
-                </div>
-              </form>
-            )}
           </div>
         </div>
       )}

@@ -22,16 +22,11 @@ Dedicated administration and analytics console for the [RoleFuse](https://rolefu
    - Token credit adjustment and real-time synchronization with Supabase.
    - Instant CSV User Data Export for offline auditing.
 
-3. **Candidate / Admin Invitation System**:
-   - Modal interface to generate custom invitation links.
-   - Automated email dispatch via Supabase auth mailer with fallback link generation.
-   - Automatic provisioning of plan tiers and credits upon acceptance.
-
-4. **Support Ticketing & Live Communication**:
+3. **Support Ticketing & Live Communication**:
    - Unified support mailbox with real-time ticket statuses (`pending`, `replied`).
    - In-app response dispatch back to user dashboard notification center.
 
-5. **Broadcast Announcements**:
+4. **Broadcast Announcements**:
    - Push site-wide announcements, flash sales, and maintenance alerts.
    - Live synchronization with `rolefuse.in` banner alerts.
 
