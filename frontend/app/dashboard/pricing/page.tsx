@@ -391,9 +391,11 @@ export default function PricingPage() {
       : (selectedPlan.id === "premium" ? 1188 : 2388);
 
     let userEmail = "";
+    let userName = "";
     try {
       const { data } = await supabase.auth.getUser();
       userEmail = data?.user?.email || "";
+      userName = data?.user?.user_metadata?.full_name || data?.user?.user_metadata?.name || "";
     } catch (err) { }
 
     // Check if Razorpay script is loaded in window
@@ -479,6 +481,20 @@ export default function PricingPage() {
           modal: {
             ondismiss: function () {
               setCheckoutLoading(false);
+              // Trigger automated abandoned checkout recovery email
+              if (userEmail) {
+                fetch("/api/payment/abandoned", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    planId: selectedPlan.id,
+                    billingCycle,
+                    price: billingCycle === "yearly" ? `${selectedPlan.priceYearly}/yr` : `${selectedPlan.priceMonthly}/mo`,
+                    email: userEmail,
+                    name: userName,
+                  }),
+                }).catch(() => {});
+              }
             }
           }
         };

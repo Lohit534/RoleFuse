@@ -184,6 +184,20 @@ export default function UpgradePaywallModal() {
         modal: {
           ondismiss: () => {
             setLoadingPlan(null);
+            // Trigger automated abandoned checkout recovery email
+            if (user?.email) {
+              fetch("/api/payment/abandoned", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  planId,
+                  billingCycle,
+                  price: billingCycle === "yearly" ? (planId === "promax" ? "₹2,388/yr" : "₹1,188/yr") : (planId === "promax" ? "₹199/mo" : "₹99/mo"),
+                  email: user.email,
+                  name: user.user_metadata?.full_name || "",
+                }),
+              }).catch(() => {});
+            }
           },
         },
       };

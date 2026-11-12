@@ -5,11 +5,15 @@ const smtpHost = process.env.SMTP_HOST || "smtp-relay.brevo.com";
 const smtpPort = Number(process.env.SMTP_PORT) || 587;
 const smtpUser = process.env.SMTP_USER || "";
 const smtpPass = process.env.SMTP_PASS || "";
-// All outgoing emails authenticate through the single verified Brevo sender: hello@rolefuse.in
+// All outgoing emails authenticate through verified Brevo senders
+// Safe fallback: defaults to BREVO_SENDER (hello@rolefuse.in) to guarantee zero 550 SMTP errors
 const senderAddress = process.env.BREVO_SENDER || "hello@rolefuse.in";
+const supportSender = process.env.BREVO_SUPPORT_SENDER || senderAddress;
+const contactSender = process.env.BREVO_CONTACT_SENDER || senderAddress;
+
 const defaultFrom = `RoleFuse <${senderAddress}>`;
-const supportEmail = `RoleFuse Support <${senderAddress}>`;
-const contactEmail = `RoleFuse Contact <${senderAddress}>`;
+const supportEmail = `RoleFuse Support <${supportSender}>`;
+const contactEmail = `RoleFuse Contact <${contactSender}>`;
 const adminEmail = process.env.ADMIN_EMAIL || process.env.OWNER_EMAIL || "support@rolefuse.in";
 
 export function getTransporter() {
@@ -361,4 +365,75 @@ export async function sendTestEmail(recipientEmail: string) {
     html: wrapEmailHtml(content, "Test email from RoleFuse via Brevo SMTP"),
   });
 }
+
+/**
+ * 5. Abandoned Payment Gateway / Checkout Exit Email
+ * Sent when a user opens the Razorpay checkout and exits before completing payment.
+ */
+export async function sendAbandonedCheckoutEmail({
+  userEmail,
+  userName,
+  planName,
+  price,
+  billingCycle,
+}: {
+  userEmail: string;
+  userName?: string;
+  planName: string;
+  price?: string;
+  billingCycle?: string;
+}) {
+  const transporter = getTransporter();
+
+  const priceDisplay = price ? ` for only ${price}` : "";
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <div style="display: inline-block; background-color: #fef3c7; color: #b45309; width: 52px; height: 52px; line-height: 52px; border-radius: 50%; font-size: 24px;">
+        ⚡
+      </div>
+      <h2 style="margin: 12px 0 4px 0; font-size: 22px; font-weight: 800; color: #0f172a;">
+        Did something go wrong with your upgrade?
+      </h2>
+      <p style="margin: 0; color: #64748b; font-size: 14px;">
+        Hi ${userName || "there"}, we noticed you started upgrading to <strong>RoleFuse ${planName}</strong>${priceDisplay}, but exited before completing payment.
+      </p>
+    </div>
+
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">
+        Here's what is waiting for you in ${planName}:
+      </h3>
+      <ul style="margin: 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.8;">
+        <li><strong>AI ATS Resume Scans</strong> matching Workday, Taleo & Greenhouse algorithms</li>
+        <li><strong>Unlimited ATS Safe PDF + DOCX</strong> downloads</li>
+        <li><strong>Job Description Missing Keyword Matching</strong> to boost your score to 90+</li>
+        <li><strong>Cover Letter AI Studio</strong> & Tailored Skill Roadmaps</li>
+      </ul>
+    </div>
+
+    <div style="background: #e6f5f2; border: 1px solid #bfe7de; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 13px; color: #087F6E;">
+      🛡️ <strong>100% RBI-Compliant & Secure:</strong> All payments are processed through Razorpay PCI-DSS Level 1. We support UPI (GPay, PhonePe, Paytm), Credit/Debit Cards, and NetBanking.
+    </div>
+
+    <div style="text-align: center; margin: 28px 0 16px 0;">
+      <a href="https://rolefuse.in/dashboard/pricing" style="display: inline-block; background-color: #087F6E; color: #ffffff; padding: 14px 32px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 15px; box-shadow: 0 4px 12px rgba(8, 127, 110, 0.25);">
+        Complete Your ${planName} Upgrade &rarr;
+      </a>
+    </div>
+
+    <p style="margin: 24px 0 0 0; text-align: center; font-size: 12px; color: #94a3b8;">
+      Have a question or ran into a payment error? Just reply directly to this email — our support team is happy to assist you!
+    </p>
+  `;
+
+  return transporter.sendMail({
+    from: supportEmail,
+    to: userEmail,
+    replyTo: "support@rolefuse.in",
+    subject: `Did you have questions about upgrading to RoleFuse ${planName}?`,
+    html: wrapEmailHtml(content, `We noticed you started upgrading to RoleFuse ${planName}. Need any help?`),
+  });
+}
+
 
