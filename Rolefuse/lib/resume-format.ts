@@ -500,18 +500,53 @@ export function preserveCandidateContactDetails(optimized: string, original: str
   if (contactLineIdx !== -1) {
     const contactLine = lines[contactLineIdx];
     const cleanContact = contactLine.replace(/^[•\-\*–—\u2022+]\s*/, "");
-    const contactParts = cleanContact.split(/\s*\|\s*/).map((p) => p.trim()).filter(Boolean);
+    const rawParts = cleanContact.split(/\s*\|\s*/).map((p) => p.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim()).filter(Boolean);
 
-    // Ensure phone is present
-    if (originalPhone && !topHeaderSlice.includes(originalPhone.toLowerCase()) && !contactParts.some((p) => /\d{10}/.test(p.replace(/\D/g, "")))) {
-      contactParts.unshift(originalPhone);
+    // Deduplicate contact items: at most 1 phone, 1 email, 1 linkedin, 1 github
+    let phoneFound = false;
+    let emailFound = false;
+    let liFound = false;
+    let ghFound = false;
+    const contactParts: string[] = [];
+
+    for (const p of rawParts) {
+      if (/@/.test(p)) {
+        if (!emailFound) {
+          contactParts.push(p);
+          emailFound = true;
+        }
+      } else if (/(?:\+?\d{1,3}[-.\s]?)?\(?[\dX]{3}\)?[-.\s]?[\dX]{3}[-.\s]?[\dX]{4}|\b\d{10}\b/.test(p)) {
+        if (!phoneFound) {
+          contactParts.push(p);
+          phoneFound = true;
+        }
+      } else if (/linkedin\.com/i.test(p) || /^linkedin\b/i.test(p)) {
+        if (!liFound) {
+          contactParts.push(p);
+          liFound = true;
+        }
+      } else if (/github\.com/i.test(p) || /^github\b/i.test(p)) {
+        if (!ghFound) {
+          contactParts.push(p);
+          ghFound = true;
+        }
+      } else if (!contactParts.some(existing => existing.toLowerCase() === p.toLowerCase())) {
+        contactParts.push(p);
+      }
     }
-    // Ensure email is present
-    if (originalEmail && !topHeaderSlice.includes(originalEmail.toLowerCase())) {
+
+    // Ensure phone is present (only 1)
+    if (originalPhone && !phoneFound) {
+      contactParts.unshift(originalPhone);
+      phoneFound = true;
+    }
+    // Ensure email is present (only 1)
+    if (originalEmail && !emailFound) {
       contactParts.splice(contactParts.length > 0 ? 1 : 0, 0, originalEmail);
+      emailFound = true;
     }
     // Ensure location is present only if explicitly in candidate's original contact block, otherwise strip all hallucinated locations
-    if (originalLocation && !topHeaderSlice.includes(originalLocation.toLowerCase())) {
+    if (originalLocation && !contactParts.some(p => p.toLowerCase().includes(originalLocation.toLowerCase()))) {
       contactParts.push(originalLocation);
     }
     // Clean up any non-phone, non-email, non-URL segments (locations, titles, subtitles) that are not in originalContactBlock
@@ -521,18 +556,17 @@ export function preserveCandidateContactDetails(optimized: string, original: str
       const isEmail = /@/.test(p);
       const isUrl = /(?:http|www|\.com|\.in|\.org|\.io|linkedin|github)/i.test(p);
       if (!isPhone && !isEmail && !isUrl) {
-        // If this segment is not explicitly in the candidate's original contact block, drop it completely!
         if (!originalContactBlock.toLowerCase().includes(p.toLowerCase())) {
           contactParts.splice(i, 1);
         }
       }
     }
-    // Ensure LinkedIn is present
-    if (originalLinkedin && !topHeaderSlice.includes("linkedin.com")) {
+    // Ensure LinkedIn is present (only 1)
+    if (originalLinkedin && !liFound) {
       contactParts.push(originalLinkedin);
     }
-    // Ensure GitHub is present
-    if (originalGithub && !topHeaderSlice.includes("github.com")) {
+    // Ensure GitHub is present (only 1)
+    if (originalGithub && !ghFound) {
       contactParts.push(originalGithub);
     }
 
@@ -632,10 +666,11 @@ export function ensureUserAnswersInResume(
         for (let i = 0; i < expLines.length; i++) {
           const l = expLines[i].trim();
           if (l && !l.startsWith("•") && !l.startsWith("-") && !l.startsWith("*")) {
-            if (!l.includes("|")) {
-              expLines[i] = `${expLines[i]} | ${datesVal}`;
-            } else if (!/\b(19\d{2}|20\d{2})\b/.test(l)) {
-              expLines[i] = `${expLines[i]} | ${datesVal}`;
+            const cleanL = l.replace(/[\s|–—\-,:]+$/, "").trim();
+            if (!cleanL.includes("|")) {
+              expLines[i] = `${cleanL} | ${datesVal}`;
+            } else if (!/\b(19\d{2}|20\d{2})\b/.test(cleanL)) {
+              expLines[i] = `${cleanL} | ${datesVal}`;
             }
             break;
           }
@@ -698,7 +733,8 @@ export function ensureUserAnswersInResume(
           const l = pLines[i].trim();
           if (l && !l.startsWith("•") && !l.startsWith("-") && !l.startsWith("*")) {
             if (!l.includes(projYearVal)) {
-              pLines[i] = `${pLines[i]} | ${projYearVal}`;
+              const cleanL = l.replace(/[\s|–—\-,:]+$/, "").trim();
+              pLines[i] = `${cleanL} | ${projYearVal}`;
             }
           }
         }

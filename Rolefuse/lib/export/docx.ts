@@ -124,9 +124,10 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
 
     // 2. Contact row — 9.5pt centered gray, separated by spaces, all on one line
     // 3. Horizontal rule after contact (bottom border single 6pt black)
-    if (parsed.contacts.length > 0) {
+    const uniqueContacts = parsed.contacts.filter((c, idx, arr) => arr.findIndex(x => x.type === c.type) === idx);
+    if (uniqueContacts.length > 0) {
       const contactRuns: TextRun[] = [];
-      parsed.contacts.forEach((c, idx) => {
+      uniqueContacts.forEach((c, idx) => {
         contactRuns.push(
           new TextRun({
             text: c.text,
@@ -135,7 +136,7 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
             color: "444444",
           })
         );
-        if (idx < parsed.contacts.length - 1) {
+        if (idx < uniqueContacts.length - 1) {
           contactRuns.push(
             new TextRun({
               text: "   •   ",
@@ -225,9 +226,12 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
     if (parsed.experience.length > 0) {
       addSectionHeader("EXPERIENCE");
       for (const exp of parsed.experience) {
-        const fullTitle = exp.company && !exp.title.includes(exp.company)
-          ? `${exp.title} – ${exp.company}`
-          : exp.title;
+        const cleanExpTitle = exp.title.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+        const cleanExpComp = exp.company.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+        const fullTitle = cleanExpComp && !cleanExpTitle.includes(cleanExpComp)
+          ? `${cleanExpTitle} – ${cleanExpComp}`
+          : cleanExpTitle;
+        const cleanTech = (exp.techTags || "").replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
 
         // Line 1: "Job Title – Company" LEFT + "Date Range" RIGHT
         children.push(
@@ -235,12 +239,12 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
         );
 
         // Line 2: "Tech stack tags" left in gray italic
-        if (exp.techTags) {
+        if (cleanTech) {
           children.push(
             new Paragraph({
               children: [
                 new TextRun({
-                  text: exp.techTags,
+                  text: cleanTech,
                   font: FONT,
                   size: 20, // 10pt
                   italics: true,
@@ -263,9 +267,11 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
     if (parsed.projects.length > 0) {
       addSectionHeader("PROJECTS");
       for (const proj of parsed.projects) {
-        const projectTitle = proj.techStack
-          ? `${proj.name} — ${proj.techStack}`
-          : proj.name;
+        const cleanProjName = proj.name.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+        const cleanProjTech = proj.techStack.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+        const projectTitle = cleanProjTech
+          ? `${cleanProjName} — ${cleanProjTech}`
+          : cleanProjName;
 
         // Line 1: "Project Name — Tech Stack" LEFT + "Year" RIGHT
         children.push(
@@ -280,9 +286,10 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
     }
 
     // SECTION 5: AWARDS & CERTIFICATIONS
-    if (parsed.certifications.length > 0) {
+    const validCerts = parsed.certifications.filter(c => !/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(c.raw.trim()));
+    if (validCerts.length > 0) {
       addSectionHeader("AWARDS & CERTIFICATIONS");
-      for (const cert of parsed.certifications) {
+      for (const cert of validCerts) {
         children.push(bullet(cert.raw, cert.boldPrefix, cert.rest));
       }
     }
@@ -291,14 +298,17 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
     if (parsed.education.length > 0) {
       addSectionHeader("EDUCATION");
       for (const edu of parsed.education) {
+        const cleanDegree = edu.degree.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+        const cleanInst = edu.institution.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+
         // Line 1: "Degree" LEFT + "Year" RIGHT
         children.push(
-          twoCol(edu.degree, edu.yearOrDates, { bold: true }, { color: "555555" }, 15)
+          twoCol(cleanDegree, edu.yearOrDates, { bold: true }, { color: "555555" }, 15)
         );
 
         // Line 2: "Institution" LEFT + "CGPA/GPA" RIGHT, separated by 4pt space (80 twips)
         children.push(
-          twoCol(edu.institution, edu.grade, { italics: true }, { italics: true, color: "555555" }, 80)
+          twoCol(cleanInst, edu.grade, { italics: true }, { color: "555555", italics: true }, 80)
         );
       }
     }

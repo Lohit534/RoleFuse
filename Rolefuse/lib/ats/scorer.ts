@@ -204,18 +204,21 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
 
   // ── 2. DYNAMIC SEMANTIC & ROLE ALIGNMENT ────────────────────────────────
   // Check target job titles against candidate resume headline/summary
+  // Multi-word specific titles matched first to avoid generic single-word false matches
+  const sortedTitles = [...COMMON_TITLES].sort((a, b) => b.length - a.length);
   let titleScore = 5;
-  for (const title of COMMON_TITLES) {
+  for (const title of sortedTitles) {
     if (new RegExp(`\\b${title}\\b`, "i").test(jdLower)) {
       if (new RegExp(`\\b${title}\\b`, "i").test(resumeLower)) {
-        titleScore = 25;
+        // Multi-word specific title match (e.g. "Senior Java Developer", "Backend Engineer")
+        titleScore = title.includes(" ") ? 25 : 15;
         break;
       }
     }
   }
 
   // Domain role matching if exact title string was not an identical match
-  if (titleScore < 25) {
+  if (titleScore < 20) {
     const roleKeywordGroups = [
       ["machine learning", "ml", "artificial intelligence"],
       ["generative ai", "genai", "llm", "large language"],
@@ -321,15 +324,34 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
   formatting = Math.min(100, formatting);
 
   // ── 5. PURE DYNAMIC OVERALL SCORE ────────────────────────────────────────
-  // Weighted composite — honest scoring, no hidden floors or static values.
-  // Typical un-optimized resume → ~30–55. AI-optimized → ~82–92.
-  // Every bullet passing verb + metric → up to the 96 ceiling.
-  const overall = Math.min(MAX_ATS_SCORE, Math.max(5, Math.round(
-    keywordMatch    * 0.35 +
-    semanticMatch   * 0.20 +
-    impactBullets   * 0.35 +
-    formatting      * 0.10
-  )));
+  // Rigorous weighted composite (weights strictly sum to 1.00):
+  // - Technical Keywords Match : 40%
+  // - Semantic Role Alignment  : 25%
+  // - Measurable Impact Bullets: 25%
+  // - Resume ATS Formatting    : 10%
+  //
+  // ATS Relevance Gating:
+  // If a candidate applies to a completely unrelated role (e.g. HR or Sales applying for Java Engineer),
+  // high writing quality in the unrelated domain cannot award an undeserved high score.
+  const relevanceFactor = Math.min(1.0, (keywordMatch * 0.60 + semanticMatch * 0.40) / 100);
+  
+  const impactWeight = relevanceFactor < 0.40 ? 0.12 : 0.25;
+  const formatWeight = relevanceFactor < 0.40 ? 0.05 : 0.10;
+  const kwWeight = 0.40;
+  const semWeight = 0.25;
+
+  const rawComposite = (
+    keywordMatch    * kwWeight +
+    semanticMatch   * semWeight +
+    impactBullets   * impactWeight +
+    formatting      * formatWeight
+  );
+
+  const normalizedOverall = relevanceFactor < 0.35
+    ? Math.round(rawComposite * (0.35 + relevanceFactor * 1.5))
+    : Math.round(rawComposite);
+
+  const overall = Math.min(MAX_ATS_SCORE, Math.max(5, normalizedOverall));
 
   const extractedSkills = Array.from(new Set([...resumeTechTerms, ...foundKeywords]));
   const extractedTitles: string[] = [];

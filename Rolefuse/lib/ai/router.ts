@@ -212,33 +212,38 @@ export function validateAndRepairResumeFormat(text: string): string {
   // 7. Normalize bullet characters to •
   result = result.replace(/^[\s]*[-–—·○►▪✓→]\s*/gm, "• ");
 
-  // 8. Ensure double newlines before known section headers
+  // 8. Ensure double newlines before known section headers (full-line match to prevent splitting compound headers)
   const SECTION_HEADERS = [
-    "PROFESSIONAL SUMMARY",
-    "SUMMARY",
-    "OBJECTIVE",
-    "TECHNICAL SKILLS",
-    "SKILLS",
-    "CORE SKILLS",
-    "KEY SKILLS",
     "PROFESSIONAL EXPERIENCE",
+    "INTERNSHIP EXPERIENCE",
     "WORK EXPERIENCE",
-    "EXPERIENCE",
     "EMPLOYMENT HISTORY",
-    "INTERNSHIPS?",
-    "PROJECTS",
     "PERSONAL PROJECTS",
-    "EDUCATION",
     "ACADEMIC BACKGROUND",
     "CERTIFICATIONS & ACHIEVEMENTS",
     "CERTIFICATIONS AND ACHIEVEMENTS",
-    "CERTIFICATIONS?",
-    "ACHIEVEMENTS?",
-    "AWARDS?",
+    "AWARDS & CERTIFICATIONS",
+    "AWARDS AND CERTIFICATIONS",
+    "PROFESSIONAL SUMMARY",
+    "TECHNICAL SKILLS",
+    "CORE COMPETENCIES",
+    "CORE SKILLS",
+    "KEY SKILLS",
+    "EXPERIENCE",
+    "INTERNSHIPS",
+    "INTERNSHIP",
+    "PROJECTS",
+    "EDUCATION",
+    "CERTIFICATIONS",
+    "CERTIFICATES",
+    "ACHIEVEMENTS",
+    "AWARDS",
     "LANGUAGES",
+    "SUMMARY",
+    "OBJECTIVE",
   ];
   for (const sec of SECTION_HEADERS) {
-    const reg = new RegExp(`(^|\\n)\\s*(${sec})\\b`, "gi");
+    const reg = new RegExp(`(^|\\n)\\s*(${sec})\\s*(?=[\\n:]|$)`, "gi");
     result = result.replace(reg, "\n\n$2\n");
   }
 

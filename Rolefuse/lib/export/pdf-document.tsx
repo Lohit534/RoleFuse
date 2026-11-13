@@ -294,12 +294,14 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
         {/* 2. Contact row — centered, icons before each, separated by spaces, all on one line */}
         {parsed.contacts.length > 0 && (
           <View style={styles.contactRow}>
-            {parsed.contacts.map((c, i) => (
-              <View key={i} style={styles.contactItem}>
-                <ContactIcon type={c.type} />
-                <Text style={styles.contactText}>{c.text}</Text>
-              </View>
-            ))}
+            {parsed.contacts
+              .filter((c, idx, arr) => arr.findIndex(x => x.type === c.type) === idx)
+              .map((c, i) => (
+                <View key={i} style={styles.contactItem}>
+                  <ContactIcon type={c.type} />
+                  <Text style={styles.contactText}>{c.text}</Text>
+                </View>
+              ))}
           </View>
         )}
 
@@ -343,9 +345,12 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
               <Text style={styles.sectionHeader}>EXPERIENCE</Text>
             </View>
             {parsed.experience.map((exp, i) => {
-              const fullTitle = exp.company && !exp.title.includes(exp.company)
-                ? `${exp.title} – ${exp.company}`
-                : exp.title;
+              const cleanExpTitle = exp.title.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+              const cleanExpComp = exp.company.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+              const fullTitle = cleanExpComp && !cleanExpTitle.includes(cleanExpComp)
+                ? `${cleanExpTitle} – ${cleanExpComp}`
+                : cleanExpTitle;
+              const cleanTech = (exp.techTags || "").replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
 
               return (
                 <View key={i} style={{ marginBottom: 3 }} wrap={false}>
@@ -356,9 +361,9 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
                   </View>
 
                   {/* Line 2: "Tech stack tags" left in gray italic */}
-                  {exp.techTags ? (
+                  {cleanTech ? (
                     <View style={{ marginBottom: 2 }}>
-                      <Text style={styles.techTagsItalic}>{exp.techTags}</Text>
+                      <Text style={styles.techTagsItalic}>{cleanTech}</Text>
                     </View>
                   ) : null}
 
@@ -382,9 +387,11 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
               <Text style={styles.sectionHeader}>PROJECTS</Text>
             </View>
             {parsed.projects.map((proj, i) => {
-              const projectTitle = proj.techStack
-                ? `${proj.name} — ${proj.techStack}`
-                : proj.name;
+              const cleanProjName = proj.name.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+              const cleanProjTech = proj.techStack.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+              const projectTitle = cleanProjTech
+                ? `${cleanProjName} — ${cleanProjTech}`
+                : cleanProjName;
 
               return (
                 <View key={i} style={{ marginBottom: 3 }} wrap={false}>
@@ -408,22 +415,24 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
         )}
 
         {/* SECTION 5: AWARDS & CERTIFICATIONS */}
-        {parsed.certifications.length > 0 && (
+        {parsed.certifications.filter(c => !/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(c.raw.trim())).length > 0 && (
           <View wrap={false}>
             <View style={styles.sectionHeaderWrapper}>
               <Text style={styles.sectionHeader}>AWARDS & CERTIFICATIONS</Text>
             </View>
-            {parsed.certifications.map((cert, i) => (
-              <View key={i} style={styles.bulletRow}>
-                <Text style={styles.bulletDot}>•</Text>
-                <Text style={styles.bulletText}>
-                  {cert.boldPrefix ? (
-                    <Text style={styles.boldInline}>{cert.boldPrefix}</Text>
-                  ) : null}
-                  <Text>{cert.rest}</Text>
-                </Text>
-              </View>
-            ))}
+            {parsed.certifications
+              .filter(c => !/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(c.raw.trim()))
+              .map((cert, i) => (
+                <View key={i} style={styles.bulletRow}>
+                  <Text style={styles.bulletDot}>•</Text>
+                  <Text style={styles.bulletText}>
+                    {cert.boldPrefix ? (
+                      <Text style={styles.boldInline}>{cert.boldPrefix}</Text>
+                    ) : null}
+                    <Text>{cert.rest}</Text>
+                  </Text>
+                </View>
+              ))}
           </View>
         )}
 
@@ -433,21 +442,26 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
             <View style={styles.sectionHeaderWrapper}>
               <Text style={styles.sectionHeader}>EDUCATION</Text>
             </View>
-            {parsed.education.map((edu, i) => (
-              <View key={i} style={styles.eduEntry}>
-                {/* Line 1: "Degree" LEFT + "Year" RIGHT */}
-                <View style={styles.twoColRow}>
-                  <Text style={styles.leftBold}>{edu.degree}</Text>
-                  {edu.yearOrDates ? <Text style={styles.rightDate}>{edu.yearOrDates}</Text> : null}
-                </View>
+            {parsed.education.map((edu, i) => {
+              const cleanDegree = edu.degree.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+              const cleanInst = edu.institution.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
 
-                {/* Line 2: "Institution" LEFT + "CGPA/GPA" RIGHT */}
-                <View style={styles.twoColRow}>
-                  <Text style={styles.leftItalic}>{edu.institution}</Text>
-                  {edu.grade ? <Text style={styles.rightGradeItalic}>{edu.grade}</Text> : null}
+              return (
+                <View key={i} style={styles.eduEntry}>
+                  {/* Line 1: "Degree" LEFT + "Year" RIGHT */}
+                  <View style={styles.twoColRow}>
+                    <Text style={styles.leftBold}>{cleanDegree}</Text>
+                    {edu.yearOrDates ? <Text style={styles.rightDate}>{edu.yearOrDates}</Text> : null}
+                  </View>
+
+                  {/* Line 2: "Institution" LEFT + "CGPA/GPA" RIGHT */}
+                  <View style={styles.twoColRow}>
+                    <Text style={styles.leftItalic}>{cleanInst}</Text>
+                    {edu.grade ? <Text style={styles.rightGradeItalic}>{edu.grade}</Text> : null}
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 

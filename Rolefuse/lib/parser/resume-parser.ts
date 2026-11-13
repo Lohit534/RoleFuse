@@ -317,20 +317,22 @@ function extractRightDate(line: string): { left: string; date: string } {
   const match = line.match(DATE_REGEX_END);
   if (match) {
     const date = match[0].trim();
-    const remaining = line.slice(0, match.index).trim();
+    let remaining = line.slice(0, match.index).trim();
+    remaining = remaining.replace(/[\s|–—\-,:]+$/, "").trim();
     return { left: remaining, date };
   }
-  return { left: line, date: "" };
+  return { left: line.replace(/[\s|–—\-,:]+$/, "").trim(), date: "" };
 }
 
 function extractRightGrade(line: string): { left: string; grade: string } {
   const match = line.match(GRADE_REGEX_END);
   if (match) {
     const grade = match[0].trim();
-    const remaining = line.slice(0, match.index).trim();
+    let remaining = line.slice(0, match.index).trim();
+    remaining = remaining.replace(/[\s|–—\-,:]+$/, "").trim();
     return { left: remaining, grade };
   }
-  return { left: line, grade: "" };
+  return { left: line.replace(/[\s|–—\-,:]+$/, "").trim(), grade: "" };
 }
 
 // ── Canonical Section Map ───────────────────────────────────────────────────
@@ -435,25 +437,35 @@ export function parseResume(rawText: string): ParsedResume {
     // Split on common delimiters: tabs, 2+ spaces, vertical bars, bullet points, font icon markers
     const tokens = line.split(/(?:\s{2,}|\s*[|•\u2022]\s*|[ƒ#ï§€])/).map(t => t.trim()).filter(Boolean);
     for (const token of tokens) {
-      // Remove any leading icon glyphs or symbols
-      const cleanTok = token.replace(/^[ƒ#ï§€|•\s\-\*]+/, '').trim();
+      // Remove any leading icon glyphs or symbols and trailing delimiters
+      const cleanTok = token.replace(/^[ƒ#ï§€|•\s\-\*]+/, '').replace(/[\s|–—\-,:]+$/, '').trim();
       if (!cleanTok) continue;
 
       if (/@/.test(cleanTok)) {
-        contacts.push({ type: 'email', text: cleanTok, url: `mailto:${cleanTok}` });
+        if (!contacts.some(c => c.type === 'email')) {
+          contacts.push({ type: 'email', text: cleanTok, url: `mailto:${cleanTok}` });
+        }
       } else if (/(?:\+?\d{1,3}[-.\s]?)?\(?[\dX]{3}\)?[-.\s]?[\dX]{3}[-.\s]?[\dX]{4}|\+?[\dX]{10,13}|^\+91-[\dX]+/i.test(cleanTok)) {
-        contacts.push({ type: 'phone', text: cleanTok, url: `tel:${cleanTok.replace(/[^+\d]/g, '')}` });
+        if (!contacts.some(c => c.type === 'phone')) {
+          contacts.push({ type: 'phone', text: cleanTok, url: `tel:${cleanTok.replace(/[^+\d]/g, '')}` });
+        }
       } else if (/linkedin\.com/i.test(cleanTok) || /^linkedin\b/i.test(cleanTok)) {
-        const display = cleanTok.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
-        contacts.push({ type: 'linkedin', text: display, url: cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}` });
+        if (!contacts.some(c => c.type === 'linkedin')) {
+          const display = cleanTok.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+          contacts.push({ type: 'linkedin', text: display, url: cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}` });
+        }
       } else if (/github\.com/i.test(cleanTok) || /^github\b/i.test(cleanTok)) {
-        const display = cleanTok.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
-        contacts.push({ type: 'github', text: display, url: cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}` });
+        if (!contacts.some(c => c.type === 'github')) {
+          const display = cleanTok.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+          contacts.push({ type: 'github', text: display, url: cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}` });
+        }
       } else if (/portfolio|\.me|\.dev|\.io|\.app|\.com|\.in/i.test(cleanTok)) {
-        const display = cleanTok.replace(/^[^a-zA-Z0-9]+/, '').replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
-        contacts.push({ type: 'portfolio', text: display, url: cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}` });
+        if (!contacts.some(c => c.type === 'portfolio')) {
+          const display = cleanTok.replace(/^[^a-zA-Z0-9]+/, '').replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+          contacts.push({ type: 'portfolio', text: display, url: cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}` });
+        }
       } else if (!role && isRoleOrTitle(cleanTok)) {
-        role = cleanTok;
+        role = cleanTok.replace(/[\s|–—\-,:]+$/, "").trim();
       }
     }
 
@@ -472,6 +484,8 @@ export function parseResume(rawText: string): ParsedResume {
     if (/^\[Verified Internship/i.test(line)) continue;
     if (/^\[.*Technologies.*\]/i.test(line)) continue;
     if (/^[a-z0-9_\-\s]+\]$/i.test(line) && line.endsWith(']')) continue;
+    if (/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(line.replace(/^[•\-*\u2022\s]+/, ''))) continue;
+    if (/^(?:AWARDS|CERTIFICATIONS)\s*(&|AND)\s*(?:CERTIFICATIONS|ACHIEVEMENTS|AWARDS)\s*$/i.test(line.replace(/^[•\-*\u2022\s]+/, ''))) continue;
 
     const sec = matchSectionHeader(line);
     if (sec) {
@@ -543,6 +557,9 @@ export function parseResume(rawText: string): ParsedResume {
         company = dashMatch[2].trim();
       }
 
+      title = title.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+      company = company.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+
       currentExp = {
         title,
         company,
@@ -555,28 +572,39 @@ export function parseResume(rawText: string): ParsedResume {
       // Inspect next line for tech tags or company info
       if (i + 1 < expLines.length && !/^[•\-*\u2022]/.test(expLines[i + 1])) {
         const nextLine = expLines[i + 1];
-        // Check for comma-separated tech stack or sub-row
-        const techMatch = nextLine.match(/([A-Z][a-zA-Z0-9\s\.\+#]+(?:,\s*[A-Z][a-zA-Z0-9\s\.\+#]+)+)/);
-        if (techMatch) {
-          const techStart = techMatch.index || 0;
-          const compPart = nextLine.slice(0, techStart).trim();
-          const techPart = nextLine.slice(techStart).trim();
-          if (compPart && !currentExp.company) {
-            currentExp.company = compPart;
-          }
-          currentExp.techTags = techPart;
-          i++;
-        } else if (nextLine.includes(',') || /^[A-Za-z0-9\s\+#\.\-]+$/.test(nextLine)) {
+
+        // Format: "Company | Tech Stack" (e.g. "TalentShine | django, tensorflow, scikitlearn")
+        const pipeMatch = nextLine.match(/^(.+?)\s*\|\s*(.+)$/);
+        if (pipeMatch) {
           if (!currentExp.company) {
-            currentExp.company = nextLine;
-          } else {
-            currentExp.techTags = nextLine;
+            currentExp.company = pipeMatch[1].replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
           }
+          currentExp.techTags = pipeMatch[2].replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
           i++;
+        } else {
+          // Check for comma-separated tech stack or sub-row
+          const techMatch = nextLine.match(/([a-zA-Z0-9\s\.\+#]+(?:,\s*[a-zA-Z0-9\s\.\+#]+)+)/);
+          if (techMatch && (techMatch.index || 0) > 0) {
+            const techStart = techMatch.index || 0;
+            const compPart = nextLine.slice(0, techStart).trim();
+            const techPart = nextLine.slice(techStart).trim();
+            if (compPart && !currentExp.company) {
+              currentExp.company = compPart.replace(/[\s|–—\-,:]+$/, "").trim();
+            }
+            currentExp.techTags = techPart.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+            i++;
+          } else if (nextLine.includes(',') || /^[A-Za-z0-9\s\+#\.\-]+$/.test(nextLine)) {
+            if (!currentExp.company) {
+              currentExp.company = nextLine.replace(/[\s|–—\-,:]+$/, "").trim();
+            } else {
+              currentExp.techTags = nextLine.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+            }
+            i++;
+          }
         }
       }
     } else if (currentExp && !currentExp.techTags && rawLine.includes(',')) {
-      currentExp.techTags = rawLine;
+      currentExp.techTags = rawLine.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
     } else if (currentExp && currentExp.bullets.length > 0) {
       currentExp.bullets[currentExp.bullets.length - 1] += ' ' + stripMarkdownAsterisks(rawLine);
     }
@@ -610,9 +638,12 @@ export function parseResume(rawText: string): ParsedResume {
         techStack = splitMatch[2].trim();
       }
 
+      const cleanName = stripMarkdownAsterisks(name).replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+      const cleanTech = stripMarkdownAsterisks(techStack).replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+
       currentProj = {
-        name: stripMarkdownAsterisks(name),
-        techStack: stripMarkdownAsterisks(techStack),
+        name: cleanName,
+        techStack: cleanTech,
         year: date,
         bullets: []
       };
@@ -634,6 +665,9 @@ export function parseResume(rawText: string): ParsedResume {
   for (const line of rawCertLines) {
     const clean = stripMarkdownAsterisks(line).replace(/^[•\-*\u2022]\s*/, '').trim();
     if (!clean) continue;
+    // Filter out section header leakage like "& ACHIEVEMENTS" or "CERTIFICATIONS & ACHIEVEMENTS"
+    if (/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(clean)) continue;
+    if (/^(?:AWARDS|CERTIFICATIONS)\s*(&|AND)\s*(?:CERTIFICATIONS|ACHIEVEMENTS|AWARDS)\s*$/i.test(clean)) continue;
     if (PURE_DATE_REGEX.test(clean)) {
       orphanedDates.push(clean);
     } else if (PURE_GRADE_REGEX.test(clean)) {
@@ -676,17 +710,18 @@ export function parseResume(rawText: string): ParsedResume {
 
     const { left: degLeft, date } = extractRightDate(rawLine);
     const { left: instLeft, grade } = extractRightGrade(degLeft);
+    const cleanLeft = stripMarkdownAsterisks(instLeft).replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
 
     if (isDegreeLine(rawLine) || !currentEdu || (currentEdu.institution && !currentEdu.degree)) {
       currentEdu = {
-        degree: stripMarkdownAsterisks(instLeft),
+        degree: cleanLeft,
         institution: '',
         yearOrDates: date,
         grade: grade
       };
       education.push(currentEdu);
     } else if (!currentEdu.institution) {
-      currentEdu.institution = stripMarkdownAsterisks(instLeft);
+      currentEdu.institution = cleanLeft;
       if (date && !currentEdu.yearOrDates) currentEdu.yearOrDates = date;
       if (grade && !currentEdu.grade) currentEdu.grade = grade;
     } else {
@@ -694,7 +729,7 @@ export function parseResume(rawText: string): ParsedResume {
       if (date && !currentEdu.yearOrDates) currentEdu.yearOrDates = date;
       if (grade && !currentEdu.grade) currentEdu.grade = grade;
       else if (!currentEdu.institution.includes(clean)) {
-        currentEdu.institution += ', ' + clean;
+        currentEdu.institution += ', ' + cleanLeft;
       }
     }
   }
@@ -718,6 +753,8 @@ export function parseResume(rawText: string): ParsedResume {
     const isBullet = /^[•\-*\u2022]/.test(rawLine);
     const clean = stripMarkdownAsterisks(rawLine.replace(/^[•\-*\u2022]\s*/, '')).trim();
     if (!clean) continue;
+    if (/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(clean)) continue;
+    if (/^(?:AWARDS|CERTIFICATIONS)\s*(&|AND)\s*(?:CERTIFICATIONS|ACHIEVEMENTS|AWARDS)\s*$/i.test(clean)) continue;
 
     if (isBullet || !currentCert) {
       const { title, rest } = splitCertText(clean);
