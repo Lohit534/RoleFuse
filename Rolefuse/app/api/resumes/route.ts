@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
                     r.optimizedText = serializeResumeJSONToText(parsedJson);
                   } catch (_e) {}
                 }
+                r.content = r.optimizedText || r.originalText || "";
                 allResumes.push(r);
               }
             }
@@ -120,6 +121,13 @@ export async function GET(request: NextRequest) {
                 !r.jobTitle?.startsWith("ADMIN_BROADCAST") &&
                 (!r.id || !String(r.id).startsWith("bc_"))
               ) {
+                if (!r.originalText && !r.optimizedText && r.optimizedJson) {
+                  try {
+                    const parsedJson = JSON.parse(r.optimizedJson);
+                    r.optimizedText = serializeResumeJSONToText(parsedJson);
+                  } catch (_e) {}
+                }
+                r.content = r.optimizedText || r.originalText || "";
                 allResumes.push(r);
               }
             }
@@ -128,13 +136,14 @@ export async function GET(request: NextRequest) {
       } catch (_e) {}
     }
 
-    // Strictly normal user-created resumes only (empty jobDescription)
-    // Optimization history records are strictly excluded and accessed via /api/history
+    // Filter resumes: return ONLY user resumes (manually created in builder or explicitly saved from optimization).
+    // NEVER fallback to optimization history scans (which have a non-empty jobDescription).
     const returnedResumes = allResumes.filter(
       (r: any) =>
         (!r.jobDescription || r.jobDescription.trim() === "") &&
         r.jobTitle !== "SUPPORT_TICKET" &&
-        r.jobTitle !== "USER_FEEDBACK"
+        r.jobTitle !== "USER_FEEDBACK" &&
+        !r.jobTitle?.startsWith("ADMIN_BROADCAST")
     );
 
     returnedResumes.sort(

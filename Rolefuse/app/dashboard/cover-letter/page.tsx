@@ -37,6 +37,8 @@ interface SavedResume {
   jobTitle?: string;
   company?: string;
   content?: string;
+  optimizedText?: string;
+  originalText?: string;
   resumeJSON?: any;
 }
 
@@ -54,7 +56,9 @@ function CoverLetterContent() {
   const [selectedResumeId, setSelectedResumeId] = useState<string>("");
   const [resumeText, setResumeText] = useState("");
   const [jobTitle, setJobTitle] = useState("");
+  const [isCustomRole, setIsCustomRole] = useState(false);
   const [company, setCompany] = useState("");
+  const [isCustomCompany, setIsCustomCompany] = useState(false);
   const [jobDescription, setJobDescription] = useState("");
   const [tone, setTone] = useState<"modern" | "formal" | "startup" | "creative">("modern");
 
@@ -146,7 +150,9 @@ function CoverLetterContent() {
     }
     const found = savedResumes.find(r => r.id === id);
     if (found) {
-      setResumeText(found.content || JSON.stringify(found.resumeJSON || ""));
+      setResumeText(found.content || found.optimizedText || found.originalText || (found.resumeJSON ? JSON.stringify(found.resumeJSON) : ""));
+      if (!company && found.company) setCompany(found.company);
+      if (!jobTitle && found.jobTitle) setJobTitle(found.jobTitle);
     }
   };
 
@@ -167,8 +173,8 @@ function CoverLetterContent() {
       toast.error("Please provide your resume content.");
       return;
     }
-    if (!jobDescription.trim()) {
-      toast.error("Please paste the target job description.");
+    if (jobDescription.trim().length < 50) {
+      toast.error("Please paste the target job description (minimum 50 characters required).");
       return;
     }
 
@@ -200,6 +206,29 @@ function CoverLetterContent() {
 
       setCoverLetter(data.coverLetter);
       toast.success("Personalized cover letter generated!");
+
+      // Persist to user's local cover letters cache so dashboard checklist recognizes it
+      try {
+        const userId = user?.id || "guest";
+        const storageKey = `fastHire_cover_letters_${userId}`;
+        const existing: any[] = JSON.parse(localStorage.getItem(storageKey) || "[]");
+        const newRecord = {
+          id: `cl_${Date.now()}`,
+          jobTitle: jobTitle.trim(),
+          company: company.trim(),
+          coverLetter: data.coverLetter,
+          createdAt: new Date().toISOString()
+        };
+        const updated = [newRecord, ...existing].slice(0, 30);
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("cover-letter-created", {
+              detail: { jobTitle: jobTitle.trim(), company: company.trim() }
+            })
+          );
+        }
+      } catch (_e) {}
     } catch (err: any) {
       toast.error(err.message || "Failed to generate cover letter.");
     } finally {
@@ -402,87 +431,113 @@ function CoverLetterContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                        <Building2 className="h-3 w-3 text-slate-400" /> Company
+                      <label className="text-xs font-bold text-slate-700 block">
+                        Target Company
                       </label>
-                      <select
-                        value=""
-                        onChange={(e) => {
-                          if (e.target.value) setCompany(e.target.value);
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomCompany(!isCustomCompany);
+                          if (isCustomCompany) setCompany("");
                         }}
-                        className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
+                        className="text-[11px] text-[#0A66C2] hover:underline cursor-pointer font-medium"
                       >
-                        <option value="" disabled>Select company ▾</option>
+                        {isCustomCompany ? "← Choose from list" : "+ Enter custom company"}
+                      </button>
+                    </div>
+                    {!isCustomCompany ? (
+                      <select
+                        value={company}
+                        onChange={(e) => {
+                          if (e.target.value === "__custom__") {
+                            setIsCustomCompany(true);
+                            setCompany("");
+                          } else {
+                            setCompany(e.target.value);
+                          }
+                        }}
+                        className="w-full text-xs font-medium text-slate-800 bg-white hover:bg-slate-50 border border-slate-200 rounded-md px-3 py-2 h-10 focus:outline-none focus:ring-1 focus:ring-[#0A66C2] focus:border-[#0A66C2] cursor-pointer"
+                      >
+                        <option value="" className="bg-white text-slate-500">Select company...</option>
+                        <option value="__custom__" className="bg-white text-[#0A66C2] font-semibold">+ Enter custom company...</option>
                         {COMPANY_OPTIONS.map((c) => (
-                          <option key={c} value={c}>{c}</option>
+                          <option key={c} value={c} className="bg-white text-slate-800">
+                            {c}
+                          </option>
                         ))}
                       </select>
-                    </div>
-                    <Input
-                      list="cl-company-options"
-                      placeholder="Type or select company (e.g. Google)..."
-                      value={company}
-                      onChange={(e) => setCompany(e.target.value)}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      data-lpignore="true"
-                      className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
-                    />
-                    <datalist id="cl-company-options">
-                      {COMPANY_OPTIONS.map((c) => (
-                        <option key={c} value={c} />
-                      ))}
-                    </datalist>
+                    ) : (
+                      <Input
+                        placeholder="Type custom company (e.g. OpenAI, Stripe)..."
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        autoFocus
+                        className="text-xs bg-white border-slate-200 focus:border-[#0A66C2] focus:ring-1 focus:ring-[#0A66C2] rounded-md h-10 px-3"
+                      />
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                        <Briefcase className="h-3 w-3 text-slate-400" /> Target Role
+                      <label className="text-xs font-bold text-slate-700 block">
+                        Target Role
                       </label>
-                      <select
-                        value=""
-                        onChange={(e) => {
-                          if (e.target.value) setJobTitle(e.target.value);
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCustomRole(!isCustomRole);
+                          if (isCustomRole) setJobTitle("");
                         }}
-                        className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
+                        className="text-[11px] text-[#0A66C2] hover:underline cursor-pointer font-medium"
                       >
-                        <option value="" disabled>Select IT role ▾</option>
+                        {isCustomRole ? "← Choose from list" : "+ Enter custom role"}
+                      </button>
+                    </div>
+                    {!isCustomRole ? (
+                      <select
+                        value={jobTitle}
+                        onChange={(e) => {
+                          if (e.target.value === "__custom__") {
+                            setIsCustomRole(true);
+                            setJobTitle("");
+                          } else {
+                            setJobTitle(e.target.value);
+                          }
+                        }}
+                        className="w-full text-xs font-medium text-slate-800 bg-white hover:bg-slate-50 border border-slate-200 rounded-md px-3 py-2 h-10 focus:outline-none focus:ring-1 focus:ring-[#0A66C2] focus:border-[#0A66C2] cursor-pointer"
+                      >
+                        <option value="" className="bg-white text-slate-500">Select target role...</option>
+                        <option value="__custom__" className="bg-white text-[#0A66C2] font-semibold">+ Enter custom role...</option>
                         {IT_ROLE_OPTIONS.map((r) => (
-                          <option key={r} value={r}>{r}</option>
+                          <option key={r} value={r} className="bg-white text-slate-800">
+                            {r}
+                          </option>
                         ))}
                       </select>
-                    </div>
-                    <Input
-                      list="cl-role-options"
-                      placeholder="Type or select IT role (e.g. Software Engineer)..."
-                      value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
-                      autoComplete="off"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      data-lpignore="true"
-                      className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
-                    />
-                    <datalist id="cl-role-options">
-                      {IT_ROLE_OPTIONS.map((r) => (
-                        <option key={r} value={r} />
-                      ))}
-                    </datalist>
+                    ) : (
+                      <Input
+                        placeholder="Type custom role (e.g. Lead Software Engineer)..."
+                        value={jobTitle}
+                        onChange={(e) => setJobTitle(e.target.value)}
+                        autoFocus
+                        className="text-xs bg-white border-slate-200 focus:border-[#0A66C2] focus:ring-1 focus:ring-[#0A66C2] rounded-md h-10 px-3"
+                      />
+                    )}
                   </div>
                 </div>
 
                 {/* 3. Target Job Description */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700">Target Job Description</label>
-                    <span className="text-[10px] text-slate-400">{jobDescription.length} chars</span>
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Target Job Description
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {jobDescription.trim().length} chars {jobDescription.trim().length < 50 ? "(min 50)" : ""}
+                    </span>
                   </div>
                   <Textarea
-                    placeholder="Paste the job description or core responsibilities here..."
+                    placeholder="Paste the job description or core responsibilities here (minimum 50 characters required)..."
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
                     rows={6}
@@ -490,8 +545,13 @@ function CoverLetterContent() {
                     autoComplete="off"
                     spellCheck={false}
                     data-lpignore="true"
-                    className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl leading-relaxed"
+                    className="text-xs bg-white border-slate-200 focus:border-[#0A66C2] focus:ring-1 focus:ring-[#0A66C2] rounded-md p-3 leading-relaxed"
                   />
+                  {jobDescription.trim().length > 0 && jobDescription.trim().length < 50 && (
+                    <p className="text-[11px] text-amber-600 font-medium">
+                      Job description is too short ({jobDescription.trim().length}/50 characters). Please paste the full requirements.
+                    </p>
+                  )}
                 </div>
 
                 {/* 4. Tone Selection */}
@@ -508,13 +568,13 @@ function CoverLetterContent() {
                         key={t.id}
                         type="button"
                         onClick={() => setTone(t.id as any)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
                           tone === t.id
-                            ? "bg-teal-50/70 border-[#087F6E] shadow-xs"
+                            ? "bg-blue-50/70 border-[#0A66C2] shadow-xs"
                             : "bg-white border-slate-200 hover:bg-slate-50"
                         }`}
                       >
-                        <div className={`text-xs font-bold ${tone === t.id ? "text-[#087F6E]" : "text-slate-800"}`}>
+                        <div className={`text-xs font-bold ${tone === t.id ? "text-[#0A66C2]" : "text-slate-800"}`}>
                           {t.label}
                         </div>
                         <div className="text-[10px] text-slate-500 font-medium">{t.desc}</div>
@@ -524,23 +584,33 @@ function CoverLetterContent() {
                 </div>
 
                 {/* Submit Action */}
-                <Button
-                  type="submit"
-                  disabled={generating || !jobDescription.trim()}
-                  className="w-full h-10 bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer mt-2"
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin text-white" />
-                      Analyzing Resume &amp; Drafting Letter...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-4 w-4" />
-                      Generate Personalized Cover Letter
-                    </>
+                <div className="space-y-1.5 pt-1">
+                  <Button
+                    type="submit"
+                    disabled={generating || jobDescription.trim().length < 50}
+                    className={`w-full h-10 font-bold text-xs rounded-md flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
+                      jobDescription.trim().length >= 50 && !generating
+                        ? "bg-[#0A66C2] hover:bg-[#084e96] text-white cursor-pointer"
+                        : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
+                    }`}
+                  >
+                    {generating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin text-white" />
+                        Analyzing Resume &amp; Drafting Letter...
+                      </>
+                    ) : (
+                      <span>Generate Personalized Cover Letter</span>
+                    )}
+                  </Button>
+                  {jobDescription.trim().length < 50 && (
+                    <span className="text-[11px] text-amber-600 font-medium text-center block">
+                      {jobDescription.trim().length === 0
+                        ? "Paste target job description above (min 50 chars) to generate letter"
+                        : `Need ${50 - jobDescription.trim().length} more characters to enable generator`}
+                    </span>
                   )}
-                </Button>
+                </div>
               </form>
             </CardContent>
           </Card>

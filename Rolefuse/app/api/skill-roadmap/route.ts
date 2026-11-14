@@ -3,18 +3,39 @@ import { createClient } from "@/lib/supabase/server";
 import { callAIText } from "@/lib/ai/router";
 import { logger } from "@/lib/logger";
 
-function buildSkillRoadmapPrompt(skills: string[]): string {
+function buildSkillRoadmapPrompt(
+  skills: string[],
+  jobTitle?: string,
+  company?: string,
+  jobDescription?: string,
+  resumeText?: string
+): string {
   const skillList = skills.join(", ");
   const isSingle = skills.length === 1;
   const focusLabel = isSingle ? skills[0] : `[${skillList}]`;
 
-  return `You are a senior career coach and technical learning strategist. Generate a highly detailed, personalized, and accurate 90-day "Watch & Build" learning roadmap for the following skill${isSingle ? "" : "s"}: ${skillList}.
+  let context = "";
+  if (jobTitle || company) {
+    context += `\n🎯 TARGET ROLE: ${jobTitle || "Technical Role"}${company ? ` at ${company}` : ""}`;
+  }
+  if (jobDescription) {
+    context += `\n📋 TARGET JOB REQUIREMENTS:\n${jobDescription.slice(0, 1500)}`;
+  }
+  if (resumeText) {
+    context += `\n👤 CANDIDATE EXISTING BACKGROUND & SKILLS:\n${resumeText.slice(0, 1500)}`;
+  }
 
-IMPORTANT RULES:
-- The roadmap MUST be specific to ${focusLabel}. Do NOT produce a generic template.
-- Include real, well-known YouTube channels and learning resources that specifically teach ${skillList}.
-- Include specific frameworks, tools, libraries, and concepts that are actually relevant to ${skillList}.
-- If multiple skills are provided, show how they INTEGRATE with each other and what combined projects are relevant.
+  return `You are a senior technical career coach and curriculum director. Generate a highly detailed, personalized, and authentic 90-day "Watch & Build" learning roadmap for the candidate.
+PRIMARY SKILLS TO MASTER: ${skillList}
+${context}
+
+CRITICAL RULES:
+- The roadmap MUST be deeply tailored to ${focusLabel}${jobTitle ? ` and the hiring expectations for ${jobTitle}` : ""}.
+- Strictly avoid generic, canned, or static templates. Each section must provide real, accurate, and actionable guidance.
+- Bridge the candidate's existing background directly to the requirements in the target job description.
+- Include real, well-known YouTube channels, open-source repositories, and verified learning resources that specifically teach ${skillList}.
+- Include specific frameworks, tools, libraries, and real production architecture patterns relevant to ${skillList}.
+- If multiple skills are provided, demonstrate how they INTEGRATE into a single production stack and capstone project.
 - Format the roadmap clearly with 4 phases, emoji section headers, and bullet points.
 - Each phase must specify: Goal, What to Learn (with actual topic names), Recommended YouTube Channels or Resources (with channel descriptions).
 - End with a "Daily Routine" section.
@@ -23,7 +44,7 @@ IMPORTANT RULES:
 
 OUTPUT FORMAT (follow exactly):
 🚀 90-Day "Watch & Build" Roadmap: ${focusLabel}
-[One line describing what this roadmap will achieve]
+[One line describing what this roadmap will achieve for ${jobTitle || "the target role"}]
 
 ---
 
@@ -56,7 +77,7 @@ What to Learn:
 📅 Phase 3: [Project-Focused Phase] (Weeks 9–10)
 Goal: [Specific goal]
 What to Build:
-• [Specific project idea using ${skillList}]
+• [Specific project idea combining ${skillList} aligned with ${jobTitle || "industry standards"}]
 • [Another project idea]
 
 📺 Best YouTube Channels / Resources:
@@ -77,7 +98,7 @@ What to Learn:
 2. Afternoon (60–90 mins): [Specific action]
 3. Weekend: [Specific project/practice task]
 
-Now generate the complete roadmap for: ${skillList}`;
+Now generate the complete personalized roadmap for: ${skillList}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -93,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { skills } = body;
+    const { skills, jobTitle, company, jobDescription, resumeText } = body;
 
     if (!Array.isArray(skills) || skills.length === 0) {
       return NextResponse.json(
@@ -109,9 +130,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prompt = buildSkillRoadmapPrompt(skills);
+    const prompt = buildSkillRoadmapPrompt(skills, jobTitle, company, jobDescription, resumeText);
 
-    logger.info(`[skill-roadmap] Generating AI roadmap for: ${skills.join(", ")}`);
+    logger.info(`[skill-roadmap] Generating AI roadmap for: ${skills.join(", ")} (Role: ${jobTitle || "N/A"})`);
     const roadmap = await callAIText(prompt);
 
     return NextResponse.json({ roadmap });

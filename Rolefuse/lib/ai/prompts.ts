@@ -44,10 +44,12 @@ export function buildOptimizationPrompt(
     : "";
 
   const lengthInstruction =
-    lengthOption === "Shorter"
-      ? "- Trim bullets to 3 per role maximum"
-      : lengthOption === "Longer"
-      ? "- Expand bullets to 5-6 per role with more detail"
+    lengthOption === "Shorter" || lengthOption === "1 Page" || lengthOption === "Fresher"
+      ? "- Tailor strictly for 1-page format (Fresher / under 5 yrs experience): prioritize the most impactful projects and roles; trim bullets to 2-3 concise bullets per role/project maximum."
+      : lengthOption === "Longer" || lengthOption === "2 Pages" || lengthOption === "Experience"
+      ? "- Tailor for 2-page format (Experienced professional / 5-10+ yrs experience): expand bullets to 4-5 per role with quantified technical details, business impact, and leadership scope."
+      : lengthOption === "Academic CV"
+      ? "- Format as comprehensive Academic CV: detailed publication, research, teaching, grant, project, and educational records."
       : "";
 
   const sep = "=".repeat(51);
@@ -84,7 +86,7 @@ export function buildOptimizationPrompt(
     sectionOrderStr += `${stepNum++}. ${expSectionHeading}\n${stepNum++}. (blank line)\n`;
   }
   sectionOrderStr += `${stepNum++}. PROJECTS\n${stepNum++}. (blank line)\n`;
-  sectionOrderStr += `${stepNum++}. CERTIFICATIONS & ACHIEVEMENTS  (omit if candidate has none)\n${stepNum++}. (blank line)\n`;
+  sectionOrderStr += `${stepNum++}. AWARDS & CERTIFICATIONS  (omit only if candidate has zero certs or achievements; NEVER merge into Projects)\n${stepNum++}. (blank line)\n`;
   sectionOrderStr += `${stepNum++}. EDUCATION\n`;
 
   if (hasOriginalLanguages) {
@@ -189,9 +191,10 @@ export function buildOptimizationPrompt(
     "    - NEVER output words like 'Graduated:', 'Passing Year:', 'Batch:' before dates. Just output the year or date range directly (e.g. '2026' or '2020 - 2022').\n" +
     "    - If Intermediate / High School has a stream (like MPC, BiPC, Science, Commerce), attach it directly to the degree on Line 1: 'Intermediate (MPC) | 2020 - 2022'.\n" +
     "    - Never output stream names or 'Graduated:' as a standalone line.\n\n" +
-    "CERTIFICATIONS & ACHIEVEMENTS:\n" +
-    "  Header: CERTIFICATIONS & ACHIEVEMENTS (ALL CAPS)\n" +
-    "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section. Do NOT create two separate sections.\n" +
+    "AWARDS & CERTIFICATIONS:\n" +
+    "  Header: AWARDS & CERTIFICATIONS (ALL CAPS)\n" +
+    "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section with header 'AWARDS & CERTIFICATIONS'. Do NOT create two separate sections.\n" +
+    "  ABSOLUTE RULE — NEVER MERGE INTO PROJECTS: Certifications and achievements MUST appear in their own dedicated section under 'AWARDS & CERTIFICATIONS' between PROJECTS and EDUCATION. NEVER append them as bullets under a project!\n" +
     "  CERTIFICATIONS format: • Certification Name – Providing Organization / Platform (e.g. • Python Foundations – Infosys Springboard, • Python Programming – CodeTantra, • Foundations of Cybersecurity – Google)\n" +
     "  CRITICAL FOR CERTIFICATIONS: Keep the EXACT Certification Name and EXACT Providing Company Name as provided by the candidate. NEVER swap them, NEVER change company names, and NEVER write wordy sentences or explanations.\n" +
     "  ACHIEVEMENTS format: • Descriptive accomplishment sentence (e.g. • Solved 150+ Data Structures and Algorithms problems on LeetCode, • Solved 30+ Python algorithmic challenges on HackerRank)\n" +
@@ -320,7 +323,7 @@ export function buildOptimizationPrompt(
     "[ ] Resume fits the PAGE BUDGET (" + pageBudget.maxPages + " page" + (pageBudget.maxPages > 1 ? "s" : "") + " max)\n" +
     "[ ] Zero fabricated or invented dates/years/months for internships, projects, or certifications\n" +
     "[ ] Every internship entry follows Line 1 (Title | Dates) + Line 2 (Company | Tech Stack) format\n" +
-    "[ ] Certifications and achievements combined into a single CERTIFICATIONS & ACHIEVEMENTS section\n" +
+    "[ ] Certifications and achievements placed in their own separate AWARDS & CERTIFICATIONS section (never merged into Projects)\n" +
     "[ ] Metrics/numbers added or [ADD:] placeholders used where missing\n" +
     "[ ] No LaTeX, no Markdown, no literal backslash-n in resume text\n" +
     "[ ] All original URLs and contact info preserved verbatim\n" +
@@ -479,10 +482,39 @@ export function buildLinkedInOptimizerPrompt(
   targetRole?: string,
   industry?: string,
   jobDescription?: string,
-  linkedinUrl?: string
+  linkedinUrl?: string,
+  parsedProfile?: any,
+  calculatedMetrics?: any
 ): string {
   const truncatedResume = resumeText.slice(0, 5000);
   const truncatedJd = jobDescription ? jobDescription.slice(0, 3500) : "";
+
+  let profileDetailsSection = "";
+  if (parsedProfile) {
+    profileDetailsSection = 
+      "PARSED CANDIDATE LINKEDIN PROFILE DATA:\n" +
+      `- Full Name: ${parsedProfile.fullName || "Candidate"}\n` +
+      `- Current Headline: ${parsedProfile.headline || "Professional"}\n` +
+      `- Location: ${parsedProfile.location || "Verified"}\n` +
+      `- Verified Skills: ${(parsedProfile.skills || []).slice(0, 30).join(", ")}\n` +
+      `- Work History:\n` +
+      (parsedProfile.experiences || []).map((e: any) => `  * ${e.role} at ${e.company} (${e.dates || "Recent"}):\n${(e.bullets || []).map((b: string) => `    - ${b}`).join("\n")}`).join("\n\n") + "\n" +
+      `- Projects:\n` +
+      (parsedProfile.projects || []).map((p: string) => `  * ${p}`).join("\n") + "\n" +
+      `- Education:\n` +
+      (parsedProfile.education || []).map((ed: any) => `  * ${ed.degree} from ${ed.school}`).join("\n") + "\n" +
+      `- Certifications:\n` +
+      (parsedProfile.certifications || []).map((c: string) => `  * ${c}`).join("\n") + "\n\n";
+  }
+
+  let metricsSection = "";
+  if (calculatedMetrics) {
+    metricsSection =
+      "CALCULATED ATS & LINKEDIN RECRUITER METRICS:\n" +
+      `- Base Profile Match Score: ${calculatedMetrics.profileScore}%\n` +
+      `- Exact Matched Skills Found: ${(calculatedMetrics.matchedSkills || []).slice(0, 25).join(", ")}\n` +
+      `- Flagged Missing Target Skills: ${(calculatedMetrics.missingSkills || []).slice(0, 20).join(", ")}\n\n`;
+  }
 
   return (
     "You are the world's leading LinkedIn personal branding and executive profile consultant (comparable to Jobscan LinkedIn Optimization).\n\n" +
@@ -490,20 +522,32 @@ export function buildLinkedInOptimizerPrompt(
     "Get this candidate noticed and found on LinkedIn by recruiters searching for: " + (targetRole || "Target Industry Role") + ".\n" +
     (linkedinUrl ? "LinkedIn Profile URL: " + linkedinUrl + "\n" : "") +
     (truncatedJd ? "TARGET JOB DESCRIPTION TO MATCH AGAINST:\n" + truncatedJd + "\n\n" : "") +
+    profileDetailsSection +
+    metricsSection +
     "CANDIDATE PROFILE / RESUME DATA:\n" + truncatedResume + "\n\n" +
-    "TASKS:\n" +
-    "1. Calculate a realistic LinkedIn Profile Match Score (0-100) showing how well their profile matches recruiter search queries and target job expectations.\n" +
-    "2. Diagnose exactly where human recruiters lose interest (dropoff points) and why.\n" +
-    "3. Flag exact skill gaps (missing hard skills vs matched skills found in target job).\n" +
-    "4. Generate 4 high-converting, magnetic headline variations (under 220 chars) that get found in LinkedIn Recruiter.\n" +
-    "5. Generate 3 complete, formatted About summary variations tailored to convert views into interviews.\n" +
-    "6. Identify the top 12 recruiter search keywords.\n" +
-    "7. Provide 2-3 before/after bullet upgrades using Google's XYZ formula.\n\n" +
+    "TASKS & ACCURACY REQUIREMENTS:\n" +
+    "1. Calculate an accurate LinkedIn Profile Match Score (0-100) reflecting how well their actual experience matches the target job description.\n" +
+    "2. Diagnose where human recruiters lose interest on this specific candidate's profile.\n" +
+    "3. Flag real skill gaps: identify actual missingSkills (in JD but absent from profile) and matchedSkills (present in both).\n" +
+    "4. Generate 4 high-converting, magnetic headline variations (under 220 chars) tailored to " + (targetRole || "the target role") + " using their real technologies.\n" +
+    "5. Generate 3 complete, fully-written LinkedIn About summaries tailored to their actual domain and background.\n" +
+    "6. Identify the top 12 recruiter search keywords relevant to this specific role and profile.\n" +
+    "7. Provide 2-3 before/after bullet upgrades taking real duties from their background and rewriting them with Google's XYZ formula.\n\n" +
+    "CRITICAL ANTI-HALLUCINATION & ANTI-STATIC RULE:\n" +
+    "DO NOT return placeholder strings like 'Key Skill 1' or 'Target Role'. Every headline, summary, skill, keyword, and bullet MUST be genuinely customized to the candidate's actual background and the target job description.\n\n" +
     "Return ONLY valid JSON matching this schema with NO markdown code fences or conversational text:\n" +
     "{\n" +
-    '  "profileScore": 74,\n' +
+    `  "profileScore": ${calculatedMetrics?.profileScore || 74},\n` +
     '  "profileScoreFeedback": "Summary of your profile readiness and recruiter search visibility",\n' +
     '  "dropoffAnalysis": "Recruiters lose interest after 6 seconds if your headline lacks hard skills or your summary is a generic bio. Adding quantifiable metrics and targeted keywords prevents dropoff.",\n' +
+    '  "extractedProfile": {\n' +
+    `    "fullName": "${parsedProfile?.fullName || "Candidate Name"}",\n` +
+    `    "headline": "${parsedProfile?.headline || "Professional"}",\n` +
+    `    "location": "${parsedProfile?.location || "Verified"}",\n` +
+    `    "hasCustomUrl": ${parsedProfile?.hasCustomUrl ?? true},\n` +
+    '    "hasProfilePicture": true,\n' +
+    '    "hasBackgroundPicture": true\n' +
+    '  },\n' +
     '  "skillGaps": {\n' +
     '    "missingSkills": ["Key Skill 1", "Key Skill 2", "Key Skill 3", "Key Skill 4"],\n' +
     '    "matchedSkills": ["Matched Skill 1", "Matched Skill 2", "Matched Skill 3"]\n' +

@@ -196,6 +196,24 @@ export function splitCertText(text: string): { title: string; rest: string } {
   return { title: '', rest: clean };
 }
 
+export function isCertOrAchievementLine(text: string): boolean {
+  if (!text) return false;
+  const clean = stripMarkdownAsterisks(text).replace(/^[•\-*\u2022\s]+/, '').trim();
+  if (!clean || clean.length < 5) return false;
+  // Specific certification platforms, credentials, or courses
+  if (/(?:certification|certificate|certified|hackerrank|springboard|codetantra|leetcode|codechef|coursera|udemy|nptel|licen[sc]e)\b/i.test(clean)) {
+    return true;
+  }
+  // Algorithmic and academic achievements
+  if (/^(?:solved|ranked|won|secured|completed)\s+\d+\+?\s+(?:problems?|challenges?|questions?|dsa|algorithms?)/i.test(clean)) {
+    return true;
+  }
+  if (/^(?:participated|represented|awarded|recognized|published)\b/i.test(clean) && /(?:hackathon|competition|academic\s*projects?|symposium|seminar|teamwork)/i.test(clean)) {
+    return true;
+  }
+  return false;
+}
+
 export function extractRoleFromResume(textOrResume: string | any, jobTitle?: string | null): string {
   let text = "";
   let explicitTitle = jobTitle;
@@ -484,8 +502,6 @@ export function parseResume(rawText: string): ParsedResume {
     if (/^\[Verified Internship/i.test(line)) continue;
     if (/^\[.*Technologies.*\]/i.test(line)) continue;
     if (/^[a-z0-9_\-\s]+\]$/i.test(line) && line.endsWith(']')) continue;
-    if (/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(line.replace(/^[•\-*\u2022\s]+/, ''))) continue;
-    if (/^(?:AWARDS|CERTIFICATIONS)\s*(&|AND)\s*(?:CERTIFICATIONS|ACHIEVEMENTS|AWARDS)\s*$/i.test(line.replace(/^[•\-*\u2022\s]+/, ''))) continue;
 
     const sec = matchSectionHeader(line);
     if (sec) {
@@ -535,6 +551,11 @@ export function parseResume(rawText: string): ParsedResume {
   for (let i = 0; i < expLines.length; i++) {
     const rawLine = expLines[i];
     const isBullet = /^[•\-*\u2022]/.test(rawLine);
+
+    if (isCertOrAchievementLine(rawLine)) {
+      rawSections['AWARDS & CERTIFICATIONS'].push(rawLine);
+      continue;
+    }
 
     if (isBullet) {
       if (currentExp) {
@@ -618,6 +639,11 @@ export function parseResume(rawText: string): ParsedResume {
   for (let i = 0; i < projLines.length; i++) {
     const rawLine = projLines[i];
     const isBullet = /^[•\-*\u2022]/.test(rawLine);
+
+    if (isCertOrAchievementLine(rawLine)) {
+      rawSections['AWARDS & CERTIFICATIONS'].push(rawLine);
+      continue;
+    }
 
     if (isBullet) {
       if (currentProj) {

@@ -42,6 +42,7 @@ import { ResumesSkeleton, ResumesGridSkeleton } from "@/components/SkeletonShimm
 import { getTemplateById, ATS_TEMPLATES_DATA, AtsTemplateProfile } from "@/lib/ats-templates-data";
 import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 import { Palette, Maximize2, Minimize2 } from "lucide-react";
+import { GeminiIcon } from "@/components/icons/GeminiIcon";
 
 // Structured Resume Form Types
 interface StructuredResume {
@@ -226,14 +227,17 @@ function ResumesPageContent() {
           setActivePlan(plan);
         }
 
-        // Optimistically load cached resumes if available
+        // Optimistically load cached resumes if available (strictly standalone resumes only, no optimization scans)
         if (typeof window !== "undefined") {
           const cached = localStorage.getItem(`fastHire_resumes_cache_${user.id}`);
           if (cached) {
             try {
               const parsed = JSON.parse(cached);
               if (Array.isArray(parsed) && parsed.length > 0) {
-                setResumes(parsed);
+                const onlyResumes = parsed.filter(
+                  (r: any) => !r.jobDescription || r.jobDescription.trim() === ""
+                );
+                setResumes(onlyResumes);
                 setLoading(false);
               }
             } catch (e) {}
@@ -244,11 +248,11 @@ function ResumesPageContent() {
         let dbData: any[] = [];
         let dbError: any = null;
         try {
-          const historyRes = await fetch("/api/resumes");
-          if (historyRes.ok) {
-            dbData = await historyRes.json();
+          const res = await fetch("/api/resumes");
+          if (res.ok) {
+            dbData = await res.json();
           } else {
-            const errBody = await historyRes.json().catch(() => ({}));
+            const errBody = await res.json().catch(() => ({}));
             dbError = new Error(errBody.error || "Failed to fetch resumes from API");
           }
         } catch (fetchErr: any) {
@@ -261,20 +265,28 @@ function ResumesPageContent() {
           logger.error("Failed to query resumes from Supabase", dbError);
           toast.error("Could not load resumes.");
         } else if (dbData) {
-          if (Array.isArray(dbData) && dbData.length > 0) {
-            setResumes(dbData as ResumeRecord[]);
+          // Strictly standalone resumes (manually created or added to resumes library)
+          const cleanResumes = (Array.isArray(dbData) ? dbData : []).filter(
+            (r: any) => !r.jobDescription || r.jobDescription.trim() === ""
+          );
+
+          if (cleanResumes.length > 0) {
+            setResumes(cleanResumes as ResumeRecord[]);
             if (typeof window !== "undefined") {
-              localStorage.setItem(`fastHire_resumes_cache_${user.id}`, JSON.stringify(dbData));
+              localStorage.setItem(`fastHire_resumes_cache_${user.id}`, JSON.stringify(cleanResumes));
             }
           } else {
-            // If server returned empty, check if user has manually created resumes in cache to avoid wiping them out
+            // Check if user has valid offline standalone resumes
             const cachedStr = typeof window !== "undefined" ? localStorage.getItem(`fastHire_resumes_cache_${user.id}`) : null;
             if (cachedStr) {
               try {
                 const cachedResumes = JSON.parse(cachedStr);
-                if (Array.isArray(cachedResumes) && cachedResumes.length > 0) {
-                  setResumes(cachedResumes);
-                  for (const cr of cachedResumes) {
+                const validResumes = Array.isArray(cachedResumes)
+                  ? cachedResumes.filter((cr: any) => !cr.jobDescription || cr.jobDescription.trim() === "")
+                  : [];
+                if (validResumes.length > 0) {
+                  setResumes(validResumes);
+                  for (const cr of validResumes) {
                     fetch("/api/resumes", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
@@ -283,6 +295,9 @@ function ResumesPageContent() {
                   }
                 } else {
                   setResumes([]);
+                  if (typeof window !== "undefined") {
+                    localStorage.removeItem(`fastHire_resumes_cache_${user.id}`);
+                  }
                 }
               } catch {
                 setResumes([]);
@@ -728,6 +743,39 @@ function ResumesPageContent() {
     if (editingResume && typeof window !== "undefined") {
       localStorage.setItem(`fastHire_resume_template_${editingResume.id}`, styleId);
     }
+  };
+
+  // Launch optimization against job description in main dashboard
+  const handleOptimizeAgainstJob = (record: ResumeRecord | StructuredResume | null) => {
+    if (!record) return;
+    let text = "";
+    let title = "";
+    let company = "";
+
+    if ("optimizedText" in record || "originalText" in record || "content" in record) {
+      const r = record as ResumeRecord;
+      text = r.optimizedText || r.originalText || (r as any).content || "";
+      title = r.jobTitle || "";
+      company = r.company || "";
+    } else {
+      text = compileStructuredResume(record as StructuredResume);
+      title = tempTitle || editingResume?.jobTitle || "";
+      company = editingResume?.company || "";
+    }
+
+    if (!text.trim()) {
+      toast.error("Resume content is empty. Please add details first.");
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("fastHire_dashboard_prefill_resume", text);
+      if (title) localStorage.setItem("fastHire_dashboard_prefill_title", title);
+      if (company) localStorage.setItem("fastHire_dashboard_prefill_company", company);
+    }
+
+    toast.success("Loaded resume into Optimize Dashboard!");
+    router.push("/dashboard?prefill=true");
   };
 
   // Open Resume Editor
@@ -1512,15 +1560,15 @@ function ResumesPageContent() {
                             </div>
                           </div>
 
-                          {/* Card controls footer (Image 1) */}
+                          {/* Card controls footer - Edit & Delete only */}
                           <div className="flex gap-2 items-center pt-2 border-t border-[#DCE7E9]">
                             <Button
                               onClick={() => handleOpenEditor(resume)}
                               variant="ghost"
-                              className="flex-1 bg-[#F5FAFA] hover:bg-[#087F6E] text-[#111827] hover:text-white border border-[#DCE7E9] rounded-xl h-8 text-[11px] font-bold gap-1.5 transition-colors cursor-pointer"
+                              className="flex-1 bg-[#F5FAFA] hover:bg-[#087F6E] text-[#111827] hover:text-white border border-[#DCE7E9] rounded-md h-8 text-[11px] font-bold gap-1.5 transition-colors cursor-pointer"
                             >
                               <Edit3 className="h-3.5 w-3.5" />
-                              Edit
+                              <span>Edit</span>
                             </Button>
                             <Button
                               onClick={(e) => {
@@ -1529,7 +1577,7 @@ function ResumesPageContent() {
                               }}
                               disabled={isDeleting}
                               variant="ghost"
-                              className="h-8 w-8 p-0 rounded-xl hover:bg-rose-50 text-[#526176] hover:text-rose-600 border border-[#DCE7E9] cursor-pointer"
+                              className="h-8 w-8 p-0 rounded-md hover:bg-rose-50 text-[#526176] hover:text-rose-600 border border-[#DCE7E9] cursor-pointer"
                               title="Remove resume"
                             >
                               {isDeleting ? (
@@ -1609,24 +1657,18 @@ function ResumesPageContent() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0 flex-wrap">
-              {/* Template Style Selector Dropdown */}
-              <div className="hidden sm:flex items-center gap-1.5 bg-slate-100 p-1 rounded-lg border border-slate-200">
-                <Palette className="h-3 w-3 text-[#0d6e5a] ml-1" />
-                <select
-                  value={templateStyle}
-                  onChange={(e) => handleTemplateStyleChange(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer py-0.5 pr-2"
-                >
-                  {TEMPLATE_STYLES.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+              {/* Rectangle Button: Optimize Against Job connects to Optimize Dashboard */}
+              <Button
+                type="button"
+                onClick={() => handleOptimizeAgainstJob(editorData || editingResume)}
+                className="h-8 px-4 font-bold text-xs rounded-md bg-[#087F6E] hover:bg-[#065F53] text-white flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+              >
+                <GeminiIcon className="h-3.5 w-3.5 text-white" />
+                <span>Optimize Against Job</span>
+              </Button>
 
-              <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 sm:px-3 py-1 rounded-full">
+              <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 sm:px-3 py-1 rounded-md">
                 <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span>Auto-saved</span>
               </div>
@@ -2348,24 +2390,23 @@ function ResumesPageContent() {
 
             </div>
 
-            {/* Right Column: Live Professional Preview sheet matching HTML design (Image 2) */}
-            <div className={`w-full lg:w-1/2 bg-slate-100 overflow-y-auto px-2 py-3 sm:px-6 sm:py-6 md:px-8 md:py-8 flex flex-col items-center ${mobileTab === "preview" ? "flex" : "hidden lg:flex"}`}>
-              {/* Preview Toolbar with Template Style Badge & Full Length Toggle */}
+            {/* Right Column: Live Professional Preview sheet with smooth scrolling */}
+            <div className={`w-full lg:w-1/2 bg-slate-100 overflow-y-auto max-h-[calc(100vh-60px)] px-2 py-3 sm:px-6 sm:py-6 md:px-8 md:py-8 flex flex-col items-center ${mobileTab === "preview" ? "flex" : "hidden lg:flex"}`}>
+              {/* Preview Toolbar with Optimize Against Job & Full Length Toggle */}
               <div className="w-full max-w-[800px] mb-3 flex items-center justify-between gap-2 px-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <Palette className="h-3.5 w-3.5 text-[#0d6e5a]" />
-                    <span>{TEMPLATE_STYLES.find(t => t.id === templateStyle)?.name || "Classic Academic"}</span>
-                  </span>
-                  <span className="bg-teal-50 text-[#0d6e5a] border border-teal-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                    {TEMPLATE_STYLES.find(t => t.id === templateStyle)?.badge || "LaTeX Standard"}
-                  </span>
-                </div>
+                <Button
+                  type="button"
+                  onClick={() => handleOptimizeAgainstJob(editorData || editingResume)}
+                  className="h-8 px-3.5 font-bold text-xs rounded-md bg-[#087F6E] hover:bg-[#065F53] text-white flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                >
+                  <GeminiIcon className="h-3.5 w-3.5 text-white" />
+                  <span>Optimize Against Job</span>
+                </Button>
 
                 <button
                   type="button"
                   onClick={() => setIsFullLengthPreview(!isFullLengthPreview)}
-                  className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 shadow-2xs px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 shadow-2xs px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   {isFullLengthPreview ? (
                     <>
@@ -2383,24 +2424,24 @@ function ResumesPageContent() {
 
               {editorData && (
                 <div 
-                  className={`w-full max-w-[800px] bg-white text-black p-3.5 sm:p-8 md:p-12 lg:p-[20mm] shadow-xl sm:shadow-2xl flex flex-col select-text border border-slate-300 rounded-lg sm:rounded-none transition-all ${
+                  className={`w-full max-w-[800px] bg-white text-black p-3.5 sm:p-8 md:p-12 lg:p-[20mm] shadow-xl sm:shadow-2xl flex flex-col select-text border border-slate-300 rounded-md sm:rounded-none transition-all break-words [overflow-wrap:anywhere] overflow-x-hidden ${
                     isFullLengthPreview ? "min-h-auto" : "min-h-[600px] sm:min-h-[850px] lg:min-h-[1056px]"
                   }`}
                   style={{ fontFamily: TEMPLATE_STYLES.find(t => t.id === templateStyle)?.fontFamily || "'Times New Roman', Times, serif" }}
                 >
                   
                   {/* Name center header */}
-                  <h1 className="text-xl sm:text-2xl font-bold uppercase text-center tracking-wide leading-tight">
+                  <h1 className="text-xl sm:text-2xl font-bold uppercase text-center tracking-wide leading-tight break-words [overflow-wrap:anywhere]">
                     {editorData.name || "Jane Smith"}
                   </h1>
 
                   {/* Contact parts centered */}
-                  <div className="text-[9px] sm:text-[10px] text-slate-700 text-center mt-1 mb-4 font-normal flex flex-wrap justify-center gap-1 sm:gap-1.5 leading-normal">
+                  <div className="text-[9px] sm:text-[10px] text-slate-700 text-center mt-1 mb-4 font-normal flex flex-wrap justify-center gap-1 sm:gap-1.5 leading-normal break-words [overflow-wrap:anywhere]">
                     {[editorData.email, editorData.phone, editorData.location, editorData.linkedin, editorData.website]
                       .filter(Boolean)
                       .map((val, idx, arr) => (
                         <React.Fragment key={idx}>
-                          <span>{val}</span>
+                          <span className="break-all">{val}</span>
                           {idx < arr.length - 1 && <span className="text-slate-400 select-none">|</span>}
                         </React.Fragment>
                       ))
@@ -2416,7 +2457,7 @@ function ResumesPageContent() {
                         <h2 className="text-[11px] font-bold uppercase tracking-wider border-b border-black pb-0.5">
                           Professional Summary
                         </h2>
-                        <p className="text-justify leading-relaxed">
+                        <p className="text-justify leading-relaxed break-words [overflow-wrap:anywhere]">
                           {renderRichText(editorData.summary)}
                         </p>
                       </div>
@@ -2430,7 +2471,7 @@ function ResumesPageContent() {
                         </h2>
                         <div className="space-y-0.5">
                           {editorData.skills.map(group => (
-                            <p key={group.id} className="leading-relaxed">
+                            <p key={group.id} className="leading-relaxed break-words [overflow-wrap:anywhere]">
                               <span className="font-bold">{group.category}:</span> {group.list.join(", ")}
                             </p>
                           ))}
@@ -2447,14 +2488,14 @@ function ResumesPageContent() {
                         <div className="space-y-2.5">
                           {editorData.experience.map(exp => (
                             <div key={exp.id} className="space-y-1">
-                              <div className="flex justify-between items-baseline font-bold">
-                                <span>{renderRichText(exp.company)} {exp.title ? `— ${exp.title}` : ""}</span>
-                                <span className="font-normal italic text-[10px]">{exp.date}</span>
+                              <div className="flex justify-between items-baseline font-bold gap-2 flex-wrap">
+                                <span className="break-words [overflow-wrap:anywhere]">{renderRichText(exp.company)} {exp.title ? `— ${exp.title}` : ""}</span>
+                                <span className="font-normal italic text-[10px] shrink-0">{exp.date}</span>
                               </div>
                               {exp.bullets.length > 0 && (
                                 <ul className="list-disc pl-4 space-y-0.5">
                                   {exp.bullets.filter(Boolean).map((bullet, idx) => (
-                                    <li key={idx} className="text-justify leading-relaxed">
+                                    <li key={idx} className="text-justify leading-relaxed break-words [overflow-wrap:anywhere]">
                                       {renderRichText(bullet)}
                                     </li>
                                   ))}
@@ -2475,19 +2516,19 @@ function ResumesPageContent() {
                         <div className="space-y-2">
                           {editorData.projects.map(proj => (
                             <div key={proj.id} className="space-y-0.5">
-                              <div className="flex justify-between items-baseline font-bold">
-                                <span>
+                              <div className="flex justify-between items-baseline font-bold gap-2 flex-wrap">
+                                <span className="break-words [overflow-wrap:anywhere]">
                                   {proj.name}
                                   {proj.techStack ? " | " : ""}
                                   {proj.techStack && <span className="font-normal italic">{proj.techStack}</span>}
-                                  {proj.link && <span className="font-normal text-[10px] text-slate-500 ml-1">({proj.link})</span>}
+                                  {proj.link && <span className="font-normal text-[10px] text-slate-500 ml-1 break-all">({proj.link})</span>}
                                 </span>
-                                <span className="font-normal italic text-[10px]">{proj.date}</span>
+                                <span className="font-normal italic text-[10px] shrink-0">{proj.date}</span>
                               </div>
                               {proj.bullets && proj.bullets.length > 0 && (
                                 <ul className="list-disc pl-4 space-y-0.5">
                                   {proj.bullets.filter(Boolean).map((bullet, idx) => (
-                                    <li key={idx} className="text-justify leading-relaxed">
+                                    <li key={idx} className="text-justify leading-relaxed break-words [overflow-wrap:anywhere]">
                                       {renderRichText(bullet)}
                                     </li>
                                   ))}
@@ -2508,13 +2549,13 @@ function ResumesPageContent() {
                         <div className="space-y-1.5">
                           {editorData.education.map(edu => (
                             <div key={edu.id} className="space-y-0.5">
-                              <div className="flex justify-between items-baseline">
-                                <div>
+                              <div className="flex justify-between items-baseline gap-2 flex-wrap">
+                                <div className="break-words [overflow-wrap:anywhere]">
                                   <span className="font-bold">{edu.school}</span>
                                   {edu.degree && <span className="italic"> — {edu.degree}</span>}
                                   {edu.field && <span> in {edu.field}</span>}
                                 </div>
-                                <span className="font-normal italic text-[10px]">{edu.date}</span>
+                                <span className="font-normal italic text-[10px] shrink-0">{edu.date}</span>
                               </div>
                               {edu.gpa && (
                                 <div className="flex justify-end text-[10px] text-slate-700 italic font-bold">
@@ -2535,7 +2576,7 @@ function ResumesPageContent() {
                         </h2>
                         <ul className="list-disc pl-4 space-y-0.5">
                           {editorData.certifications.filter(Boolean).map((cert, idx) => (
-                            <li key={idx} className="leading-relaxed">
+                            <li key={idx} className="leading-relaxed break-words [overflow-wrap:anywhere]">
                               {renderRichText(cert)}
                             </li>
                           ))}
@@ -2551,7 +2592,7 @@ function ResumesPageContent() {
                         </h2>
                         <ul className="list-disc pl-4 space-y-0.5">
                           {editorData.achievements.filter(Boolean).map((ach, idx) => (
-                            <li key={idx} className="leading-relaxed">
+                            <li key={idx} className="leading-relaxed break-words [overflow-wrap:anywhere]">
                               {renderRichText(ach)}
                             </li>
                           ))}
@@ -2567,7 +2608,7 @@ function ResumesPageContent() {
                         </h2>
                         <ul className="list-disc pl-4 space-y-0.5">
                           {editorData.languages.filter(Boolean).map((lang, idx) => (
-                            <li key={idx} className="leading-relaxed">
+                            <li key={idx} className="leading-relaxed break-words [overflow-wrap:anywhere]">
                               {renderRichText(lang)}
                             </li>
                           ))}

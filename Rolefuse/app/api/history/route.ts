@@ -189,13 +189,15 @@ export async function GET(request: NextRequest) {
         return false;
       }
 
-      // 3. Keep any actual optimization record (has scores, optimized text, keywords, or job description)
+      // 3. Optimization History ONLY contains scans performed against a target job description.
+      // Standalone resumes from /dashboard/resumes have empty jobDescription and belong strictly to Resumes, not History.
+      const hasJobDescription = Boolean(r.jobDescription && typeof r.jobDescription === "string" && r.jobDescription.trim().length > 0);
+      if (!hasJobDescription) return false;
+
       const hasOptimizationData =
         (r.scoreBefore !== undefined && r.scoreBefore !== null) ||
         (r.scoreAfter !== undefined && r.scoreAfter !== null) ||
-        Boolean(r.optimizedText && r.optimizedText.trim() !== "") ||
-        Boolean(r.jobDescription && r.jobDescription.trim() !== "") ||
-        Boolean(r.keywordsAdded && (Array.isArray(r.keywordsAdded) ? r.keywordsAdded.length > 0 : true));
+        Boolean(r.optimizedText && r.optimizedText.trim() !== "");
 
       if (!hasOptimizationData) return false;
 

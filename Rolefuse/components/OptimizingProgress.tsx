@@ -35,6 +35,7 @@ interface OptimizingProgressProps {
   resumeText: string;
   jobDescription: string;
   instructions?: string;
+  lengthOption?: string;
 }
 
 const STEP_CEILINGS: Record<number, number> = {
@@ -99,6 +100,7 @@ export default function OptimizingProgress({
   resumeText,
   jobDescription,
   instructions = "",
+  lengthOption = "Auto-detect",
 }: OptimizingProgressProps) {
   const [steps, setSteps] = useState<
     { id: number; status: "pending" | "running" | "done"; duration?: string }[]
@@ -256,6 +258,7 @@ export default function OptimizingProgress({
             resumeText,
             jobDescription,
             instructions,
+            lengthOption,
           }),
         });
 
@@ -401,6 +404,7 @@ export default function OptimizingProgress({
           resumeText,
           jobDescription,
           instructions,
+          lengthOption,
           userAnswers: finalAnswers,
           skipDetection: true,
         }),
@@ -470,32 +474,32 @@ export default function OptimizingProgress({
   const currentQ = missingQuestions[currentQuestionIndex] || missingQuestions[0];
   const isLast = currentQuestionIndex === missingQuestions.length - 1;
 
-  // ── RENDER AI QUESTION BOX (STRICTLY STYLED MATCHING IMAGE 2 CARD MODAL) ──
+  // ── RENDER AI QUESTION BOX (STRICTLY STYLED MATCHING RECTANGLE BOX WITH INPUT CLARITY) ──
   if (awaitingInput && missingQuestions.length > 0 && currentQ) {
     return (
-      <div className="w-full max-w-lg mx-auto bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl border border-slate-100 select-none animate-in fade-in zoom-in-95 duration-200">
-        {/* Top Icon Badge matching Gemini sparkly type */}
-        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-teal-50 border border-teal-200/80 flex items-center justify-center text-[#0d6e5a] mx-auto mb-3 sm:mb-5 shadow-2xs">
-          <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2]" />
+      <div className="w-full max-w-lg mx-auto bg-white rounded-xl p-5 sm:p-7 shadow-xl border border-slate-200 select-none animate-in fade-in zoom-in-95 duration-200">
+        {/* Top Icon Badge */}
+        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-md bg-teal-50 border border-teal-200 flex items-center justify-center text-[#087F6E] mx-auto mb-3 sm:mb-4 shadow-2xs">
+          <Sparkles className="w-5 h-5 stroke-[2]" />
         </div>
 
         {/* Headline */}
-        <h2 className="text-xl sm:text-[28px] font-black text-slate-900 tracking-tight text-center mb-1.5 sm:mb-2 leading-tight">
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight text-center mb-1.5 leading-tight">
           Missing Details Detected
         </h2>
 
         {/* Clean explanatory description */}
-        <p className="text-slate-500 text-xs sm:text-sm font-normal text-center mb-4 sm:mb-6 leading-relaxed max-w-sm mx-auto">
+        <p className="text-slate-600 text-xs sm:text-sm font-normal text-center mb-4 sm:mb-5 leading-relaxed max-w-sm mx-auto">
           We found a few missing values in your resume. Answering them helps tailor your resume and maximize your ATS match score.
         </p>
 
         {/* Question & Target Context Box */}
-        <div className="bg-slate-50/90 border border-slate-200/80 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 mb-4 sm:mb-5 text-left">
+        <div className="bg-slate-50 border border-slate-200 rounded-md p-4 mb-4 text-left">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-teal-50 text-[#0d6e5a] border border-teal-200">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-teal-50 text-[#087F6E] border border-teal-200">
               {currentQ.section || "DETAILS"}
             </span>
-            <span className="text-[11px] sm:text-xs text-slate-400 font-semibold">
+            <span className="text-[11px] sm:text-xs text-slate-500 font-semibold">
               Question {currentQuestionIndex + 1} of {missingQuestions.length}
             </span>
           </div>
@@ -504,22 +508,25 @@ export default function OptimizingProgress({
             {currentQ.field}
           </div>
 
-          <div className="text-sm sm:text-lg font-bold text-slate-900 mb-1.5 sm:mb-2 leading-snug">
+          <div className="text-sm sm:text-base font-bold text-slate-900 mb-1.5 leading-snug">
             {currentQ.question}
           </div>
 
           {currentQ.originalBullet && (
-            <div className="text-[11px] sm:text-xs text-slate-700 italic bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2.5 sm:p-3 mt-2">
-              <span className="font-bold text-slate-400 block mb-0.5 sm:mb-1 uppercase tracking-wider text-[9px] not-italic">
+            <div className="text-xs text-slate-700 italic bg-white border border-slate-200 rounded-md p-2.5 sm:p-3 mt-2 leading-relaxed">
+              <span className="font-bold text-slate-400 block mb-0.5 uppercase tracking-wider text-[9px] not-italic">
                 Target Resume Bullet:
               </span>
-              "{currentQ.originalBullet}"
+              &ldquo;{currentQ.originalBullet}&rdquo;
             </div>
           )}
         </div>
 
-        {/* Input Field */}
-        <div className="mb-4 sm:mb-6 text-left">
+        {/* Input Field with Maximum Visibility and Rectangle Shape */}
+        <div className="mb-4 sm:mb-5 text-left">
+          <label className="text-xs font-bold text-slate-800 block mb-1.5">
+            Your Input:
+          </label>
           <input
             autoFocus
             type="text"
@@ -541,14 +548,14 @@ export default function OptimizingProgress({
               }
             }}
             placeholder={currentQ.hint || `Type your answer for ${currentQ.field}...`}
-            className="w-full h-11 sm:h-12 px-3.5 sm:px-4 text-xs sm:text-sm bg-white border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0d6e5a] focus:border-transparent transition-all shadow-xs"
+            className="w-full h-11 sm:h-12 px-3.5 text-sm font-medium bg-white border-2 border-slate-300 focus:border-[#087F6E] focus:ring-2 focus:ring-[#087F6E]/20 rounded-md text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none transition-all shadow-2xs"
           />
-          <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1.5 ml-1">
-            Press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[9px] sm:text-[10px] font-mono">Enter ↵</kbd> to save and proceed.
+          <p className="text-[11px] text-slate-500 mt-1.5">
+            Press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono font-semibold text-slate-700">Enter ↵</kbd> to save and proceed.
           </p>
         </div>
 
-        {/* Dual Action Buttons matching Image 2 Layout */}
+        {/* Dual Action Buttons - Rectangle Box Style */}
         <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3">
           <button
             type="button"
@@ -560,7 +567,7 @@ export default function OptimizingProgress({
               }
             }}
             disabled={isApplying}
-            className="w-full sm:flex-1 h-11 sm:h-12 rounded-xl bg-[#0d6e5a] hover:bg-[#075E53] active:scale-95 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            className="w-full sm:flex-1 h-11 rounded-md bg-[#087F6E] hover:bg-[#065F53] active:scale-[0.98] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
           >
             <span className="flex items-center gap-1.5">
               {isLast ? "Finish & Optimize ✨" : (
@@ -580,7 +587,7 @@ export default function OptimizingProgress({
                 handleApplyAnswers(true);
               }
             }}
-            className="w-full sm:flex-1 h-11 sm:h-12 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center justify-center transition-all cursor-pointer"
+            className="w-full sm:flex-1 h-11 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-semibold flex items-center justify-center transition-all cursor-pointer shadow-2xs"
           >
             <span>{isLast ? "Skip All & Optimize" : "Skip this question"}</span>
           </button>

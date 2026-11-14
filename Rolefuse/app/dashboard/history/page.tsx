@@ -188,6 +188,47 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
   const [activeTab, setActiveTab] = useState<"resume" | "changes" | "breakdown" | "roadmap" | "cover_letter">("resume");
   const [showShareModal, setShowShareModal] = useState(false);
   const [animatedBarWidth, setAnimatedBarWidth] = useState(0);
+  const [savingToResumes, setSavingToResumes] = useState(false);
+  const [savedToResumes, setSavedToResumes] = useState(false);
+
+  const handleSaveToResumes = async () => {
+    const textToSave = resume.optimizedText || resume.originalText;
+    if (!textToSave) {
+      toast.error("No resume content found to save.");
+      return;
+    }
+    setSavingToResumes(true);
+    try {
+      const res = await fetch("/api/resumes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          originalText: resume.originalText || textToSave,
+          optimizedText: textToSave,
+          jobDescription: "", // Standalone resume in My Resumes library
+          jobTitle: resume.jobTitle ? `${resume.jobTitle} (Optimized)` : "Target Role Resume",
+          company: resume.company || "General Application",
+          scoreBefore: resume.scoreBefore || 50,
+          scoreAfter: resume.scoreAfter || 85,
+          keywordsBefore: resume.keywordsBefore || 0,
+          keywordsAfter: resume.keywordsAfter || 10,
+          impactBefore: resume.impactBefore || 0,
+          impactAfter: resume.impactAfter || 10,
+          keywordsAdded: resume.keywordsAdded || [],
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to save to Resumes library.");
+      }
+      setSavedToResumes(true);
+      toast.success("Saved to My Resumes! You can now view and edit it in My Resumes.");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save resume.");
+    } finally {
+      setSavingToResumes(false);
+    }
+  };
 
   useEffect(() => {
     // Smooth animated fill for the ATS score progress bar line
@@ -422,8 +463,27 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
     setRoadmapLoading(true);
     setRoadmapContent(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const content = generateMultiSkillRoadmap(selectedRoadmapSkills);
+      const res = await fetch("/api/skill-roadmap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          skills: selectedRoadmapSkills,
+          jobTitle: resume.jobTitle,
+          company: resume.company,
+          jobDescription: resume.jobDescription,
+          resumeText: resume.optimizedText || resume.originalText
+        }),
+      });
+
+      let content = "";
+      if (res.ok) {
+        const data = await res.json();
+        content = data.roadmap;
+      } else {
+        // Fallback to local roadmap generator if offline
+        content = generateMultiSkillRoadmap(selectedRoadmapSkills);
+      }
+
       setRoadmapContent(content);
       if (typeof window !== "undefined") {
         localStorage.setItem(`fastHire_roadmap_${resume.id}`, content);
@@ -435,7 +495,10 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
       }).catch(() => {});
       toast.success(`Generated 90-day roadmap for ${selectedRoadmapSkills.length} selected skill${selectedRoadmapSkills.length > 1 ? "s" : ""}!`);
     } catch (e) {
-      toast.error("Failed to generate learning roadmap.");
+      // Local fallback on network failure
+      const fallbackContent = generateMultiSkillRoadmap(selectedRoadmapSkills);
+      setRoadmapContent(fallbackContent);
+      toast.success(`Generated 90-day roadmap for ${selectedRoadmapSkills.length} selected skill${selectedRoadmapSkills.length > 1 ? "s" : ""}!`);
     } finally {
       setRoadmapLoading(false);
     }
@@ -509,7 +572,27 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleSaveToResumes}
+            disabled={savingToResumes || savedToResumes}
+            className={`font-bold text-xs h-9 px-3.5 rounded-md shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
+              savedToResumes
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
+                : "bg-[#087F6E] hover:bg-[#065F53] text-white"
+            }`}
+          >
+            {savingToResumes ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : savedToResumes ? (
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+            <span>{savedToResumes ? "Saved in Resumes" : "Save to My Resumes"}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowShareModal(true)}

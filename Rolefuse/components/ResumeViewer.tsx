@@ -496,7 +496,23 @@ export default function ResumeViewer({
                   </div>
                 );
               case "contact": {
-                const cleanSegments = block.segments.filter((seg) => !isRoleOrTitle(seg.text));
+                const rawSegments = block.segments.filter((seg) => !isRoleOrTitle(seg.text));
+                if (rawSegments.length === 0) return null;
+
+                // Deduplicate contacts so email, phone, etc. never appear twice
+                const seenTypes = new Set<string>();
+                const cleanSegments = rawSegments.filter((seg) => {
+                  const lower = (seg.text || "").toLowerCase() + " " + (seg.url || "").toLowerCase();
+                  let iconType = "globe";
+                  if (seg.text.includes("@") || lower.includes("@")) iconType = "email";
+                  else if (/\+?\d[\d\s\-\(\)]{7,}/.test(seg.text)) iconType = "phone";
+                  else if (lower.includes("linkedin")) iconType = "linkedin";
+                  else if (lower.includes("github")) iconType = "github";
+
+                  if (seenTypes.has(iconType)) return false;
+                  seenTypes.add(iconType);
+                  return true;
+                });
                 if (cleanSegments.length === 0) return null;
                 return (
                   <div

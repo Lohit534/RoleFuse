@@ -70,7 +70,9 @@ export default function MockInterviewPage() {
   const [selectedResumeId, setSelectedResumeId] = useState("");
   const [resumeText, setResumeText] = useState("");
   const [jobTitle, setJobTitle] = useState("");
+  const [isCustomRole, setIsCustomRole] = useState(false);
   const [company, setCompany] = useState("");
+  const [isCustomCompany, setIsCustomCompany] = useState(false);
   const [jobDescription, setJobDescription] = useState("");
 
   // Question generation states
@@ -86,6 +88,7 @@ export default function MockInterviewPage() {
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [evaluatingMap, setEvaluatingMap] = useState<Record<string, boolean>>({});
   const [evaluations, setEvaluations] = useState<Record<string, AnswerEvaluation>>({});
+  const [showInputs, setShowInputs] = useState(true);
 
   useEffect(() => {
     async function init() {
@@ -136,7 +139,9 @@ export default function MockInterviewPage() {
     }
     const found = savedResumes.find(r => r.id === id);
     if (found) {
-      setResumeText(found.content || JSON.stringify(found.resumeJSON || ""));
+      setResumeText(found.content || found.optimizedText || found.originalText || (found.resumeJSON ? JSON.stringify(found.resumeJSON) : ""));
+      if (!company && found.company) setCompany(found.company);
+      if (!jobTitle && found.jobTitle) setJobTitle(found.jobTitle);
     }
   };
 
@@ -155,8 +160,8 @@ export default function MockInterviewPage() {
       toast.error("Please supply your resume content.");
       return;
     }
-    if (!jobDescription.trim()) {
-      toast.error("Please paste the target job description.");
+    if (jobDescription.trim().length < 50) {
+      toast.error("Please paste the target job description (minimum 50 characters required).");
       return;
     }
 
@@ -187,7 +192,11 @@ export default function MockInterviewPage() {
 
       setOverview(resData.data?.overview || "");
       setQuestions(resData.data?.questions || []);
-      toast.success("Generated tailored interview loop!");
+      setShowInputs(false);
+      toast.success("Generated tailored interview loop! (2 credits deducted)");
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("credits-updated"));
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to generate questions.");
     } finally {
@@ -315,164 +324,260 @@ export default function MockInterviewPage() {
               </Button>
             </div>
           </Card>
+        ) : generatingQuestions ? (
+          /* Prominent Generating Spinner at Top */
+          <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-4 animate-in fade-in duration-300">
+            <div className="h-12 w-12 rounded-full border-4 border-slate-100 border-t-[#087F6E] animate-spin mx-auto" />
+            <h2 className="text-xl font-bold text-slate-900">Generating Realistic Interview Loop...</h2>
+            <p className="text-xs text-slate-500">
+              Formulating target behavioral, technical, and situational STAR questions for <span className="font-semibold text-slate-800">{jobTitle || "your target role"}</span> {company ? `at ${company}` : ""}.
+            </p>
+          </div>
         ) : (
           <>
-            {/* Input Parameters Section */}
-            <Card className="bg-white border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-          <CardContent className="p-5 sm:p-6 space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Sparkles className="h-4 w-4 text-[#087F6E]" />
-              <h2 className="font-extrabold text-sm text-slate-900">Target Role &amp; Experience Setup</h2>
-            </div>
-
-            <form onSubmit={handleGenerateQuestions} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* Resume Source */}
+            {/* When questions are generated, show Results Top Bar & Results AT THE TOP */}
+            {questions.length > 0 && !showInputs && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">Resume Background</label>
-                  {savedResumes.length > 0 && (
-                    <select
-                      value={selectedResumeId}
-                      onChange={(e) => handleSelectResume(e.target.value)}
-                      className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#087F6E]/20 mb-1.5"
-                    >
-                      <option value="">-- Choose saved resume (or paste below) --</option>
-                      {savedResumes.map((res) => (
-                        <option key={res.id} value={res.id}>
-                          {res.title || res.jobTitle || "Master Resume"}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  <Input
-                    placeholder="Paste resume excerpt..."
-                    value={resumeText}
-                    onChange={(e) => {
-                      setResumeText(e.target.value);
-                      if (selectedResumeId) setSelectedResumeId("");
-                    }}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    data-lpignore="true"
-                    className="text-xs bg-slate-50 border-slate-200 rounded-xl h-9"
-                  />
-                </div>
-
-                {/* Company Name (Dropdown + Manual Type) */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                      <Building2 className="h-3 w-3 text-slate-400" /> Company
-                    </label>
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        if (e.target.value) setCompany(e.target.value);
-                      }}
-                      className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
-                    >
-                      <option value="" disabled>Select company ▾</option>
-                      {COMPANY_OPTIONS.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-[#087F6E] text-white text-[10px] font-bold border-none">
+                      {questions.length} Questions Ready
+                    </Badge>
+                    <span className="text-xs font-bold text-slate-900">
+                      {jobTitle || "Target Role"} {company ? `at ${company}` : ""}
+                    </span>
                   </div>
-                  <Input
-                    list="mock-company-options"
-                    placeholder="Type or select company (e.g. Google)..."
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    data-lpignore="true"
-                    className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
-                  />
-                  <datalist id="mock-company-options">
-                    {COMPANY_OPTIONS.map((c) => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
+                  <p className="text-xs text-slate-500">
+                    Practice questions tailored to your job description with real-time STAR scoring.
+                  </p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowInputs(true)}
+                  className="text-xs h-9 font-bold border-slate-200 text-slate-700 hover:bg-slate-50 rounded-md cursor-pointer shadow-xs flex items-center gap-1.5 self-start sm:self-center"
+                >
+                  <RefreshCw className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Change Target Role &amp; JD</span>
+                </Button>
+              </div>
+            )}
 
-                {/* Job Title / IT Roles (Dropdown + Manual Type) */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                      <Briefcase className="h-3 w-3 text-slate-400" /> Target Role
-                    </label>
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        if (e.target.value) setJobTitle(e.target.value);
-                      }}
-                      className="text-[10px] text-[#087F6E] bg-transparent border-0 underline hover:text-[#065F53] cursor-pointer focus:outline-none font-semibold"
-                    >
-                      <option value="" disabled>Select IT role ▾</option>
-                      {IT_ROLE_OPTIONS.map((r) => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
+            {/* Input Parameters Section - Shown when no questions or when editing inputs */}
+            {(questions.length === 0 || showInputs) && (
+              <Card className="bg-white border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                <CardContent className="p-5 sm:p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-[#087F6E]" />
+                      <h2 className="font-extrabold text-sm text-slate-900">Target Role &amp; Experience Setup</h2>
+                    </div>
+                    {questions.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowInputs(false)}
+                        className="text-xs text-slate-500 hover:text-slate-800 font-medium"
+                      >
+                        Cancel / Back to Questions
+                      </Button>
+                    )}
                   </div>
-                  <Input
-                    list="mock-role-options"
-                    placeholder="Type or select IT role (e.g. Senior Software Engineer)..."
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    data-lpignore="true"
-                    className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl h-9"
-                  />
-                  <datalist id="mock-role-options">
-                    {IT_ROLE_OPTIONS.map((r) => (
-                      <option key={r} value={r} />
-                    ))}
-                  </datalist>
-                </div>
-              </div>
 
-              {/* Job Description */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">Job Description &amp; Requirements</label>
-                <Textarea
-                  placeholder="Paste the target job description to pinpoint interview questions..."
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  rows={4}
-                  required
-                  autoComplete="off"
-                  spellCheck={false}
-                  data-lpignore="true"
-                  className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl"
-                />
-              </div>
+                  <form onSubmit={handleGenerateQuestions} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Resume Source */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700">Resume Background</label>
+                        {savedResumes.length > 0 && (
+                          <select
+                            value={selectedResumeId}
+                            onChange={(e) => handleSelectResume(e.target.value)}
+                            className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#087F6E]/20 mb-1.5"
+                          >
+                            <option value="">-- Choose saved resume (or paste below) --</option>
+                            {savedResumes.map((res) => (
+                              <option key={res.id} value={res.id}>
+                                {res.title || res.jobTitle || "Master Resume"}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <Input
+                          placeholder="Paste resume excerpt..."
+                          value={resumeText}
+                          onChange={(e) => {
+                            setResumeText(e.target.value);
+                            if (selectedResumeId) setSelectedResumeId("");
+                          }}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          data-lpignore="true"
+                          className="text-xs bg-slate-50 border-slate-200 rounded-xl h-9"
+                        />
+                      </div>
 
-              <Button
-                type="submit"
-                disabled={generatingQuestions || !jobDescription.trim()}
-                className="w-full sm:w-auto h-10 px-6 bg-[#087F6E] hover:bg-[#065F53] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
-              >
-                {generatingQuestions ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin text-white" />
-                    Generating Realistic Interview Loop...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="h-4 w-4" />
-                    Generate Interview Questions &amp; Rubrics
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                      {/* Company Name (Dropdown + Manual Type) */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-700 block">
+                            Target Company
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCustomCompany(!isCustomCompany);
+                              if (isCustomCompany) setCompany("");
+                            }}
+                            className="text-[11px] text-[#0A66C2] hover:underline cursor-pointer font-medium"
+                          >
+                            {isCustomCompany ? "← Choose from list" : "+ Enter custom company"}
+                          </button>
+                        </div>
+                        {!isCustomCompany ? (
+                          <select
+                            value={company}
+                            onChange={(e) => {
+                              if (e.target.value === "__custom__") {
+                                setIsCustomCompany(true);
+                                setCompany("");
+                              } else {
+                                setCompany(e.target.value);
+                              }
+                            }}
+                            className="w-full text-xs font-medium text-slate-800 bg-white hover:bg-slate-50 border border-slate-200 rounded-md px-3 py-2 h-10 focus:outline-none focus:ring-1 focus:ring-[#0A66C2] focus:border-[#0A66C2] cursor-pointer"
+                          >
+                            <option value="" className="bg-white text-slate-500">Select company...</option>
+                            <option value="__custom__" className="bg-white text-[#0A66C2] font-semibold">+ Enter custom company...</option>
+                            {COMPANY_OPTIONS.map((c) => (
+                              <option key={c} value={c} className="bg-white text-slate-800">
+                                {c}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            placeholder="Type custom company (e.g. OpenAI, Stripe, Startup)..."
+                            value={company}
+                            onChange={(e) => setCompany(e.target.value)}
+                            autoFocus
+                            className="text-xs bg-white border-slate-200 focus:border-[#0A66C2] focus:ring-1 focus:ring-[#0A66C2] rounded-md h-10 px-3"
+                          />
+                        )}
+                      </div>
+
+                      {/* Job Title / IT Roles (Dropdown + Manual Type) */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-700 block">
+                            Target Role
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCustomRole(!isCustomRole);
+                              if (isCustomRole) setJobTitle("");
+                            }}
+                            className="text-[11px] text-[#0A66C2] hover:underline cursor-pointer font-medium"
+                          >
+                            {isCustomRole ? "← Choose from list" : "+ Enter custom role"}
+                          </button>
+                        </div>
+                        {!isCustomRole ? (
+                          <select
+                            value={jobTitle}
+                            onChange={(e) => {
+                              if (e.target.value === "__custom__") {
+                                setIsCustomRole(true);
+                                setJobTitle("");
+                              } else {
+                                setJobTitle(e.target.value);
+                              }
+                            }}
+                            className="w-full text-xs font-medium text-slate-800 bg-white hover:bg-slate-50 border border-slate-200 rounded-md px-3 py-2 h-10 focus:outline-none focus:ring-1 focus:ring-[#0A66C2] focus:border-[#0A66C2] cursor-pointer"
+                          >
+                            <option value="" className="bg-white text-slate-500">Select target role...</option>
+                            <option value="__custom__" className="bg-white text-[#0A66C2] font-semibold">+ Enter custom role...</option>
+                            {IT_ROLE_OPTIONS.map((r) => (
+                              <option key={r} value={r} className="bg-white text-slate-800">
+                                {r}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            placeholder="Type custom role (e.g. Senior Backend Engineer)..."
+                            value={jobTitle}
+                            onChange={(e) => setJobTitle(e.target.value)}
+                            autoFocus
+                            className="text-xs bg-white border-slate-200 focus:border-[#0A66C2] focus:ring-1 focus:ring-[#0A66C2] rounded-md h-10 px-3"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Job Description */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-700 block">
+                          Job Description &amp; Requirements
+                        </label>
+                        <span className="text-[10px] text-slate-400">
+                          {jobDescription.trim().length} chars {jobDescription.trim().length < 50 ? "(min 50)" : ""}
+                        </span>
+                      </div>
+                      <Textarea
+                        placeholder="Paste the target job description to pinpoint interview questions (minimum 50 characters required)..."
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
+                        rows={4}
+                        required
+                        autoComplete="off"
+                        spellCheck={false}
+                        data-lpignore="true"
+                        className="text-xs bg-white border-slate-200 focus:border-[#0A66C2] focus:ring-1 focus:ring-[#0A66C2] rounded-md p-3"
+                      />
+                      {jobDescription.trim().length > 0 && jobDescription.trim().length < 50 && (
+                        <p className="text-[11px] text-amber-600 font-medium">
+                          Job description is too short ({jobDescription.trim().length}/50 characters). Please paste the complete requirements.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                      <Button
+                        type="submit"
+                        disabled={generatingQuestions || jobDescription.trim().length < 50}
+                        className={`h-10 px-6 font-bold text-xs rounded-md flex items-center justify-center gap-2 shadow-xs transition-all ${
+                          jobDescription.trim().length >= 50 && !generatingQuestions
+                            ? "bg-[#0A66C2] hover:bg-[#084e96] text-white cursor-pointer"
+                            : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
+                        }`}
+                      >
+                        {generatingQuestions ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin text-white mr-1" />
+                            <span>Generating Questions &amp; Rubrics...</span>
+                          </>
+                        ) : (
+                          <span>Generate Interview Questions &amp; Rubrics (2 credits)</span>
+                        )}
+                      </Button>
+                      {jobDescription.trim().length < 50 && (
+                        <span className="text-[11px] text-amber-600 font-medium">
+                          {jobDescription.trim().length === 0
+                            ? "Paste target job description above (min 50 chars) to generate questions"
+                            : `Need ${50 - jobDescription.trim().length} more characters to enable interview generator`}
+                        </span>
+                      )}
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
 
         {/* Overview Banner */}
         {overview && (
@@ -519,16 +624,16 @@ export default function MockInterviewPage() {
               const isModelExpanded = expandedModelAnswer === q.id;
 
               return (
-                <Card key={q.id || idx} className="bg-white border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                <Card key={q.id || idx} className="bg-white border-slate-200 shadow-xs rounded-xl overflow-hidden">
                   <CardContent className="p-5 sm:p-6 space-y-4">
                     {/* Top Badges & Question */}
                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                       <div className="space-y-1.5 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-100 border-none">
+                          <Badge className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-100 border-none rounded-md">
                             {q.category}
                           </Badge>
-                          <Badge className={`text-[10px] font-bold ${
+                          <Badge className={`text-[10px] font-bold rounded-md ${
                             q.difficulty === "Easy" ? "bg-emerald-50 text-emerald-700" :
                             q.difficulty === "Hard" ? "bg-rose-50 text-rose-700" :
                             "bg-amber-50 text-amber-700"
@@ -543,7 +648,7 @@ export default function MockInterviewPage() {
                     </div>
 
                     {/* Why Asked Insight */}
-                    <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 text-xs text-slate-600 space-y-1">
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-md p-3 text-xs text-slate-600 space-y-1">
                       <div className="font-bold text-slate-800 flex items-center gap-1.5">
                         <HelpCircle className="h-3.5 w-3.5 text-[#087F6E]" />
                         What the Interviewer is Evaluating:
@@ -557,7 +662,7 @@ export default function MockInterviewPage() {
                         <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Key Elements to Include:</span>
                         <div className="flex flex-wrap gap-1.5">
                           {q.keyPoints.map((pt, i) => (
-                            <span key={i} className="text-[11px] font-medium text-slate-600 bg-teal-50/70 border border-teal-200/60 px-2 py-0.5 rounded-lg">
+                            <span key={i} className="text-[11px] font-medium text-slate-600 bg-teal-50/70 border border-teal-200/60 px-2 py-0.5 rounded-md">
                               &bull; {pt}
                             </span>
                           ))}
@@ -567,16 +672,16 @@ export default function MockInterviewPage() {
 
                     {/* Practice Response Area */}
                     <div className="space-y-2 pt-2 border-t border-slate-100">
-                      <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
                         <span>Your Practice Response:</span>
-                        <span className="text-[10px] text-slate-400">STAR Format Recommended</span>
+                        <span className="text-[11px] text-slate-500 font-medium">STAR Format (Situation, Task, Action, Result)</span>
                       </label>
                       <Textarea
                         placeholder="Type how you would answer this in an actual interview (Situation, Task, Action, Result)..."
                         value={userAnswers[q.id] || ""}
                         onChange={(e) => setUserAnswers({ ...userAnswers, [q.id]: e.target.value })}
-                        rows={3}
-                        className="text-xs bg-slate-50 border-slate-200 focus:border-[#087F6E] rounded-xl leading-relaxed"
+                        rows={4}
+                        className="text-xs sm:text-sm bg-white text-slate-900 border border-slate-300 focus:border-[#087F6E] focus:ring-1 focus:ring-[#087F6E] rounded-md leading-relaxed p-3 shadow-2xs font-normal"
                       />
 
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
@@ -585,7 +690,7 @@ export default function MockInterviewPage() {
                           size="sm"
                           disabled={isEvaluating || !userAnswers[q.id]?.trim()}
                           onClick={() => handleEvaluateAnswer(q.id, q.question)}
-                          className="w-full sm:w-auto h-9 text-xs font-bold bg-[#087F6E] hover:bg-[#065F53] text-white rounded-xl shadow-xs cursor-pointer"
+                          className="w-full sm:w-auto h-9 text-xs font-bold bg-[#087F6E] hover:bg-[#065F53] text-white rounded-md shadow-xs cursor-pointer px-4"
                         >
                           {isEvaluating ? (
                             <>
@@ -613,14 +718,14 @@ export default function MockInterviewPage() {
 
                     {/* AI Evaluation Result Card */}
                     {evalResult && (
-                      <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-4 space-y-3 mt-3 animate-in fade-in duration-200">
+                      <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 space-y-3 mt-3 animate-in fade-in duration-200">
                         <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
                           <div className="flex items-center gap-2">
                             <Trophy className="h-4 w-4 text-emerald-700" />
                             <span className="font-extrabold text-xs text-emerald-900">AI Evaluation Feedback</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge className="bg-emerald-600 text-white font-extrabold text-xs">
+                            <Badge className="bg-emerald-600 text-white font-extrabold text-xs rounded-md">
                               Score: {evalResult.score}/100
                             </Badge>
                             <span className="text-xs font-bold text-emerald-800">{evalResult.verdict}</span>
@@ -634,19 +739,19 @@ export default function MockInterviewPage() {
                         {/* STAR Breakdown */}
                         {evalResult.starBreakdown && (
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
-                            <div className="bg-white/80 p-2 rounded-xl border border-emerald-200/60">
+                            <div className="bg-white p-2.5 rounded-md border border-emerald-200">
                               <span className="font-bold text-emerald-900 block">Situation</span>
                               <span className="text-slate-600">{evalResult.starBreakdown.situation || "Covered"}</span>
                             </div>
-                            <div className="bg-white/80 p-2 rounded-xl border border-emerald-200/60">
+                            <div className="bg-white p-2.5 rounded-md border border-emerald-200">
                               <span className="font-bold text-emerald-900 block">Task</span>
                               <span className="text-slate-600">{evalResult.starBreakdown.task || "Covered"}</span>
                             </div>
-                            <div className="bg-white/80 p-2 rounded-xl border border-emerald-200/60">
+                            <div className="bg-white p-2.5 rounded-md border border-emerald-200">
                               <span className="font-bold text-emerald-900 block">Action</span>
                               <span className="text-slate-600">{evalResult.starBreakdown.action || "Covered"}</span>
                             </div>
-                            <div className="bg-white/80 p-2 rounded-xl border border-emerald-200/60">
+                            <div className="bg-white p-2.5 rounded-md border border-emerald-200">
                               <span className="font-bold text-emerald-900 block">Result</span>
                               <span className="text-slate-600">{evalResult.starBreakdown.result || "Covered"}</span>
                             </div>
@@ -655,7 +760,7 @@ export default function MockInterviewPage() {
 
                         {/* Improved Version */}
                         {evalResult.improvedVersion && (
-                          <div className="bg-white rounded-xl p-3 border border-emerald-200 text-xs space-y-1">
+                          <div className="bg-white rounded-md p-3 border border-emerald-200 text-xs space-y-1">
                             <span className="font-bold text-emerald-900 block">Polished STAR Rephrasing:</span>
                             <p className="text-slate-700 leading-relaxed italic">&quot;{evalResult.improvedVersion}&quot;</p>
                           </div>

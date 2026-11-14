@@ -57,6 +57,8 @@ import {
   BookmarkPlus,
   BookmarkCheck,
   RotateCcw,
+  Smile,
+  Search,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
@@ -170,6 +172,8 @@ function clearActiveSession() {
     sessionStorage.removeItem(key);
     localStorage.removeItem(key);
   });
+  localStorage.removeItem("fastHire_dashboard_draft_resume");
+  localStorage.removeItem("fastHire_dashboard_draft_jd");
 }
 
 function loadActiveSession() {
@@ -270,6 +274,64 @@ export default function DashboardPage() {
   const [instructions, setInstructions] = useState("");
   const [lengthOption, setLengthOption] = useState("Auto-detect");
 
+  // Auto-detect Popover & Search State
+  const [isAutoDetectOpen, setIsAutoDetectOpen] = useState(false);
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
+  const autoDetectMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        autoDetectMenuRef.current &&
+        !autoDetectMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsAutoDetectOpen(false);
+      }
+    };
+    if (isAutoDetectOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isAutoDetectOpen]);
+
+  const TAG_CATEGORIES = [
+    {
+      category: "Experience Level",
+      tags: [
+        { label: "[Fresher]", value: "Fresher", sub: "Under 5 yrs / 1 page" },
+        { label: "[Experience]", value: "Experience", sub: "5-10+ yrs experience" },
+      ],
+    },
+    {
+      category: "Format & Length",
+      tags: [
+        { label: "[Auto-detect]", value: "Auto-detect", sub: "Let AI decide" },
+        { label: "[Academic CV]", value: "Academic CV", sub: "PhD / research / academia" },
+        { label: "[1 Page]", value: "1 Page", sub: "Strict 1-page format" },
+        { label: "[2 Pages]", value: "2 Pages", sub: "Comprehensive 2-page format" },
+      ],
+    },
+  ];
+
+  const isTagActive = (val: string) => {
+    if (val === "Fresher" || val === "1 Page") {
+      return lengthOption === "Fresher" || lengthOption === "1 Page";
+    }
+    if (val === "Experience" || val === "2 Pages") {
+      return lengthOption === "Experience" || lengthOption === "2 Pages";
+    }
+    return lengthOption === val;
+  };
+
+  const getAutoDetectLabel = () => {
+    if (lengthOption === "Fresher" || lengthOption === "1 Page") return "Fresher";
+    if (lengthOption === "Experience" || lengthOption === "2 Pages") return "Experience";
+    if (lengthOption === "Academic CV") return "Academic CV";
+    return "Auto-detect";
+  };
+
   // User plan states
   const [user, setUser] = useState<any>(null);
   const [userPlan, setUserPlan] = useState<string>("free");
@@ -318,6 +380,7 @@ export default function DashboardPage() {
       }
 
       setIsSavedToResumes(true);
+      toast.success("Saved to My Resumes! You can now view and edit it in My Resumes.");
     } catch (err: any) {
       toast.error(err.message || "Failed to save resume.");
     } finally {
@@ -371,11 +434,44 @@ export default function DashboardPage() {
     score: number;
     jobTitle: string;
     company: string;
+    searchabilityMatch: boolean;
+    formattingMatch: boolean;
+    skillsMatch: boolean;
+    coverLetterStatus: "matched" | "unmatched" | "not_used";
+    recruiterTipsMatch: boolean;
   }>({
     score: 40,
     jobTitle: "Software Engineer",
     company: "Company Name",
+    searchabilityMatch: true,
+    formattingMatch: true,
+    skillsMatch: true,
+    coverLetterStatus: "not_used",
+    recruiterTipsMatch: true,
   });
+
+  // Listen for newly generated cover letters to dynamically update checklist
+  useEffect(() => {
+    const handleCoverLetterCreated = (e: any) => {
+      const detail = e?.detail;
+      const targetTitle = (latestScanInfo.jobTitle || "").toLowerCase().trim();
+      const targetComp = (latestScanInfo.company || "").toLowerCase().trim();
+      const genTitle = (detail?.jobTitle || "").toLowerCase().trim();
+      const genComp = (detail?.company || "").toLowerCase().trim();
+
+      const isMatch =
+        (targetTitle && genTitle && (genTitle.includes(targetTitle) || targetTitle.includes(genTitle))) ||
+        (targetComp && genComp && (genComp.includes(targetComp) || targetComp.includes(genComp))) ||
+        (!targetTitle && !genTitle);
+
+      setLatestScanInfo((prev) => ({
+        ...prev,
+        coverLetterStatus: isMatch ? "matched" : "unmatched",
+      }));
+    };
+    window.addEventListener("cover-letter-created", handleCoverLetterCreated);
+    return () => window.removeEventListener("cover-letter-created", handleCoverLetterCreated);
+  }, [latestScanInfo.jobTitle, latestScanInfo.company]);
 
   const [jobTrackerStats, setJobTrackerStats] = useState<{
     total: number;
@@ -410,18 +506,39 @@ export default function DashboardPage() {
     return () => window.removeEventListener("open-optimize-editor", handleOpenEditor);
   }, [resetStore, setResumeText, setJobDescription]);
 
+  // Reliable auto-save of dashboard draft inputs
   useEffect(() => {
-    // Purge any old input text or URLs from storage so the user fills fresh every time
-    try {
-      localStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
-      localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
-      sessionStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
-      sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
-      localStorage.removeItem("fasthire-resume-storage");
-      sessionStorage.removeItem("fasthire-resume-storage");
-    } catch {}
+    if (typeof window === "undefined") return;
+    if (resumeText && resumeText.trim().length > 0) {
+      localStorage.setItem("fastHire_dashboard_draft_resume", resumeText);
+    }
+  }, [resumeText]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (jobDescription && jobDescription.trim().length > 0) {
+      localStorage.setItem("fastHire_dashboard_draft_jd", jobDescription);
+    }
+  }, [jobDescription]);
+
+  useEffect(() => {
     if (sampleLoadedRef.current) return;
+
+    // Check if prefill was requested from Resumes Page "Optimize Against Job" button
+    const prefillResume = typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_prefill_resume") : null;
+    const prefillTitle = typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_prefill_title") : null;
+    const prefillCompany = typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_prefill_company") : null;
+
+    if (prefillResume) {
+      sampleLoadedRef.current = true;
+      setResumeText(prefillResume);
+      localStorage.removeItem("fastHire_dashboard_prefill_resume");
+      localStorage.removeItem("fastHire_dashboard_prefill_title");
+      localStorage.removeItem("fastHire_dashboard_prefill_company");
+      setViewMode("editor");
+      toast.success("Resume loaded for optimization!");
+      return;
+    }
 
     // Check if sample data was requested from landing page or query
     const isPendingSample =
@@ -454,9 +571,6 @@ export default function DashboardPage() {
         window.history.replaceState({}, "", "/dashboard");
       }
     } else {
-      // Clear inputs to blank so user fills newly every time
-      setResumeText("");
-      setJobDescription("");
       const activeSession = loadActiveSession();
       if (activeSession) {
         sampleLoadedRef.current = true;
@@ -468,6 +582,12 @@ export default function DashboardPage() {
         if (activeSession.roadmapContent) setRoadmapContent(activeSession.roadmapContent);
         if (activeSession.coverLetter) setCoverLetterGenerated(activeSession.coverLetter);
         if (activeSession.trackerAdded) setTrackerAdded(true);
+      } else {
+        // Restore reliable auto-saved drafts if available
+        const draftResume = typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_draft_resume") : null;
+        const draftJD = typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_draft_jd") : null;
+        if (draftResume) setResumeText(draftResume);
+        if (draftJD) setJobDescription(draftJD);
       }
     }
   }, [setResumeText, setJobDescription]);
@@ -581,10 +701,45 @@ export default function DashboardPage() {
             if (Array.isArray(historyList) && historyList.length > 0) {
               const latest = historyList[0];
               const scoreVal = typeof latest.scoreAfter === "number" ? latest.scoreAfter : (typeof latest.scoreBefore === "number" ? latest.scoreBefore : 40);
+
+              // Check cover letter status: not_used vs matched vs unmatched
+              let clStatus: "matched" | "unmatched" | "not_used" = "not_used";
+              try {
+                const clRaw = localStorage.getItem(`fastHire_cover_letters_${data.user.id}`);
+                if (clRaw) {
+                  const clList = JSON.parse(clRaw);
+                  if (Array.isArray(clList) && clList.length > 0) {
+                    const targetTitle = (latest.jobTitle || "").toLowerCase().trim();
+                    const targetComp = (latest.company || "").toLowerCase().trim();
+
+                    const matched = clList.find((cl: any) => {
+                      const clTitle = (cl.jobTitle || "").toLowerCase().trim();
+                      const clComp = (cl.company || "").toLowerCase().trim();
+                      const titleMatch = targetTitle && clTitle && (clTitle.includes(targetTitle) || targetTitle.includes(clTitle));
+                      const compMatch = targetComp && clComp && (clComp.includes(targetComp) || targetComp.includes(clComp));
+                      return titleMatch || compMatch;
+                    });
+
+                    clStatus = matched ? "matched" : "unmatched";
+                  }
+                }
+              } catch (_e) {}
+
+              // Dynamic checks based on real score and metrics
+              const skillsPass = scoreVal >= 70 || (latest.keywordsAfter && latest.keywordsAfter >= 3);
+              const searchabilityPass = scoreVal >= 60;
+              const formattingPass = scoreVal >= 50;
+              const recruiterTipsPass = scoreVal >= 65;
+
               setLatestScanInfo({
                 score: scoreVal,
                 jobTitle: latest.jobTitle || "Software Engineer",
                 company: latest.company || "Target Company",
+                searchabilityMatch: searchabilityPass,
+                formattingMatch: formattingPass,
+                skillsMatch: skillsPass,
+                coverLetterStatus: clStatus,
+                recruiterTipsMatch: recruiterTipsPass,
               });
             }
           }
@@ -772,7 +927,48 @@ export default function DashboardPage() {
       userId: user?.id,
     });
 
-    // Clear input fields and active states so after optimization inputs are reset cleanly
+    // Update Latest Scan overview card immediately
+    const scoreVal = data.scoreAfter?.overall || 85;
+    const skillsPass = scoreVal >= 70 || (data.scoreAfter?.foundKeywords && data.scoreAfter.foundKeywords.length >= 3);
+    const searchabilityPass = scoreVal >= 60;
+    const formattingPass = scoreVal >= 50;
+    const recruiterTipsPass = scoreVal >= 65;
+
+    let clStatus: "matched" | "unmatched" | "not_used" = "not_used";
+    try {
+      if (user?.id) {
+        const clRaw = localStorage.getItem(`fastHire_cover_letters_${user.id}`);
+        if (clRaw) {
+          const list = JSON.parse(clRaw);
+          if (Array.isArray(list) && list.length > 0) {
+            const scanRole = (finalData.jobTitle || finalData.detectedRole || "").toLowerCase().trim();
+            const scanComp = (finalData.company || finalData.detectedCompany || "").toLowerCase().trim();
+
+            const found = list.find((cl: any) => {
+              const clTitle = (cl.jobTitle || "").toLowerCase().trim();
+              const clComp = (cl.company || "").toLowerCase().trim();
+              return (scanRole && clTitle && (clTitle.includes(scanRole) || scanRole.includes(clTitle))) ||
+                     (scanComp && clComp && (clComp.includes(scanComp) || scanComp.includes(clComp)));
+            });
+
+            clStatus = (found || coverLetterGenerated) ? "matched" : "unmatched";
+          }
+        }
+      }
+    } catch (_e) {}
+
+    setLatestScanInfo({
+      score: scoreVal,
+      jobTitle: finalData.jobTitle || finalData.detectedRole || "Target Role",
+      company: finalData.company || finalData.detectedCompany || "Target Company",
+      searchabilityMatch: searchabilityPass,
+      formattingMatch: formattingPass,
+      skillsMatch: skillsPass,
+      coverLetterStatus: clStatus,
+      recruiterTipsMatch: recruiterTipsPass,
+    });
+
+    // Clear input fields and draft states so after optimization inputs are reset cleanly
     setResumeText("");
     setJobDescription("");
     setActiveOptimizationText("");
@@ -782,6 +978,8 @@ export default function DashboardPage() {
       sessionStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
       localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
       sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+      localStorage.removeItem("fastHire_dashboard_draft_resume");
+      localStorage.removeItem("fastHire_dashboard_draft_jd");
     } catch {}
 
     // Small delay before scrolling to results
@@ -1123,7 +1321,13 @@ export default function DashboardPage() {
       const res = await fetch("/api/skill-roadmap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skills: selectedRoadmapSkills }),
+        body: JSON.stringify({
+          skills: selectedRoadmapSkills,
+          jobTitle: optimizeResult?.jobTitle,
+          company: optimizeResult?.company,
+          jobDescription: jobDescription || optimizeResult?.jobDescription,
+          resumeText: optimizeResult?.optimizedText || resumeText
+        }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -1265,6 +1469,7 @@ export default function DashboardPage() {
                 resumeText={activeOptimizationText || resumeText}
                 jobDescription={jobDescription}
                 instructions={activeOptimizationInstructions || instructions}
+                lengthOption={lengthOption}
               />
             </div>
           </div>
@@ -1498,301 +1703,134 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* ─── NEXT STEP CAREER ACCELERATORS ─── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Link
-                href="/dashboard/cover-letter"
-                className="bg-white hover:bg-teal-50/50 border border-slate-200 hover:border-teal-300 rounded-2xl p-4 transition-all shadow-xs group cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 mb-1.5">
-                  <div className="h-7 w-7 rounded-lg bg-teal-50 text-[#087F6E] flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <span className="font-extrabold text-xs text-slate-900 group-hover:text-[#087F6E] transition-colors">
-                    Cover Letter Studio
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-normal">
-                  Draft a personalized, high-converting letter tailored to this JD.
-                </p>
-              </Link>
-
-              <Link
-                href="/dashboard/mock-interview"
-                onClick={(e: React.MouseEvent) => {
-                  if (!isOwner && userPlan !== "promax") {
-                    e.preventDefault();
-                    useUpgradeModalStore.getState().openModal({
-                      badge: "MAX",
-                      title: "Unlock AI Mock Interview Coach",
-                      description: "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions and get instant AI feedback.",
-                    });
-                  }
-                }}
-                className={`relative rounded-2xl p-4 transition-all shadow-xs border ${
-                  !isOwner && userPlan !== "promax"
-                    ? "bg-slate-50/40 border-slate-200/50 opacity-50 cursor-pointer"
-                    : "bg-white hover:bg-teal-50/50 border-slate-200 hover:border-teal-300 group cursor-pointer"
-                }`}
-              >
-                {!isOwner && userPlan !== "promax" && (
-                  <span className="absolute top-3.5 right-3.5 text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal">
-                    MAX
-                  </span>
-                )}
-                <div className="flex items-center gap-2.5 mb-1.5 pr-16">
-                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center transition-transform ${
-                    !isOwner && userPlan !== "promax"
-                      ? "bg-slate-100 text-slate-400"
-                      : "bg-teal-50 text-[#087F6E] group-hover:scale-105"
-                  }`}>
-                    <Target className="h-4 w-4" />
-                  </div>
-                  <span className={`font-extrabold text-xs transition-colors ${
-                    !isOwner && userPlan !== "promax"
-                      ? "text-slate-700"
-                      : "text-slate-900 group-hover:text-[#087F6E]"
-                  }`}>
-                    Mock Interview Simulator
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-normal">
-                  Practice role-specific STAR questions generated from this job.
-                </p>
-              </Link>
-
-              <Link
-                href="/dashboard/linkedin-optimizer"
-                onClick={(e: React.MouseEvent) => {
-                  if (!isOwner && userPlan !== "promax") {
-                    e.preventDefault();
-                    useUpgradeModalStore.getState().openModal({
-                      badge: "MAX",
-                      title: "Unlock LinkedIn Profile Optimizer",
-                      description: "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and recruiter search rankings.",
-                    });
-                  }
-                }}
-                className={`relative rounded-2xl p-4 transition-all shadow-xs border ${
-                  !isOwner && userPlan !== "promax"
-                    ? "bg-slate-50/40 border-slate-200/50 opacity-50 cursor-pointer"
-                    : "bg-white hover:bg-teal-50/50 border-slate-200 hover:border-teal-300 group cursor-pointer"
-                }`}
-              >
-                {!isOwner && userPlan !== "promax" && (
-                  <span className="absolute top-3.5 right-3.5 text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal">
-                    MAX
-                  </span>
-                )}
-                <div className="flex items-center gap-2.5 mb-1.5 pr-16">
-                  <div className={`h-7 w-7 rounded-lg flex items-center justify-center transition-transform ${
-                    !isOwner && userPlan !== "promax"
-                      ? "bg-slate-100 text-slate-400"
-                      : "bg-teal-50 text-[#087F6E] group-hover:scale-105"
-                  }`}>
-                    <LinkedInIcon className="h-4 w-4" />
-                  </div>
-                  <span className={`font-extrabold text-xs transition-colors ${
-                    !isOwner && userPlan !== "promax"
-                      ? "text-slate-700"
-                      : "text-slate-900 group-hover:text-[#087F6E]"
-                  }`}>
-                    LinkedIn Optimizer
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-normal">
-                  Rank #1 in recruiter searches with optimized headlines and bio.
-                </p>
-              </Link>
+            {/* ─── CAREER ACCELERATOR (Single Clean Dropdown) ─── */}
+            <div className="bg-white border border-slate-200 rounded-lg px-3 py-2.5 shadow-2xs flex flex-row items-center justify-between gap-3">
+              <span className="text-xs font-bold text-slate-800 shrink-0 whitespace-nowrap">
+                Career Accelerators:
+              </span>
+              <div className="flex-1 max-w-xs sm:max-w-sm">
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val) return;
+                    if ((val === "/dashboard/mock-interview" || val === "/dashboard/linkedin-optimizer") && !isOwner && userPlan !== "promax") {
+                      useUpgradeModalStore.getState().openModal({
+                        badge: "MAX",
+                        title: val.includes("interview") ? "Unlock AI Mock Interview Coach" : "Unlock LinkedIn Profile Optimizer",
+                        description: val.includes("interview")
+                          ? "AI Mock Interview Coach is exclusively available for Pro Max members. Upgrade to Pro Max to simulate role-specific STAR questions."
+                          : "LinkedIn Profile Optimizer is exclusively available for Pro Max members. Upgrade to Pro Max to optimize your headline, bio, and search rankings.",
+                      });
+                      e.target.value = "";
+                      return;
+                    }
+                    router.push(val);
+                  }}
+                  className="w-full text-xs font-medium text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#087F6E] focus:border-[#087F6E] cursor-pointer transition-colors"
+                >
+                  <option value="" disabled>Select Career Accelerator...</option>
+                  <option value="/dashboard/cover-letter">Cover Letter Studio</option>
+                  <option value="/dashboard/mock-interview">AI Mock Interview Coach {!isOwner && userPlan !== "promax" ? "(PRO MAX)" : ""}</option>
+                  <option value="/dashboard/linkedin-optimizer">LinkedIn Optimizer {!isOwner && userPlan !== "promax" ? "(PRO MAX)" : ""}</option>
+                </select>
+              </div>
             </div>
 
-            {/* ─── SKILL ROADMAP & COVER LETTER (Matching History Style) ─── */}
+            {/* ─── SKILLS LEARNING ROADMAP ─── */}
             <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-              {/* Tabs Bar */}
-              <div className="flex items-center gap-6 border-b border-slate-200 pb-px">
-                <button
-                  type="button"
-                  onClick={() => setResultsSubTab("roadmap")}
-                  className={`flex items-center gap-2 py-3 px-1 text-xs font-bold transition-all relative border-b-2 cursor-pointer ${
-                    resultsSubTab === "roadmap"
-                      ? "border-[#087F6E] text-[#087F6E]"
-                      : "border-transparent text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  <span>Skills Learning Roadmap</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setResultsSubTab("cover_letter")}
-                  className={`flex items-center gap-2 py-3 px-1 text-xs font-bold transition-all relative border-b-2 cursor-pointer ${
-                    resultsSubTab === "cover_letter"
-                      ? "border-[#087F6E] text-[#087F6E]"
-                      : "border-transparent text-slate-500 hover:text-slate-900"
-                  }`}
-                >
-                  <span>Tailored Cover Letter</span>
-                </button>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                    Skills Learning Roadmap
+                    {userPlan === "free" && (
+                      <span className="text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal inline-flex items-center">
+                        PRO
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Select up to 3 skills to build a complete 90-day learning curriculum
+                  </p>
+                </div>
+                <span className="text-xs font-mono font-bold text-[#0d6e5a] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
+                  {selectedRoadmapSkills.length}/3 Selected
+                </span>
               </div>
 
-              {/* ─── TAB 1: SKILL LEARNING ROADMAP ─── */}
-              {resultsSubTab === "roadmap" && (
-                <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                    <div>
-                      <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                        Skills Learning Roadmap
-                        {userPlan === "free" && (
-                          <span className="text-[10px] font-semibold text-black bg-[#f1f5f9] border border-slate-200/80 px-2 py-0.5 rounded-full tracking-normal inline-flex items-center">
-                            PRO
-                          </span>
-                        )}
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Select up to 3 skills to build a complete 90-day learning curriculum
-                      </p>
-                    </div>
-                    <span className="text-xs font-mono font-bold text-[#0d6e5a] bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
-                      {selectedRoadmapSkills.length}/3 Selected
-                    </span>
-                  </div>
-
-                  {/* Skill Chips */}
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                      Choose up to 3 target skills:
-                    </span>
-                    <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto pr-1">
-                      {(availableSkills.length > 0
-                        ? availableSkills
-                        : ["Machine Learning", "Generative AI", "Python", "SQL", "Docker"]
-                      ).map((skill, i) => {
-                        const isSelected = selectedRoadmapSkills.includes(skill);
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => toggleRoadmapSkill(skill)}
-                            className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all border flex items-center gap-1.5 cursor-pointer ${
-                              isSelected
-                                ? "bg-[#0d6e5a] border-[#0d6e5a] text-white font-bold shadow-xs"
-                                : "bg-white border-slate-200 text-slate-800 hover:text-slate-950 hover:border-slate-300"
-                            }`}
-                          >
-                            {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
-                            {skill}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Action Row */}
-                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
-                    <span className="text-xs text-slate-500">
-                      {selectedRoadmapSkills.length === 0
-                        ? "Click 1 to 3 skills above to build your roadmap."
-                        : `Selected: ${selectedRoadmapSkills.join(", ")}`}
-                    </span>
-                    <Button
-                      onClick={handleGenerateRoadmap}
-                      disabled={selectedRoadmapSkills.length === 0 || roadmapLoading}
-                      className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-md shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
-                    >
-                      {roadmapLoading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                      ) : (
-                        <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                      )}
-                      Generate Complete Roadmap ({selectedRoadmapSkills.length}/3)
-                    </Button>
-                  </div>
-
-                  {/* Loading state */}
-                  {roadmapLoading && (
-                    <div className="flex items-center gap-2.5 text-xs text-slate-600 py-8 justify-center bg-slate-50 border border-slate-200 rounded-xl">
-                      <Loader2 className="h-4 w-4 animate-spin text-[#0d6e5a]" />
-                      <span>Synthesizing tailored 90-day curriculum for {selectedRoadmapSkills.join(", ")}...</span>
-                    </div>
-                  )}
-
-                  {/* Generated roadmap output */}
-                  {roadmapContent && (
-                    <div className="space-y-3">
-                      <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl text-xs text-slate-900 leading-relaxed font-sans shadow-xs select-text">
-                        <pre className="whitespace-pre-wrap font-sans text-slate-900 select-text">{roadmapContent}</pre>
-                      </div>
-                      <Button
-                        onClick={() => {
-                          navigator.clipboard.writeText(roadmapContent);
-                        }}
-                        className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer font-bold"
+              {/* Skill Chips */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Choose up to 3 target skills:
+                </span>
+                <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto pr-1">
+                  {(availableSkills.length > 0
+                    ? availableSkills
+                    : ["Machine Learning", "Generative AI", "Python", "SQL", "Docker"]
+                  ).map((skill, i) => {
+                    const isSelected = selectedRoadmapSkills.includes(skill);
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => toggleRoadmapSkill(skill)}
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all border flex items-center gap-1.5 cursor-pointer ${
+                          isSelected
+                            ? "bg-[#0d6e5a] border-[#0d6e5a] text-white font-bold shadow-xs"
+                            : "bg-white border-slate-200 text-slate-800 hover:text-slate-950 hover:border-slate-300"
+                        }`}
                       >
-                        Copy Roadmap
-                      </Button>
-                    </div>
+                        {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                        {skill}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action Row */}
+              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
+                <span className="text-xs text-slate-500">
+                  {selectedRoadmapSkills.length === 0
+                    ? "Click 1 to 3 skills above to build your roadmap."
+                    : `Selected: ${selectedRoadmapSkills.join(", ")}`}
+                </span>
+                <Button
+                  onClick={handleGenerateRoadmap}
+                  disabled={selectedRoadmapSkills.length === 0 || roadmapLoading}
+                  className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-md shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  {roadmapLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                   )}
+                  Generate Complete Roadmap ({selectedRoadmapSkills.length}/3)
+                </Button>
+              </div>
+
+              {/* Loading state */}
+              {roadmapLoading && (
+                <div className="flex items-center gap-2.5 text-xs text-slate-600 py-8 justify-center bg-slate-50 border border-slate-200 rounded-xl">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#0d6e5a]" />
+                  <span>Synthesizing tailored 90-day curriculum for {selectedRoadmapSkills.join(", ")}...</span>
                 </div>
               )}
 
-              {/* ─── TAB 2: TAILORED COVER LETTER ─── */}
-              {resultsSubTab === "cover_letter" && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div>
-                      <h3 className="text-base font-black text-slate-900">Tailored Cover Letter Generator</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Generate a personalized cover letter aligned with this job specification
-                      </p>
-                    </div>
+              {/* Generated roadmap output */}
+              {roadmapContent && (
+                <div className="space-y-3">
+                  <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl text-xs text-slate-900 leading-relaxed font-sans shadow-xs select-text">
+                    <pre className="whitespace-pre-wrap font-sans text-slate-900 select-text">{roadmapContent}</pre>
                   </div>
-
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                    RoleFuse uses your optimized resume highlights and target job description to draft an executive-level cover letter.
-                  </p>
-
-                  {!coverLetterGenerated && !generatingLetter && (
-                    <Button
-                      onClick={handleGenerateCoverLetter}
-                      className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-5 rounded-md shadow-xs transition-colors cursor-pointer"
-                    >
-                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                      Generate Cover Letter
-                    </Button>
-                  )}
-
-                  {generatingLetter && (
-                    <div className="flex items-center gap-2.5 text-xs text-slate-600 py-8 justify-center bg-slate-50 border border-slate-200 rounded-xl">
-                      <Loader2 className="h-4 w-4 animate-spin text-[#0d6e5a]" />
-                      <span>Drafting tailored cover letter...</span>
-                    </div>
-                  )}
-
-                  {coverLetterGenerated && (
-                    <div className="space-y-3 select-text">
-                      <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl text-xs text-slate-900 leading-relaxed font-serif shadow-xs select-text">
-                        <pre className="whitespace-pre-wrap font-serif text-slate-900 select-text">{coverLetterGenerated}</pre>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          onClick={() => {
-                            navigator.clipboard.writeText(coverLetterGenerated);
-                          }}
-                          className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer font-bold"
-                        >
-                          Copy Cover Letter
-                        </Button>
-                        <Link href="/dashboard/cover-letter">
-                          <Button
-                            variant="outline"
-                            className="text-xs h-8 rounded-md font-bold text-[#087F6E] border-teal-200 hover:bg-teal-50"
-                          >
-                            Open in Dedicated Studio &rarr;
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  )}
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(roadmapContent);
+                    }}
+                    className="bg-white border border-slate-200 text-slate-800 hover:text-slate-950 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer font-bold"
+                  >
+                    Copy Roadmap
+                  </Button>
                 </div>
               )}
             </div>
@@ -1839,65 +1877,6 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* Resume Length card */}
-            <div className="bg-white border border-[#DCE7E9] rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4 shadow-xs">
-              <div className="flex items-center gap-2">
-                <h4 className="font-heading font-bold text-xs sm:text-sm text-[#111827]">
-                  Resume Length
-                </h4>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                {[
-                  {
-                    value: "Auto-detect",
-                    label: "Auto-detect",
-                    sub: "Let AI decide",
-                  },
-                  {
-                    value: "1 Page",
-                    label: "1 Page",
-                    sub: "Fresher / under 5 yrs",
-                  },
-                  {
-                    value: "2 Pages",
-                    label: "2 Pages",
-                    sub: "5-10+ yrs experience",
-                  },
-                  {
-                    value: "Academic CV",
-                    label: "Academic CV",
-                    sub: "PhD / research / academia",
-                  },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setLengthOption(opt.value)}
-                    className={`flex flex-col items-start gap-1 sm:gap-1.5 rounded-xl p-2.5 sm:p-3.5 border text-left transition-all duration-200 cursor-pointer ${
-                      lengthOption === opt.value
-                        ? "bg-[#E5F8F5] border-[#087F6E] shadow-xs"
-                        : "bg-white border-[#DCE7E9] hover:border-[#087F6E]/40 hover:bg-[#F5FAFA]"
-                    }`}
-                  >
-                    <div>
-                      <span
-                        className={`text-xs font-bold block ${
-                          lengthOption === opt.value
-                            ? "text-[#087F6E]"
-                            : "text-[#111827]"
-                        }`}
-                      >
-                        {opt.label}
-                      </span>
-                      <span className="text-[10px] text-[#526176] font-normal leading-tight block mt-0.5 sm:mt-1">
-                        {opt.sub}
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Inline Validation Message */}
             {validationMessage && (
               <div className="w-full max-w-lg mx-auto p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center animate-in fade-in duration-150">
@@ -1905,7 +1884,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* CTA Button & Available Scans */}
+            {/* CTA Button & Available Scans & Auto-detect Popover */}
             <div className="w-full flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 pt-2">
               {/* Available Scans (Left Side - Kept exactly as earlier) */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 h-10 bg-slate-50/90 border border-slate-200/80 rounded-md text-xs font-medium text-slate-600 select-none">
@@ -1933,6 +1912,110 @@ export default function DashboardPage() {
                   >
                     Upgrade
                   </button>
+                )}
+              </div>
+
+              {/* Auto-detect Popover Menu Trigger (Middle - Replicating reference image exactly) */}
+              <div className="relative" ref={autoDetectMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsAutoDetectOpen((prev) => !prev)}
+                  className={`h-10 px-3.5 rounded-md border text-xs font-medium flex items-center gap-2 transition-all cursor-pointer shadow-xs select-none ${
+                    isAutoDetectOpen
+                      ? "bg-slate-100 border-[#087F6E] text-[#087F6E]"
+                      : "bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50 text-slate-700"
+                  }`}
+                  title="Select resume length & experience level"
+                >
+                  <Smile className="w-4 h-4 text-purple-600 shrink-0" />
+                  <span className="font-semibold text-slate-900">{getAutoDetectLabel()}</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                      isAutoDetectOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Popover Floating Card */}
+                {isAutoDetectOpen && (
+                  <div className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0 w-80 sm:w-88 max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-xl shadow-2xl p-3.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    {/* Search Tags Input */}
+                    <div className="relative mb-3">
+                      <input
+                        type="text"
+                        placeholder="Search tags"
+                        value={tagSearchQuery}
+                        onChange={(e) => setTagSearchQuery(e.target.value)}
+                        autoFocus
+                        className="w-full h-8 pl-3 pr-8 text-xs bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded-lg focus:outline-none focus:border-[#087F6E] focus:ring-1 focus:ring-[#087F6E]"
+                      />
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+
+                    {/* Tag Categories Container */}
+                    <div className="max-h-60 overflow-y-auto pr-1 space-y-3.5 text-left">
+                      {TAG_CATEGORIES.map((cat) => {
+                        const q = tagSearchQuery.trim().toLowerCase();
+                        const matchingTags = q
+                          ? cat.tags.filter(
+                              (t) =>
+                                t.label.toLowerCase().includes(q) ||
+                                t.value.toLowerCase().includes(q) ||
+                                t.sub.toLowerCase().includes(q)
+                            )
+                          : cat.tags;
+
+                        if (matchingTags.length === 0) return null;
+
+                        return (
+                          <div key={cat.category} className="space-y-1.5">
+                            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                              {cat.category}
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {matchingTags.map((tag) => {
+                                const active = isTagActive(tag.value);
+                                return (
+                                  <button
+                                    key={tag.value}
+                                    type="button"
+                                    onClick={() => {
+                                      setLengthOption(tag.value);
+                                      setIsAutoDetectOpen(false);
+                                      setTagSearchQuery("");
+                                    }}
+                                    className={`px-2.5 py-1 rounded-md border text-xs transition-all cursor-pointer flex items-center gap-1 select-none ${
+                                      active
+                                        ? "bg-[#E5F8F5] border-[#087F6E] text-[#087F6E] font-bold shadow-2xs"
+                                        : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 font-normal"
+                                    }`}
+                                    title={tag.sub}
+                                  >
+                                    <span>{tag.label}</span>
+                                    {active && <Check className="w-3 h-3 text-[#087F6E]" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {TAG_CATEGORIES.every(
+                        (cat) =>
+                          cat.tags.filter(
+                            (t) =>
+                              t.label.toLowerCase().includes(tagSearchQuery.trim().toLowerCase()) ||
+                              t.value.toLowerCase().includes(tagSearchQuery.trim().toLowerCase()) ||
+                              t.sub.toLowerCase().includes(tagSearchQuery.trim().toLowerCase())
+                          ).length === 0
+                      ) && (
+                        <div className="py-5 text-center text-xs text-slate-400 font-medium">
+                          No tags matching "{tagSearchQuery}"
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -2017,26 +2100,48 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    {/* 5-item diagnostic checklist */}
+                    {/* 5-item diagnostic checklist dynamically calculated from scan */}
                     <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pt-1 text-[10px] sm:text-[11px] font-medium text-slate-600">
                       <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        {latestScanInfo.searchabilityMatch ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        )}
                         <span className="truncate">Searchability</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        {latestScanInfo.formattingMatch ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        )}
                         <span className="truncate">Formatting</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        {latestScanInfo.skillsMatch ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        )}
                         <span className="truncate">Skills Match</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        {latestScanInfo.coverLetterStatus === "matched" ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        ) : latestScanInfo.coverLetterStatus === "unmatched" ? (
+                          <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        ) : (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        )}
                         <span className="truncate">Cover Letter</span>
                       </div>
                       <div className="flex items-center gap-1.5 col-span-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        {latestScanInfo.recruiterTipsMatch ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        )}
                         <span className="truncate">Recruiter Tips</span>
                       </div>
                     </div>

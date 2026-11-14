@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!jobDescription || typeof jobDescription !== "string" || !jobDescription.trim()) {
+    if (!jobDescription || typeof jobDescription !== "string" || jobDescription.trim().length < 50) {
       return NextResponse.json(
-        { error: "Job description is required to generate a personalized cover letter." },
+        { error: "Job description is required and must contain at least 50 characters." },
         { status: 400 }
       );
     }
