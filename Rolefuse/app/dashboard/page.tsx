@@ -1486,7 +1486,7 @@ export default function DashboardPage() {
     afterScore && beforeScore ? afterScore.overall - beforeScore.overall : 0;
 
   const isScoreLow = (afterScore?.overall ?? 0) < 75;
-  const shouldShowBulletImprover = bulletsNeedingImprovementCount > 0 || isScoreLow;
+  const shouldShowBulletImprover = bulletsNeedingImprovementCount > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans">

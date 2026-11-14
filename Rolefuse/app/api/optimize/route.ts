@@ -667,7 +667,12 @@ export async function POST(request: NextRequest) {
     const jdTech = extractTechTerms(jobDescription || "");
     const resumeTechLower = new Set(extractTechTerms(aiResult.resume || enrichedResumeText).map(t => t.toLowerCase()));
     const missingFromOptimized = jdTech.filter(t => !resumeTechLower.has(t.toLowerCase()) && isTechnicalKeyword(t));
-    const allMissingToInject = Array.from(new Set([...missingTechTerms, ...missingFromOptimized]));
+    const jdAllKeywords = Array.from(extractKeywords(jobDescription || "")).filter(isTechnicalKeyword);
+    const resumeKeywordsLower = new Set(
+      Array.from(extractKeywords(aiResult.resume || enrichedResumeText)).map(k => k.toLowerCase())
+    );
+    const missingJdKeywords = jdAllKeywords.filter(k => !resumeKeywordsLower.has(k.toLowerCase()));
+    const allMissingToInject = Array.from(new Set([...missingTechTerms, ...missingFromOptimized, ...missingJdKeywords]));
 
     aiResult.resume = enrichResumeATSQuality(
       aiResult.resume || enrichedResumeText,

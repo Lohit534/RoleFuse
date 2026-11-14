@@ -19,7 +19,12 @@ export const COMMON_TITLES = [
   "Product Manager", "Project Manager", "Business Analyst", "System Administrator",
   "DevOps Engineer", "QA Engineer", "Mobile Developer", "UI/UX Designer",
   "Software Developer", "Web Developer", "Android Developer", "iOS Developer",
-  "Site Reliability Engineer", "Security Engineer", "Solutions Architect"
+  "Site Reliability Engineer", "Security Engineer", "Solutions Architect",
+  "Network Product Support Engineer", "Product Support Engineer", "Network Support Engineer",
+  "Technical Support Engineer", "Support Engineer", "Network Engineer", "Systems Engineer",
+  "IT Support Specialist", "Network Administrator", "Systems Administrator",
+  "Cloud Support Engineer", "Quality Assurance Engineer", "Security Analyst",
+  "SOC Analyst", "Database Administrator", "Incident Response Engineer"
 ];
 
 function normalizeWord(word: string): string {
@@ -185,8 +190,13 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
   // - 70% hard technical skills, 30% other JD phrases
   // - diminishing-returns curve (sqrt) like real ATS tools: the first matches
   //   matter most, so a resume with SOME relevant skills is not scored near zero.
+  // If JD has few or no hardcoded tech terms, use all target keywords so non-dictionary roles (support, operations, QA, systems, etc.) are scored accurately
+  const effectiveTechTerms = jdTechTerms.length >= 3
+    ? jdTechTerms
+    : allTargetKeywords.filter(k => k.length > 2);
+
   let techCredit = 0;
-  for (const t of jdTechTerms) {
+  for (const t of effectiveTechTerms) {
     const tl = t.toLowerCase();
     if (foundKeywordsSet.has(t) || resumeLower.includes(tl)) {
       techCredit += 1;
@@ -194,12 +204,12 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
       techCredit += 0.5;
     }
   }
-  const techCoverage = jdTechTerms.length > 0 ? Math.min(1, techCredit / jdTechTerms.length) : 0;
+  const techCoverage = effectiveTechTerms.length > 0 ? Math.min(1, techCredit / effectiveTechTerms.length) : 0;
   const generalDenominator = foundKeywords.length + missingKeywords.length;
   const generalCoverage = generalDenominator > 0 ? foundKeywords.length / generalDenominator : 0;
-  const keywordRatio = jdTechTerms.length >= 3
+  const keywordRatio = effectiveTechTerms.length >= 3
     ? techCoverage * 0.7 + generalCoverage * 0.3
-    : generalCoverage;
+    : generalCoverage > 0 ? generalCoverage : techCoverage;
   const keywordMatch = Math.min(97, Math.max(5, Math.round(Math.sqrt(keywordRatio) * 100)));
 
   // ── 2. DYNAMIC SEMANTIC & ROLE ALIGNMENT ────────────────────────────────
@@ -227,6 +237,9 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
       ["frontend", "react developer", "web developer", "ui engineer"],
       ["full stack", "fullstack", "software engineer"],
       ["devops", "cloud", "sre", "infrastructure"],
+      ["network", "support", "incident management", "troubleshooting", "product support", "systems engineer"],
+      ["quality assurance", "qa engineer", "testing", "software tester"],
+      ["security", "soc analyst", "cybersecurity", "information security"],
     ];
     for (const group of roleKeywordGroups) {
       const inJd = group.some(k => jdLower.includes(k));
@@ -238,14 +251,25 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
     }
   }
 
+  // Dynamic role matching from JD header/lines (e.g. "Network Product Support Engineer")
+  if (titleScore < 20) {
+    const roleHeaderMatch = jdLower.match(/(?:role|position|job\s*title|looking\s*for\s*a|hiring\s*(?:for)?\s*a?)[:\s]+([a-z0-9\s\/\-&]+?)(?:\n|,|\.|\()/i);
+    if (roleHeaderMatch && roleHeaderMatch[1]) {
+      const detectedRole = roleHeaderMatch[1].trim();
+      if (detectedRole.length > 3 && detectedRole.length < 50 && resumeLower.includes(detectedRole)) {
+        titleScore = 25;
+      }
+    }
+  }
+
   // Tech stack domain overlap
-  const targetTechCount = Math.max(3, Math.min(10, jdTechTerms.length));
-  const techMatches = jdTechTerms.filter(t => {
+  const targetTechCount = Math.max(3, Math.min(10, effectiveTechTerms.length));
+  const techMatches = effectiveTechTerms.filter(t => {
     const tl = t.toLowerCase();
     const tClean = tl.replace(/[^a-z0-9]/g, "");
     return resumeLower.includes(tl) || (tClean.length > 2 && resumeCleanAlpha.includes(tClean));
   }).length;
-  const techRatio = Math.min(1.0, (techCredit || techMatches) / targetTechCount);
+  const techRatio = targetTechCount > 0 ? Math.min(1.0, (techCredit || techMatches) / targetTechCount) : 0;
   const techScore = Math.round(Math.sqrt(techRatio) * 55);
 
   // Summary & narrative alignment
@@ -253,7 +277,7 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
   const summaryMatch = resumeText.match(/(?:(?:professional\s+)?summary|career\s+objective|objective|profile|about me)[^\n]*\n([\s\S]{0,800}?)(?:\n\s*\n|\n[A-Z][A-Z &]{3,}\n|$)/i);
   const summaryText = (summaryMatch?.[1] || "").toLowerCase();
   const summaryClean = summaryText.replace(/[^a-z0-9]/g, "");
-  const summaryJdTerms = jdTechTerms.filter(t => {
+  const summaryJdTerms = effectiveTechTerms.filter(t => {
     const tl = t.toLowerCase();
     const tClean = tl.replace(/[^a-z0-9]/g, "");
     return summaryText.includes(tl) || (tClean.length > 2 && summaryClean.includes(tClean));
@@ -333,7 +357,10 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
   // ATS Relevance Gating:
   // If a candidate applies to a completely unrelated role (e.g. HR or Sales applying for Java Engineer),
   // high writing quality in the unrelated domain cannot award an undeserved high score.
-  const relevanceFactor = Math.min(1.0, (keywordMatch * 0.60 + semanticMatch * 0.40) / 100);
+  // BUT if candidate matches domain keywords, has target role title, or has matching skills, they are not unrelated.
+  const hasDomainRelevance = foundKeywords.length >= 3 || techMatches >= 2 || titleScore >= 20;
+  const rawRelevance = (keywordMatch * 0.60 + semanticMatch * 0.40) / 100;
+  const relevanceFactor = Math.min(1.0, hasDomainRelevance ? Math.max(0.40, rawRelevance) : rawRelevance);
   
   const impactWeight = relevanceFactor < 0.40 ? 0.12 : 0.25;
   const formatWeight = relevanceFactor < 0.40 ? 0.05 : 0.10;

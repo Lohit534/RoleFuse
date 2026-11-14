@@ -83,6 +83,19 @@ const TECH_TERMS = [
   "OWASP", "Penetration Testing", "SAST", "DAST", "SOC2", "ISO 27001",
   "Zero Trust", "RBAC", "ABAC",
 
+  // Support, Operations & Networking
+  "Incident Management", "Network Monitoring", "System Monitoring", "Technical Troubleshooting",
+  "Troubleshooting", "ServiceNow", "Jira Service Management", "ITIL", "ITSM", "SLA",
+  "Root Cause Analysis", "RCA", "Escalation Management", "Product Support", "Technical Support",
+  "Customer Support", "Remote Support", "Documentation", "Testing", "Validation",
+  "Quality Assurance", "QA", "Defect Tracking", "Service Reliability",
+  "Stakeholder Communication", "Team Coordination", "Problem Solving", "Time Management", "Process Adherence",
+  "Networking", "Network Engineering", "TCP/IP", "DNS", "DHCP", "VPN", "VLAN", "LAN", "WAN", "SD-WAN",
+  "Firewall", "Firewalls", "Routing", "Switching", "Routers", "Switches", "Wireshark", "Packet Capture",
+  "BGP", "OSPF", "Cisco", "CCNA", "CCNP", "Juniper", "Load Balancing", "Subnetting", "VoIP", "IPsec",
+  "Active Directory", "LDAP", "Windows Server", "VMware", "Virtualization", "Hyper-V",
+  "SSH", "Telnet", "SNMP", "Nagios", "Zabbix", "Splunk",
+
   // Blockchain
   "Ethereum", "Web3.js", "Hardhat", "Truffle", "IPFS",
 ];
@@ -130,6 +143,14 @@ const PHRASE_TERMS: string[] = [
   "security engineering", "information security", "network security",
   "application security", "penetration testing", "vulnerability assessment",
   "identity management",
+
+  // Support, Operations & Networking phrases
+  "incident management", "network monitoring", "system monitoring", "technical troubleshooting",
+  "product support", "network support", "technical support", "customer support", "remote support",
+  "root cause analysis", "escalation management", "quality assurance", "service reliability",
+  "stakeholder communication", "team coordination", "problem solving", "time management", "process adherence",
+  "network engineering", "network protocols", "load balancing", "packet capture", "active directory",
+  "jira service management",
 ];
 
 const TECH_MAP = new Map<string, string>(
@@ -248,6 +269,18 @@ export function isTechnicalKeyword(term: string): boolean {
     "unit testing": true, "integration testing": true,
     "data cleaning": true, "data mining": true,
     "object oriented programming": true, "object-oriented programming": true,
+    "incident management": true, "network monitoring": true, "system monitoring": true,
+    "technical troubleshooting": true, "troubleshooting": true, "product support": true,
+    "network support": true, "technical support": true, "customer support": true, "remote support": true,
+    "root cause analysis": true, "rca": true, "escalation management": true, "quality assurance": true,
+    "service reliability": true, "stakeholder communication": true, "team coordination": true,
+    "time management": true, "process adherence": true, "tcp/ip": true, "dns": true, "dhcp": true,
+    "vpn": true, "vlan": true, "lan": true, "wan": true, "sd-wan": true, "firewall": true, "firewalls": true,
+    "routing": true, "switching": true, "routers": true, "switches": true, "wireshark": true,
+    "packet capture": true, "ccna": true, "ccnp": true, "cisco": true, "juniper": true,
+    "servicenow": true, "itil": true, "itsm": true, "sla": true, "active directory": true, "ldap": true,
+    "vmware": true, "virtualization": true, "splunk": true, "nagios": true, "zabbix": true,
+    "testing": true, "validation": true, "documentation": true, "defect tracking": true,
   };
 
   if (TECH_ALIASES[clean] || TECH_ALIASES[singular]) return true;
@@ -258,6 +291,26 @@ export function isTechnicalKeyword(term: string): boolean {
     for (const t of ALL_TECH_LOWER) {
       if (t.replace(/[^a-z0-9]/g, "") === normClean) return true;
     }
+  }
+
+  // Dynamic compound technical/operational phrases (e.g. "packet analysis", "network protocol", "system administration")
+  const DOMAIN_INDICATORS = [
+    "engineer", "engineering", "developer", "development",
+    "architecture", "architect", "management", "monitoring",
+    "troubleshooting", "administration", "administrator",
+    "analysis", "analyst", "testing", "tester", "automation",
+    "configuration", "deployment", "integration", "protocol",
+    "infrastructure", "security", "pipeline", "database",
+    "network", "networking", "system", "systems", "operations",
+    "reliability", "optimization", "support", "validation",
+    "assurance", "computing", "analytics", "modeling",
+    "governance", "compliance"
+  ];
+  const words = clean.split(/\s+/);
+  if (words.length >= 2 && words.length <= 4) {
+    const hasDomainWord = words.some(w => DOMAIN_INDICATORS.includes(w) || ALL_TECH_LOWER.has(w));
+    const allValid = words.every(w => w.length > 1 && !STOP_WORDS.has(w) && !HR_FILLER_WORDS.has(w));
+    if (hasDomainWord && allValid) return true;
   }
 
   return false;
@@ -284,9 +337,26 @@ export function extractKeywords(text: string): Set<string> {
         .filter((s) => s.length > 1 && s.length < 45 && !STOP_WORDS.has(s.toLowerCase()) && !HR_FILLER_WORDS.has(s.toLowerCase()));
 
       for (const token of tokens) {
-        if (isTechnicalKeyword(token)) {
-          const canonical = TECH_MAP.get(token.toLowerCase()) || token;
+        const tokenLower = token.toLowerCase();
+        if (isTechnicalKeyword(token) || (token.length >= 2 && token.length <= 40 && !STOP_WORDS.has(tokenLower) && !HR_FILLER_WORDS.has(tokenLower))) {
+          const canonical = TECH_MAP.get(tokenLower) || token;
           keywords.add(canonical);
+        }
+      }
+    }
+  }
+
+  // 2b. Parse JD requirements/qualifications/responsibilities sections for key bullet phrases
+  const reqSecMatch = text.match(/(?:^|\r?\n)(?:REQUIREMENTS|QUALIFICATIONS|RESPONSIBILITIES|WHAT\s+YOU(?:'LL|\s+WILL)\s+(?:DO|BRING)|JOB\s+REQUIREMENTS)[\s\S]*?(?=\r?\n[A-Z\s&]{4,}[\r\n]|$)/i);
+  if (reqSecMatch) {
+    const rawReqLines = reqSecMatch[0].split(/\r?\n/).slice(1);
+    for (const line of rawReqLines) {
+      const cleanLine = line.replace(/^[•\-\*\u2022▸►→|0-9.)\s]+/, "").trim();
+      if (!cleanLine || cleanLine.length < 3) continue;
+      const subTokens = cleanLine.split(/[,;]+/).map((s) => s.trim());
+      for (const st of subTokens) {
+        if (isTechnicalKeyword(st)) {
+          keywords.add(TECH_MAP.get(st.toLowerCase()) || st);
         }
       }
     }
