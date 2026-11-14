@@ -7,7 +7,7 @@ import { callAI, callAIText } from "@/lib/ai/router";
 import { scoreResume } from "@/lib/ats/scorer";
 import { sanitizeOptimizedResume, ensureUserAnswersInResume } from "@/lib/resume-format";
 import { enrichResumeATSQuality } from "@/lib/ats/bullets";
-import { extractTechTerms, isTechnicalKeyword } from "@/lib/ats/keywords";
+import { extractKeywords, extractTechTerms, isTechnicalKeyword } from "@/lib/ats/keywords";
 import { generateUUID } from "@/lib/utils";
 import { isOwnerEmail, FREE_CREDITS_PER_MONTH, PRO_CREDITS_PER_MONTH, PRO_MAX_CREDITS_PER_MONTH } from "@/types";
 import { buildTrainingSample } from "@/lib/anonymizer";
@@ -664,10 +664,15 @@ export async function POST(request: NextRequest) {
     // 2. Missing target JD tech terms are added to TECHNICAL SKILLS
     // 3. Summary is aligned with target role and key JD competencies
     const missingTechTerms = (scoreBefore.missingKeywords || []).filter(isTechnicalKeyword);
+    const jdTech = extractTechTerms(jobDescription || "");
+    const resumeTechLower = new Set(extractTechTerms(aiResult.resume || enrichedResumeText).map(t => t.toLowerCase()));
+    const missingFromOptimized = jdTech.filter(t => !resumeTechLower.has(t.toLowerCase()) && isTechnicalKeyword(t));
+    const allMissingToInject = Array.from(new Set([...missingTechTerms, ...missingFromOptimized]));
+
     aiResult.resume = enrichResumeATSQuality(
       aiResult.resume || enrichedResumeText,
       jobDescription,
-      missingTechTerms,
+      allMissingToInject,
       jobTitle
     );
 
@@ -718,14 +723,29 @@ export async function POST(request: NextRequest) {
       aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
     }
     const resumeTech = extractTechTerms(resumeText || "");
+    const resumeKeywords = Array.from(extractKeywords(resumeText || ""));
     const jdLower = (jobDescription || "").toLowerCase();
-    const resumeTechInJd = resumeTech.filter(t => jdLower.includes(t.toLowerCase()));
 
-    // Strict technical keywords filter for Already in Resume
-    const alreadyInResume = Array.from(new Set([
+    // Skills found in the original resume that match the JD
+    const resumeTechInJd = resumeTech.filter(t => jdLower.includes(t.toLowerCase()));
+    const resumeKeywordsInJd = resumeKeywords.filter(k => jdLower.includes(k.toLowerCase()));
+
+    // Strict technical keywords filter for Already in Resume (deduplicated case-insensitively)
+    const alreadyMap = new Map<string, string>();
+    const allFoundCandidates: string[] = [
       ...(scoreBefore.foundKeywords || []),
-      ...resumeTechInJd
-    ])).filter(k => k && k.trim().length > 1 && isTechnicalKeyword(k));
+      ...resumeTechInJd,
+      ...resumeKeywordsInJd
+    ];
+    for (const k of allFoundCandidates) {
+      if (typeof k === "string" && k.trim().length > 1 && isTechnicalKeyword(k)) {
+        const lower = k.toLowerCase().trim();
+        if (!alreadyMap.has(lower)) {
+          alreadyMap.set(lower, k.trim());
+        }
+      }
+    }
+    const alreadyInResume = Array.from(alreadyMap.values());
 
     const beforeKeywordsSet = new Set([
       ...scoreBefore.foundKeywords.map(k => k.toLowerCase().trim()),
@@ -748,20 +768,25 @@ export async function POST(request: NextRequest) {
       t => jdLower.includes(t.toLowerCase()) && !beforeKeywordsSet.has(t.toLowerCase().trim()) && isTechnicalKeyword(t)
     );
 
-    // Filter injected keywords strictly to verified technical keywords
-    const mergedKeywordsAdded = Array.from(
-      new Set([
-        ...(Array.isArray(aiResult.keywordsAdded) ? aiResult.keywordsAdded : []),
-        ...injectedFromScorer,
-        ...missingNowFound,
-        ...newTechFromJd
-      ])
-    ).filter(kw => {
-      if (!kw || kw.trim().length <= 1) return false;
-      if (beforeKeywordsSet.has(kw.toLowerCase().trim())) return false;
-      if (!isTechnicalKeyword(kw)) return false;
-      return true;
-    });
+    // Filter injected keywords strictly to verified technical keywords with clean case deduplication
+    const addedMap = new Map<string, string>();
+    for (const kw of [
+      ...(Array.isArray(aiResult.keywordsAdded) ? aiResult.keywordsAdded : []),
+      ...injectedFromScorer,
+      ...missingNowFound,
+      ...newTechFromJd
+    ]) {
+      if (!kw || typeof kw !== "string") continue;
+      const cleanKw = kw.trim();
+      const lower = cleanKw.toLowerCase();
+      if (cleanKw.length <= 1) continue;
+      if (beforeKeywordsSet.has(lower)) continue;
+      if (!isTechnicalKeyword(cleanKw)) continue;
+      if (!addedMap.has(lower)) {
+        addedMap.set(lower, cleanKw);
+      }
+    }
+    const mergedKeywordsAdded = Array.from(addedMap.values());
 
     await send(5, 'done');
       await send(6, 'running');

@@ -59,6 +59,7 @@ import {
   RotateCcw,
   Smile,
   Search,
+  MinusCircle,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
@@ -705,28 +706,33 @@ export default function DashboardPage() {
               // Check cover letter status: not_used vs matched vs unmatched
               let clStatus: "matched" | "unmatched" | "not_used" = "not_used";
               try {
-                const clRaw = localStorage.getItem(`fastHire_cover_letters_${data.user.id}`);
-                if (clRaw) {
-                  const clList = JSON.parse(clRaw);
-                  if (Array.isArray(clList) && clList.length > 0) {
-                    const targetTitle = (latest.jobTitle || "").toLowerCase().trim();
-                    const targetComp = (latest.company || "").toLowerCase().trim();
+                const targetTitle = (latest.jobTitle || "").toLowerCase().trim();
+                const targetComp = (latest.company || "").toLowerCase().trim();
+                const directCl = typeof window !== "undefined" && latest.id ? localStorage.getItem(`fastHire_coverLetter_${latest.id}`) : null;
 
-                    const matched = clList.find((cl: any) => {
-                      const clTitle = (cl.jobTitle || "").toLowerCase().trim();
-                      const clComp = (cl.company || "").toLowerCase().trim();
-                      const titleMatch = targetTitle && clTitle && (clTitle.includes(targetTitle) || targetTitle.includes(clTitle));
-                      const compMatch = targetComp && clComp && (clComp.includes(targetComp) || targetComp.includes(clComp));
-                      return titleMatch || compMatch;
-                    });
+                if (directCl || latest.coverLetter) {
+                  clStatus = "matched";
+                } else {
+                  const clRaw = localStorage.getItem(`fastHire_cover_letters_${data.user.id}`);
+                  if (clRaw) {
+                    const clList = JSON.parse(clRaw);
+                    if (Array.isArray(clList) && clList.length > 0) {
+                      const matched = clList.find((cl: any) => {
+                        const clTitle = (cl.jobTitle || "").toLowerCase().trim();
+                        const clComp = (cl.company || "").toLowerCase().trim();
+                        const titleMatch = targetTitle && clTitle && (clTitle.includes(targetTitle) || targetTitle.includes(clTitle));
+                        const compMatch = targetComp && clComp && (clComp.includes(targetComp) || targetComp.includes(clComp));
+                        return titleMatch || compMatch;
+                      });
 
-                    clStatus = matched ? "matched" : "unmatched";
+                      clStatus = matched ? "matched" : "unmatched";
+                    }
                   }
                 }
               } catch (_e) {}
 
               // Dynamic checks based on real score and metrics
-              const skillsPass = scoreVal >= 70 || (latest.keywordsAfter && latest.keywordsAfter >= 3);
+              const skillsPass = scoreVal >= 70 || (latest.keywordsAfter && latest.keywordsAfter >= 2);
               const searchabilityPass = scoreVal >= 60;
               const formattingPass = scoreVal >= 50;
               const recruiterTipsPass = scoreVal >= 65;
@@ -929,12 +935,12 @@ export default function DashboardPage() {
 
     // Update Latest Scan overview card immediately
     const scoreVal = data.scoreAfter?.overall || 85;
-    const skillsPass = scoreVal >= 70 || (data.scoreAfter?.foundKeywords && data.scoreAfter.foundKeywords.length >= 3);
+    const skillsPass = scoreVal >= 70 || (data.scoreAfter?.foundKeywords && data.scoreAfter.foundKeywords.length >= 2);
     const searchabilityPass = scoreVal >= 60;
     const formattingPass = scoreVal >= 50;
     const recruiterTipsPass = scoreVal >= 65;
 
-    let clStatus: "matched" | "unmatched" | "not_used" = "not_used";
+    let clStatus: "matched" | "unmatched" | "not_used" = coverLetterGenerated ? "matched" : "not_used";
     try {
       if (user?.id) {
         const clRaw = localStorage.getItem(`fastHire_cover_letters_${user.id}`);
@@ -1412,6 +1418,38 @@ export default function DashboardPage() {
         coverLetter: data.coverLetter,
         userId: user?.id,
       });
+
+      // Update Latest Scan overview checklist tick mark immediately
+      setLatestScanInfo((prev) => ({
+        ...prev,
+        coverLetterStatus: "matched",
+      }));
+
+      const activeJobRole = optimizeResult?.jobTitle || latestScanInfo.jobTitle || "Target Role";
+      const activeJobComp = optimizeResult?.company || latestScanInfo.company || "Target Company";
+
+      if (user?.id) {
+        try {
+          const storageKey = `fastHire_cover_letters_${user.id}`;
+          const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+          const newRecord = {
+            id: `cl_${Date.now()}`,
+            jobTitle: activeJobRole,
+            company: activeJobComp,
+            coverLetter: data.coverLetter,
+            createdAt: new Date().toISOString(),
+          };
+          localStorage.setItem(storageKey, JSON.stringify([newRecord, ...existing].slice(0, 30)));
+        } catch (_e) {}
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cover-letter-created", {
+            detail: { jobTitle: activeJobRole, company: activeJobComp },
+          })
+        );
+      }
 
       const targetId = currentResumeId || optimizeResult?.resumeId || optimizeResult?.id;
       if (targetId) {
@@ -2132,7 +2170,7 @@ export default function DashboardPage() {
                         ) : latestScanInfo.coverLetterStatus === "unmatched" ? (
                           <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
                         ) : (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <MinusCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         )}
                         <span className="truncate">Cover Letter</span>
                       </div>

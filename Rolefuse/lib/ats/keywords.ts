@@ -46,9 +46,13 @@ const TECH_TERMS = [
   "OpenAI", "Anthropic", "Claude", "GPT", "LLM", "LLMs", "RAG", "RLHF",
   "Prompt Engineering", "Generative AI", "Large Language Models",
   "Supervised Learning", "Unsupervised Learning", "Classification", "Regression",
-  "Model Validation", "Model Evaluation", "Model Training", "Model Tuning",
-  "Feature Engineering", "Data Preprocessing",
-  "Stable Diffusion", "Diffusion", "BERT", "T5", "LoRA", "QLoRA",
+  "Model Validation", "Model Evaluation", "Model Training", "Model Tuning", "Model Monitoring",
+  "Feature Engineering", "Data Preprocessing", "Data Cleaning", "Data Mining",
+  "Exploratory Data Analysis", "EDA", "Cross Validation", "Hyperparameter Tuning",
+  "Predictive Modeling", "Statistical Analysis", "Embeddings", "Vector Search", "Semantic Search",
+  "Fine-Tuning", "Fine-tuning", "PEFT", "LoRA", "QLoRA", "Kaggle",
+  "ChromaDB", "LangGraph", "CrewAI", "Ollama",
+  "Stable Diffusion", "Diffusion", "BERT", "T5",
   "FAISS", "Pandas", "NumPy", "Matplotlib", "Seaborn", "Plotly",
   "Spark", "PySpark", "Dask", "Airflow", "MLflow", "DVC", "Weights & Biases",
   "SageMaker", "Vertex AI", "Databricks", "DataRobot", "H2O",
@@ -93,9 +97,12 @@ const PHRASE_TERMS: string[] = [
   "prompt engineering", "supervised learning", "unsupervised learning",
   "neural network", "neural networks", "feature engineering", "data pipeline", "data engineering",
   "data science", "data analysis", "data visualization", "data modeling", "data preprocessing",
+  "data cleaning", "data mining", "exploratory data analysis", "statistical analysis",
   "time series", "recommendation system", "anomaly detection",
   "model training", "model deployment", "model inference", "model validation", "model evaluation",
-  "vector database", "vector databases",
+  "model monitoring", "hyperparameter tuning", "cross validation", "predictive modeling",
+  "vector database", "vector databases", "vector search", "semantic search",
+  "fine tuning", "fine-tuning",
 
   // Cloud phrases
   "cloud computing", "cloud infrastructure", "cloud native", "cloud migration",
@@ -107,10 +114,11 @@ const PHRASE_TERMS: string[] = [
   "full stack", "full-stack", "frontend development", "backend development",
   "software development", "software engineering", "system design",
   "distributed systems", "high availability", "fault tolerant",
-  "api development", "rest api", "rest apis", "microservices architecture",
+  "api development", "rest api", "rest apis", "restful api", "restful apis",
+  "microservices architecture", "problem solving",
   "django rest framework", "spring mvc", "data structures", "algorithms",
-  "jwt authentication", "event driven", "object oriented", "functional programming",
-  "test driven development", "agile methodology", "code review",
+  "jwt authentication", "event driven", "object oriented", "object oriented programming", "functional programming",
+  "test driven development", "unit testing", "integration testing", "agile methodology", "code review",
   "performance optimization", "database design", "schema design",
   "version control",
 
@@ -130,7 +138,7 @@ const TECH_MAP = new Map<string, string>(
 
 export function extractTechTerms(text: string): string[] {
   if (!text) return [];
-  const results = new Set<string>();
+  const results = new Map<string, string>(); // lowerKey -> canonicalDisplay
 
   for (const term of TECH_TERMS) {
     const escaped = term.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
@@ -138,20 +146,22 @@ export function extractTechTerms(text: string): string[] {
     const trailPattern = /[a-zA-Z0-9]$/.test(term) ? "\\b" : `(?:$|\\s|[,.;:!?()"'])`;
     const regex = new RegExp(`${leadPattern}${escaped}${trailPattern}`, "gi");
     if (regex.test(text)) {
-      results.add(term);
+      results.set(term.toLowerCase(), term);
     }
   }
 
   // Also match multi-word phrase terms
   const lowerText = text.toLowerCase();
   for (const phrase of PHRASE_TERMS) {
-    if (lowerText.includes(phrase)) {
-      // Capitalise first letter for consistent display
-      results.add(phrase.replace(/\b\w/g, (c) => c.toUpperCase()));
+    const phraseLower = phrase.toLowerCase();
+    if (lowerText.includes(phraseLower) && !results.has(phraseLower)) {
+      // Canonical display format: prefer existing canonical if available, or Title Case
+      const canonical = TECH_MAP.get(phraseLower) || phrase.replace(/\b\w/g, (c) => c.toUpperCase());
+      results.set(phraseLower, canonical);
     }
   }
 
-  return Array.from(results);
+  return Array.from(results.values());
 }
 
 export function extractActionVerbs(bulletText: string): string[] {
@@ -220,7 +230,7 @@ export function isTechnicalKeyword(term: string): boolean {
   // Well-known tech aliases and abbreviations
   const TECH_ALIASES: Record<string, boolean> = {
     "k8s": true, "postgres": true, "reactjs": true, "nextjs": true, "nodejs": true,
-    "vuejs": true, "angularjs": true, "restful api": true, "rest api": true, "rest apis": true,
+    "vuejs": true, "angularjs": true, "restful api": true, "rest api": true, "rest apis": true, "restful apis": true,
     "microservices": true, "ci/cd": true, "cicd": true, "devops": true,
     "ml": true, "ai": true, "nlp": true, "llm": true, "llms": true, "genai": true,
     "rag": true, "nosql": true, "sql": true, "bi": true, "sre": true, "qa": true,
@@ -228,6 +238,16 @@ export function isTechnicalKeyword(term: string): boolean {
     "etl": true, "aws lambda": true, "docker container": true, "docker containers": true,
     "scikitlearn": true, "scikit-learn": true, "drf": true, "ann": true, "cnn": true,
     "rnn": true, "lstm": true, "svm": true, "knn": true, "gan": true, "dsa": true,
+    "kaggle": true, "fine-tuning": true, "finetuning": true, "fine tuning": true,
+    "embeddings": true, "embedding": true, "vector search": true, "semantic search": true,
+    "problem solving": true, "eda": true, "peft": true, "langgraph": true, "ollama": true, "crewai": true,
+    "system design": true, "system architecture": true,
+    "cross validation": true, "hyperparameter tuning": true,
+    "predictive modeling": true, "statistical analysis": true,
+    "model monitoring": true, "model evaluation": true, "model validation": true,
+    "unit testing": true, "integration testing": true,
+    "data cleaning": true, "data mining": true,
+    "object oriented programming": true, "object-oriented programming": true,
   };
 
   if (TECH_ALIASES[clean] || TECH_ALIASES[singular]) return true;
@@ -251,7 +271,28 @@ export function extractKeywords(text: string): Set<string> {
   const textTechTerms = extractTechTerms(text);
   for (const tech of textTechTerms) keywords.add(tech);
 
-  // 2. Extract line-by-line / clause-by-clause, keeping strictly technical terms
+  // 2. Parse dedicated SKILLS / TECHNICAL SKILLS section if present in the text
+  const skillsSecMatch = text.match(/(?:^|\r?\n)(?:TECHNICAL\s+SKILLS|SKILLS|CORE\s+COMPETENCIES|KEY\s+SKILLS|AREAS\s+OF\s+EXPERTISE)[\s\S]*?(?=\r?\n[A-Z\s&]{4,}[\r\n]|$)/i);
+  if (skillsSecMatch) {
+    const rawSkillLines = skillsSecMatch[0].split(/\r?\n/).slice(1); // skip header line
+    for (const line of rawSkillLines) {
+      // Split by colon to separate category label from skills, then by comma/bullet
+      const afterColon = line.includes(":") ? line.slice(line.indexOf(":") + 1) : line;
+      const tokens = afterColon
+        .split(/[,;•\-\*|]+/)
+        .map((s) => s.replace(/^[•\-\*\s]+/, "").trim())
+        .filter((s) => s.length > 1 && s.length < 45 && !STOP_WORDS.has(s.toLowerCase()) && !HR_FILLER_WORDS.has(s.toLowerCase()));
+
+      for (const token of tokens) {
+        if (isTechnicalKeyword(token)) {
+          const canonical = TECH_MAP.get(token.toLowerCase()) || token;
+          keywords.add(canonical);
+        }
+      }
+    }
+  }
+
+  // 3. Extract line-by-line / clause-by-clause, checking single words, bigrams, and trigrams
   const clauses = text.split(/[\r\n,;•\-\*\u2022▸►→|]+/);
   for (const clause of clauses) {
     const rawTokens = clause
@@ -259,10 +300,12 @@ export function extractKeywords(text: string): Set<string> {
       .map(cleanWord)
       .filter((w) => w.length > 2 && !STOP_WORDS.has(w) && !HR_FILLER_WORDS.has(w) && !/^\d+$/.test(w));
 
-    // Single words - only add recognized technical terms
+    // Single words - check recognized technical terms & aliases
     for (const word of rawTokens) {
       if (TECH_MAP.has(word)) {
         keywords.add(TECH_MAP.get(word)!);
+      } else if (isTechnicalKeyword(word)) {
+        keywords.add(word.replace(/\b\w/g, (c) => c.toUpperCase()));
       }
     }
 
@@ -273,8 +316,18 @@ export function extractKeywords(text: string): Set<string> {
       const bigram = `${w1} ${w2}`;
       if (TECH_MAP.has(bigram)) {
         keywords.add(TECH_MAP.get(bigram)!);
-      } else if (PHRASE_TERMS.some((p) => p.toLowerCase() === bigram)) {
+      } else if (PHRASE_TERMS.some((p) => p.toLowerCase() === bigram) || isTechnicalKeyword(bigram)) {
         keywords.add(bigram.replace(/\b\w/g, (c) => c.toUpperCase()));
+      }
+    }
+
+    // Meaningful trigrams within the same clause (e.g. natural language processing, large language models)
+    for (let i = 0; i < rawTokens.length - 2; i++) {
+      const trigram = `${rawTokens[i]} ${rawTokens[i + 1]} ${rawTokens[i + 2]}`;
+      if (TECH_MAP.has(trigram)) {
+        keywords.add(TECH_MAP.get(trigram)!);
+      } else if (PHRASE_TERMS.some((p) => p.toLowerCase() === trigram) || isTechnicalKeyword(trigram)) {
+        keywords.add(trigram.replace(/\b\w/g, (c) => c.toUpperCase()));
       }
     }
   }

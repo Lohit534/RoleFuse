@@ -22,18 +22,18 @@ export function buildOptimizationPrompt(
   const SKILL_CATEGORIES = [
     "Programming Languages",
     "Frameworks & Libraries",
+    "AI, Machine Learning & GenAI",
     "Databases & Backend",
     "Cloud & DevOps",
-    "Developer Tools",
+    "Developer Tools & Core Competencies",
   ];
 
   // All missing keywords + extracted skills not already in resume — cap at 40
+  const resumeLower = resumeText.toLowerCase();
   const allKeywordsToInject = Array.from(
     new Set([
-      ...missingKeywords,
-      ...extractedSkills.filter(
-        (s) => !resumeText.toLowerCase().includes(s.toLowerCase())
-      ),
+      ...(missingKeywords || []).filter((k) => k && !resumeLower.includes(k.toLowerCase())),
+      ...(extractedSkills || []).filter((s) => s && !resumeLower.includes(s.toLowerCase())),
     ])
   ).slice(0, 40);
 
@@ -146,12 +146,12 @@ export function buildOptimizationPrompt(
     "  - NEVER output bullet lines like '• Technologies & Tools: ...' or '• Python, React'.\n" +
     "  - Keep Technical Skills focused on core candidate competencies. Do NOT dump internship-specific stacks exclusively here; internship tools belong directly on the internship entry.\n" +
     "  Organized into clean 'Category: values' lines (each on ONE single line):\n" +
-    "    Programming Languages: Java, SQL, JavaScript\n" +
-    "    Frameworks: Spring Boot, Spring MVC, Hibernate, JPA\n" +
-    "    Databases: MySQL, PostgreSQL, DynamoDB, MongoDB\n" +
-    "    Developer Tools: Git, GitHub, Maven, Postman, Docker, IntelliJ IDEA\n" +
-    "    Cloud: AWS (EC2, S3), GCP (if applicable)\n" +
-    "    Core Concepts: REST APIs, Microservices, OOP, Multithreading, JWT Authentication\n" +
+    "    Programming Languages: Java, SQL, Python, JavaScript, TypeScript\n" +
+    "    Frameworks & Libraries: React, Node.js, Spring Boot, PyTorch, TensorFlow\n" +
+    "    AI, Machine Learning & GenAI: Generative AI, LLMs, Prompt Engineering, RAG\n" +
+    "    Databases & Backend: MySQL, PostgreSQL, MongoDB, Redis, REST APIs, Microservices\n" +
+    "    Cloud & DevOps: AWS, Docker, Kubernetes, CI/CD, Git, GitHub\n" +
+    "    Developer Tools & Core Competencies: Postman, VS Code, Problem Solving, Model Evaluation\n" +
     "  List JD-matching skills FIRST in each category\n\n" +
     `PROFESSIONAL EXPERIENCE & INTERNSHIPS:\n` +
     `  Header: ${expSectionHeading} (ALL CAPS)\n` +
@@ -283,7 +283,7 @@ export function buildOptimizationPrompt(
     "TASK 3 -- SKILLS REORGANIZATION:\n" +
     "- Put JD-matching skills FIRST in every category\n" +
     "- Add every missing JD technical skill to the most relevant category\n" +
-    "- Use ONLY these 5 categories (no others): " + SKILL_CATEGORIES.join(", ") + "\n\n" +
+    "- Categorize skills into clear standard categories: " + SKILL_CATEGORIES.join(", ") + "\n\n" +
     sep + "\n" +
     "PRESERVATION RULES (never violate)\n" +
     sep + "\n\n" +

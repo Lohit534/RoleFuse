@@ -96,7 +96,7 @@ const LANDING_FAQS = [
 ];
 
 function LandingFAQ() {
-  const [openIdx, setOpenIdx] = React.useState<number | null>(null);
+  const [openIdx, setOpenIdx] = React.useState<number | null>(0);
   return (
     <div className="space-y-3.5">
       {LANDING_FAQS.map((faq, idx) => {

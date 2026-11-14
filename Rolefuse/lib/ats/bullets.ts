@@ -423,19 +423,35 @@ export function enrichResumeATSQuality(
     .slice(0, 10);
 
   if (techMissing.length > 0) {
-    // FIX: Inject keywords AFTER the section header line (not before it)
-    // so they appear inside the TECHNICAL SKILLS section — not above it
-    const skillsHeaderRegex = /(?:^|\n)(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS)\n/i;
-    const skillsMatch = text.match(skillsHeaderRegex);
+    // FIX: Match header with robust CRLF support (\r?\n)
+    const skillsHeaderRegex = /(?:^|\r?\n)(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS|CORE SKILLS)[\s\S]*?(?=\r?\n|$)/i;
+    const skillsHeaderMatch = text.match(skillsHeaderRegex);
 
-    if (skillsMatch && skillsMatch.index !== undefined) {
-      // Insert the new keyword line immediately after the header newline
-      const afterHeaderPos = skillsMatch.index + skillsMatch[0].length;
-      const injectLine = `Core Competencies & Tools: ${techMissing.join(", ")}\n`;
-      text = text.slice(0, afterHeaderPos) + injectLine + text.slice(afterHeaderPos);
+    if (skillsHeaderMatch && skillsHeaderMatch.index !== undefined) {
+      // Locate the end of the skills header line
+      const headerLineEnd = text.indexOf("\n", skillsHeaderMatch.index);
+      const afterHeaderPos = headerLineEnd !== -1 ? headerLineEnd + 1 : skillsHeaderMatch.index + skillsHeaderMatch[0].length;
+      
+      // Check if there is already a Core Competencies line inside skills
+      const coreCompRegex = /^(?:Core Competencies|Core Technologies|Target Competencies)(?:\s*&[^\n:]*)?:\s*([^\r\n]+)/im;
+      const coreCompMatch = text.slice(afterHeaderPos).match(coreCompRegex);
+      
+      if (coreCompMatch && coreCompMatch.index !== undefined) {
+        const fullMatch = coreCompMatch[0];
+        const existingLine = coreCompMatch[1];
+        const existingLower = existingLine.toLowerCase();
+        const trulyNew = techMissing.filter(t => !existingLower.includes(t.toLowerCase()));
+        if (trulyNew.length > 0) {
+          const updatedLine = `${fullMatch.trimEnd()}, ${trulyNew.join(", ")}`;
+          text = text.replace(fullMatch, updatedLine);
+        }
+      } else {
+        const injectLine = `Core Competencies & Tools: ${techMissing.join(", ")}\n`;
+        text = text.slice(0, afterHeaderPos) + injectLine + text.slice(afterHeaderPos);
+      }
     } else {
       // No existing skills section — insert a new one before PROJECTS or EXPERIENCE or EDUCATION
-      const insertBeforeRegex = /\n(PROJECTS|PROFESSIONAL EXPERIENCE|INTERNSHIP EXPERIENCE|EXPERIENCE|EDUCATION)\n/i;
+      const insertBeforeRegex = /(?:\r?\n)(PROJECTS|PROFESSIONAL EXPERIENCE|INTERNSHIP EXPERIENCE|EXPERIENCE|EDUCATION)(?:\r?\n|:)/i;
       const insertMatch = text.match(insertBeforeRegex);
       const skillsBlock = `\nTECHNICAL SKILLS\nCore Competencies: ${techMissing.join(", ")}\n\n`;
       if (insertMatch && insertMatch.index !== undefined) {

@@ -188,8 +188,8 @@ export default function PricingPage() {
     paymentId: string;
   } | null>(null);
 
-  // FAQ open/close index state
-  const [openFAQIndex, setOpenFAQIndex] = useState<number | null>(null);
+  // FAQ open/close index state — first one open by default
+  const [openFAQIndex, setOpenFAQIndex] = useState<number | null>(0);
 
   // Early user offer loading state
   const [earlyUserLoading, setEarlyUserLoading] = useState(false);

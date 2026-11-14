@@ -22,7 +22,18 @@ export default function KeywordBadges({ added, found }: KeywordBadgesProps) {
     badgeHeaderIcon: React.ReactNode,
     countClass: string
   ) => {
-    const keywords = (rawKeywords || []).filter(isTechnicalKeyword);
+    // Deduplicate case-insensitively while preserving original capitalization
+    const seen = new Set<string>();
+    const keywords: string[] = [];
+    for (const raw of rawKeywords || []) {
+      if (!raw || typeof raw !== "string") continue;
+      const clean = raw.trim();
+      const lower = clean.toLowerCase();
+      if (clean.length > 1 && !seen.has(lower)) {
+        seen.add(lower);
+        keywords.push(clean);
+      }
+    }
     if (keywords.length === 0) {
       return (
         <div className="space-y-2">
