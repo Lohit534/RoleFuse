@@ -770,6 +770,55 @@ export function parseResume(rawText: string): ParsedResume {
     }
   }
 
+  // Post-process education items to fix swapped Degree vs Institution and ensure correct sequence format
+  for (const edu of education) {
+    const isInst = (s: string) => /\b(university|college|school|institute|academy|campus|vidya|vidyalaya|polytechnic)\b/i.test(s);
+    const isDeg = (s: string) => /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|high\s*school|matriculation|secondary|diploma|phd|doctorate|degree)\b/i.test(s);
+
+    if (isInst(edu.degree) && isDeg(edu.institution)) {
+      const temp = edu.degree;
+      edu.degree = edu.institution;
+      edu.institution = temp;
+    }
+
+    if (!edu.institution && (edu.degree.includes(" | ") || edu.degree.includes(" - "))) {
+      const parts = edu.degree.split(/\s+[|\-]\s+/);
+      if (parts.length >= 2) {
+        if (isDeg(parts[0])) {
+          edu.degree = parts[0].trim();
+          edu.institution = parts.slice(1).join(", ").trim();
+        } else if (isDeg(parts[1])) {
+          edu.institution = parts[0].trim();
+          edu.degree = parts[1].trim();
+        }
+      }
+    }
+  }
+
+  // Strict Reverse-Chronological Education Sequence:
+  // 1. Master / PhD / Doctorate
+  // 2. Bachelor / B.Tech / B.E / B.Sc / BCA / Degree
+  // 3. Diploma / Polytechnic
+  // 4. Intermediate / Class 12 / 12th / HSC
+  // 5. Secondary / SSC / Class 10 / 10th / Matriculation
+  const getEduRank = (edu: EducationItem): number => {
+    const text = (edu.degree + " " + edu.institution).toLowerCase();
+    if (/\b(master|m\.?\s*tech|ms|msc|mca|phd|doctorate)\b/i.test(text)) return 1;
+    if (/\b(bachelor|b\.?\s*tech|b\.?\s*e|bca|bsc|undergraduate|degree)\b/i.test(text)) return 2;
+    if (/\b(diploma|polytechnic)\b/i.test(text)) return 3;
+    if (/\b(intermediate|12th|class\s*xii|hsc|junior\s*college|senior\s*secondary)\b/i.test(text)) return 4;
+    if (/\b(10th|class\s*x|ssc|matriculation|secondary|high\s*school)\b/i.test(text)) return 5;
+    return 3;
+  };
+
+  education.sort((a, b) => {
+    const rankDiff = getEduRank(a) - getEduRank(b);
+    if (rankDiff !== 0) return rankDiff;
+    const yearA = parseInt(a.yearOrDates.match(/\b(19|20)\d{2}\b/)?.[0] || "0", 10);
+    const yearB = parseInt(b.yearOrDates.match(/\b(19|20)\d{2}\b/)?.[0] || "0", 10);
+    return yearB - yearA;
+  });
+
   // Parse Certifications items
   const certifications: CertificationItem[] = [];
   let currentCert: CertificationItem | null = null;

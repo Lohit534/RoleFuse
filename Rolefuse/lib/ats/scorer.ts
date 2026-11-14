@@ -6,8 +6,8 @@ import { extractScorableBullets, hasStrongActionVerb, hasQuantifiedMetric } from
 
 export { hasQuantifiedMetric };
 
-/** Absolute ceiling — no real ATS gives a perfect score; 96 = fully optimized resume. */
-export const MAX_ATS_SCORE = 96;
+/** Dynamic scale ceiling (0-100) */
+export const MAX_ATS_SCORE = 100;
 
 export const COMMON_TITLES = [
   "Software Engineer", "Frontend Engineer", "Backend Engineer", "Full Stack Developer",

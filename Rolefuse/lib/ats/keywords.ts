@@ -87,9 +87,8 @@ const TECH_TERMS = [
   "Incident Management", "Network Monitoring", "System Monitoring", "Technical Troubleshooting",
   "Troubleshooting", "ServiceNow", "Jira Service Management", "ITIL", "ITSM", "SLA",
   "Root Cause Analysis", "RCA", "Escalation Management", "Product Support", "Technical Support",
-  "Customer Support", "Remote Support", "Documentation", "Testing", "Validation",
+  "Customer Support", "Remote Support", "Testing", "Validation",
   "Quality Assurance", "QA", "Defect Tracking", "Service Reliability",
-  "Stakeholder Communication", "Team Coordination", "Problem Solving", "Time Management", "Process Adherence",
   "Networking", "Network Engineering", "TCP/IP", "DNS", "DHCP", "VPN", "VLAN", "LAN", "WAN", "SD-WAN",
   "Firewall", "Firewalls", "Routing", "Switching", "Routers", "Switches", "Wireshark", "Packet Capture",
   "BGP", "OSPF", "Cisco", "CCNA", "CCNP", "Juniper", "Load Balancing", "Subnetting", "VoIP", "IPsec",
@@ -128,7 +127,7 @@ const PHRASE_TERMS: string[] = [
   "software development", "software engineering", "system design",
   "distributed systems", "high availability", "fault tolerant",
   "api development", "rest api", "rest apis", "restful api", "restful apis",
-  "microservices architecture", "problem solving",
+  "microservices architecture",
   "django rest framework", "spring mvc", "data structures", "algorithms",
   "jwt authentication", "event driven", "object oriented", "object oriented programming", "functional programming",
   "test driven development", "unit testing", "integration testing", "agile methodology", "code review",
@@ -148,7 +147,6 @@ const PHRASE_TERMS: string[] = [
   "incident management", "network monitoring", "system monitoring", "technical troubleshooting",
   "product support", "network support", "technical support", "customer support", "remote support",
   "root cause analysis", "escalation management", "quality assurance", "service reliability",
-  "stakeholder communication", "team coordination", "problem solving", "time management", "process adherence",
   "network engineering", "network protocols", "load balancing", "packet capture", "active directory",
   "jira service management",
 ];
@@ -229,6 +227,23 @@ function cleanWord(w: string): string {
   return cleaned;
 }
 
+const SOFT_SKILLS_AND_NORMAL_WORDS = new Set<string>([
+  "communication", "stakeholder communication", "team coordination",
+  "teamwork", "problem solving", "time management", "process adherence",
+  "leadership", "documentation", "interpersonal skills", "multi-tasking",
+  "multitasking", "work ethic", "attention to detail", "adaptability",
+  "collaboration", "critical thinking", "self starter", "fast learner",
+  "hard worker", "presentation skills", "public speaking", "negotiation",
+  "conflict resolution", "decision making", "organizational skills",
+  "analytical skills", "soft skills", "people skills", "relationship building",
+  "emotional intelligence", "active listening", "flexibility", "motivation",
+  "creativity", "dedication", "punctuality", "responsibility", "reporting",
+  "time-management", "problem-solving", "critical-thinking", "ownership",
+  "coordination", "interpersonal", "organizational", "detail oriented",
+  "detail-oriented", "strategic thinking", "project management", "verbal communication",
+  "written communication", "client relations", "customer service",
+]);
+
 const ALL_TECH_LOWER = new Set<string>([
   ...TECH_TERMS.map((t) => t.toLowerCase()),
   ...PHRASE_TERMS.map((p) => p.toLowerCase()),
@@ -238,14 +253,16 @@ export function isTechnicalKeyword(term: string): boolean {
   if (!term || typeof term !== "string") return false;
   const clean = term.trim().toLowerCase().replace(/^[•\-\*\s]+/, "").replace(/[,\.]*$/, "");
   if (!clean || clean.length < 2) return false;
-  if (STOP_WORDS.has(clean) || HR_FILLER_WORDS.has(clean)) return false;
+  if (STOP_WORDS.has(clean) || HR_FILLER_WORDS.has(clean) || SOFT_SKILLS_AND_NORMAL_WORDS.has(clean)) return false;
+
+  const singular = clean.replace(/s$/, "");
+  if (SOFT_SKILLS_AND_NORMAL_WORDS.has(singular)) return false;
 
   // Direct set match
   if (ALL_TECH_LOWER.has(clean) || TECH_MAP.has(clean)) return true;
   if (PHRASE_TERMS.some((p) => p.toLowerCase() === clean)) return true;
 
   // Check singular/plural variants (e.g. Microservices -> microservice, APIs -> api, Pipelines -> pipeline)
-  const singular = clean.replace(/s$/, "");
   if (ALL_TECH_LOWER.has(singular) || TECH_MAP.has(singular)) return true;
 
   // Well-known tech aliases and abbreviations
@@ -261,7 +278,7 @@ export function isTechnicalKeyword(term: string): boolean {
     "rnn": true, "lstm": true, "svm": true, "knn": true, "gan": true, "dsa": true,
     "kaggle": true, "fine-tuning": true, "finetuning": true, "fine tuning": true,
     "embeddings": true, "embedding": true, "vector search": true, "semantic search": true,
-    "problem solving": true, "eda": true, "peft": true, "langgraph": true, "ollama": true, "crewai": true,
+    "eda": true, "peft": true, "langgraph": true, "ollama": true, "crewai": true,
     "system design": true, "system architecture": true,
     "cross validation": true, "hyperparameter tuning": true,
     "predictive modeling": true, "statistical analysis": true,
@@ -273,14 +290,13 @@ export function isTechnicalKeyword(term: string): boolean {
     "technical troubleshooting": true, "troubleshooting": true, "product support": true,
     "network support": true, "technical support": true, "customer support": true, "remote support": true,
     "root cause analysis": true, "rca": true, "escalation management": true, "quality assurance": true,
-    "service reliability": true, "stakeholder communication": true, "team coordination": true,
-    "time management": true, "process adherence": true, "tcp/ip": true, "dns": true, "dhcp": true,
+    "service reliability": true, "tcp/ip": true, "dns": true, "dhcp": true,
     "vpn": true, "vlan": true, "lan": true, "wan": true, "sd-wan": true, "firewall": true, "firewalls": true,
     "routing": true, "switching": true, "routers": true, "switches": true, "wireshark": true,
     "packet capture": true, "ccna": true, "ccnp": true, "cisco": true, "juniper": true,
     "servicenow": true, "itil": true, "itsm": true, "sla": true, "active directory": true, "ldap": true,
     "vmware": true, "virtualization": true, "splunk": true, "nagios": true, "zabbix": true,
-    "testing": true, "validation": true, "documentation": true, "defect tracking": true,
+    "testing": true, "validation": true, "defect tracking": true,
   };
 
   if (TECH_ALIASES[clean] || TECH_ALIASES[singular]) return true;
@@ -296,20 +312,18 @@ export function isTechnicalKeyword(term: string): boolean {
   // Dynamic compound technical/operational phrases (e.g. "packet analysis", "network protocol", "system administration")
   const DOMAIN_INDICATORS = [
     "engineer", "engineering", "developer", "development",
-    "architecture", "architect", "management", "monitoring",
+    "architecture", "architect", "monitoring",
     "troubleshooting", "administration", "administrator",
-    "analysis", "analyst", "testing", "tester", "automation",
-    "configuration", "deployment", "integration", "protocol",
+    "automation", "configuration", "deployment", "integration", "protocol",
     "infrastructure", "security", "pipeline", "database",
-    "network", "networking", "system", "systems", "operations",
-    "reliability", "optimization", "support", "validation",
-    "assurance", "computing", "analytics", "modeling",
+    "network", "networking", "system", "systems",
+    "reliability", "optimization", "computing", "analytics", "modeling",
     "governance", "compliance"
   ];
   const words = clean.split(/\s+/);
   if (words.length >= 2 && words.length <= 4) {
     const hasDomainWord = words.some(w => DOMAIN_INDICATORS.includes(w) || ALL_TECH_LOWER.has(w));
-    const allValid = words.every(w => w.length > 1 && !STOP_WORDS.has(w) && !HR_FILLER_WORDS.has(w));
+    const allValid = words.every(w => w.length > 1 && !STOP_WORDS.has(w) && !HR_FILLER_WORDS.has(w) && !SOFT_SKILLS_AND_NORMAL_WORDS.has(w));
     if (hasDomainWord && allValid) return true;
   }
 
@@ -334,12 +348,11 @@ export function extractKeywords(text: string): Set<string> {
       const tokens = afterColon
         .split(/[,;•\-\*|]+/)
         .map((s) => s.replace(/^[•\-\*\s]+/, "").trim())
-        .filter((s) => s.length > 1 && s.length < 45 && !STOP_WORDS.has(s.toLowerCase()) && !HR_FILLER_WORDS.has(s.toLowerCase()));
+        .filter((s) => s.length > 1 && s.length < 45 && !STOP_WORDS.has(s.toLowerCase()) && !HR_FILLER_WORDS.has(s.toLowerCase()) && !SOFT_SKILLS_AND_NORMAL_WORDS.has(s.toLowerCase()));
 
       for (const token of tokens) {
-        const tokenLower = token.toLowerCase();
-        if (isTechnicalKeyword(token) || (token.length >= 2 && token.length <= 40 && !STOP_WORDS.has(tokenLower) && !HR_FILLER_WORDS.has(tokenLower))) {
-          const canonical = TECH_MAP.get(tokenLower) || token;
+        if (isTechnicalKeyword(token)) {
+          const canonical = TECH_MAP.get(token.toLowerCase()) || token;
           keywords.add(canonical);
         }
       }

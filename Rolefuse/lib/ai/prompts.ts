@@ -179,18 +179,20 @@ export function buildOptimizationPrompt(
     "    Lines 2+: 2-4 impact-oriented bullets describing contributions, architectures, and outcomes.\n\n" +
     "EDUCATION:\n" +
     "  Header: EDUCATION (ALL CAPS)\n" +
-    "  CRITICAL EDUCATION RULE: Preserve EVERY education stage and credential mentioned in original resume or user answers:\n" +
-    "  - College / University Degree (e.g. B.Tech, B.S., M.Tech, Degree)\n" +
-    "  - Intermediate / 12th / Class XII / Diploma (if present)\n" +
-    "  - SSC / 10th / Class X / Secondary School Certificate / Matriculation (MANDATORY if present in resume or provided in user answers)\n" +
-    "  NEVER DELETE, DROP, OR OMIT SSC OR INTERMEDIATE! Retain all candidate schooling and degree records.\n" +
-    "  For each entry:\n" +
+    "  CRITICAL EDUCATION SEQUENCE FORMAT:\n" +
+    "  Entries MUST be ordered in strict reverse-chronological sequence:\n" +
+    "    1. Highest Degree / College (e.g. B.Tech / B.S. / M.Tech) [Most Recent]\n" +
+    "    2. Intermediate / Class XII / 12th / Diploma (if present)\n" +
+    "    3. Secondary / SSC / Class X / 10th (if present) [Earliest]\n" +
+    "  For each entry, follow this EXACT two-line sequence format:\n" +
     "    Line 1: Degree / Qualification Name | YYYY (or Month YYYY - Month YYYY)\n" +
-    "    Line 2: Institution / School Name | CGPA: X.X (or Stream / Percentage)\n" +
-    "    CRITICAL EDUCATION RULES:\n" +
-    "    - NEVER output words like 'Graduated:', 'Passing Year:', 'Batch:' before dates. Just output the year or date range directly (e.g. '2026' or '2020 - 2022').\n" +
-    "    - If Intermediate / High School has a stream (like MPC, BiPC, Science, Commerce), attach it directly to the degree on Line 1: 'Intermediate (MPC) | 2020 - 2022'.\n" +
-    "    - Never output stream names or 'Graduated:' as a standalone line.\n\n" +
+    "    Line 2: Institution / University Name | CGPA: X.X (or Stream / Percentage)\n" +
+    "  CRITICAL EDUCATION RULES:\n" +
+    "  - Line 1 MUST be the Degree or Qualification Name, NEVER the College Name!\n" +
+    "  - Line 2 MUST be the Institution / University / School Name, NEVER the Degree Name!\n" +
+    "  - NEVER output words like 'Graduated:', 'Passing Year:', 'Batch:' before dates. Just output the year or date range directly (e.g. '2026' or '2020 - 2022').\n" +
+    "  - If Intermediate / High School has a stream (like MPC, BiPC, Science, Commerce), attach it directly to the degree on Line 1: 'Intermediate (MPC) | 2020 - 2022'.\n" +
+    "  - NEVER delete, drop, or omit SSC or Intermediate! Retain all candidate schooling and degree records in this exact reverse-chronological sequence.\n\n" +
     "AWARDS & CERTIFICATIONS:\n" +
     "  Header: AWARDS & CERTIFICATIONS (ALL CAPS)\n" +
     "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section with header 'AWARDS & CERTIFICATIONS'. Do NOT create two separate sections.\n" +
