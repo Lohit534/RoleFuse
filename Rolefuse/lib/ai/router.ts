@@ -660,7 +660,8 @@ export async function callAI(prompt: string, rawText = ""): Promise<AIResult> {
     detectedCompany: "General Application",
   };
 
-  const hasGroq = !!process.env.GROQ_API_KEY && !isGroqKeyInvalid;
+  const rawGroqKey = (process.env.GROQ_API_KEY || "").replace(/^["']|["']$/g, "").trim();
+  const hasGroq = !!rawGroqKey && rawGroqKey.startsWith("gsk_") && rawGroqKey.length > 25 && !isGroqKeyInvalid;
 
   if (hasGroq) {
     try {
@@ -808,6 +809,7 @@ async function callGroqRaw(prompt: string): Promise<string> {
         "https://api.groq.com/openai/v1/chat/completions",
         {
           method: "POST",
+          signal: AbortSignal.timeout(15000),
           headers: {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json",
