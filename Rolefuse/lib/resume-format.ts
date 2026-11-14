@@ -418,6 +418,70 @@ export function sanitizeOptimizedResume(
     }
   }
 
+  // 4. Strict Skills Cleaning: Remove soft skills categories, deduplicate Core Technologies vs Frameworks, and remove junk phrases
+  const skillsHeaderIdx = out.findIndex((l) => /^(?:TECHNICAL SKILLS|SKILLS|CORE SKILLS|CORE COMPETENCIES)\b/i.test(l.trim()));
+  if (skillsHeaderIdx !== -1) {
+    let skillsEnd = out.length;
+    for (let i = skillsHeaderIdx + 1; i < out.length; i++) {
+      if (detectSectionHeader(out[i])) {
+        skillsEnd = i;
+        break;
+      }
+    }
+
+    const JUNK_OR_SOFT_SKILL_RE = /troubleshoot\s*network|issues\s*across|title\s*network|monitor\s*network|enterprise\s*monitoring|monitoring\s*tools|problem\s*solving|time\s*management|team\s*coordination|stakeholder\s*communication|process\s*adherence|documentation/i;
+    let fwLineIdx = -1;
+    let coreLineIdx = -1;
+
+    for (let i = skillsHeaderIdx + 1; i < skillsEnd; i++) {
+      const line = out[i].trim();
+      if (!line) continue;
+      // Drop whole soft-skill category lines
+      if (/^(?:Communication|Soft Skills|Professional Skills|Interpersonal Skills|Communication & Professional)(?:\s*&[^\n:]*)?:\s*/i.test(line)) {
+        out.splice(i, 1);
+        skillsEnd--;
+        i--;
+        continue;
+      }
+      if (/^(?:Frameworks\s*&\s*Libraries|Frameworks|Libraries)\s*:\s*/i.test(line)) {
+        fwLineIdx = i;
+      } else if (/^(?:Core Technologies|Core Competencies)\s*:\s*/i.test(line)) {
+        coreLineIdx = i;
+      }
+
+      // Filter individual soft skills / junk phrases from each line
+      if (line.includes(":")) {
+        const colon = line.indexOf(":");
+        const label = line.slice(0, colon).trim();
+        const items = line.slice(colon + 1).split(/,\s*/).map(s => s.trim()).filter(s => s.length > 1 && !JUNK_OR_SOFT_SKILL_RE.test(s));
+        if (items.length === 0) {
+          out.splice(i, 1);
+          skillsEnd--;
+          i--;
+        } else {
+          out[i] = `${label}: ${items.join(", ")}`;
+        }
+      }
+    }
+
+    // If Frameworks & Libraries exists, merge any unique items from Core Technologies into it, then delete Core Technologies
+    if (fwLineIdx !== -1 && coreLineIdx !== -1) {
+      const fwLine = out[fwLineIdx];
+      const coreLine = out[coreLineIdx];
+      const fwItems = fwLine.slice(fwLine.indexOf(":") + 1).split(/,\s*/).map(s => s.trim()).filter(Boolean);
+      const fwSet = new Set(fwItems.map(s => s.toLowerCase()));
+      const coreItems = coreLine.slice(coreLine.indexOf(":") + 1).split(/,\s*/).map(s => s.trim()).filter(Boolean);
+      for (const ci of coreItems) {
+        if (!fwSet.has(ci.toLowerCase()) && !JUNK_OR_SOFT_SKILL_RE.test(ci)) {
+          fwItems.push(ci);
+          fwSet.add(ci.toLowerCase());
+        }
+      }
+      out[fwLineIdx] = `${fwLine.slice(0, fwLine.indexOf(":")).trim()}: ${fwItems.join(", ")}`;
+      out.splice(coreLineIdx, 1);
+    }
+  }
+
   let finalResume = out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   finalResume = preserveCandidateContactDetails(finalResume, original);
   return finalResume;
@@ -446,20 +510,32 @@ export function preserveCandidateContactDetails(optimized: string, original: str
   const emailMatch = originalHeader.match(/[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}/i);
   const originalEmail = emailMatch ? emailMatch[0].trim() : null;
 
-  // Extract LinkedIn from original (handles custom URLs, in/ links, with or without https)
-  const linkedinMatch = originalHeader.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/(?:in\/)?[\w\-–_.]+/i) ||
-                        originalHeader.match(/(?:linkedin|li)\s*[:\-]\s*(?:https?:\/\/)?(?:www\.)?(?:linkedin\.com\/(?:in\/)?)?([a-zA-Z0-9\-_.]+)/i);
-  let originalLinkedin = linkedinMatch ? (linkedinMatch[1] && !linkedinMatch[0].includes("linkedin.com") ? `linkedin.com/in/${linkedinMatch[1]}` : linkedinMatch[0]).replace(/[.,;|]+$/, "").trim() : null;
-  if (originalLinkedin && !originalLinkedin.startsWith("http") && !originalLinkedin.toLowerCase().startsWith("linkedin.com")) {
-    originalLinkedin = `linkedin.com/in/${originalLinkedin.replace(/^https?:\/\/(?:www\.)?linkedin\.com\/(?:in\/)?/i, "")}`;
+  // Extract LinkedIn from original (handles custom URLs, in/ links, with or without https, and country subdomains like in.linkedin.com)
+  const linkedinMatch = originalHeader.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub|profile)?\/?[\w\-–_.]+/i) ||
+                        originalHeader.match(/(?:linkedin|li)\s*[:=]\s*(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?(?:linkedin\.com\/(?:in\/)?)?([a-zA-Z0-9\-_.]+)/i);
+  let originalLinkedin: string | null = null;
+  if (linkedinMatch) {
+    const rawVal = (linkedinMatch[1] && !linkedinMatch[0].includes("linkedin.com") ? linkedinMatch[1] : linkedinMatch[0]).replace(/[.,;|]+$/, "").trim();
+    if (!/^(?:github|portfolio|email|phone|website|mobile)$/i.test(rawVal)) {
+      originalLinkedin = rawVal.includes("linkedin.com") ? rawVal : `linkedin.com/in/${rawVal}`;
+      if (!originalLinkedin.startsWith("http") && !originalLinkedin.toLowerCase().includes("linkedin.com")) {
+        originalLinkedin = `linkedin.com/in/${originalLinkedin.replace(/^https?:\/\/(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in\/)?/i, "")}`;
+      }
+    }
   }
 
   // Extract GitHub from original
   const githubMatch = originalHeader.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-–_.]+/i) ||
-                      originalHeader.match(/(?:github|gh)\s*[:\-]\s*(?:https?:\/\/)?(?:www\.)?(?:github\.com\/)?([a-zA-Z0-9\-_.]+)/i);
-  let originalGithub = githubMatch ? (githubMatch[1] && !githubMatch[0].includes("github.com") ? `github.com/${githubMatch[1]}` : githubMatch[0]).replace(/[.,;|]+$/, "").trim() : null;
-  if (originalGithub && !originalGithub.startsWith("http") && !originalGithub.toLowerCase().startsWith("github.com")) {
-    originalGithub = `github.com/${originalGithub.replace(/^https?:\/\/(?:www\.)?github\.com\//i, "")}`;
+                      originalHeader.match(/(?:github|gh)\s*[:=]\s*(?:https?:\/\/)?(?:www\.)?(?:github\.com\/)?([a-zA-Z0-9\-_.]+)/i);
+  let originalGithub: string | null = null;
+  if (githubMatch) {
+    const rawVal = (githubMatch[1] && !githubMatch[0].includes("github.com") ? githubMatch[1] : githubMatch[0]).replace(/[.,;|]+$/, "").trim();
+    if (!/^(?:linkedin|portfolio|email|phone|website|mobile)$/i.test(rawVal)) {
+      originalGithub = rawVal.includes("github.com") ? rawVal : `github.com/${rawVal}`;
+      if (!originalGithub.startsWith("http") && !originalGithub.toLowerCase().includes("github.com")) {
+        originalGithub = `github.com/${originalGithub.replace(/^https?:\/\/(?:www\.)?github\.com\//i, "")}`;
+      }
+    }
   }
 
   // Extract location ONLY from the actual contact block (top 6 lines before any section), NEVER from education/body!
@@ -520,14 +596,16 @@ export function preserveCandidateContactDetails(optimized: string, original: str
           contactParts.push(p);
           phoneFound = true;
         }
-      } else if (/linkedin\.com/i.test(p) || /^linkedin\b/i.test(p)) {
+      } else if (/linkedin/i.test(p)) {
         if (!liFound) {
-          contactParts.push(p);
+          const actualLi = (p.includes(".com") || p.includes("/")) ? p : (originalLinkedin || p);
+          contactParts.push(actualLi);
           liFound = true;
         }
-      } else if (/github\.com/i.test(p) || /^github\b/i.test(p)) {
+      } else if (/github/i.test(p)) {
         if (!ghFound) {
-          contactParts.push(p);
+          const actualGh = (p.includes(".com") || p.includes("/")) ? p : (originalGithub || p);
+          contactParts.push(actualGh);
           ghFound = true;
         }
       } else if (!contactParts.some(existing => existing.toLowerCase() === p.toLowerCase())) {
@@ -696,26 +774,45 @@ export function ensureUserAnswersInResume(
 
     if (skillsMatch) {
       const skillsBlock = skillsMatch[2];
-      const missingTerms = terms.filter((t) => !skillsBlock.toLowerCase().includes(t.toLowerCase()));
+      const fwMatch = skillsBlock.match(/^(?:Frameworks\s*&\s*Libraries|Frameworks|Libraries):\s*([^\r\n]+)/im);
+      const coreTechMatch = skillsBlock.match(/^(?:Core Technologies|Core Competencies):\s*([^\r\n]+)/im);
 
-      if (missingTerms.length > 0) {
-        // If Core Technologies line already exists, merge terms into it; do NOT add duplicate line
-        const coreTechMatch = skillsBlock.match(/Core Technologies:\s*([^\n]+)/i);
+      if (fwMatch) {
+        // Frameworks & Libraries exists: ALWAYS merge terms into it, and remove any redundant Core Technologies
+        const existingFw = fwMatch[1];
+        const existingList = existingFw.split(/,\s*/).map((t) => t.trim().toLowerCase());
+        const toAdd = terms.filter((t) => !existingList.includes(t.toLowerCase()));
+        
+        // Also absorb any Core Technologies items into Frameworks
         if (coreTechMatch) {
-          const existingList = coreTechMatch[1].split(/,\s*/).map(t => t.trim().toLowerCase());
-          const actuallyNew = missingTerms.filter(t => !existingList.includes(t.toLowerCase()));
-          if (actuallyNew.length > 0) {
-            const updatedLine = `Core Technologies: ${coreTechMatch[1].trim()}, ${actuallyNew.join(", ")}`;
-            out = out.replace(coreTechMatch[0], updatedLine);
+          const coreItems = coreTechMatch[1].split(/,\s*/).map((t) => t.trim());
+          for (const ci of coreItems) {
+            if (ci && !existingList.includes(ci.toLowerCase()) && !toAdd.some((a) => a.toLowerCase() === ci.toLowerCase())) {
+              toAdd.push(ci);
+            }
           }
-        } else {
-          const newSkillsLine = `Core Technologies: ${missingTerms.join(", ")}`;
-          const updatedSkillsBlock = `${skillsBlock.trimEnd()}\n${newSkillsLine}\n`;
-          out = out.replace(skillsBlock, updatedSkillsBlock);
+          out = out.replace(coreTechMatch[0] + "\n", "").replace(coreTechMatch[0], "");
         }
+
+        if (toAdd.length > 0) {
+          const updatedLine = `${fwMatch[0].split(":")[0]}: ${existingFw.trim()}, ${toAdd.join(", ")}`;
+          out = out.replace(fwMatch[0], updatedLine);
+        }
+      } else if (coreTechMatch) {
+        // If no Frameworks & Libraries exists, rename Core Technologies to Frameworks & Libraries
+        const existingCore = coreTechMatch[1];
+        const existingList = existingCore.split(/,\s*/).map((t) => t.trim().toLowerCase());
+        const toAdd = terms.filter((t) => !existingList.includes(t.toLowerCase()));
+        const allItems = [...existingCore.split(/,\s*/).map((t) => t.trim()), ...toAdd].filter(Boolean);
+        const updatedLine = `Frameworks & Libraries: ${allItems.join(", ")}`;
+        out = out.replace(coreTechMatch[0], updatedLine);
+      } else if (terms.length > 0) {
+        const newSkillsLine = `Frameworks & Libraries: ${terms.join(", ")}`;
+        const updatedSkillsBlock = `${skillsBlock.trimEnd()}\n${newSkillsLine}\n`;
+        out = out.replace(skillsBlock, updatedSkillsBlock);
       }
     } else if (terms.length > 0) {
-      out = `${out.trimEnd()}\n\nTECHNICAL SKILLS\nCore Technologies: ${terms.join(", ")}\n`;
+      out = `${out.trimEnd()}\n\nTECHNICAL SKILLS\nFrameworks & Libraries: ${terms.join(", ")}\n`;
     }
   }
 

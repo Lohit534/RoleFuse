@@ -83,7 +83,29 @@ export async function POST(request: NextRequest) {
 
     logger.info(`[parse-pdf] Extracting exact text from: ${file.name} (${file.size} bytes)`);
 
+    const extractedLinks = new Set<string>();
+
     if (fileType === "pdf") {
+      // Direct raw binary scan for URIs embedded in PDF objects/streams (Canva, Word, Adobe, LaTeX)
+      try {
+        const bufferStr = buffer.toString("binary");
+        const uriMatches = bufferStr.match(/\/URI\s*\(([^)]+)\)/gi);
+        if (uriMatches) {
+          for (const m of uriMatches) {
+            const rawUri = m.replace(/^\/URI\s*\(/i, "").replace(/\)$/, "").trim();
+            if (/linkedin\.com|github\.com|https?:\/\//i.test(rawUri)) {
+              extractedLinks.add(rawUri);
+            }
+          }
+        }
+        const directLinkMatches = bufferStr.match(/https?:\/\/(?:www\.)?(?:[a-z]{2,3}\.)?(?:linkedin\.com\/in\/[a-zA-Z0-9\-_./%]+|github\.com\/[a-zA-Z0-9\-_./%]+)/gi);
+        if (directLinkMatches) {
+          for (const u of directLinkMatches) {
+            extractedLinks.add(u.trim());
+          }
+        }
+      } catch (_bufErr) {}
+
       // Stage 1: pdfjs-dist (Mozilla PDF.js) — handles modern PDFs with embedded fonts (Canva, Adobe, etc.)
       try {
         const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs").catch(() => null)
@@ -107,18 +129,16 @@ export async function POST(request: NextRequest) {
           const numPages = pdfDoc.numPages;
           const pageTexts: string[] = [];
 
-          const extractedLinks = new Set<string>();
-
           for (let i = 1; i <= numPages; i++) {
             try {
               const page = await pdfDoc.getPage(i);
 
-              // Extract annotations (especially LinkedIn, GitHub, and portfolio URLs)
+              // Extract annotations (handles unsafeUrl, url, and named destinations)
               try {
                 const annotations = await page.getAnnotations();
                 for (const annot of (annotations || [])) {
-                  if (annot && (annot.subtype === "Link" || annot.type === "Link") && annot.url) {
-                    const u = String(annot.url).trim();
+                  if (annot) {
+                    const u = String(annot.unsafeUrl || annot.url || (typeof annot.dest === "string" ? annot.dest : "")).trim();
                     if (/linkedin\.com|github\.com|https?:\/\//i.test(u)) {
                       extractedLinks.add(u);
                     }
@@ -281,6 +301,37 @@ export async function POST(request: NextRequest) {
       } catch (docxErr: any) {
         logger.warn("[parse-pdf] mammoth failed:", docxErr.message);
       }
+    }
+
+    // Inject any discovered LinkedIn / GitHub links into extractedText if missing
+    if (fileType === "pdf" && extractedLinks.size > 0 && extractedText.trim().length > 30) {
+      extractedLinks.forEach((linkUrl) => {
+        if (!extractedText.includes(linkUrl)) {
+          if (/linkedin\.com/i.test(linkUrl)) {
+            if (/\blinkedin\b/i.test(extractedText) && !/linkedin\.com/i.test(extractedText)) {
+              extractedText = extractedText.replace(/\blinkedin\b/i, `LinkedIn: ${linkUrl}`);
+            } else {
+              const firstNl = extractedText.indexOf("\n");
+              if (firstNl !== -1) {
+                extractedText = extractedText.slice(0, firstNl) + ` | LinkedIn: ${linkUrl}` + extractedText.slice(firstNl);
+              } else {
+                extractedText = `LinkedIn: ${linkUrl}\n` + extractedText;
+              }
+            }
+          } else if (/github\.com/i.test(linkUrl)) {
+            if (/\bgithub\b/i.test(extractedText) && !/github\.com/i.test(extractedText)) {
+              extractedText = extractedText.replace(/\bgithub\b/i, `GitHub: ${linkUrl}`);
+            } else {
+              const firstNl = extractedText.indexOf("\n");
+              if (firstNl !== -1) {
+                extractedText = extractedText.slice(0, firstNl) + ` | GitHub: ${linkUrl}` + extractedText.slice(firstNl);
+              } else {
+                extractedText = `GitHub: ${linkUrl}\n` + extractedText;
+              }
+            }
+          }
+        }
+      });
     }
 
     // Clean up control characters and invalid Unicode from AI-generated/Canva PDFs while preserving exact text

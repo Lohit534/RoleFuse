@@ -470,12 +470,22 @@ export function parseResume(rawText: string): ParsedResume {
       } else if (/linkedin\.com/i.test(cleanTok) || /^linkedin\b/i.test(cleanTok)) {
         if (!contacts.some(c => c.type === 'linkedin')) {
           const display = cleanTok.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
-          contacts.push({ type: 'linkedin', text: display, url: cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}` });
+          const hasUrl = cleanTok.includes('.com') || cleanTok.includes('/');
+          contacts.push({
+            type: 'linkedin',
+            text: display,
+            url: hasUrl ? (cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}`) : undefined
+          });
         }
       } else if (/github\.com/i.test(cleanTok) || /^github\b/i.test(cleanTok)) {
         if (!contacts.some(c => c.type === 'github')) {
           const display = cleanTok.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
-          contacts.push({ type: 'github', text: display, url: cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}` });
+          const hasUrl = cleanTok.includes('.com') || cleanTok.includes('/');
+          contacts.push({
+            type: 'github',
+            text: display,
+            url: hasUrl ? (cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}`) : undefined
+          });
         }
       } else if (/portfolio|\.me|\.dev|\.io|\.app|\.com|\.in/i.test(cleanTok)) {
         if (!contacts.some(c => c.type === 'portfolio')) {
@@ -541,6 +551,42 @@ export function parseResume(rawText: string): ParsedResume {
       }
     }
   }
+
+  // User Rule: If Frameworks & Libraries already exists, remove redundant Core Technologies
+  const hasFrameworksCategory = Array.from(skillsMap.keys()).some(k => k.includes('framework') || k.includes('libraries'));
+  if (hasFrameworksCategory) {
+    for (const k of Array.from(skillsMap.keys())) {
+      if (k === 'coretechnologies' || k === 'corecompetencies' || k === 'corecompetenciestools') {
+        const coreCat = skillsMap.get(k);
+        const fwKey = Array.from(skillsMap.keys()).find(key => key.includes('framework') || key.includes('libraries'));
+        if (coreCat && fwKey) {
+          const fw = skillsMap.get(fwKey)!;
+          const fwSet = new Set(fw.skills.split(',').map(s => s.trim().toLowerCase()));
+          const newTerms = coreCat.skills.split(',').map(s => s.trim()).filter(s => s.length > 1 && !fwSet.has(s.toLowerCase()));
+          if (newTerms.length > 0) {
+            fw.skills += ', ' + newTerms.join(', ');
+          }
+        }
+        skillsMap.delete(k);
+      }
+    }
+  }
+
+  // Filter out any leaked sentence fragments or soft skills from skill lines
+  const JUNK_SKILL_RE = /troubleshoot\s*network|issues\s*across|title\s*network|monitor\s*network|enterprise\s*monitoring|monitoring\s*tools|problem\s*solving/i;
+  for (const [key, cat] of Array.from(skillsMap.entries())) {
+    const cleaned = cat.skills
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s.length > 1 && !JUNK_SKILL_RE.test(s))
+      .join(', ');
+    if (cleaned.length === 0) {
+      skillsMap.delete(key);
+    } else {
+      cat.skills = cleaned;
+    }
+  }
+
   const skills = Array.from(skillsMap.values());
 
   // Experience
@@ -772,6 +818,11 @@ export function parseResume(rawText: string): ParsedResume {
 
   // Post-process education items to fix swapped Degree vs Institution and ensure correct sequence format
   for (const edu of education) {
+    edu.degree = stripMarkdownAsterisks(edu.degree).replace(/^[•\-\*\u2022+]\s*/, '').trim();
+    edu.institution = stripMarkdownAsterisks(edu.institution).replace(/^[•\-\*\u2022+]\s*/, '').trim();
+    edu.grade = stripMarkdownAsterisks(edu.grade).trim();
+    edu.yearOrDates = stripMarkdownAsterisks(edu.yearOrDates).trim();
+
     const isInst = (s: string) => /\b(university|college|school|institute|academy|campus|vidya|vidyalaya|polytechnic)\b/i.test(s);
     const isDeg = (s: string) => /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|high\s*school|matriculation|secondary|diploma|phd|doctorate|degree)\b/i.test(s);
 
@@ -781,7 +832,25 @@ export function parseResume(rawText: string): ParsedResume {
       edu.institution = temp;
     }
 
-    if (!edu.institution && (edu.degree.includes(" | ") || edu.degree.includes(" - "))) {
+    // Specific normalization for SSC / 10th / High School
+    const isSsc = /\b(ssc|10th|secondary\s*school|class\s*x|matriculation)\b/i.test(edu.degree);
+    if (isSsc) {
+      const sscCleanName = "Secondary School Certificate (SSC)";
+      // Check if the degree string has the school name attached (e.g. "Secondary School Certificate (SSC) - Z.P. High School" or "SSC: St. John's School")
+      const dashSep = edu.degree.match(/^(?:secondary\s*school\s*certificate(?:\s*\(ssc\))?|ssc|class\s*x|10th(?:\s*standard)?)\s*[:–—\-|,]\s*(.+)$/i);
+      if (dashSep && dashSep[1]) {
+        edu.degree = sscCleanName;
+        if (!edu.institution) {
+          edu.institution = dashSep[1].trim();
+        }
+      } else if (!edu.institution && (edu.degree.includes(" - ") || edu.degree.includes(" – ") || edu.degree.includes(" — ") || edu.degree.includes(" | "))) {
+        const parts = edu.degree.split(/\s*[-–—|]\s*/);
+        if (parts.length >= 2) {
+          edu.degree = sscCleanName;
+          edu.institution = parts.slice(1).join(", ").trim();
+        }
+      }
+    } else if (!edu.institution && (edu.degree.includes(" | ") || edu.degree.includes(" - "))) {
       const parts = edu.degree.split(/\s+[|\-]\s+/);
       if (parts.length >= 2) {
         if (isDeg(parts[0])) {

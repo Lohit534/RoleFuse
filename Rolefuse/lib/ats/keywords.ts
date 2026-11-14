@@ -89,11 +89,12 @@ const TECH_TERMS = [
   "Root Cause Analysis", "RCA", "Escalation Management", "Product Support", "Technical Support",
   "Customer Support", "Remote Support", "Testing", "Validation",
   "Quality Assurance", "QA", "Defect Tracking", "Service Reliability",
-  "Networking", "Network Engineering", "TCP/IP", "DNS", "DHCP", "VPN", "VLAN", "LAN", "WAN", "SD-WAN",
+  "Networking", "Network Engineering", "Network Protocols", "TCP/IP", "DNS", "DHCP", "VPN", "VLAN", "LAN", "WAN", "SD-WAN",
   "Firewall", "Firewalls", "Routing", "Switching", "Routers", "Switches", "Wireshark", "Packet Capture",
   "BGP", "OSPF", "Cisco", "CCNA", "CCNP", "Juniper", "Load Balancing", "Subnetting", "VoIP", "IPsec",
   "Active Directory", "LDAP", "Windows Server", "VMware", "Virtualization", "Hyper-V",
-  "SSH", "Telnet", "SNMP", "Nagios", "Zabbix", "Splunk",
+  "SSH", "Telnet", "SNMP", "Nagios", "Zabbix", "Splunk", "Network Configuration", "System Administration",
+
 
   // Blockchain
   "Ethereum", "Web3.js", "Hardhat", "Truffle", "IPFS",
@@ -151,9 +152,10 @@ const PHRASE_TERMS: string[] = [
   "jira service management",
 ];
 
-const TECH_MAP = new Map<string, string>(
-  TECH_TERMS.map((t) => [t.toLowerCase(), t])
-);
+const TECH_MAP = new Map<string, string>([
+  ...TECH_TERMS.map((t) => [t.toLowerCase(), t] as [string, string]),
+  ...PHRASE_TERMS.map((p) => [p.toLowerCase(), p.replace(/\b\w/g, (c) => c.toUpperCase())] as [string, string]),
+]);
 
 export function extractTechTerms(text: string): string[] {
   if (!text) return [];
@@ -291,12 +293,18 @@ export function isTechnicalKeyword(term: string): boolean {
     "network support": true, "technical support": true, "customer support": true, "remote support": true,
     "root cause analysis": true, "rca": true, "escalation management": true, "quality assurance": true,
     "service reliability": true, "tcp/ip": true, "dns": true, "dhcp": true,
-    "vpn": true, "vlan": true, "lan": true, "wan": true, "sd-wan": true, "firewall": true, "firewalls": true,
+    "vpn": true, "vlan": true, "lan": true, "wan": true, "sd-wan": true, "sdwan": true, "firewall": true, "firewalls": true,
     "routing": true, "switching": true, "routers": true, "switches": true, "wireshark": true,
     "packet capture": true, "ccna": true, "ccnp": true, "cisco": true, "juniper": true,
     "servicenow": true, "itil": true, "itsm": true, "sla": true, "active directory": true, "ldap": true,
     "vmware": true, "virtualization": true, "splunk": true, "nagios": true, "zabbix": true,
     "testing": true, "validation": true, "defect tracking": true,
+    "tcp": true, "ip": true, "udp": true, "voip": true, "ipsec": true, "bgp": true, "ospf": true,
+    "snmp": true, "ssh": true, "telnet": true, "cli": true, "sdk": true, "mttr": true,
+    "siem": true, "iam": true, "rbac": true, "abac": true, "json": true, "xml": true, "yaml": true,
+    "http": true, "https": true, "vpc": true, "ec2": true, "s3": true, "rds": true,
+    "network configuration": true, "system administration": true, "network infrastructure": true,
+    "incident resolution": true, "network protocols": true, "packet analysis": true,
   };
 
   if (TECH_ALIASES[clean] || TECH_ALIASES[singular]) return true;
@@ -309,24 +317,6 @@ export function isTechnicalKeyword(term: string): boolean {
     }
   }
 
-  // Dynamic compound technical/operational phrases (e.g. "packet analysis", "network protocol", "system administration")
-  const DOMAIN_INDICATORS = [
-    "engineer", "engineering", "developer", "development",
-    "architecture", "architect", "monitoring",
-    "troubleshooting", "administration", "administrator",
-    "automation", "configuration", "deployment", "integration", "protocol",
-    "infrastructure", "security", "pipeline", "database",
-    "network", "networking", "system", "systems",
-    "reliability", "optimization", "computing", "analytics", "modeling",
-    "governance", "compliance"
-  ];
-  const words = clean.split(/\s+/);
-  if (words.length >= 2 && words.length <= 4) {
-    const hasDomainWord = words.some(w => DOMAIN_INDICATORS.includes(w) || ALL_TECH_LOWER.has(w));
-    const allValid = words.every(w => w.length > 1 && !STOP_WORDS.has(w) && !HR_FILLER_WORDS.has(w) && !SOFT_SKILLS_AND_NORMAL_WORDS.has(w));
-    if (hasDomainWord && allValid) return true;
-  }
-
   return false;
 }
 
@@ -337,6 +327,15 @@ export function extractKeywords(text: string): Set<string> {
   // 1. Extract known tech terms and phrases (highest precision)
   const textTechTerms = extractTechTerms(text);
   for (const tech of textTechTerms) keywords.add(tech);
+
+  // 1b. Extract recognized technical acronyms and short identifiers (e.g. BGP, OSPF, TCP/IP, VPN, VLAN, CLI, SDK, SLA)
+  const acronymMatches = text.match(/\b[A-Za-z0-9\-\/]{2,10}\b/g) || [];
+  for (const acr of acronymMatches) {
+    if (isTechnicalKeyword(acr)) {
+      const canonical = TECH_MAP.get(acr.toLowerCase()) || acr.toUpperCase();
+      keywords.add(canonical);
+    }
+  }
 
   // 2. Parse dedicated SKILLS / TECHNICAL SKILLS section if present in the text
   const skillsSecMatch = text.match(/(?:^|\r?\n)(?:TECHNICAL\s+SKILLS|SKILLS|CORE\s+COMPETENCIES|KEY\s+SKILLS|AREAS\s+OF\s+EXPERTISE)[\s\S]*?(?=\r?\n[A-Z\s&]{4,}[\r\n]|$)/i);

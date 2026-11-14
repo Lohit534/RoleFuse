@@ -348,37 +348,23 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
   formatting = Math.min(100, formatting);
 
   // ── 5. PURE DYNAMIC OVERALL SCORE ────────────────────────────────────────
-  // Rigorous weighted composite (weights strictly sum to 1.00):
+  // Standard ATS weighted composite:
   // - Technical Keywords Match : 40%
   // - Semantic Role Alignment  : 25%
   // - Measurable Impact Bullets: 25%
   // - Resume ATS Formatting    : 10%
   //
-  // ATS Relevance Gating:
-  // If a candidate applies to a completely unrelated role (e.g. HR or Sales applying for Java Engineer),
-  // high writing quality in the unrelated domain cannot award an undeserved high score.
-  // BUT if candidate matches domain keywords, has target role title, or has matching skills, they are not unrelated.
-  const hasDomainRelevance = foundKeywords.length >= 3 || techMatches >= 2 || titleScore >= 20;
-  const rawRelevance = (keywordMatch * 0.60 + semanticMatch * 0.40) / 100;
-  const relevanceFactor = Math.min(1.0, hasDomainRelevance ? Math.max(0.40, rawRelevance) : rawRelevance);
-  
-  const impactWeight = relevanceFactor < 0.40 ? 0.12 : 0.25;
-  const formatWeight = relevanceFactor < 0.40 ? 0.05 : 0.10;
-  const kwWeight = 0.40;
-  const semWeight = 0.25;
-
+  // Follows evaluation criteria (Accuracy, Consistency, Fairness):
+  // Honest calculation based on actual keyword matches and content quality,
+  // avoiding artificial downscaling or wild single-digit crashes.
   const rawComposite = (
-    keywordMatch    * kwWeight +
-    semanticMatch   * semWeight +
-    impactBullets   * impactWeight +
-    formatting      * formatWeight
+    keywordMatch    * 0.40 +
+    semanticMatch   * 0.25 +
+    impactBullets   * 0.25 +
+    formatting      * 0.10
   );
 
-  const normalizedOverall = relevanceFactor < 0.35
-    ? Math.round(rawComposite * (0.35 + relevanceFactor * 1.5))
-    : Math.round(rawComposite);
-
-  const overall = Math.min(MAX_ATS_SCORE, Math.max(5, normalizedOverall));
+  const overall = Math.min(MAX_ATS_SCORE, Math.max(15, Math.round(rawComposite)));
 
   const extractedSkills = Array.from(new Set([...resumeTechTerms, ...foundKeywords]));
   const extractedTitles: string[] = [];

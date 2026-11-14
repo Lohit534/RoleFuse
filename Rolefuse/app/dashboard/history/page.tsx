@@ -43,21 +43,37 @@ function getResumeDisplayTitle(resume: any, fallbackName = "Resume"): string {
 function ensureProfileLinks(optText?: string, origText?: string): string {
   let text = optText || "";
   if (!origText) return text;
-  const origLi = origText.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w\-\.%]+\/?/i);
+  const origLi = origText.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub|profile)?\/?[\w\-\.%]+\/?/i);
   const origGh = origText.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/?/i);
   const hasLi = /linkedin\.com/i.test(text);
   const hasGh = /github\.com/i.test(text);
   
-  if ((origLi && !hasLi) || (origGh && !hasGh)) {
-    const lines = text.split("\n");
-    let contactLineIdx = lines.findIndex((l, i) => i > 0 && i < 5 && (l.includes("@") || /\+?\d{7,}/.test(l)));
-    if (contactLineIdx !== -1) {
-      const extraLinks: string[] = [];
-      if (origLi && !hasLi) extraLinks.push(origLi[0].startsWith("http") ? origLi[0] : "https://" + origLi[0]);
-      if (origGh && !hasGh) extraLinks.push(origGh[0].startsWith("http") ? origGh[0] : "https://" + origGh[0]);
-      lines[contactLineIdx] = `${lines[contactLineIdx]} | ${extraLinks.join(" | ")}`;
-      return lines.join("\n");
+  const lines = text.split("\n");
+  let contactLineIdx = lines.findIndex((l, i) => i > 0 && i < 6 && (l.includes("@") || /\+?\d{7,}/.test(l) || /linkedin|github/i.test(l)));
+  if (contactLineIdx !== -1) {
+    let line = lines[contactLineIdx];
+    if (origLi) {
+      const liUrl = origLi[0].startsWith("http") ? origLi[0] : `https://${origLi[0].replace(/^\/+/, "")}`;
+      if (!hasLi) {
+        if (/\blinkedin\b/i.test(line)) {
+          line = line.replace(/\blinkedin\b/i, liUrl);
+        } else {
+          line = `${line} | ${liUrl}`;
+        }
+      }
     }
+    if (origGh) {
+      const ghUrl = origGh[0].startsWith("http") ? origGh[0] : `https://${origGh[0].replace(/^\/+/, "")}`;
+      if (!hasGh) {
+        if (/\bgithub\b/i.test(line)) {
+          line = line.replace(/\bgithub\b/i, ghUrl);
+        } else {
+          line = `${line} | ${ghUrl}`;
+        }
+      }
+    }
+    lines[contactLineIdx] = line;
+    return lines.join("\n");
   }
   return text;
 }
@@ -868,13 +884,12 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                               cleanHandle = iconType === "linkedin" ? "LinkedIn" : (iconType === "github" ? "GitHub" : (seg.url || "Link"));
                             }
 
-                            const linkHref = seg.url || (
-                              iconType === "linkedin"
-                                ? (seg.text.startsWith("http") ? seg.text : `https://${seg.text.replace(/^linkedin:?\s*/i, "")}`)
-                                : iconType === "github"
-                                ? (seg.text.startsWith("http") ? seg.text : `https://${seg.text.replace(/^github:?\s*/i, "")}`)
-                                : null
-                            );
+                            const isActualUrl = (s: string) => Boolean(s && (s.includes(".com") || s.includes("/") || s.startsWith("http")));
+                            const linkHref = seg.url && isActualUrl(seg.url)
+                              ? seg.url
+                              : (isActualUrl(seg.text)
+                                ? (seg.text.startsWith("http") ? seg.text : `https://${seg.text.replace(/^(?:linkedin|github):?\s*/i, "")}`)
+                                : null);
 
                             return (
                               <span key={sIdx} className="inline-flex items-center">

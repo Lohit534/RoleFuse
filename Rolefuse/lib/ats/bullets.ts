@@ -373,11 +373,14 @@ export function enforceVerbAndMetric(improved: string, original: string): string
 
 /** Common titles for ATS semantic alignment matching */
 const COMMON_ROLE_TITLES = [
+  "Network Product Support Engineer", "Network Support Engineer", "Technical Support Engineer",
+  "Product Support Engineer", "Network Engineer", "Support Engineer", "Systems Engineer",
   "Software Engineer", "Frontend Engineer", "Backend Engineer", "Full Stack Developer",
   "Developer", "Data Scientist", "Data Analyst", "Product Manager", "Project Manager",
   "Business Analyst", "System Administrator", "DevOps Engineer", "QA Engineer",
   "Mobile Developer", "UI/UX Designer", "Software Developer", "Web Developer",
-  "Android Developer", "iOS Developer", "Cloud Engineer", "Site Reliability Engineer"
+  "Android Developer", "iOS Developer", "Cloud Engineer", "Site Reliability Engineer",
+  "Security Analyst", "SOC Analyst", "Database Administrator"
 ];
 
 /**
@@ -432,11 +435,28 @@ export function enrichResumeATSQuality(
       const headerLineEnd = text.indexOf("\n", skillsHeaderMatch.index);
       const afterHeaderPos = headerLineEnd !== -1 ? headerLineEnd + 1 : skillsHeaderMatch.index + skillsHeaderMatch[0].length;
       
-      // Check if there is already a Core Competencies line inside skills
+      // Per User Rule: If Frameworks & Libraries already exists, remove redundant Core Technologies
+      const hasFrameworks = /(?:Frameworks\s*&\s*Libraries|Frameworks|Libraries)\s*:/i.test(text.slice(afterHeaderPos));
       const coreCompRegex = /^(?:Core Competencies|Core Technologies|Target Competencies)(?:\s*&[^\n:]*)?:\s*([^\r\n]+)/im;
       const coreCompMatch = text.slice(afterHeaderPos).match(coreCompRegex);
+
+      if (hasFrameworks && coreCompMatch && coreCompMatch.index !== undefined) {
+        text = text.replace(coreCompMatch[0] + "\n", "").replace(coreCompMatch[0], "");
+      }
+
+      // Check if an existing skill line can absorb missing keywords without creating redundant categories
+      const targetCategoryMatch = text.slice(afterHeaderPos).match(/^(?:Frameworks\s*&\s*Libraries|Developer Tools|Support & Operations|Tools & Technologies|Technical Skills|[A-Z][a-zA-Z\s&]+):\s*([^\r\n]+)/im);
       
-      if (coreCompMatch && coreCompMatch.index !== undefined) {
+      if (targetCategoryMatch && targetCategoryMatch.index !== undefined) {
+        const fullMatch = targetCategoryMatch[0];
+        const existingLine = targetCategoryMatch[1];
+        const existingLower = text.toLowerCase();
+        const trulyNew = techMissing.filter(t => !existingLower.includes(t.toLowerCase().trim()));
+        if (trulyNew.length > 0) {
+          const updatedLine = `${fullMatch.trimEnd()}, ${trulyNew.join(", ")}`;
+          text = text.replace(fullMatch, updatedLine);
+        }
+      } else if (!hasFrameworks && coreCompMatch && coreCompMatch.index !== undefined) {
         const fullMatch = coreCompMatch[0];
         const existingLine = coreCompMatch[1];
         const existingLower = existingLine.toLowerCase();
@@ -446,7 +466,7 @@ export function enrichResumeATSQuality(
           text = text.replace(fullMatch, updatedLine);
         }
       } else {
-        const injectLine = `Core Competencies & Tools: ${techMissing.join(", ")}\n`;
+        const injectLine = `Developer Tools: ${techMissing.join(", ")}\n`;
         text = text.slice(0, afterHeaderPos) + injectLine + text.slice(afterHeaderPos);
       }
     } else {
@@ -475,14 +495,21 @@ export function enrichResumeATSQuality(
 
   if (sMatch && sMatch.index !== undefined) {
     const originalSummaryBody = sMatch[2].trim();
-    const hasTitle = new RegExp(`\\b${roleTitle}\\b`, "i").test(originalSummaryBody);
-    const matchedJdCount = jdTech.filter((t) => new RegExp(`(^|[^a-z])${t.replace(/[.+#]/g, "\\$&")}([^a-z]|$)`, "i").test(originalSummaryBody)).length;
+    const hasTitle = new RegExp(`\\b${roleTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(originalSummaryBody);
 
-    if (!hasTitle || (jdTech.length > 0 && matchedJdCount < 2)) {
-      const techClause = jdTech.length > 0 ? ` specializing in ${jdTech.join(", ")}` : "";
-      const cleanedBody = originalSummaryBody.replace(/^Results-driven\s+[A-Za-z\s]+with\s+/i, "");
-      const enhancedSummary = `Results-driven ${roleTitle}${techClause} with a track record of engineering scalable, high-performance solutions. ${cleanedBody}`;
-      text = text.replace(sMatch[0], `\n${sMatch[1]}\n${enhancedSummary}\n`);
+    // If target role is specific and not yet in summary, update the opening role cleanly without duplicating sentences
+    if (!hasTitle && roleTitle && roleTitle !== "Software Engineer") {
+      let updatedBody = originalSummaryBody;
+      if (/^(?:Results-driven|Aspiring|Experienced|Dedicated|Motivated)\s+[A-Za-z\s]+?(?=\s+(?:and\s+20\d{2}|with\s+|specializing\s+|graduate\s+|seeking\s+))/i.test(originalSummaryBody)) {
+        updatedBody = originalSummaryBody.replace(
+          /^(?:Results-driven|Aspiring|Experienced|Dedicated|Motivated)\s+[A-Za-z\s]+?(?=\s+(?:and\s+20\d{2}|with\s+|specializing\s+|graduate\s+|seeking\s+))/i,
+          `Aspiring ${roleTitle}`
+        );
+      } else {
+        const techClause = jdTech.length > 0 ? ` specializing in ${jdTech.join(", ")}` : "";
+        updatedBody = `Results-driven ${roleTitle}${techClause} with a track record of delivering high-quality technical outcomes. ${originalSummaryBody}`;
+      }
+      text = text.replace(sMatch[0], `\n${sMatch[1]}\n${updatedBody}\n`);
     }
   }
 

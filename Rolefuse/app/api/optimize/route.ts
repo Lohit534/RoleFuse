@@ -106,8 +106,9 @@ const MIN_JD_CHARS = 50;
 function extractProfileUrls(text: string): { linkedin?: string; github?: string; portfolio: string[] } {
   const result: { linkedin?: string; github?: string; portfolio: string[] } = { portfolio: [] };
 
-  // LinkedIn profile URL
-  const liMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w\-\.%]+\/?/i);
+  // LinkedIn profile URL (handles country subdomains in.linkedin.com, www.linkedin.com, /in/, /pub/, etc.)
+  const liMatch = text.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub|profile)?\/?[\w\-\.%]+\/?/i) ||
+                  text.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/[\w\-\.%]+\/?/i);
   if (liMatch) {
     const url = liMatch[0];
     result.linkedin = url.startsWith('http') ? url : 'https://' + url;
@@ -750,11 +751,24 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+    // If few overlapping keywords were found against the JD, include candidate's core technical skills from the original resume
+    if (alreadyMap.size < 4) {
+      for (const k of [...resumeTech, ...resumeKeywords]) {
+        if (typeof k === "string" && k.trim().length > 1 && isTechnicalKeyword(k)) {
+          const lower = k.toLowerCase().trim();
+          if (!alreadyMap.has(lower)) {
+            alreadyMap.set(lower, k.trim());
+          }
+        }
+      }
+    }
     const alreadyInResume = Array.from(alreadyMap.values());
 
     const beforeKeywordsSet = new Set([
       ...scoreBefore.foundKeywords.map(k => k.toLowerCase().trim()),
-      ...alreadyInResume.map(k => k.toLowerCase().trim())
+      ...alreadyInResume.map(k => k.toLowerCase().trim()),
+      ...resumeTech.map(t => t.toLowerCase().trim()),
+      ...resumeKeywords.map(k => k.toLowerCase().trim())
     ]);
 
     // Calculate actual injected keywords by combining AI-declared keywords with ATS delta analysis
@@ -789,6 +803,16 @@ export async function POST(request: NextRequest) {
       if (!isTechnicalKeyword(cleanKw)) continue;
       if (!addedMap.has(lower)) {
         addedMap.set(lower, cleanKw);
+      }
+    }
+
+    // Fallback: If addedMap has few items, find any tech terms present in optimizedText that were not in original resumeText
+    if (addedMap.size < 3) {
+      for (const t of optimizedTech) {
+        const lower = t.toLowerCase().trim();
+        if (!beforeKeywordsSet.has(lower) && isTechnicalKeyword(t) && !addedMap.has(lower)) {
+          addedMap.set(lower, t.trim());
+        }
       }
     }
     const mergedKeywordsAdded = Array.from(addedMap.values());

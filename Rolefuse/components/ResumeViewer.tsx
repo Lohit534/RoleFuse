@@ -530,7 +530,7 @@ export default function ResumeViewer({
 
                       let cleanHandle = seg.text
                         .replace(/^https?:\/\/(www\.)?/i, "")
-                        .replace(/^(?:linkedin profile|github profile|portfolio|linkedin|github|email|phone|mobile|tel|cell|location|address)\s*[:\-]?\s*/i, "")
+                        .replace(/^(?:linkedin profile|github profile|portfolio|linkedin|github|email|phone|mobile|tel|cell|location|address)\b\s*[:\-]?\s*/i, "")
                         .replace(/\/$/, "")
                         .replace(/^mailto:/, "")
                         .replace(/^tel:/, "")
@@ -539,10 +539,17 @@ export default function ResumeViewer({
                         cleanHandle = iconType === "linkedin" ? "LinkedIn" : (iconType === "github" ? "GitHub" : (seg.url || "Link"));
                       }
 
+                      const isActualUrl = (s?: string) => Boolean(s && (s.includes(".com") || s.includes("/") || s.startsWith("http")));
+                      const linkHref = seg.url && isActualUrl(seg.url)
+                        ? seg.url
+                        : (isActualUrl(seg.text)
+                          ? (seg.text.startsWith("http") ? seg.text : `https://${seg.text.replace(/^(?:linkedin|github):?\s*/i, "")}`)
+                          : null);
+
                       const el =
-                        seg.isLink && seg.url ? (
+                        seg.isLink && linkHref ? (
                           <a
-                            href={seg.url}
+                            href={linkHref}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="hover:underline text-black"

@@ -144,15 +144,13 @@ export function buildOptimizationPrompt(
     "  - NEVER use bullet points (•, -, *, etc.) anywhere in the TECHNICAL SKILLS section.\n" +
     "  - Every skill line MUST strictly be in 'Category: val1, val2, val3' format on a single line.\n" +
     "  - NEVER output bullet lines like '• Technologies & Tools: ...' or '• Python, React'.\n" +
-    "  - Keep Technical Skills focused on core candidate competencies. Do NOT dump internship-specific stacks exclusively here; internship tools belong directly on the internship entry.\n" +
-    "  Organized into clean 'Category: values' lines (each on ONE single line):\n" +
-    "    Programming Languages: Java, SQL, Python, JavaScript, TypeScript\n" +
-    "    Frameworks & Libraries: React, Node.js, Spring Boot, PyTorch, TensorFlow\n" +
-    "    AI, Machine Learning & GenAI: Generative AI, LLMs, Prompt Engineering, RAG\n" +
-    "    Databases & Backend: MySQL, PostgreSQL, MongoDB, Redis, REST APIs, Microservices\n" +
-    "    Cloud & DevOps: AWS, Docker, Kubernetes, CI/CD, Git, GitHub\n" +
-    "    Developer Tools & Core Competencies: Postman, VS Code, Problem Solving, Model Evaluation\n" +
-    "  List JD-matching skills FIRST in each category\n\n" +
+    "  CRITICAL CATEGORY AND SKILL RULES (USER MANDATE):\n" +
+    "  - PRESERVE the candidate's existing skill categories from their original resume (e.g. Programming Languages, Frameworks & Libraries, Developer Tools).\n" +
+    "  - DO NOT invent or fabricate arbitrary new categories (NEVER add 'Developer Tools & Core Competencies', 'AI, Machine Learning & GenAI', 'Support & Operations', 'Communication & Professional').\n" +
+    "  - If the candidate's original resume had 'Core Technologies', use 'Frameworks & Libraries' instead. NEVER output both 'Core Technologies' and 'Frameworks & Libraries'.\n" +
+    "  - Strictly ONLY include genuine technical keywords (programming languages, libraries, frameworks, databases, developer tools, networking protocols, cloud platforms).\n" +
+    "  - ABSOLUTE PROHIBITION ON SOFT SKILLS: NEVER include soft skills, generic English phrases, job responsibilities, or non-technical words in Technical Skills (NEVER write 'Problem Solving', 'Documentation', 'Incident Management', 'Monitoring Tools', 'Troubleshoot Network', 'Title Network Product', 'Issues Across...', 'Time Management', 'Team Coordination', 'Stakeholder Communication').\n" +
+    "  - Inject JD-matching technical keywords into the candidate's relevant technical categories.\n\n" +
     `PROFESSIONAL EXPERIENCE & INTERNSHIPS:\n` +
     `  Header: ${expSectionHeading} (ALL CAPS)\n` +
     `  CRITICAL: ONLY include this section if the original resume actually contains work experience, internship, or trainee content. DO NOT fabricate experience entries.\n` +
@@ -284,8 +282,10 @@ export function buildOptimizationPrompt(
     sep + "\n\n" +
     "TASK 3 -- SKILLS REORGANIZATION:\n" +
     "- Put JD-matching skills FIRST in every category\n" +
-    "- Add every missing JD technical skill to the most relevant category\n" +
-    "- Categorize skills into clear standard categories: " + SKILL_CATEGORIES.join(", ") + "\n\n" +
+    "- Add every missing JD technical skill to candidate's existing technical categories\n" +
+    "- Keep candidate's original categories (Programming Languages, Frameworks & Libraries, Developer Tools)\n" +
+    "- NEVER output duplicate Core Technologies if Frameworks & Libraries exists\n" +
+    "- NEVER add soft skills or job phrases into skills\n\n" +
     sep + "\n" +
     "PRESERVATION RULES (never violate)\n" +
     sep + "\n\n" +
