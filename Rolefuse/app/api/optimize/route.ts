@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 import { buildOptimizationPrompt } from "@/lib/ai/prompts";
-import { callAI, callAIText } from "@/lib/ai/router";
+import { callAI, callAIText, sanitizeJobDescription } from "@/lib/ai/router";
 import { scoreResume } from "@/lib/ats/scorer";
 import { sanitizeOptimizedResume, ensureUserAnswersInResume } from "@/lib/resume-format";
 import { enrichResumeATSQuality } from "@/lib/ats/bullets";
@@ -183,7 +183,8 @@ export async function POST(request: NextRequest) {
 
       // 2. Parse and validate body
       const bodyText = await request.text();
-      const { resumeText, jobDescription, instructions, lengthOption, jobTitle, company, dataTrainingConsent, userAnswers, skipDetection } = JSON.parse(bodyText || '{}');
+      const { resumeText, jobDescription: rawJd, instructions, lengthOption, jobTitle, company, dataTrainingConsent, userAnswers, skipDetection } = JSON.parse(bodyText || '{}');
+      const jobDescription = sanitizeJobDescription(rawJd || '');
 
       // ── FAST PROFILE URL EXTRACTION ───────────────────────────────────────────
       // Extract LinkedIn / GitHub / portfolio URLs directly from the resume text
@@ -703,16 +704,8 @@ export async function POST(request: NextRequest) {
             scoreAfter.missingKeywords = (scoreAfter.missingKeywords || []).filter(isTechnicalKeyword);
             scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
 
-            // Real-world ATS benchmark tier:
-            // Cap initial post-optimization score in the high-performing range (85 - 89)
-            // so candidates see a massive genuine increase (+30 to +45 pts) from baseline,
-            // while leaving 1-3 bullets needing improvement to drive Interactive Bullet Improver engagement and paid plan conversions.
-            if (scoreAfter.overall > 89) {
-              scoreAfter.overall = 85 + (scoreAfter.overall % 4);
-            }
-            if (scoreAfter.impactBullets > 82) {
-              scoreAfter.impactBullets = 78 + (scoreAfter.impactBullets % 5);
-            }
+            // Genuine dynamic ATS scoring: Evaluated purely against technical keywords,
+            // semantic role alignment, quantified impact metrics, and ATS structure.
 
             // If genuine score is still under 72, perform targeted keyword & metric polish to guarantee 72+
             if (scoreAfter.overall < 72) {

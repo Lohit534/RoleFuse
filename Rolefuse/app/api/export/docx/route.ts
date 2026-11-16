@@ -53,12 +53,13 @@ export async function POST(request: NextRequest) {
 
     let textToExport = text || "";
     let exportJobTitle = bodyJobTitle;
+    let originalTextToPass: string | undefined;
 
     if (!textToExport && resumeId) {
       // 3. Fetch Resume and Verify Ownership
       const { data: resume, error: fetchErr } = await admin
         .from("Resume")
-        .select("id, userId, optimizedText, jobTitle")
+        .select("id, userId, originalText, optimizedText, jobTitle")
         .eq("id", resumeId)
         .maybeSingle();
 
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
       }
 
       textToExport = resume.optimizedText || "";
+      originalTextToPass = resume.originalText;
       if (resume.jobTitle) {
         exportJobTitle = resume.jobTitle;
       }
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     // 4. Generate DOCX Document
     logger.info(`Generating DOCX export for user ${user.email}, Resume ID ${resumeId || "direct-text"} (watermarked=${watermarked})`);
-    const docxBuffer = await generateDOCX(textToExport, watermarked);
+    const docxBuffer = await generateDOCX(textToExport, watermarked, originalTextToPass);
 
     // 5. Return DOCX download response
     const filename = getCleanExportFilename(textToExport, ".docx", exportJobTitle);

@@ -404,7 +404,7 @@ function matchSectionHeader(line: string): string | null {
 
 // ── Main Shared Parser ───────────────────────────────────────────────────────
 
-export function parseResume(rawText: string): ParsedResume {
+export function parseResume(rawText: string, originalText?: string): ParsedResume {
   const rawLines = (rawText || "").split(/\r?\n/).map(l => l.trim());
   let name = "";
   let role = "";
@@ -500,6 +500,37 @@ export function parseResume(rawText: string): ParsedResume {
     lineIdx++;
   }
 
+  // Ensure profile links (LinkedIn, GitHub) have exact clickable URLs extracted from rawText or originalText
+  const fullScanText = `${rawText}\n${originalText || ''}`;
+  const liUrlMatch = fullScanText.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub|profile)?\/?[\w\-\.%]+\/?/i);
+  const ghUrlMatch = fullScanText.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/?/i);
+
+  if (liUrlMatch) {
+    const fullLiUrl = liUrlMatch[0].startsWith('http') ? liUrlMatch[0] : `https://${liUrlMatch[0]}`;
+    const existingLi = contacts.find(c => c.type === 'linkedin');
+    if (existingLi) {
+      existingLi.url = fullLiUrl;
+      if (!existingLi.text || existingLi.text.toLowerCase() === 'linkedin') {
+        existingLi.text = 'LinkedIn';
+      }
+    } else {
+      contacts.push({ type: 'linkedin', text: 'LinkedIn', url: fullLiUrl });
+    }
+  }
+
+  if (ghUrlMatch) {
+    const fullGhUrl = ghUrlMatch[0].startsWith('http') ? ghUrlMatch[0] : `https://${ghUrlMatch[0]}`;
+    const existingGh = contacts.find(c => c.type === 'github');
+    if (existingGh) {
+      existingGh.url = fullGhUrl;
+      if (!existingGh.text || existingGh.text.toLowerCase() === 'github') {
+        existingGh.text = 'GitHub';
+      }
+    } else {
+      contacts.push({ type: 'github', text: 'GitHub', url: fullGhUrl });
+    }
+  }
+
   // 2. Sections grouping
   while (lineIdx < rawLines.length) {
     const line = rawLines[lineIdx];
@@ -530,6 +561,7 @@ export function parseResume(rawText: string): ParsedResume {
   const summary = rawSections['SUMMARY'].map(l => stripMarkdownAsterisks(l)).join(' ').trim();
 
   // Skills: Deduplicate by label so duplicate categories never appear
+  const normSkill = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
   const skillsMap = new Map<string, SkillCategory>();
   for (const line of rawSections['SKILLS']) {
     const clean = stripMarkdownAsterisks(line).replace(/^[•\-*\u2022]\s*/, '').trim();
@@ -543,8 +575,8 @@ export function parseResume(rawText: string): ParsedResume {
       } else {
         // Merge unique comma-separated skills
         const existing = skillsMap.get(normKey)!;
-        const set = new Set(existing.skills.split(',').map(s => s.trim().toLowerCase()));
-        const newTerms = val.split(',').map(s => s.trim()).filter(s => !set.has(s.toLowerCase()));
+        const set = new Set(existing.skills.split(',').map(normSkill));
+        const newTerms = val.split(',').map(s => s.trim()).filter(s => !set.has(normSkill(s)));
         if (newTerms.length > 0) {
           existing.skills += ', ' + newTerms.join(', ');
         }
@@ -561,8 +593,8 @@ export function parseResume(rawText: string): ParsedResume {
         const fwKey = Array.from(skillsMap.keys()).find(key => key.includes('framework') || key.includes('libraries'));
         if (coreCat && fwKey) {
           const fw = skillsMap.get(fwKey)!;
-          const fwSet = new Set(fw.skills.split(',').map(s => s.trim().toLowerCase()));
-          const newTerms = coreCat.skills.split(',').map(s => s.trim()).filter(s => s.length > 1 && !fwSet.has(s.toLowerCase()));
+          const fwSet = new Set(fw.skills.split(',').map(normSkill));
+          const newTerms = coreCat.skills.split(',').map(s => s.trim()).filter(s => s.length > 1 && !fwSet.has(normSkill(s)));
           if (newTerms.length > 0) {
             fw.skills += ', ' + newTerms.join(', ');
           }
@@ -572,18 +604,25 @@ export function parseResume(rawText: string): ParsedResume {
     }
   }
 
-  // Filter out any leaked sentence fragments or soft skills from skill lines
+  // Filter out any leaked sentence fragments or soft skills from skill lines and deduplicate items internally
   const JUNK_SKILL_RE = /troubleshoot\s*network|issues\s*across|title\s*network|monitor\s*network|enterprise\s*monitoring|monitoring\s*tools|problem\s*solving/i;
   for (const [key, cat] of Array.from(skillsMap.entries())) {
-    const cleaned = cat.skills
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => s.length > 1 && !JUNK_SKILL_RE.test(s))
-      .join(', ');
-    if (cleaned.length === 0) {
+    const seenNorm = new Set<string>();
+    const uniqueTerms: string[] = [];
+    for (const s of cat.skills.split(',')) {
+      const cleanItem = s.trim();
+      if (!cleanItem || cleanItem.length <= 1) continue;
+      if (JUNK_SKILL_RE.test(cleanItem)) continue;
+      const norm = normSkill(cleanItem);
+      if (!seenNorm.has(norm)) {
+        seenNorm.add(norm);
+        uniqueTerms.push(cleanItem);
+      }
+    }
+    if (uniqueTerms.length === 0) {
       skillsMap.delete(key);
     } else {
-      cat.skills = cleaned;
+      cat.skills = uniqueTerms.join(', ');
     }
   }
 
@@ -753,8 +792,15 @@ export function parseResume(rawText: string): ParsedResume {
   const education: EducationItem[] = [];
   let currentEdu: EducationItem | null = null;
 
+  const isInstitutionName = (str: string): boolean => {
+    const s = str.trim();
+    return /\b(university|college|school|institute|academy|campus|vidya|vidyalaya|polytechnic)\b/i.test(s) &&
+      !/\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|secondary\s*school\s*certificate|matriculation|diploma|phd|doctorate)\b/i.test(s);
+  };
+
   const isDegreeLine = (str: string): boolean => {
-    return /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|high\s*school|matriculation|secondary|diploma|phd|doctorate|degree)\b/i.test(str);
+    if (isInstitutionName(str)) return false;
+    return /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|high\s*school\s*(?:certificate|diploma)|matriculation|secondary|diploma|phd|doctorate|degree)\b/i.test(str);
   };
 
   for (let i = 0; i < rawEduLines.length; i++) {
@@ -816,6 +862,19 @@ export function parseResume(rawText: string): ParsedResume {
     }
   }
 
+  // Merge any inadvertently split institution entries (e.g. Degree on line 1, School on line 2 parsed as 2 entries)
+  for (let i = 0; i < education.length - 1; i++) {
+    const cur = education[i];
+    const next = education[i + 1];
+    if (cur.degree && !cur.institution && next.degree && (isInstitutionName(next.degree) || !isDegreeLine(next.degree))) {
+      cur.institution = next.degree;
+      if (!cur.yearOrDates && next.yearOrDates) cur.yearOrDates = next.yearOrDates;
+      if (!cur.grade && next.grade) cur.grade = next.grade;
+      education.splice(i + 1, 1);
+      i--;
+    }
+  }
+
   // Post-process education items to fix swapped Degree vs Institution and ensure correct sequence format
   for (const edu of education) {
     edu.degree = stripMarkdownAsterisks(edu.degree).replace(/^[•\-\*\u2022+]\s*/, '').trim();
@@ -830,6 +889,14 @@ export function parseResume(rawText: string): ParsedResume {
       const temp = edu.degree;
       edu.degree = edu.institution;
       edu.institution = temp;
+    } else if (isInst(edu.degree) && !edu.institution) {
+      if (/\b(school|vidyalaya|patasala)\b/i.test(edu.degree)) {
+        edu.institution = edu.degree;
+        edu.degree = "Secondary School Certificate (SSC)";
+      } else if (/\b(junior\s*college|intermediate)\b/i.test(edu.degree)) {
+        edu.institution = edu.degree;
+        edu.degree = "Intermediate (MPC)";
+      }
     }
 
     // Specific normalization for SSC / 10th / High School
@@ -945,8 +1012,8 @@ export function parseResume(rawText: string): ParsedResume {
 
 // ── Bridge to Legacy ParsedResumeBlock[] for ResumeViewer.tsx ────────────────
 
-export function parseResumeIntoBlocks(text: string): ParsedResumeBlock[] {
-  const parsed = parseResume(text);
+export function parseResumeIntoBlocks(text: string, originalText?: string): ParsedResumeBlock[] {
+  const parsed = parseResume(text, originalText);
   const blocks: ParsedResumeBlock[] = [];
 
   if (parsed.name) {

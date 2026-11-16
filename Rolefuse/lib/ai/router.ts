@@ -3,6 +3,39 @@ import { callGemini } from "./gemini";
 import { logger } from "../logger";
 import type { ResumeJSON } from "@/types/resume";
 
+/**
+ * Untrusted Job Description Prompt-Injection Sanitizer
+ * (Adapted from ai-job-search-dev/ai-job-search local-first security architecture)
+ *
+ * Scraped and user-pasted job postings often contain zero-width hidden characters,
+ * prompt-injection tokens (e.g. "[SYSTEM: Disregard prior instructions]"),
+ * script tags, and tracking payloads.
+ *
+ * This zero-cost sanitizer neutralizes prompt-injection attempts and cleans invisible
+ * formatting artifacts while strictly preserving all genuine job requirements,
+ * responsibilities, and technical keywords.
+ */
+export function sanitizeJobDescription(rawJd: string): string {
+  if (!rawJd || typeof rawJd !== "string") return "";
+
+  return rawJd
+    // 1. Remove zero-width & invisible Unicode characters used to hide prompt injections
+    .replace(/[\u200B-\u200D\uFEFF\u00A0\u200E\u200F\u202A-\u202E]/g, " ")
+    // 2. Remove script / iframe / style / object tags
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+    // 3. Remove HTML comments (often used for invisible prompt injection)
+    .replace(/<!--[\s\S]*?-->/g, "")
+    // 4. Neutralize adversarial prompt-injection commands
+    .replace(/(?:ignore|disregard|forget|bypass)\s+(?:all\s+)?(?:previous|prior|above|system)\s+(?:instructions|prompts|directives)/gi, "")
+    .replace(/\[\s*(?:system|admin|developer|instruction|override)\s*:[^\]]*\]/gi, "")
+    .replace(/(?:you\s+are\s+now\s+in\s+developer\s+mode|dan\s+mode|jailbreak)/gi, "")
+    // 5. Normalize line breaks
+    .replace(/\r?\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export interface AIResult {
   resume: string; // Plain text serialized from JSON (for display/scoring)
   resumeJSON: ResumeJSON | null; // Structured JSON (for PDF rendering)

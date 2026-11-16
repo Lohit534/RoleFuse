@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     const textToExport = resume.optimizedText || resume.originalText || "";
 
     logger.info(`Generating PDF for resume ${resumeId} (watermarked=${watermarked})`);
-    pdfBuffer = await generatePDF(textToExport, watermarked);
+    pdfBuffer = await generatePDF(textToExport, watermarked, resume.originalText);
 
     // 5. Return PDF download
     const filename = getCleanExportFilename(textToExport, ".pdf", resume.jobTitle);

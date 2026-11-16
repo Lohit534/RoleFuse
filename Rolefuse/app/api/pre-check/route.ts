@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { detectMissingFields } from "@/lib/resume-inspector";
 import { hasQuantifiedMetric, localScore } from "@/lib/ats/scorer";
 import { extractScorableBullets } from "@/lib/ats/bullets";
+import { sanitizeJobDescription } from "@/lib/ai/router";
 
 export const runtime = "nodejs";
 export const maxDuration = 30; // Quick pre-check, should take < 10s
@@ -148,6 +149,7 @@ function extractProjectContext(text: string): { title: string; subtitle: string 
 }
 
 export function gatherAllMissingQuestions(resumeText: string, jobDescription?: string) {
+  const sanitizedJd = jobDescription ? sanitizeJobDescription(jobDescription) : "";
   const questions: Array<{
     id: string;
     category: "year_date" | "tech_stack" | "metrics" | "education" | "general";
@@ -164,15 +166,46 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
   const internCtx = extractInternshipContext(text);
   const projCtx = extractProjectContext(text);
 
-  // 1. Internship / Work Experience Duration & Dates Detection
+  // 1. Role-Specific Missing JD Skills (prioritized first so questions are dynamic and role-specific)
+  if (sanitizedJd && sanitizedJd.length > 50) {
+    const score = localScore(resumeText, sanitizedJd);
+    const topMissing = score.missingKeywords.slice(0, 3);
+    if (topMissing.length > 0) {
+      questions.push({
+        id: "target_skills",
+        category: "tech_stack",
+        title: "Target Job Skills Alignment",
+        question: `Do you have hands-on experience with ${topMissing.join(", ")}? Enter any you have worked with:`,
+        hint: `e.g., ${topMissing.join(", ")}`,
+        contextTitle: "Target Job Alignment",
+        contextSubtitle: `Key technical skills from job requirements: ${topMissing.join(", ")}`,
+      });
+    }
+  }
+
+  // 2. Weak experience / project bullets missing quantifiable metrics (specific to candidate's bullets)
+  const weakBullets = findWeakBulletsLocally(resumeText);
+  for (const b of weakBullets.slice(0, 2)) {
+    questions.push({
+      id: b.id,
+      category: "metrics",
+      title: "Quantified Metric",
+      originalBullet: b.originalBullet,
+      question: b.question,
+      hint: b.hint,
+      contextTitle: "Target Resume Bullet",
+      contextSubtitle: b.originalBullet,
+    });
+  }
+
+  // 3. Internship / Work Experience Duration & Dates Detection (only if dates are truly missing)
   const hasInternship = /\b(intern|internship|trainee|apprentice)\b/i.test(text);
   const hasExpSection = /(?:EXPERIENCE|WORK EXPERIENCE|INTERNSHIPS?|EMPLOYMENT HISTORY)\b/i.test(text);
 
-  // Extract experience/internship section text to check if dates/durations exist specifically in that section
   const expMatch = text.match(/(?:EXPERIENCE|WORK EXPERIENCE|INTERNSHIPS?|EMPLOYMENT HISTORY)[\s\S]*?(?=(?:EDUCATION|PROJECTS?|TECHNICAL SKILLS|SKILLS|CERTIFICATIONS?|LANGUAGES?|$))/i);
   const expSectionText = expMatch ? expMatch[0] : (hasInternship ? text : "");
 
-  const expDatePattern = /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,]+20\d{2}\b|\b20\d{2}\s*[–\-]\s*(20\d{2}|Present|Current)\b|\b\d+\s*(?:months?|weeks?|yrs?|years?)\b/i;
+  const expDatePattern = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s,–\-\/]+20\d{2}\b|\b\d{1,2}\/\d{2,4}\b|\b20\d{2}\s*[–\-\/]\s*(?:20\d{2}|Present|Current)\b|\b(?:19|20)\d{2}\b|\b\d+\s*(?:months?|weeks?|yrs?|years?)\b/i;
   const hasExpSpecificDates = expSectionText ? expDatePattern.test(expSectionText) : false;
 
   if ((hasInternship || hasExpSection) && !hasExpSpecificDates) {
@@ -187,27 +220,26 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
     });
   }
 
-  // 2. Internship & Project Tech Stack Detection
+  // 4. Internship & Project Tech Stack Detection (only if not already listed in experience or project lines)
   const hasProjects = /(?:PROJECTS?|ACADEMIC PROJECTS?|KEY PROJECTS?)\b/i.test(upperText);
-  // Check if projects or internship have explicit tech stack notation or if candidate needs to specify stack
   const projMatch = text.match(/(?:PROJECTS?|ACADEMIC PROJECTS?|KEY PROJECTS?)[\s\S]*?(?=(?:EDUCATION|EXPERIENCE|WORK EXPERIENCE|INTERNSHIPS?|SKILLS|CERTIFICATIONS?|$))/i);
   const projSectionText = projMatch ? projMatch[0] : "";
   const hasExplicitTechInProjs = /(?:tech\s*stack|technologies|tools\s*used|stack|\bused\s*:)\b/i.test(projSectionText) ||
-    /\|\s*(?:React|Node|Python|Java|SQL|Spring|Django|Express|AWS|MongoDB)/i.test(projSectionText);
+    /\|\s*(?:React|Node|Python|Java|SQL|Spring|Django|Express|AWS|MongoDB|PostgreSQL|Docker)/i.test(projSectionText);
 
-  if ((hasProjects && !hasExplicitTechInProjs) || (hasInternship && !/(?:React|Node|Python|Java|SQL|Spring|Django|Express|AWS|MongoDB|TypeScript|C\+\+)\b/i.test(expSectionText))) {
+  if ((hasProjects && !hasExplicitTechInProjs) && (hasInternship && !/(?:React|Node|Python|Java|SQL|Spring|Django|Express|AWS|MongoDB|TypeScript|C\+\+)\b/i.test(expSectionText))) {
     questions.push({
       id: "tech_stack",
       category: "tech_stack",
-      title: "Internship & Project Tech Stack",
-      question: `Which technologies and tools did you use during your ${internCtx.title}?`,
+      title: "Project & Work Tech Stack",
+      question: `Which core technologies and tools did you use for: ${projCtx.title}?`,
       hint: "e.g., React.js, Node.js, Express, PostgreSQL, Tailwind CSS, Git",
-      contextTitle: internCtx.title,
-      contextSubtitle: internCtx.subtitle,
+      contextTitle: projCtx.title,
+      contextSubtitle: projCtx.subtitle,
     });
   }
 
-  // 2b. Project Completion Year Detection
+  // 5. Project Completion Year Detection (only if missing)
   const hasProjectYear = projSectionText ? /\b(?:19|20)\d{2}\b/.test(projSectionText) : false;
   if (hasProjects && !hasProjectYear) {
     questions.push({
@@ -221,48 +253,13 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
     });
   }
 
-  // NOTE: Education questions (SSC 10th, college GPA, certification year) are intentionally
-  // NOT asked. Education is not mandatory for ATS optimization — the AI preserves whatever
-  // the candidate already has. Pre-check focuses only on experience, projects, and metrics.
-
-  // 4. Missing target Job Description skills
-  if (jobDescription && jobDescription.length > 50) {
-    const score = localScore(resumeText, jobDescription);
-    const topMissing = score.missingKeywords.slice(0, 3);
-    if (topMissing.length > 0) {
-      questions.push({
-        id: "target_skills",
-        category: "tech_stack",
-        title: "Target Job Skills Alignment",
-        question: `Do you have experience with ${topMissing.join(", ")}? Enter any you have worked with:`,
-        hint: `e.g., ${topMissing.join(", ")}`,
-        contextTitle: "Target Job Alignment",
-        contextSubtitle: `Key technical skills from job description: ${topMissing.join(", ")}`,
-      });
-    }
-  }
-
-  // 5. Weak experience / project bullets missing quantifiable metrics
-  const weakBullets = findWeakBulletsLocally(resumeText);
-  for (const b of weakBullets) {
-    questions.push({
-      id: b.id,
-      category: "metrics",
-      title: "Quantified Metric",
-      originalBullet: b.originalBullet,
-      question: b.question,
-      hint: b.hint,
-      contextTitle: "Target Resume Bullet",
-      contextSubtitle: b.originalBullet,
-    });
-  }
-
-  return questions.slice(0, 5);
+  return questions.slice(0, 4);
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { resumeText, jobDescription } = await request.json();
+    const { resumeText, jobDescription: rawJd } = await request.json();
+    const jobDescription = rawJd ? sanitizeJobDescription(rawJd) : "";
 
     if (!resumeText || resumeText.length < 50) {
       return NextResponse.json({ questions: [] });

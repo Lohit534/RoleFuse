@@ -217,12 +217,7 @@ export default function BulletImprover({
     return !c.hasVerb || !c.hasMetric;
   });
 
-  const effectiveBulletsNeedingImprovement =
-    bulletsNeedingImprovement.length > 0
-      ? bulletsNeedingImprovement
-      : bulletItems.slice(0, Math.min(2, bulletItems.length));
-
-  const displayedBullets = filterMode === "needs-improvement" ? effectiveBulletsNeedingImprovement : bulletItems;
+  const displayedBullets = filterMode === "needs-improvement" ? bulletsNeedingImprovement : bulletItems;
 
   return (
     <div className="space-y-6">

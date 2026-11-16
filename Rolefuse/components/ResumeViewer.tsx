@@ -99,8 +99,8 @@ export default function ResumeViewer({
   const [isFullLength, setIsFullLength] = useState(true);
   const [templateStyle, setTemplateStyle] = useState<"academic" | "modern" | "clean">("academic");
 
-  // Parse blocks for rendering
-  const blocks = parseResumeIntoBlocks(text);
+  // Parse blocks for rendering (passing originalText to ensure links are preserved)
+  const blocks = parseResumeIntoBlocks(text, originalText);
 
   // Set up original words Set for diff highlighting
   const originalClean = (originalText || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ");
@@ -540,19 +540,24 @@ export default function ResumeViewer({
                       }
 
                       const isActualUrl = (s?: string) => Boolean(s && (s.includes(".com") || s.includes("/") || s.startsWith("http")));
-                      const linkHref = seg.url && isActualUrl(seg.url)
+                      let linkHref = seg.url && isActualUrl(seg.url)
                         ? seg.url
                         : (isActualUrl(seg.text)
                           ? (seg.text.startsWith("http") ? seg.text : `https://${seg.text.replace(/^(?:linkedin|github):?\s*/i, "")}`)
                           : null);
 
+                      if (!linkHref) {
+                        if (iconType === "email") linkHref = `mailto:${cleanHandle}`;
+                        else if (iconType === "phone") linkHref = `tel:${cleanHandle.replace(/[^+\d]/g, "")}`;
+                      }
+
                       const el =
-                        seg.isLink && linkHref ? (
+                        linkHref ? (
                           <a
                             href={linkHref}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:underline text-black"
+                            target={linkHref.startsWith("http") ? "_blank" : undefined}
+                            rel={linkHref.startsWith("http") ? "noopener noreferrer" : undefined}
+                            className="hover:underline text-black cursor-pointer"
                           >
                             {cleanHandle}
                           </a>
@@ -681,12 +686,18 @@ export default function ResumeViewer({
                   <div key={idx} className="mb-1.5">
                     <div className={`flex flex-row flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} font-bold text-black leading-snug select-text`}>
                       <span className="min-w-0">{renderHighlightedText(block.degree)}</span>
-                      <span className="font-semibold text-black ml-auto">{renderHighlightedText(block.dates)}</span>
+                      {block.dates ? (
+                        <span className="font-semibold text-black ml-auto">{renderHighlightedText(block.dates)}</span>
+                      ) : null}
                     </div>
-                    <div className={`flex flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} italic text-black leading-snug select-text`}>
-                      <span className="min-w-0">{renderHighlightedText(block.school)}</span>
-                      <span className="ml-auto not-italic">{renderHighlightedText(block.gpa)}</span>
-                    </div>
+                    {block.school || block.gpa ? (
+                      <div className={`flex flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} italic text-black leading-snug select-text`}>
+                        <span className="min-w-0">{renderHighlightedText(block.school)}</span>
+                        {block.gpa ? (
+                          <span className="ml-auto not-italic">{renderHighlightedText(block.gpa)}</span>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 );
               case "bullet":

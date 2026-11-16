@@ -7,6 +7,7 @@ import {
   BorderStyle,
   TabStopType,
   Tab,
+  ExternalHyperlink,
 } from "docx";
 import { logger } from "../logger";
 import { parseResume, stripMarkdownAsterisks } from "../parser/resume-parser";
@@ -63,10 +64,10 @@ function bullet(text: string, boldPrefix = "", rest = ""): Paragraph {
   });
 }
 
-export async function generateDOCX(resumeText: string, watermarked = false): Promise<Buffer> {
+export async function generateDOCX(resumeText: string, watermarked = false, originalText?: string): Promise<Buffer> {
   try {
     logger.info(`Generating DOCX matching ATS resume template (watermarked=${watermarked})...`);
-    const parsed = parseResume(resumeText);
+    const parsed = parseResume(resumeText, originalText);
     const children: Paragraph[] = [];
 
     // Optional Watermark
@@ -126,16 +127,34 @@ export async function generateDOCX(resumeText: string, watermarked = false): Pro
     // 3. Horizontal rule after contact (bottom border single 6pt black)
     const uniqueContacts = parsed.contacts.filter((c, idx, arr) => arr.findIndex(x => x.type === c.type) === idx);
     if (uniqueContacts.length > 0) {
-      const contactRuns: TextRun[] = [];
+      const contactRuns: (TextRun | ExternalHyperlink)[] = [];
       uniqueContacts.forEach((c, idx) => {
-        contactRuns.push(
-          new TextRun({
-            text: c.text,
-            font: FONT,
-            size: 19, // 9.5pt
-            color: "444444",
-          })
-        );
+        const linkUrl = c.url || (c.type === "email" ? `mailto:${c.text}` : (c.type === "phone" ? `tel:${c.text.replace(/[^+\d]/g, "")}` : null));
+        if (linkUrl) {
+          contactRuns.push(
+            new ExternalHyperlink({
+              children: [
+                new TextRun({
+                  text: c.text,
+                  font: FONT,
+                  size: 19, // 9.5pt
+                  color: "0000EE",
+                  underline: {},
+                }),
+              ],
+              link: linkUrl,
+            })
+          );
+        } else {
+          contactRuns.push(
+            new TextRun({
+              text: c.text,
+              font: FONT,
+              size: 19, // 9.5pt
+              color: "444444",
+            })
+          );
+        }
         if (idx < uniqueContacts.length - 1) {
           contactRuns.push(
             new TextRun({

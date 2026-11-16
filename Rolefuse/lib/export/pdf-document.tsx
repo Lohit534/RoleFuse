@@ -9,6 +9,7 @@ import {
   renderToBuffer,
   Svg,
   Path,
+  Link,
 } from "@react-pdf/renderer";
 import { logger } from "../logger";
 import {
@@ -270,10 +271,11 @@ const styles = StyleSheet.create({
 interface ResumePDFProps {
   text: string;
   watermarked?: boolean;
+  originalText?: string;
 }
 
-export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked = false }) => {
-  const parsed = parseResume(text);
+export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked = false, originalText }) => {
+  const parsed = parseResume(text, originalText);
 
   return (
     <Document title={getCleanExportFilename(text, ".pdf")} author={parsed.name}>
@@ -296,12 +298,21 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
           <View style={styles.contactRow}>
             {parsed.contacts
               .filter((c, idx, arr) => arr.findIndex(x => x.type === c.type) === idx)
-              .map((c, i) => (
-                <View key={i} style={styles.contactItem}>
-                  <ContactIcon type={c.type} />
-                  <Text style={styles.contactText}>{c.text}</Text>
-                </View>
-              ))}
+              .map((c, i) => {
+                const linkUrl = c.url || (c.type === "email" ? `mailto:${c.text}` : (c.type === "phone" ? `tel:${c.text.replace(/[^+\d]/g, "")}` : null));
+                return (
+                  <View key={i} style={styles.contactItem}>
+                    <ContactIcon type={c.type} />
+                    {linkUrl ? (
+                      <Link src={linkUrl} style={{ ...styles.contactText, textDecoration: 'none' }}>
+                        {c.text}
+                      </Link>
+                    ) : (
+                      <Text style={styles.contactText}>{c.text}</Text>
+                    )}
+                  </View>
+                );
+              })}
           </View>
         )}
 
@@ -484,10 +495,10 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
   );
 };
 
-export async function generatePDF(resumeText: string, watermarked = false): Promise<Buffer> {
+export async function generatePDF(resumeText: string, watermarked = false, originalText?: string): Promise<Buffer> {
   try {
     logger.info(`Generating PDF matching ATS resume template (watermarked=${watermarked})...`);
-    const docElement = <ResumePDFDocument text={resumeText} watermarked={watermarked} />;
+    const docElement = <ResumePDFDocument text={resumeText} watermarked={watermarked} originalText={originalText} />;
     const buffer = await renderToBuffer(docElement);
     logger.info("PDF generation completed successfully.");
     return buffer;

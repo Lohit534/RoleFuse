@@ -468,16 +468,28 @@ export function sanitizeOptimizedResume(
     if (fwLineIdx !== -1 && coreLineIdx !== -1) {
       const fwLine = out[fwLineIdx];
       const coreLine = out[coreLineIdx];
+      const normSkill = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
       const fwItems = fwLine.slice(fwLine.indexOf(":") + 1).split(/,\s*/).map(s => s.trim()).filter(Boolean);
-      const fwSet = new Set(fwItems.map(s => s.toLowerCase()));
+      const fwNormSet = new Set(fwItems.map(normSkill));
       const coreItems = coreLine.slice(coreLine.indexOf(":") + 1).split(/,\s*/).map(s => s.trim()).filter(Boolean);
       for (const ci of coreItems) {
-        if (!fwSet.has(ci.toLowerCase()) && !JUNK_OR_SOFT_SKILL_RE.test(ci)) {
+        const norm = normSkill(ci);
+        if (!fwNormSet.has(norm) && !JUNK_OR_SOFT_SKILL_RE.test(ci)) {
           fwItems.push(ci);
-          fwSet.add(ci.toLowerCase());
+          fwNormSet.add(norm);
         }
       }
-      out[fwLineIdx] = `${fwLine.slice(0, fwLine.indexOf(":")).trim()}: ${fwItems.join(", ")}`;
+      // Deduplicate fwItems internally
+      const finalFwItems: string[] = [];
+      const seenFw = new Set<string>();
+      for (const it of fwItems) {
+        const norm = normSkill(it);
+        if (!seenFw.has(norm) && !JUNK_OR_SOFT_SKILL_RE.test(it)) {
+          seenFw.add(norm);
+          finalFwItems.push(it);
+        }
+      }
+      out[fwLineIdx] = `${fwLine.slice(0, fwLine.indexOf(":")).trim()}: ${finalFwItems.join(", ")}`;
       out.splice(coreLineIdx, 1);
     }
   }
@@ -777,34 +789,56 @@ export function ensureUserAnswersInResume(
       const fwMatch = skillsBlock.match(/^(?:Frameworks\s*&\s*Libraries|Frameworks|Libraries):\s*([^\r\n]+)/im);
       const coreTechMatch = skillsBlock.match(/^(?:Core Technologies|Core Competencies):\s*([^\r\n]+)/im);
 
+      const normSkill = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (fwMatch) {
         // Frameworks & Libraries exists: ALWAYS merge terms into it, and remove any redundant Core Technologies
         const existingFw = fwMatch[1];
-        const existingList = existingFw.split(/,\s*/).map((t) => t.trim().toLowerCase());
-        const toAdd = terms.filter((t) => !existingList.includes(t.toLowerCase()));
+        const existingNormSet = new Set(existingFw.split(/,\s*/).map(normSkill));
+        const toAdd = terms.filter((t) => !existingNormSet.has(normSkill(t)));
         
         // Also absorb any Core Technologies items into Frameworks
         if (coreTechMatch) {
           const coreItems = coreTechMatch[1].split(/,\s*/).map((t) => t.trim());
           for (const ci of coreItems) {
-            if (ci && !existingList.includes(ci.toLowerCase()) && !toAdd.some((a) => a.toLowerCase() === ci.toLowerCase())) {
+            const norm = normSkill(ci);
+            if (ci && !existingNormSet.has(norm) && !toAdd.some((a) => normSkill(a) === norm)) {
               toAdd.push(ci);
+              existingNormSet.add(norm);
             }
           }
           out = out.replace(coreTechMatch[0] + "\n", "").replace(coreTechMatch[0], "");
         }
 
         if (toAdd.length > 0) {
-          const updatedLine = `${fwMatch[0].split(":")[0]}: ${existingFw.trim()}, ${toAdd.join(", ")}`;
+          const allFw = [...existingFw.split(/,\s*/).map((t) => t.trim()), ...toAdd].filter(Boolean);
+          const seen = new Set<string>();
+          const dedupedFw: string[] = [];
+          for (const item of allFw) {
+            const norm = normSkill(item);
+            if (!seen.has(norm)) {
+              seen.add(norm);
+              dedupedFw.push(item);
+            }
+          }
+          const updatedLine = `${fwMatch[0].split(":")[0]}: ${dedupedFw.join(", ")}`;
           out = out.replace(fwMatch[0], updatedLine);
         }
       } else if (coreTechMatch) {
         // If no Frameworks & Libraries exists, rename Core Technologies to Frameworks & Libraries
         const existingCore = coreTechMatch[1];
-        const existingList = existingCore.split(/,\s*/).map((t) => t.trim().toLowerCase());
-        const toAdd = terms.filter((t) => !existingList.includes(t.toLowerCase()));
+        const existingNormSet = new Set(existingCore.split(/,\s*/).map(normSkill));
+        const toAdd = terms.filter((t) => !existingNormSet.has(normSkill(t)));
         const allItems = [...existingCore.split(/,\s*/).map((t) => t.trim()), ...toAdd].filter(Boolean);
-        const updatedLine = `Frameworks & Libraries: ${allItems.join(", ")}`;
+        const seen = new Set<string>();
+        const dedupedItems: string[] = [];
+        for (const item of allItems) {
+          const norm = normSkill(item);
+          if (!seen.has(norm)) {
+            seen.add(norm);
+            dedupedItems.push(item);
+          }
+        }
+        const updatedLine = `Frameworks & Libraries: ${dedupedItems.join(", ")}`;
         out = out.replace(coreTechMatch[0], updatedLine);
       } else if (terms.length > 0) {
         const newSkillsLine = `Frameworks & Libraries: ${terms.join(", ")}`;

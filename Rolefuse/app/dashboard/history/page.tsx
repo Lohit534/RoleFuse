@@ -833,7 +833,7 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
 
               {/* Resume Body: Standard Harvard / Tech ATS LaTeX Format (zero teal color, pure black and dark slate text) */}
               <div className="w-full text-black font-serif select-text leading-snug break-words" style={{ fontFamily: "'Times New Roman', Times, 'Liberation Serif', serif" }}>
-                {parseResumeIntoBlocks(ensureProfileLinks(resume.optimizedText || "", resume.originalText || "")).map((block, idx) => {
+                {parseResumeIntoBlocks(ensureProfileLinks(resume.optimizedText || "", resume.originalText || ""), resume.originalText || "").map((block, idx) => {
                   switch (block.type) {
                     case "name":
                       return (
@@ -885,11 +885,16 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
                             }
 
                             const isActualUrl = (s: string) => Boolean(s && (s.includes(".com") || s.includes("/") || s.startsWith("http")));
-                            const linkHref = seg.url && isActualUrl(seg.url)
+                            let linkHref = seg.url && isActualUrl(seg.url)
                               ? seg.url
                               : (isActualUrl(seg.text)
                                 ? (seg.text.startsWith("http") ? seg.text : `https://${seg.text.replace(/^(?:linkedin|github):?\s*/i, "")}`)
                                 : null);
+
+                            if (!linkHref) {
+                              if (iconType === "email") linkHref = `mailto:${cleanHandle}`;
+                              else if (iconType === "phone") linkHref = `tel:${cleanHandle.replace(/[^+\d]/g, "")}`;
+                            }
 
                             return (
                               <span key={sIdx} className="inline-flex items-center">
