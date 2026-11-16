@@ -22,21 +22,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Owner always gets unlimited — no DB lookup needed
-    const isOwner = isOwnerEmail(user.email);
-    if (isOwner) {
-      return NextResponse.json({
-        freeUsed: 0,
-        paidCredits: 999999,
-        freeRemaining: 999999,
-        resetAt: new Date().toISOString(),
-        isOwner: true,
-        planId: "promax",
-      });
-    }
-
     const admin = getAdminClient() as any;
     const now = new Date();
+
+    // Check if user is admin/owner via environment variables, Supabase metadata, or Database record
+    let isOwner =
+      isOwnerEmail(user.email) ||
+      user.app_metadata?.role === "admin" ||
+      user.app_metadata?.role === "owner" ||
+      user.user_metadata?.role === "admin" ||
+      user.user_metadata?.role === "owner";
 
     // Resolve user record ID in public.User to prevent email unique constraint violations or foreign key errors
     let activeUserId = user.id;
@@ -44,13 +39,16 @@ export async function GET(request: NextRequest) {
       if (user.email) {
         const { data: existingUser } = await admin
           .from("User")
-          .select("id, createdAt")
+          .select("id, createdAt, role, isAdmin")
           .eq("email", user.email.toLowerCase().trim())
           .maybeSingle();
 
         if (existingUser) {
           activeUserId = existingUser.id;
-          logger.info(`[credits] Found existing User record for email ${user.email} with ID ${existingUser.id}. Reusing this ID.`);
+          if (existingUser.role === "admin" || existingUser.role === "owner" || existingUser.isAdmin === true) {
+            isOwner = true;
+          }
+          logger.info(`[credits] Found existing User record for email ${user.email} with ID ${existingUser.id} (isOwner=${isOwner}).`);
           
           // Auto-heal: sync real signup time from Auth to public.User table to fix early adopter ranks (e.g. user 3)
           if (user.created_at) {
@@ -91,6 +89,18 @@ export async function GET(request: NextRequest) {
       }
     } catch (e: any) {
       logger.error("[credits] Error during User resolution/insertion:", e.message);
+    }
+
+    // Owner / Admin identified from DB record, metadata, or env gets unlimited credits
+    if (isOwner) {
+      return NextResponse.json({
+        freeUsed: 0,
+        paidCredits: 999999,
+        freeRemaining: 999999,
+        resetAt: new Date().toISOString(),
+        isOwner: true,
+        planId: "promax",
+      });
     }
 
     // Determine if user is in the first 50 users (sorted by createdAt)

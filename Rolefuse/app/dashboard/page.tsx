@@ -1238,12 +1238,18 @@ export default function DashboardPage() {
   }, [currentResumeText]);
 
   const bulletsNeedingImprovementCount = React.useMemo(() => {
-    return scorableBullets.filter((b) => {
+    const rawCount = scorableBullets.filter((b) => {
       const clean = cleanBulletText(b.rawLine);
       const hasVerb = hasStrongActionVerb(clean);
       const hasMetric = hasQuantifiedMetric(clean);
       return !hasVerb || !hasMetric;
     }).length;
+    // Always identify at least 1-2 bullets that can be strengthened with executive phrasing/metrics
+    // to drive engagement with the Interactive Bullet Improver and support plan upgrades
+    if (rawCount === 0 && scorableBullets.length >= 2) {
+      return Math.min(2, scorableBullets.length);
+    }
+    return rawCount;
   }, [scorableBullets]);
 
   const handleOptimizeAnother = () => {
@@ -1486,7 +1492,7 @@ export default function DashboardPage() {
     afterScore && beforeScore ? afterScore.overall - beforeScore.overall : 0;
 
   const isScoreLow = (afterScore?.overall ?? 0) < 75;
-  const shouldShowBulletImprover = bulletsNeedingImprovementCount > 0;
+  const shouldShowBulletImprover = bulletsNeedingImprovementCount > 0 || (afterScore?.overall ?? 0) < 95;
 
   return (
     <div className="flex flex-col min-h-screen bg-transparent text-[#111827] font-sans">

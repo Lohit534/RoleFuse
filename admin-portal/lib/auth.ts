@@ -10,9 +10,6 @@ export function isAdminEmail(email?: string): boolean {
     process.env.OWNER_EMAIL ||
     "";
   const allowed = rawAdmin.split(",").map(e => e.toLowerCase().trim()).filter(Boolean);
-  if (!allowed.includes("lohithpeyyala@gmail.com")) {
-    allowed.push("lohithpeyyala@gmail.com");
-  }
   return allowed.includes(email.toLowerCase().trim());
 }
 
@@ -25,8 +22,34 @@ export async function verifyAdmin(request: NextRequest): Promise<{ user: any; to
   try {
     const adminClient = getAdminClient(token);
     const { data, error } = await adminClient.auth.getUser(token);
-    if (!error && data?.user && isAdminEmail(data.user.email)) {
-      return { user: data.user, token };
+    if (!error && data?.user) {
+      const email = data.user.email;
+      // 1. Check Supabase app_metadata or user_metadata for admin role
+      const isRoleAdmin =
+        data.user.app_metadata?.role === "admin" ||
+        data.user.app_metadata?.role === "owner" ||
+        data.user.user_metadata?.role === "admin" ||
+        data.user.user_metadata?.role === "owner";
+
+      // 2. Check Database record in public.User
+      let isDbAdmin = false;
+      if (email) {
+        try {
+          const { data: dbUser } = await adminClient
+            .from("User")
+            .select("role, isAdmin")
+            .eq("email", email.toLowerCase().trim())
+            .maybeSingle();
+          if (dbUser && (dbUser.role === "admin" || dbUser.role === "owner" || dbUser.isAdmin === true)) {
+            isDbAdmin = true;
+          }
+        } catch (_dbErr) {}
+      }
+
+      // 3. Check environment-configured admin email
+      if (isRoleAdmin || isDbAdmin || isAdminEmail(email)) {
+        return { user: data.user, token };
+      }
     }
   } catch {
     return null;

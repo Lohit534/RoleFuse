@@ -802,8 +802,8 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
               </div>
             </div>
 
-            {/* Scrollable Document Paper Viewport (scrolling instead of fixed page) */}
-            <div className="rounded-2xl border border-slate-200/90 bg-slate-100/60 p-2 sm:p-3.5 shadow-inner max-h-[740px] sm:max-h-[820px] overflow-y-auto overscroll-contain select-text">
+            {/* Natural Document Paper Viewport (smooth page scrolling without nested scroll trapping) */}
+            <div className="rounded-2xl border border-slate-200/90 bg-slate-100/60 p-2 sm:p-3.5 shadow-inner overflow-visible min-h-[640px] select-text">
               <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-10 shadow-sm min-h-[640px] relative font-serif select-text">
               {/* Watermark for free plan downloads */}
               {isLocked && (

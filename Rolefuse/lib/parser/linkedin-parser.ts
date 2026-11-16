@@ -38,7 +38,7 @@ export interface ParsedLinkedInProfile {
 
 /**
  * Extracts and normalizes name from LinkedIn vanity URL slug
- * e.g. "peyyala-lohit-520141285" -> "Peyyala Lohit"
+ * e.g. "alex-turner-520141285" -> "Alex Turner"
  * e.g. "john-smith" -> "John Smith"
  */
 export function extractNameFromVanitySlug(slug: string): string {

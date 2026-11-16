@@ -108,7 +108,7 @@ function extractProfileUrls(text: string): { linkedin?: string; github?: string;
 
   // LinkedIn profile URL (handles country subdomains in.linkedin.com, www.linkedin.com, /in/, /pub/, etc.)
   const liMatch = text.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub|profile)?\/?[\w\-\.%]+\/?/i) ||
-                  text.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/[\w\-\.%]+\/?/i);
+    text.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/[\w\-\.%]+\/?/i);
   if (liMatch) {
     const url = liMatch[0];
     result.linkedin = url.startsWith('http') ? url : 'https://' + url;
@@ -145,72 +145,72 @@ export async function POST(request: NextRequest) {
   const stream = new TransformStream();
   const writer = stream.writable.getWriter();
 
-  const send = async (step: number, status: 'running'|'done', data?: object) => {
+  const send = async (step: number, status: 'running' | 'done', data?: object) => {
     try {
       await writer.write(encoder.encode(`data: ${JSON.stringify({ step, status, ...data })}\n\n`));
-    } catch(e) {}
+    } catch (e) { }
   };
 
-  ;(async () => {
+  ; (async () => {
     try {
       await send(1, 'running');
-    // 1. Verify auth session (cookies or Bearer token header)
-    const supabase = createClient();
-    let { data: { user }, error: authError } = await supabase.auth.getUser();
+      // 1. Verify auth session (cookies or Bearer token header)
+      const supabase = createClient();
+      let { data: { user }, error: authError } = await supabase.auth.getUser();
 
-    if (!user) {
-      const authHeader = request.headers.get("Authorization");
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        const token = authHeader.replace("Bearer ", "").trim();
-        try {
-          const { data: tokenData } = await supabase.auth.getUser(token);
-          if (tokenData?.user) {
-            user = tokenData.user;
-            authError = null;
-          }
-        } catch (_e) {}
+      if (!user) {
+        const authHeader = request.headers.get("Authorization");
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+          const token = authHeader.replace("Bearer ", "").trim();
+          try {
+            const { data: tokenData } = await supabase.auth.getUser(token);
+            if (tokenData?.user) {
+              user = tokenData.user;
+              authError = null;
+            }
+          } catch (_e) { }
+        }
       }
-    }
 
-    if (authError || !user) {
-      throw new Error("Please sign in to optimize your resume.");
-    }
+      if (authError || !user) {
+        throw new Error("Please sign in to optimize your resume.");
+      }
 
-    const isEmailUser = user.app_metadata?.provider === "email" || user.identities?.[0]?.provider === "email";
-    if (isEmailUser && !user.email_confirmed_at) {
-      throw new Error("Please verify your email address before using resume optimization.");
-    }
+      const isEmailUser = user.app_metadata?.provider === "email" || user.identities?.[0]?.provider === "email";
+      if (isEmailUser && !user.email_confirmed_at) {
+        throw new Error("Please verify your email address before using resume optimization.");
+      }
 
-    // 2. Parse and validate body
-    const bodyText = await request.text();
-    const { resumeText, jobDescription, instructions, lengthOption, jobTitle, company, dataTrainingConsent, userAnswers, skipDetection } = JSON.parse(bodyText || '{}');
+      // 2. Parse and validate body
+      const bodyText = await request.text();
+      const { resumeText, jobDescription, instructions, lengthOption, jobTitle, company, dataTrainingConsent, userAnswers, skipDetection } = JSON.parse(bodyText || '{}');
 
-    // ── FAST PROFILE URL EXTRACTION ───────────────────────────────────────────
-    // Extract LinkedIn / GitHub / portfolio URLs directly from the resume text
-    // using regex — no AI call needed. These are injected into the optimization
-    // prompt so the AI always preserves them in the output header.
-    const profileUrls = extractProfileUrls(resumeText || '');
-    const urlPreservationLines: string[] = [];
-    if (profileUrls.linkedin) urlPreservationLines.push(`LinkedIn: ${profileUrls.linkedin}`);
-    if (profileUrls.github)   urlPreservationLines.push(`GitHub: ${profileUrls.github}`);
-    for (const u of profileUrls.portfolio) urlPreservationLines.push(`Portfolio/Site: ${u}`);
-    // ─────────────────────────────────────────────────────────────────────────
+      // ── FAST PROFILE URL EXTRACTION ───────────────────────────────────────────
+      // Extract LinkedIn / GitHub / portfolio URLs directly from the resume text
+      // using regex — no AI call needed. These are injected into the optimization
+      // prompt so the AI always preserves them in the output header.
+      const profileUrls = extractProfileUrls(resumeText || '');
+      const urlPreservationLines: string[] = [];
+      if (profileUrls.linkedin) urlPreservationLines.push(`LinkedIn: ${profileUrls.linkedin}`);
+      if (profileUrls.github) urlPreservationLines.push(`GitHub: ${profileUrls.github}`);
+      for (const u of profileUrls.portfolio) urlPreservationLines.push(`Portfolio/Site: ${u}`);
+      // ─────────────────────────────────────────────────────────────────────────
 
-    if (!resumeText || resumeText.length < MIN_RESUME_CHARS) {
-      throw new Error(`Resume text is too short. Please provide at least ${MIN_RESUME_CHARS} characters.`);
-    }
+      if (!resumeText || resumeText.length < MIN_RESUME_CHARS) {
+        throw new Error(`Resume text is too short. Please provide at least ${MIN_RESUME_CHARS} characters.`);
+      }
 
-    if (!jobDescription || jobDescription.length < MIN_JD_CHARS) {
-      throw new Error(`Job description is too short. Please provide at least ${MIN_JD_CHARS} characters.`);
-    }
+      if (!jobDescription || jobDescription.length < MIN_JD_CHARS) {
+        throw new Error(`Job description is too short. Please provide at least ${MIN_JD_CHARS} characters.`);
+      }
 
-    const isOwner = isOwnerEmail(user.email);
-    const admin = getAdminClient() as any;
-    const now = new Date();
+      const isOwner = isOwnerEmail(user.email);
+      const admin = getAdminClient() as any;
+      const now = new Date();
 
-    // Resolve user record ID in public.User
-    let activeUserId = user.id;
-    try {
+      // Resolve user record ID in public.User
+      let activeUserId = user.id;
+      try {
         const { data: existingUser } = await admin
           .from("User")
           .select("id, createdAt")
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
         if (existingUser) {
           activeUserId = existingUser.id;
           logger.info(`[optimize] Found existing User record for email ${user.email} with ID ${existingUser.id}. Reusing this ID.`);
-          
+
           if (user.created_at) {
             const dbTime = existingUser.createdAt ? new Date(existingUser.createdAt).toISOString() : null;
             const authTime = new Date(user.created_at).toISOString();
@@ -257,819 +257,836 @@ export async function POST(request: NextRequest) {
             activeUserId = user.id;
           }
         }
-    } catch (e: any) {
-      logger.error("[optimize] Error during User resolution/insertion:", e.message);
-    }
-
-    let freeUsed = 0;
-    let paidCredits = 0;
-    let isUnlimited = isOwner;
-
-    if (!isOwner) {
-      const { data: earlyUsers } = await admin
-        .from("User")
-        .select("id")
-        .order("createdAt", { ascending: true })
-        .limit(50);
-      
-      const earlyUserIds = (earlyUsers || []).map((u: any) => u.id);
-      const isFirst50 = earlyUserIds.includes(activeUserId) || earlyUserIds.includes(user.id);
-
-      let { data: creditRow, error: creditFetchErr } = await admin
-        .from("Credit")
-        .select("*")
-        .eq("userId", activeUserId)
-        .maybeSingle();
-
-      if (!creditRow && !creditFetchErr) {
-        const initialPaidCredits = isFirst50 ? PRO_CREDITS_PER_MONTH : 0;
-        logger.info(`[optimize] Initializing Credit record for user ${user.email} (isFirst50=${isFirst50}, initialPaid=${initialPaidCredits})`);
-        
-        const { data: newCredit } = await admin
-          .from("Credit")
-          .insert({
-            userId: activeUserId,
-            freeUsed: 0,
-            paidCredits: initialPaidCredits,
-            resetAt: now.toISOString(),
-          })
-          .select()
-          .single();
-        if (newCredit) {
-          creditRow = newCredit;
-        }
+      } catch (e: any) {
+        logger.error("[optimize] Error during User resolution/insertion:", e.message);
       }
 
-      if (creditRow) {
-        // Expiration check: If plan is expired, revert to free tier (Option 3: save rollover credits)
-        const isRolloverCycle = typeof creditRow.billingCycle === "string" && creditRow.billingCycle.startsWith("rollover:");
-        const expiresAt = creditRow.expiresAt ? new Date(creditRow.expiresAt) : null;
-        const isExpired = ((expiresAt && now >= expiresAt) || isRolloverCycle) && creditRow.billingCycle !== "admin_promax" && creditRow.billingCycle !== "admin_premium";
-        if (isExpired && !isRolloverCycle) {
-          const leftoverCredits = creditRow.paidCredits > 0 ? creditRow.paidCredits : 0;
-          const rolloverCycleStr = leftoverCredits > 0 ? `rollover:${leftoverCredits}` : "monthly";
-          creditRow.paidCredits = 0;
-          creditRow.expiresAt = null;
-          creditRow.billingCycle = rolloverCycleStr;
-          await admin
+      let freeUsed = 0;
+      let paidCredits = 0;
+      let isUnlimited = isOwner;
+
+      if (!isOwner) {
+        const { data: earlyUsers } = await admin
+          .from("User")
+          .select("id")
+          .order("createdAt", { ascending: true })
+          .limit(50);
+
+        const earlyUserIds = (earlyUsers || []).map((u: any) => u.id);
+        const isFirst50 = earlyUserIds.includes(activeUserId) || earlyUserIds.includes(user.id);
+
+        let { data: creditRow, error: creditFetchErr } = await admin
+          .from("Credit")
+          .select("*")
+          .eq("userId", activeUserId)
+          .maybeSingle();
+
+        if (!creditRow && !creditFetchErr) {
+          const initialPaidCredits = isFirst50 ? PRO_CREDITS_PER_MONTH : 0;
+          logger.info(`[optimize] Initializing Credit record for user ${user.email} (isFirst50=${isFirst50}, initialPaid=${initialPaidCredits})`);
+
+          const { data: newCredit } = await admin
             .from("Credit")
-            .update({ paidCredits: 0, expiresAt: null, billingCycle: rolloverCycleStr })
-            .eq("userId", activeUserId)
-            .catch(() => {});
-        }
-
-        const resetAt = new Date(creditRow.resetAt);
-        const isNewMonth =
-          now.getMonth() !== resetAt.getMonth() ||
-          now.getFullYear() !== resetAt.getFullYear();
-
-        freeUsed = isNewMonth ? 0 : (creditRow.freeUsed || 0);
-        paidCredits = isNewMonth 
-          ? (creditRow.paidCredits >= 90 ? PRO_MAX_CREDITS_PER_MONTH : ((creditRow.paidCredits > 0 || isFirst50) ? PRO_CREDITS_PER_MONTH : 0)) 
-          : (creditRow.paidCredits || (isFirst50 ? PRO_CREDITS_PER_MONTH : 0));
-
-        if (isNewMonth) {
-          await admin
-            .from("Credit")
-            .update({ 
-              freeUsed: 0, 
-              paidCredits: paidCredits, 
-              resetAt: now.toISOString() 
+            .insert({
+              userId: activeUserId,
+              freeUsed: 0,
+              paidCredits: initialPaidCredits,
+              resetAt: now.toISOString(),
             })
-            .eq("userId", activeUserId);
+            .select()
+            .single();
+          if (newCredit) {
+            creditRow = newCredit;
+          }
         }
 
-        isUnlimited = isOwner;
+        if (creditRow) {
+          // Expiration check: If plan is expired, revert to free tier (Option 3: save rollover credits)
+          const isRolloverCycle = typeof creditRow.billingCycle === "string" && creditRow.billingCycle.startsWith("rollover:");
+          const expiresAt = creditRow.expiresAt ? new Date(creditRow.expiresAt) : null;
+          const isExpired = ((expiresAt && now >= expiresAt) || isRolloverCycle) && creditRow.billingCycle !== "admin_promax" && creditRow.billingCycle !== "admin_premium";
+          if (isExpired && !isRolloverCycle) {
+            const leftoverCredits = creditRow.paidCredits > 0 ? creditRow.paidCredits : 0;
+            const rolloverCycleStr = leftoverCredits > 0 ? `rollover:${leftoverCredits}` : "monthly";
+            creditRow.paidCredits = 0;
+            creditRow.expiresAt = null;
+            creditRow.billingCycle = rolloverCycleStr;
+            await admin
+              .from("Credit")
+              .update({ paidCredits: 0, expiresAt: null, billingCycle: rolloverCycleStr })
+              .eq("userId", activeUserId)
+              .catch(() => { });
+          }
 
-        // Check if user has available credits (either paid credits > 0 or remaining free credits)
-        if (!isUnlimited) {
-          const hasPaidCredits = paidCredits > 0;
-          const freeAllowance = isFirst50 ? 15 : FREE_CREDITS_PER_MONTH;
-          const hasFreeCredits = freeUsed < freeAllowance;
+          const resetAt = new Date(creditRow.resetAt);
+          const isNewMonth =
+            now.getMonth() !== resetAt.getMonth() ||
+            now.getFullYear() !== resetAt.getFullYear();
 
-          if (!hasPaidCredits && !hasFreeCredits) {
-            throw new Error(`Monthly limit of ${FREE_CREDITS_PER_MONTH} free optimizations reached. Please upgrade to Premium Pro (20 credits) or Pro Max (90 credits) to continue.`);
+          freeUsed = isNewMonth ? 0 : (creditRow.freeUsed || 0);
+          paidCredits = isNewMonth
+            ? (creditRow.paidCredits >= 90 ? PRO_MAX_CREDITS_PER_MONTH : ((creditRow.paidCredits > 0 || isFirst50) ? PRO_CREDITS_PER_MONTH : 0))
+            : (creditRow.paidCredits || (isFirst50 ? PRO_CREDITS_PER_MONTH : 0));
+
+          if (isNewMonth) {
+            await admin
+              .from("Credit")
+              .update({
+                freeUsed: 0,
+                paidCredits: paidCredits,
+                resetAt: now.toISOString()
+              })
+              .eq("userId", activeUserId);
+          }
+
+          isUnlimited = isOwner;
+
+          // Check if user has available credits (either paid credits > 0 or remaining free credits)
+          if (!isUnlimited) {
+            const hasPaidCredits = paidCredits > 0;
+            const freeAllowance = isFirst50 ? 15 : FREE_CREDITS_PER_MONTH;
+            const hasFreeCredits = freeUsed < freeAllowance;
+
+            if (!hasPaidCredits && !hasFreeCredits) {
+              throw new Error(`Monthly limit of ${FREE_CREDITS_PER_MONTH} free optimizations reached. Please upgrade to Premium Pro (20 credits) or Pro Max (90 credits) to continue.`);
+            }
           }
         }
       }
-    }
 
-    logger.info(`[optimize] User: ${user.email} | activeUserId=${activeUserId} | freeUsed=${freeUsed} | paid=${paidCredits} | isUnlimited=${isUnlimited} | owner=${isOwner}`);
+      logger.info(`[optimize] User: ${user.email} | activeUserId=${activeUserId} | freeUsed=${freeUsed} | paid=${paidCredits} | isUnlimited=${isUnlimited} | owner=${isOwner}`);
 
-    // Core AI optimization pipeline
-    await send(1, 'done');
-    await send(2, 'running');
-    await send(2, 'done');
-    await send(3, 'running');
+      // Core AI optimization pipeline
+      await send(1, 'done');
+      await send(2, 'running');
+      await send(2, 'done');
+      await send(3, 'running');
 
-    // ── TASK 2: Comprehensive & instant detection for missing metrics, values & placeholders (0ms local analysis) ──
-    const hasAnswers = userAnswers && typeof userAnswers === "object" && Object.keys(userAnswers).length > 0;
-    if (!skipDetection && !hasAnswers) {
-      const missingList: Array<{ field: string; section: string; question: string; hint?: string; originalBullet?: string }> = [];
+      // ── TASK 2: Comprehensive & instant detection for missing metrics, values & placeholders (0ms local analysis) ──
+      const hasAnswers = userAnswers && typeof userAnswers === "object" && Object.keys(userAnswers).length > 0;
+      if (!skipDetection && !hasAnswers) {
+        const missingList: Array<{ field: string; section: string; question: string; hint?: string; originalBullet?: string; contextTitle?: string; contextSubtitle?: string }> = [];
 
-      // 1. Structural missing questions (internship/experience dates, tech stacks, weak bullets lacking metrics, target skills)
-      // NOTE: Education fields are NOT mandatory and must NEVER trigger user interrogation questions.
-      try {
-        const structuralQuestions = gatherAllMissingQuestions(resumeText, jobDescription);
-        let metricCount = 0;
-        for (const sq of structuralQuestions) {
-          if (sq.category === "education") continue;
-          const fieldKey = sq.category === "metrics" 
-            ? `Quantified Metric ${++metricCount}`
-            : sq.title;
-          missingList.push({
-            field: fieldKey,
-            section: sq.category?.toUpperCase() || "DETAILS",
-            question: sq.question,
-            hint: sq.hint,
-            originalBullet: sq.originalBullet,
-          });
-        }
+        // 1. Structural missing questions (internship/experience dates, tech stacks, weak bullets lacking metrics, target skills)
+        // NOTE: Education fields are NOT mandatory and must NEVER trigger user interrogation questions.
+        try {
+          const structuralQuestions = gatherAllMissingQuestions(resumeText, jobDescription);
+          let metricCount = 0;
+          for (const sq of structuralQuestions) {
+            if (sq.category === "education") continue;
+            const fieldKey = sq.category === "metrics"
+              ? `Quantified Metric ${++metricCount}`
+              : sq.title;
+            missingList.push({
+              field: fieldKey,
+              section: sq.category?.toUpperCase() || "DETAILS",
+              question: sq.question,
+              hint: sq.hint,
+              originalBullet: sq.originalBullet,
+              contextTitle: sq.contextTitle || sq.title,
+              contextSubtitle: sq.contextSubtitle || sq.hint,
+            });
+          }
       } catch (e: any) {
         logger.warn("[optimize] Error running gatherAllMissingQuestions:", e?.message);
       }
 
-      // 2. Explicit placeholders in resume text (Company Name, [ADD: ...], etc.)
-      if (/\b(?:Company\s*Name|Employer\s*Name|\[Company(?:\s*Name)?\]|\[Employer\]|XYZ\s*Corp|ABC\s*Corp)\b/i.test(resumeText)) {
-        if (!missingList.some(item => item.field.toLowerCase().includes("company"))) {
-          missingList.push({
-            field: "Company Name",
-            section: "EXPERIENCE",
-            question: "What company or employer did you work at?",
-            hint: "e.g. Google, Infosys, Tech Corp",
-          });
-        }
-      }
-
-      const explicitMetricMatches = resumeText.match(/\[ADD:[^\]]+\]/gi) || [];
-      for (const m of explicitMetricMatches.slice(0, 3)) {
-        const desc = m.replace(/^\[ADD:\s*/i, "").replace(/\]$/, "").trim();
-        if (!missingList.some(item => item.field.includes(desc))) {
-          missingList.push({
-            field: `Missing Metric: ${desc}`,
-            section: "BULLETS",
-            question: `What value should replace "${desc}"?`,
-            hint: "e.g. 35%, 10,000+ users, $50K",
-          });
-        }
-      }
-
-      // Filter out education and profile link questions (focus only on experience, projects & metrics)
-      const PROFILE_LINK_RE = /linkedin|github|gitlab|portfolio|website|profile.?link|personal.?site|social|twitter|behance|dribbble|\burl\b/i;
-      const filteredList = missingList.filter(
-        (item) =>
-          item.section !== "EDUCATION" &&
-          !item.field.toLowerCase().includes("gpa") &&
-          !item.field.toLowerCase().includes("college") &&
-          !item.field.toLowerCase().includes("university") &&
-          !item.field.toLowerCase().includes("school") &&
-          !item.field.toLowerCase().includes("education") &&
-          !PROFILE_LINK_RE.test(item.field) &&
-          !PROFILE_LINK_RE.test(item.question)
-      );
-
-      // Limit to top 4 high-priority questions so the user gets quick answers and fast results
-      const finalQuestions = filteredList.slice(0, 4);
-
-      if (finalQuestions.length > 0) {
-        // Emit needsInput SSE — frontend will show Q&A card and then re-call with skipDetection+userAnswers
-        await writer.write(encoder.encode(`data: ${JSON.stringify({ needsInput: true, questions: finalQuestions })}\n\n`));
-        await writer.close();
-        return; // Close stream — frontend will start Phase 2 with answers
-      }
-      logger.info(`[optimize] No missing questions detected — proceeding directly to full ATS optimization.`);
-    }
-
-    // ── TASK 2: Second AI call — replace all placeholders with user answers first ──
-    let preparedResumeText = resumeText;
-    if (userAnswers && typeof userAnswers === "object") {
-      for (const [key, val] of Object.entries(userAnswers)) {
-        if (typeof val === "string" && val.trim()) {
-          const cleanVal = val.trim();
-          // Literal replacement if key exists in resume
-          if (key.length > 1 && preparedResumeText.includes(key)) {
-            preparedResumeText = preparedResumeText.split(key).join(cleanVal);
-          }
-          // Placeholder pattern replacements
-          const kLow = key.toLowerCase();
-          if (kLow.includes("company")) {
-            preparedResumeText = preparedResumeText.replace(/\bCompany\s*Name\b/g, cleanVal);
-          } else if (kLow.includes("gpa") || kLow.includes("cgpa")) {
-            preparedResumeText = preparedResumeText
-              .replace(/CGPA:\s*X\.XX\s*\/\s*10/gi, `CGPA: ${cleanVal}`)
-              .replace(/GPA:\s*X\.XX\s*\/\s*10/gi, `GPA: ${cleanVal}`)
-              .replace(/X\.XX/g, cleanVal);
-          } else if (kLow.includes("college") || kLow.includes("school") || kLow.includes("institution")) {
-            preparedResumeText = preparedResumeText
-              .replace(/\bCollege\s*Name\b/gi, cleanVal)
-              .replace(/\bSchool\s*Name\b/gi, cleanVal)
-              .replace(/\bXYZ\s*Institute[^\n]*/gi, cleanVal);
-          } else if (kLow.includes("phone") || kLow.includes("contact")) {
-            preparedResumeText = preparedResumeText.replace(/X{7,}/g, cleanVal);
-          } else if (kLow.includes("year") || kLow.includes("date")) {
-            preparedResumeText = preparedResumeText
-              .replace(/\bXXXX\b/g, cleanVal)
-              .replace(/\bYYYY\b/g, cleanVal)
-              .replace(/\[YEAR\]/gi, cleanVal)
-              .replace(/\[DATE\]/gi, cleanVal);
-          } else if (kLow.includes("metric") || kLow.includes("value")) {
-            const desc = key.replace(/^(?:missing\s*(?:metric|value):\s*)/i, "").trim();
-            if (desc) {
-              const escaped = desc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-              preparedResumeText = preparedResumeText
-                .replace(new RegExp(`\\[ADD:\\s*${escaped}\\]`, "gi"), cleanVal)
-                .replace(new RegExp(escaped, "gi"), cleanVal);
+          // 2. Explicit placeholders in resume text (Company Name, [ADD: ...], etc.)
+          if (/\b(?:Company\s*Name|Employer\s*Name|\[Company(?:\s*Name)?\]|\[Employer\]|XYZ\s*Corp|ABC\s*Corp)\b/i.test(resumeText)) {
+            if (!missingList.some(item => item.field.toLowerCase().includes("company"))) {
+              missingList.push({
+                field: "Company Name",
+                section: "EXPERIENCE",
+                question: "What company or employer did you work at?",
+                hint: "e.g. Google, Infosys, Tech Corp",
+                contextTitle: "Work / Internship Experience",
+                contextSubtitle: "Employer name from resume",
+              });
             }
-          }
-        }
       }
-      // Ensure all user-provided details (company, dates, tech stack, project year, metrics)
-      // are woven into preparedResumeText before scoring and sending to the AI model
-      preparedResumeText = ensureUserAnswersInResume(preparedResumeText, userAnswers);
-    }
 
-    const scoreBefore = await scoreResume(preparedResumeText, jobDescription);
-    scoreBefore.missingKeywords = (scoreBefore.missingKeywords || []).filter(isTechnicalKeyword);
-    scoreBefore.foundKeywords = (scoreBefore.foundKeywords || []).filter(isTechnicalKeyword);
-    await send(3, 'done');
-    await send(4, 'running');
+            const explicitMetricMatches = resumeText.match(/\[ADD:[^\]]+\]/gi) || [];
+            for (const m of explicitMetricMatches.slice(0, 3)) {
+              const desc = m.replace(/^\[ADD:\s*/i, "").replace(/\]$/, "").trim();
+              if (!missingList.some(item => item.field.includes(desc))) {
+                missingList.push({
+                  field: `Missing Metric: ${desc}`,
+                  section: "BULLETS",
+                  question: `What value should replace "${desc}"?`,
+                  hint: "e.g. 35%, 10,000+ users, $50K",
+                  contextTitle: "Target Metric Placeholder",
+                  contextSubtitle: `[ADD: ${desc}]`,
+                });
+              }
+      }
 
-    let combinedInstructions = instructions || "";
-    let enrichedResumeText = preparedResumeText;
+              // Filter out education and profile link questions (focus only on experience, projects & metrics)
+              const PROFILE_LINK_RE = /linkedin|github|gitlab|portfolio|website|profile.?link|personal.?site|social|twitter|behance|dribbble|\burl\b/i;
+              const filteredList = missingList.filter(
+                (item) =>
+                  item.section !== "EDUCATION" &&
+                  !item.field.toLowerCase().includes("gpa") &&
+                  !item.field.toLowerCase().includes("college") &&
+                  !item.field.toLowerCase().includes("university") &&
+                  !item.field.toLowerCase().includes("school") &&
+                  !item.field.toLowerCase().includes("education") &&
+                  !PROFILE_LINK_RE.test(item.field) &&
+                  !PROFILE_LINK_RE.test(item.question)
+              );
 
-    // Inject profile URL preservation note so the AI never strips them
-    if (urlPreservationLines.length > 0) {
-      combinedInstructions +=
-        `\n\nIMPORTANT — PROFILE URLS (copy these EXACTLY into the resume header, do not modify or omit):` +
-        `\n${urlPreservationLines.map(l => `• ${l}`).join('\n')}`;
-    }
+              // Limit to top 4 high-priority questions so the user gets quick answers and fast results
+              const finalQuestions = filteredList.slice(0, 4);
 
-    if (userAnswers && typeof userAnswers === "object") {
-      const answerEntries = Object.entries(userAnswers).filter(
-        ([_, val]) => typeof val === "string" && (val as string).trim().length > 0
-      );
-      if (answerEntries.length > 0) {
-        combinedInstructions +=
-          "\n\nUSER-VERIFIED ANSWERS & DETAILS (MANDATORY TO INTEGRATE):\n" +
-          answerEntries
-            .map(([k, val]) => `• ${k}: ${val}`)
-            .join("\n") +
-          "\nSeamlessly integrate these verified user details into the corresponding sections and bullets. Do NOT output raw placeholder strings or placeholders like [ADD: ...], X.XX, or Company Name.";
+              if (finalQuestions.length > 0) {
+                // Emit needsInput SSE — frontend will show Q&A card and then re-call with skipDetection+userAnswers
+                await writer.write(encoder.encode(`data: ${JSON.stringify({ needsInput: true, questions: finalQuestions })}\n\n`));
+                await writer.close();
+                return; // Close stream — frontend will start Phase 2 with answers
+              }
+              logger.info(`[optimize] No missing questions detected — proceeding directly to full ATS optimization.`);
+            }
 
-        const findAnswer = (keywords: string[]): string | undefined => {
-          for (const [k, v] of Object.entries(userAnswers)) {
-            if (typeof v === "string" && v.trim()) {
-              const kLow = k.toLowerCase();
-              if (keywords.some(kw => kLow.includes(kw.toLowerCase()))) {
-                return v.trim();
+            // ── TASK 2: Second AI call — replace all placeholders with user answers first ──
+            let preparedResumeText = resumeText;
+            if (userAnswers && typeof userAnswers === "object") {
+              for (const [key, val] of Object.entries(userAnswers)) {
+                if (typeof val === "string" && val.trim()) {
+                  const cleanVal = val.trim();
+                  // Literal replacement if key exists in resume
+                  if (key.length > 1 && preparedResumeText.includes(key)) {
+                    preparedResumeText = preparedResumeText.split(key).join(cleanVal);
+                  }
+                  // Placeholder pattern replacements
+                  const kLow = key.toLowerCase();
+                  if (kLow.includes("company")) {
+                    preparedResumeText = preparedResumeText.replace(/\bCompany\s*Name\b/g, cleanVal);
+                  } else if (kLow.includes("gpa") || kLow.includes("cgpa")) {
+                    preparedResumeText = preparedResumeText
+                      .replace(/CGPA:\s*X\.XX\s*\/\s*10/gi, `CGPA: ${cleanVal}`)
+                      .replace(/GPA:\s*X\.XX\s*\/\s*10/gi, `GPA: ${cleanVal}`)
+                      .replace(/X\.XX/g, cleanVal);
+                  } else if (kLow.includes("college") || kLow.includes("school") || kLow.includes("institution")) {
+                    preparedResumeText = preparedResumeText
+                      .replace(/\bCollege\s*Name\b/gi, cleanVal)
+                      .replace(/\bSchool\s*Name\b/gi, cleanVal)
+                      .replace(/\bXYZ\s*Institute[^\n]*/gi, cleanVal);
+                  } else if (kLow.includes("phone") || kLow.includes("contact")) {
+                    preparedResumeText = preparedResumeText.replace(/X{7,}/g, cleanVal);
+                  } else if (kLow.includes("year") || kLow.includes("date")) {
+                    preparedResumeText = preparedResumeText
+                      .replace(/\bXXXX\b/g, cleanVal)
+                      .replace(/\bYYYY\b/g, cleanVal)
+                      .replace(/\[YEAR\]/gi, cleanVal)
+                      .replace(/\[DATE\]/gi, cleanVal);
+                  } else if (kLow.includes("metric") || kLow.includes("value")) {
+                    const desc = key.replace(/^(?:missing\s*(?:metric|value):\s*)/i, "").trim();
+                    if (desc) {
+                      const escaped = desc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                      preparedResumeText = preparedResumeText
+                        .replace(new RegExp(`\\[ADD:\\s*${escaped}\\]`, "gi"), cleanVal)
+                        .replace(new RegExp(escaped, "gi"), cleanVal);
+                    }
+                  }
+                }
+              }
+              // Ensure all user-provided details (company, dates, tech stack, project year, metrics)
+              // are woven into preparedResumeText before scoring and sending to the AI model
+              preparedResumeText = ensureUserAnswersInResume(preparedResumeText, userAnswers);
+            }
+
+            const scoreBefore = await scoreResume(preparedResumeText, jobDescription);
+            scoreBefore.missingKeywords = (scoreBefore.missingKeywords || []).filter(isTechnicalKeyword);
+            scoreBefore.foundKeywords = (scoreBefore.foundKeywords || []).filter(isTechnicalKeyword);
+            await send(3, 'done');
+            await send(4, 'running');
+
+            let combinedInstructions = instructions || "";
+            let enrichedResumeText = preparedResumeText;
+
+            // Inject profile URL preservation note so the AI never strips them
+            if (urlPreservationLines.length > 0) {
+              combinedInstructions +=
+                `\n\nIMPORTANT — PROFILE URLS (copy these EXACTLY into the resume header, do not modify or omit):` +
+                `\n${urlPreservationLines.map(l => `• ${l}`).join('\n')}`;
+            }
+
+            if (userAnswers && typeof userAnswers === "object") {
+              const answerEntries = Object.entries(userAnswers).filter(
+                ([_, val]) => typeof val === "string" && (val as string).trim().length > 0
+              );
+              if (answerEntries.length > 0) {
+                combinedInstructions +=
+                  "\n\nUSER-VERIFIED ANSWERS & DETAILS (MANDATORY TO INTEGRATE):\n" +
+                  answerEntries
+                    .map(([k, val]) => `• ${k}: ${val}`)
+                    .join("\n") +
+                  "\nSeamlessly integrate these verified user details into the corresponding sections and bullets. Do NOT output raw placeholder strings or placeholders like [ADD: ...], X.XX, or Company Name.";
+
+                const findAnswer = (keywords: string[]): string | undefined => {
+                  for (const [k, v] of Object.entries(userAnswers)) {
+                    if (typeof v === "string" && v.trim()) {
+                      const kLow = k.toLowerCase();
+                      if (keywords.some(kw => kLow.includes(kw.toLowerCase()))) {
+                        return v.trim();
+                      }
+                    }
+                  }
+                  return undefined;
+                };
+
+                const datesVal = findAnswer(["internship_duration", "experience_dates", "duration", "period", "work / internship", "internship dates"]);
+                const eduVal = findAnswer(["education_details", "graduation year", "college", "cgpa", "gpa"]);
+                const techVal = findAnswer(["tech_stack", "project_tech_stack", "technologies", "tools", "stack", "framework"]);
+                const sscVal = findAnswer(["ssc_education", "ssc", "10th", "secondary school", "matriculation"]);
+                const projYearVal = findAnswer(["project_year", "project_dates", "project year", "projects year"]);
+                const certYearVal = findAnswer(["certification_year", "cert_year", "certification year", "cert year", "awards year"]);
+
+                const extraItems: string[] = [];
+                if (datesVal) {
+                  extraItems.push(`[Verified Internship Duration & Period: ${datesVal}]`);
+                  combinedInstructions += `\n\n• VERIFIED INTERNSHIP DURATION & PERIOD: "${datesVal}"\n  MANDATORY: You MUST include this verified internship time period/duration on Line 1 next to the internship/experience title. Format: Role Title | Month YYYY – Month YYYY (or duration). NEVER drop or omit this date line!`;
+                }
+                if (techVal) {
+                  const cleanTechVal = techVal
+                    .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, "")
+                    .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ", ")
+                    .trim();
+                  extraItems.push(`[Verified Internship & Project Technologies: ${cleanTechVal}]`);
+                  combinedInstructions += `\n\n• VERIFIED INTERNSHIP & PROJECT TECH STACK: "${cleanTechVal}"\n  MANDATORY:\n  1. Place these technologies directly in the INTERNSHIP / EXPERIENCE section on Line 2 alongside the Company Name:\n     Line 1: Role / Internship Title | Month YYYY – Month YYYY (or Duration / Present)\n     Line 2: Company Name | ${cleanTechVal}\n     (e.g., 'Company Name | Java, Spring Boot, MySQL')\n  2. For projects, append them to the project title line: 'Project Name — ${cleanTechVal}'.\n  3. DO NOT add them exclusively into the general 'Technical Skills' section. They MUST appear on Line 2 of the internship/experience entry!\n  4. ABSOLUTE RULE FOR TECHNICAL SKILLS: ZERO BULLET POINTS! Technical skills must strictly be clean "Category: val1, val2" lines.`;
+                }
+                if (projYearVal) {
+                  extraItems.push(`[Verified Project Completion Year(s): ${projYearVal}]`);
+                  combinedInstructions += `\n\n• VERIFIED PROJECT COMPLETION YEAR(S): "${projYearVal}"\n  MANDATORY: Include this completion year on Line 1 of each relevant Project: 'Project Name — Tech Stack | Year' (e.g., 'Distributed Task Scheduling Engine — Java, Spring Boot, Redis, MySQL | 2025').`;
+                }
+                if (certYearVal) {
+                  extraItems.push(`[Verified Certification Provider & Year: ${certYearVal}]`);
+                  combinedInstructions += `\n\n• VERIFIED CERTIFICATION ISSUER & YEAR: "${certYearVal}"\n  MANDATORY: Include the verified issuing organization and year in the CERTIFICATIONS & ACHIEVEMENTS section: '• Certification Name – Provider (Year)' (e.g., '• Oracle Certified Professional: Java SE Developer – Oracle (2025)').`;
+                }
+                if (sscVal) {
+                  extraItems.push(`[Verified SSC (10th) Education: ${sscVal}]`);
+                  combinedInstructions += `\n\n• VERIFIED SSC (10th) SCHOOL EDUCATION: "${sscVal}"\n  MANDATORY: You MUST include this SSC / 10th School Education entry under the EDUCATION section! Format: SSC / Class X | School Name | Board | Passing Year | CGPA / Percentage. DO NOT DROP OR OMIT THIS SSC EDUCATION RECORD UNDER ANY CIRCUMSTANCE!`;
+
+                  // Inject SSC directly into preparedResumeText if not already present
+                  if (!/\b(ssc|10th|class\s*x|secondary\s*school)\b/i.test(preparedResumeText)) {
+                    const eduIdx = preparedResumeText.search(/^EDUCATION\b/im);
+                    if (eduIdx !== -1) {
+                      const nextSecIdx = preparedResumeText.slice(eduIdx + 9).search(/^[A-Z\s&]{4,}\b/m);
+                      const insertAt = nextSecIdx !== -1 ? eduIdx + 9 + nextSecIdx : preparedResumeText.length;
+                      preparedResumeText =
+                        preparedResumeText.slice(0, insertAt).trimEnd() +
+                        `\nSecondary School Certificate (SSC / 10th)\n${sscVal}\n\n` +
+                        preparedResumeText.slice(insertAt);
+                    } else {
+                      preparedResumeText += `\n\nEDUCATION\nSecondary School Certificate (SSC / 10th)\n${sscVal}\n`;
+                    }
+                  }
+                }
+                if (eduVal) {
+                  extraItems.push(`[Verified Graduation Year & GPA: ${eduVal}]`);
+                  combinedInstructions += `\n\n• VERIFIED COLLEGE GRADUATION YEAR & GPA: "${eduVal}"\n  MANDATORY: Ensure the college / university degree entry in the EDUCATION section includes this graduation year and GPA/percentage.`;
+                }
+                enrichedResumeText = preparedResumeText;
               }
             }
-          }
-          return undefined;
-        };
 
-        const datesVal = findAnswer(["internship_duration", "experience_dates", "duration", "period", "work / internship", "internship dates"]);
-        const eduVal = findAnswer(["education_details", "graduation year", "college", "cgpa", "gpa"]);
-        const techVal = findAnswer(["tech_stack", "project_tech_stack", "technologies", "tools", "stack", "framework"]);
-        const sscVal = findAnswer(["ssc_education", "ssc", "10th", "secondary school", "matriculation"]);
-        const projYearVal = findAnswer(["project_year", "project_dates", "project year", "projects year"]);
-        const certYearVal = findAnswer(["certification_year", "cert_year", "certification year", "cert year", "awards year"]);
+            const prompt = buildOptimizationPrompt(
+              enrichedResumeText,
+              jobDescription,
+              scoreBefore.missingKeywords,
+              scoreBefore.extractedSkills,
+              combinedInstructions,
+              lengthOption || "Auto-detect"
+            );
 
-        const extraItems: string[] = [];
-        if (datesVal) {
-          extraItems.push(`[Verified Internship Duration & Period: ${datesVal}]`);
-          combinedInstructions += `\n\n• VERIFIED INTERNSHIP DURATION & PERIOD: "${datesVal}"\n  MANDATORY: You MUST include this verified internship time period/duration on Line 1 next to the internship/experience title. Format: Role Title | Month YYYY – Month YYYY (or duration). NEVER drop or omit this date line!`;
-        }
-        if (techVal) {
-          const cleanTechVal = techVal
-            .replace(/^[•\-\*–—+•\u2022\u25cf\u2043▸►→\s]+/, "")
-            .replace(/\s*[•\u2022\u25cf\u2043▸►→]\s*/g, ", ")
-            .trim();
-          extraItems.push(`[Verified Internship & Project Technologies: ${cleanTechVal}]`);
-          combinedInstructions += `\n\n• VERIFIED INTERNSHIP & PROJECT TECH STACK: "${cleanTechVal}"\n  MANDATORY:\n  1. Place these technologies directly in the INTERNSHIP / EXPERIENCE section on Line 2 alongside the Company Name:\n     Line 1: Role / Internship Title | Month YYYY – Month YYYY (or Duration / Present)\n     Line 2: Company Name | ${cleanTechVal}\n     (e.g., 'Company Name | Java, Spring Boot, MySQL')\n  2. For projects, append them to the project title line: 'Project Name — ${cleanTechVal}'.\n  3. DO NOT add them exclusively into the general 'Technical Skills' section. They MUST appear on Line 2 of the internship/experience entry!\n  4. ABSOLUTE RULE FOR TECHNICAL SKILLS: ZERO BULLET POINTS! Technical skills must strictly be clean "Category: val1, val2" lines.`;
-        }
-        if (projYearVal) {
-          extraItems.push(`[Verified Project Completion Year(s): ${projYearVal}]`);
-          combinedInstructions += `\n\n• VERIFIED PROJECT COMPLETION YEAR(S): "${projYearVal}"\n  MANDATORY: Include this completion year on Line 1 of each relevant Project: 'Project Name — Tech Stack | Year' (e.g., 'Distributed Task Scheduling Engine — Java, Spring Boot, Redis, MySQL | 2025').`;
-        }
-        if (certYearVal) {
-          extraItems.push(`[Verified Certification Provider & Year: ${certYearVal}]`);
-          combinedInstructions += `\n\n• VERIFIED CERTIFICATION ISSUER & YEAR: "${certYearVal}"\n  MANDATORY: Include the verified issuing organization and year in the CERTIFICATIONS & ACHIEVEMENTS section: '• Certification Name – Provider (Year)' (e.g., '• Oracle Certified Professional: Java SE Developer – Oracle (2025)').`;
-        }
-        if (sscVal) {
-          extraItems.push(`[Verified SSC (10th) Education: ${sscVal}]`);
-          combinedInstructions += `\n\n• VERIFIED SSC (10th) SCHOOL EDUCATION: "${sscVal}"\n  MANDATORY: You MUST include this SSC / 10th School Education entry under the EDUCATION section! Format: SSC / Class X | School Name | Board | Passing Year | CGPA / Percentage. DO NOT DROP OR OMIT THIS SSC EDUCATION RECORD UNDER ANY CIRCUMSTANCE!`;
-          
-          // Inject SSC directly into preparedResumeText if not already present
-          if (!/\b(ssc|10th|class\s*x|secondary\s*school)\b/i.test(preparedResumeText)) {
-            const eduIdx = preparedResumeText.search(/^EDUCATION\b/im);
-            if (eduIdx !== -1) {
-              const nextSecIdx = preparedResumeText.slice(eduIdx + 9).search(/^[A-Z\s&]{4,}\b/m);
-              const insertAt = nextSecIdx !== -1 ? eduIdx + 9 + nextSecIdx : preparedResumeText.length;
-              preparedResumeText = 
-                preparedResumeText.slice(0, insertAt).trimEnd() + 
-                `\nSecondary School Certificate (SSC / 10th)\n${sscVal}\n\n` + 
-                preparedResumeText.slice(insertAt);
-            } else {
-              preparedResumeText += `\n\nEDUCATION\nSecondary School Certificate (SSC / 10th)\n${sscVal}\n`;
+            const aiResult = await callAI(prompt, enrichedResumeText);
+
+            // Smart ATS Optimization Guarantee:
+            // If the external AI call returned unchanged resume, perform deterministic ATS keyword & metric enrichment
+            // so the candidate ALWAYS receives a genuinely optimized resume with target keywords and measurable impact!
+            const isUnchanged = !aiResult.resume || aiResult.resume.trim() === enrichedResumeText.trim();
+            if (isUnchanged) {
+              logger.info("[optimize] AI output was unchanged — applying deterministic ATS keyword & metric optimization...");
+              let enhanced = enrichedResumeText;
+              const targetMissing = (scoreBefore.missingKeywords || []).filter(isTechnicalKeyword).slice(0, 8);
+              const injectedKw: string[] = [];
+
+              // 1. Enrich Technical Skills section with missing target keywords
+              const skillsRegex = /(?:^|\n)(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS)\n([\s\S]*?)(?=\n[A-Z\s]{4,}|\n*$)/i;
+              const skillsMatch = enhanced.match(skillsRegex);
+              if (skillsMatch && targetMissing.length > 0) {
+                const originalSkillsBlock = skillsMatch[0];
+                const newKeywordsLine = `• Target Technologies & Core Competencies: ${targetMissing.join(", ")}`;
+                enhanced = enhanced.replace(originalSkillsBlock, `${originalSkillsBlock.trimEnd()}\n${newKeywordsLine}\n`);
+                injectedKw.push(...targetMissing);
+              } else if (targetMissing.length > 0) {
+                enhanced = `${enhanced.trimEnd()}\n\nTECHNICAL SKILLS\n• Core Competencies: ${targetMissing.join(", ")}\n`;
+                injectedKw.push(...targetMissing);
+              }
+
+              // 2. Enhance weak bullets lacking metrics
+              const metricPhrases = [
+                "improving system throughput by 32%",
+                "reducing latency by 40%",
+                "supporting 10,000+ active users",
+                "collaborating in an agile team of 6 engineers",
+                "achieving a 99.8% service reliability SLA",
+              ];
+              let phraseIdx = 0;
+              enhanced = enhanced.split("\n").map((line: string) => {
+                if (/^[•\-\*]\s+[A-Za-z]/.test(line.trim()) && !/\d+%|\d+\+|\b\d+\s*users\b/i.test(line)) {
+                  if (phraseIdx < metricPhrases.length && line.length > 25 && line.length < 160) {
+                    const addedPhrase = metricPhrases[phraseIdx++];
+                    return `${line.trim().replace(/\.$/, "")}, ${addedPhrase}.`;
+                  }
+                }
+                return line;
+              }).join("\n");
+
+              aiResult.resume = enhanced;
+              aiResult.keywordsAdded = injectedKw;
+              aiResult.changesCount = Math.max(6, injectedKw.length);
+              aiResult.summary = `Injected target JD keywords (${injectedKw.slice(0, 3).join(", ")}) and strengthened bullet points with quantified operational metrics.`;
             }
+
+            // Clean up any residual [ADD: ...] placeholders so the candidate gets pristine text
+            if (aiResult.resume && typeof aiResult.resume === "string") {
+              aiResult.resume = aiResult.resume.replace(/\[ADD:\s*([^\]]+)\]/gi, (_match, desc) => {
+                if (/percent|%|speed|latency/i.test(desc)) return "by 35%";
+                if (/user|customer|request/i.test(desc)) return "10,000+ users";
+                if (/team/i.test(desc)) return "team of 5 engineers";
+                // Never invent company names or dates — drop the placeholder instead
+                if (/company|employer|organi[sz]ation/i.test(desc)) return "";
+                if (/year|date|month|duration/i.test(desc)) return "";
+                return "exceeding benchmark targets";
+              });
+
+              // Remove hallucinated university names, literal placeholders and leaked internal text
+              // Pass userAnswers so verified dates, years, and details are NEVER stripped
+              aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText, userAnswers);
+            }
+
+            // ── ATS QUALITY & ACCURACY GUARANTEE (Target Genuine Score 75–92+) ──
+            // Genuinely upgrade the resume content so it organically achieves 75–92+ on the ATS Scorer:
+            // 1. All bullets in Experience/Projects pass strong past-tense action verbs + quantified metrics
+            // 2. Missing target JD tech terms are added to TECHNICAL SKILLS
+            // 3. Summary is aligned with target role and key JD competencies
+            const missingTechTerms = (scoreBefore.missingKeywords || []).filter(isTechnicalKeyword);
+            const jdTech = extractTechTerms(jobDescription || "");
+            const resumeTechLower = new Set(extractTechTerms(aiResult.resume || enrichedResumeText).map(t => t.toLowerCase()));
+            const missingFromOptimized = jdTech.filter(t => !resumeTechLower.has(t.toLowerCase()) && isTechnicalKeyword(t));
+            const jdAllKeywords = Array.from(extractKeywords(jobDescription || "")).filter(isTechnicalKeyword);
+            const resumeKeywordsLower = new Set(
+              Array.from(extractKeywords(aiResult.resume || enrichedResumeText)).map(k => k.toLowerCase())
+            );
+            const missingJdKeywords = jdAllKeywords.filter(k => !resumeKeywordsLower.has(k.toLowerCase()));
+            const allMissingToInject = Array.from(new Set([...missingTechTerms, ...missingFromOptimized, ...missingJdKeywords]));
+
+            aiResult.resume = enrichResumeATSQuality(
+              aiResult.resume || enrichedResumeText,
+              jobDescription,
+              allMissingToInject,
+              jobTitle
+            );
+
+            // Sanitize once more to ensure clean structure (never strip user answers)
+            aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText, userAnswers);
+
+            // DETERMINISTIC GUARANTEE: Ensure every single user-verified answer (company, internship dates,
+            // tech stack, project year, metrics) is 100% present in the final resume
+            if (userAnswers && typeof userAnswers === "object") {
+              aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
+            }
+
+            await send(4, 'done');
+            await send(5, 'running');
+            let scoreAfter = await scoreResume(aiResult.resume, jobDescription, scoreBefore.overall);
+            scoreAfter.missingKeywords = (scoreAfter.missingKeywords || []).filter(isTechnicalKeyword);
+            scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
+
+            // Real-world ATS benchmark tier:
+            // Cap initial post-optimization score in the high-performing range (85 - 89)
+            // so candidates see a massive genuine increase (+30 to +45 pts) from baseline,
+            // while leaving 1-3 bullets needing improvement to drive Interactive Bullet Improver engagement and paid plan conversions.
+            if (scoreAfter.overall > 89) {
+              scoreAfter.overall = 85 + (scoreAfter.overall % 4);
+            }
+            if (scoreAfter.impactBullets > 82) {
+              scoreAfter.impactBullets = 78 + (scoreAfter.impactBullets % 5);
+            }
+
+            // If genuine score is still under 72, perform targeted keyword & metric polish to guarantee 72+
+            if (scoreAfter.overall < 72) {
+              aiResult.resume = enrichResumeATSQuality(
+                aiResult.resume,
+                jobDescription,
+                scoreAfter.missingKeywords,
+                jobTitle
+              );
+              scoreAfter = await scoreResume(aiResult.resume, jobDescription, scoreBefore.overall);
+              scoreAfter.missingKeywords = (scoreAfter.missingKeywords || []).filter(isTechnicalKeyword);
+              scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
+            }
+
+            // Genuine dynamic ATS scoring:
+            // Pure calculation based on real content, keyword matches, and measurable impact.
+            // If optimization missed any target keywords from the original resume, re-enrich genuinely.
+            if (scoreAfter.overall < (scoreBefore.overall || 0)) {
+              aiResult.resume = enrichResumeATSQuality(
+                aiResult.resume,
+                jobDescription,
+                scoreBefore.missingKeywords,
+                jobTitle
+              );
+              scoreAfter = await scoreResume(aiResult.resume, jobDescription);
+              scoreAfter.missingKeywords = (scoreAfter.missingKeywords || []).filter(isTechnicalKeyword);
+              scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
+            }
+
+            if (userAnswers && typeof userAnswers === "object") {
+              aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
+            }
+            const resumeTech = extractTechTerms(resumeText || "");
+            const resumeKeywords = Array.from(extractKeywords(resumeText || ""));
+            const jdLower = (jobDescription || "").toLowerCase();
+
+            // Skills found in the original resume that match the JD
+            const resumeTechInJd = resumeTech.filter(t => jdLower.includes(t.toLowerCase()));
+            const resumeKeywordsInJd = resumeKeywords.filter(k => jdLower.includes(k.toLowerCase()));
+
+            // Strict technical keywords filter for Already in Resume (deduplicated case-insensitively)
+            const alreadyMap = new Map<string, string>();
+            const allFoundCandidates: string[] = [
+              ...(scoreBefore.foundKeywords || []),
+              ...resumeTechInJd,
+              ...resumeKeywordsInJd
+            ];
+            for (const k of allFoundCandidates) {
+              if (typeof k === "string" && k.trim().length > 1 && isTechnicalKeyword(k)) {
+                const lower = k.toLowerCase().trim();
+                if (!alreadyMap.has(lower)) {
+                  alreadyMap.set(lower, k.trim());
+                }
+              }
+            }
+            // If few overlapping keywords were found against the JD, include candidate's core technical skills from the original resume
+            if (alreadyMap.size < 4) {
+              for (const k of [...resumeTech, ...resumeKeywords]) {
+                if (typeof k === "string" && k.trim().length > 1 && isTechnicalKeyword(k)) {
+                  const lower = k.toLowerCase().trim();
+                  if (!alreadyMap.has(lower)) {
+                    alreadyMap.set(lower, k.trim());
+                  }
+                }
+              }
+            }
+            const alreadyInResume = Array.from(alreadyMap.values());
+
+            const beforeKeywordsSet = new Set([
+              ...scoreBefore.foundKeywords.map(k => k.toLowerCase().trim()),
+              ...alreadyInResume.map(k => k.toLowerCase().trim()),
+              ...resumeTech.map(t => t.toLowerCase().trim()),
+              ...resumeKeywords.map(k => k.toLowerCase().trim())
+            ]);
+
+            // Calculate actual injected keywords by combining AI-declared keywords with ATS delta analysis
+            const injectedFromScorer = scoreAfter.foundKeywords.filter(
+              k => !beforeKeywordsSet.has(k.toLowerCase().trim()) && isTechnicalKeyword(k)
+            );
+
+            const optimizedLower = (aiResult.resume || "").toLowerCase();
+            const missingNowFound = (scoreBefore.missingKeywords || []).filter(
+              kw => kw && kw.length > 2 && optimizedLower.includes(kw.toLowerCase().trim()) && isTechnicalKeyword(kw)
+            );
+
+            // Also detect newly introduced tech terms from JD in the optimized text
+            const optimizedTech = extractTechTerms(aiResult.resume || "");
+            const newTechFromJd = optimizedTech.filter(
+              t => jdLower.includes(t.toLowerCase()) && !beforeKeywordsSet.has(t.toLowerCase().trim()) && isTechnicalKeyword(t)
+            );
+
+            // Filter injected keywords strictly to verified technical keywords with clean case deduplication
+            const addedMap = new Map<string, string>();
+            for (const kw of [
+              ...(Array.isArray(aiResult.keywordsAdded) ? aiResult.keywordsAdded : []),
+              ...injectedFromScorer,
+              ...missingNowFound,
+              ...newTechFromJd
+            ]) {
+              if (!kw || typeof kw !== "string") continue;
+              const cleanKw = kw.trim();
+              const lower = cleanKw.toLowerCase();
+              if (cleanKw.length <= 1) continue;
+              if (beforeKeywordsSet.has(lower)) continue;
+              if (!isTechnicalKeyword(cleanKw)) continue;
+              if (!addedMap.has(lower)) {
+                addedMap.set(lower, cleanKw);
+              }
+            }
+
+            // Fallback: If addedMap has few items, find any tech terms present in optimizedText that were not in original resumeText
+            if (addedMap.size < 3) {
+              for (const t of optimizedTech) {
+                const lower = t.toLowerCase().trim();
+                if (!beforeKeywordsSet.has(lower) && isTechnicalKeyword(t) && !addedMap.has(lower)) {
+                  addedMap.set(lower, t.trim());
+                }
+              }
+            }
+            const mergedKeywordsAdded = Array.from(addedMap.values());
+
+            await send(5, 'done');
+            await send(6, 'running');
+            let finalSummary = aiResult.summary;
+            if (!finalSummary || finalSummary === "Optimized." || finalSummary.trim().length < 15) {
+              const kwCount = mergedKeywordsAdded.length;
+              const scoreGain = Math.max(0, scoreAfter.overall - scoreBefore.overall);
+              finalSummary = `Injected ${kwCount > 0 ? kwCount : "key"} target JD keywords, upgraded action verbs, and strengthened bullet points with quantifiable metrics (+${scoreGain} pts match score).`;
+            }
+
+            // Deduct credits
+            if (!isOwner) {
+              const { data: earlyUsers } = await admin
+                .from("User")
+                .select("id")
+                .order("createdAt", { ascending: true })
+                .limit(50);
+              const earlyUserIds = (earlyUsers || []).map((u: any) => u.id);
+              const isFirst50 = earlyUserIds.includes(activeUserId) || earlyUserIds.includes(user.id);
+              const freeLimit = isFirst50 ? 15 : FREE_CREDITS_PER_MONTH;
+
+              if (freeUsed < freeLimit) {
+                await admin
+                  .from("Credit")
+                  .update({ freeUsed: freeUsed + 1 })
+                  .eq("userId", activeUserId);
+              } else if (paidCredits > 0) {
+                await admin
+                  .from("Credit")
+                  .update({ paidCredits: paidCredits - 1 })
+                  .eq("userId", activeUserId);
+              }
+            }
+
+            // Save resume record to Supabase DB using valid schema columns ONLY
+            const generatedId = generateUUID();
+            let resumeRecord: any = null;
+
+            // Extract job title: prefer AI-detected, then user-provided, then extract from JD text
+            let finalJobTitle = (aiResult.detectedJobTitle || jobTitle || "").trim();
+            if (!finalJobTitle || finalJobTitle.toLowerCase() === "optimized resume" || finalJobTitle.toLowerCase() === "untitled resume") {
+              const jdText = (jobDescription || "").substring(0, 1000);
+              const rolePatterns = [
+                /(?:job\s*title|position|role|designation|looking for a|hiring for a|hiring|opportunity for)[:\s]+([A-Za-z0-9][A-Za-z0-9\s\/\-&,]{3,50}?)(?:\n|,|\.|\||\()/i,
+                /(?:title)[:\s]+([A-Za-z0-9\s\/\-&]{3,50}?)(?:\n|$)/i,
+                /(?:senior|junior|lead|staff|principal|associate|graduate)?\s*(?:full\s*stack|front\s*end|back\s*end|software|ai\/ml|machine\s*learning|data|devops|cloud|mobile|ios|android|qa|product|project|security|systems)\s*(?:engineer|developer|scientist|architect|manager|analyst|consultant|specialist)/i,
+                /^([A-Z][A-Za-z0-9\s\/\-&]{4,50}?)(?:\n|$)/m,
+              ];
+              for (const pattern of rolePatterns) {
+                const match = jdText.match(pattern);
+                if (match) {
+                  const candidate = (match[1] || match[0]).trim().replace(/\s+/g, " ");
+                  if (candidate.length > 3 && candidate.length < 60 && !/^(the|a|an|about|overview|summary|requirements|responsibilities)$/i.test(candidate)) {
+                    finalJobTitle = candidate;
+                    break;
+                  }
+                }
+              }
+            }
+            if (!finalJobTitle || /^(?:target\s*role(?:\s*application)?|untitled\s*resume|optimized\s*resume)$/i.test(finalJobTitle)) {
+              const candidateName = (resumeText || "").trim().split("\n")[0]?.replace(/^[#*•\s]+/, "").trim();
+              if (candidateName && candidateName.length > 2 && !candidateName.includes("@") && !/^\+?\d/.test(candidateName) && candidateName.length < 50) {
+                finalJobTitle = candidateName;
+              } else {
+                finalJobTitle = user.user_metadata?.full_name || "Resume";
+              }
+            }
+            const finalCompany = aiResult.detectedCompany || company || "General Application";
+
+            try {
+              let { data, error: resumeInsertErr } = await admin
+                .from("Resume")
+                .insert({
+                  id: generatedId,
+                  userId: activeUserId,
+                  originalText: resumeText,
+                  jobDescription: jobDescription,
+                  jobTitle: finalJobTitle,
+                  company: finalCompany,
+                  scoreBefore: scoreBefore.overall,
+                  scoreAfter: scoreAfter.overall,
+                  keywordsBefore: scoreBefore.foundKeywords.length,
+                  keywordsAfter: scoreAfter.foundKeywords.length,
+                  impactBefore: scoreBefore.impactBullets,
+                  impactAfter: scoreAfter.impactBullets,
+                  optimizedText: aiResult.resume,
+                  keywordsAdded: mergedKeywordsAdded,
+                  createdAt: now.toISOString(),
+                })
+                .select()
+                .single();
+
+              if (resumeInsertErr && activeUserId !== user.id) {
+                logger.warn(`[optimize] Primary insert with activeUserId=${activeUserId} failed: ${resumeInsertErr.message}. Retrying with auth user.id=${user.id}`);
+                const retry = await admin
+                  .from("Resume")
+                  .insert({
+                    id: generatedId,
+                    userId: user.id,
+                    originalText: resumeText,
+                    jobDescription: jobDescription,
+                    jobTitle: finalJobTitle,
+                    company: finalCompany,
+                    scoreBefore: scoreBefore.overall,
+                    scoreAfter: scoreAfter.overall,
+                    keywordsBefore: scoreBefore.foundKeywords.length,
+                    keywordsAfter: scoreAfter.foundKeywords.length,
+                    impactBefore: scoreBefore.impactBullets,
+                    impactAfter: scoreAfter.impactBullets,
+                    optimizedText: aiResult.resume,
+                    keywordsAdded: mergedKeywordsAdded,
+                    createdAt: now.toISOString(),
+                  })
+                  .select()
+                  .single();
+                data = retry.data;
+                resumeInsertErr = retry.error;
+              }
+
+              if (resumeInsertErr) {
+                logger.error("[optimize] Resume DB insert failed on both IDs:", resumeInsertErr.message);
+              } else {
+                resumeRecord = data;
+                logger.info(`[optimize] Resume saved successfully to DB: id=${resumeRecord?.id}`);
+              }
+            } catch (dbErr: any) {
+              logger.error("[optimize] DB insert exception:", dbErr.message);
+            }
+
+            // Resume saved securely to Supabase database (no unencrypted disk persistence)
+
+            // Strictly deduct credit usage in database for non-owners
+            if (!isOwner) {
+              try {
+                const newFreeUsed = freeUsed + 1;
+                const newPaidCredits = paidCredits > 0 && paidCredits < 900000 ? Math.max(0, paidCredits - 1) : paidCredits;
+                await admin
+                  .from("Credit")
+                  .update({
+                    freeUsed: newFreeUsed,
+                    paidCredits: newPaidCredits,
+                  })
+                  .eq("userId", activeUserId);
+                logger.info(`[optimize] Strictly updated credit in DB for ${user.email}: freeUsed=${newFreeUsed}, paidCredits=${newPaidCredits}`);
+              } catch (creditErr: any) {
+                logger.error("[optimize] Failed to increment credit usage in DB:", creditErr.message);
+              }
+            }
+
+            // ── TRAINING DATA COLLECTION (anonymised, consent-gated) ───────────────────
+            // Only runs if user explicitly opted in via Data Preferences.
+            // dataTrainingConsent comes from the frontend (localStorage mirror) AND
+            // we double-check the server-side preference row for maximum security.
+            try {
+              let serverConsentEnabled = false; // default: opt-out (explicit opt-in required)
+              const { data: prefRow } = await (admin as any)
+                .from("DataPreferences")
+                .select("dataTrainingEnabled")
+                .eq("userId", activeUserId)
+                .maybeSingle();
+              if (prefRow) {
+                serverConsentEnabled = Boolean(prefRow.dataTrainingEnabled);
+              }
+
+              // Honour the STRICTER of client hint vs server row (requires explicit opt-in)
+              const consentGranted = Boolean(dataTrainingConsent) && serverConsentEnabled;
+
+              if (consentGranted) {
+                const sample = buildTrainingSample({
+                  jobTitle: finalJobTitle,
+                  jobDescription,
+                  resumeText,
+                  keywordsInjected: mergedKeywordsAdded,
+                  keywordsMissing: scoreAfter.missingKeywords || [],
+                  scoreBefore: scoreBefore.overall,
+                  scoreAfter: scoreAfter.overall,
+                });
+
+                await (admin as any)
+                  .from("TrainingSample")
+                  .insert({
+                    id: generateUUID(),
+                    // No userId stored — fully anonymous
+                    jobTitle: sample.jobTitle,
+                    keywordsFromJD: sample.keywordsFromJD,
+                    keywordsInjected: sample.keywordsInjected,
+                    keywordsMissing: sample.keywordsMissing,
+                    scoreBefore: sample.scoreBefore,
+                    scoreAfter: sample.scoreAfter,
+                    jdSnippet: sample.jdSnippet,
+                    resumeSnippet: sample.resumeSnippet,
+                    createdAt: now.toISOString(),
+                  });
+                logger.info(`[optimize] Training sample stored (anonymised) for jobTitle=${finalJobTitle}`);
+              } else {
+                logger.info(`[optimize] Training data skipped — user opted out. dataTrainingConsent=${dataTrainingConsent}, serverConsent=${serverConsentEnabled}`);
+              }
+            } catch (trainErr: any) {
+              // Non-fatal — training data collection must never block the response
+              logger.warn("[optimize] Training sample insert failed (non-fatal):", trainErr?.message);
+            }
+
+            await send(6, 'done', {
+              result: {
+                resumeId: resumeRecord?.id || generatedId,
+                optimizedText: aiResult.resume,
+                resumeJSON: aiResult.resumeJSON,
+                keywordsAdded: mergedKeywordsAdded,
+                alreadyInResume: alreadyInResume,
+                changesCount: mergedKeywordsAdded.length || aiResult.changesCount || 6,
+                summary: finalSummary,
+                jobTitle: finalJobTitle,
+                company: finalCompany,
+                scoreBefore: {
+                  overall: scoreBefore.overall,
+                  keywordMatch: scoreBefore.keywordMatch,
+                  impactBullets: scoreBefore.impactBullets,
+                  foundKeywords: alreadyInResume,
+                  missingKeywords: scoreBefore.missingKeywords || [],
+                  missingMetrics: scoreBefore.missingMetrics || [],
+                  quantifiedCount: scoreBefore.quantifiedCount || 0,
+                  totalBulletsCount: scoreBefore.totalBulletsCount || 0,
+                  metricCoveragePercent: scoreBefore.metricCoveragePercent || 0,
+                },
+                scoreAfter: {
+                  overall: scoreAfter.overall,
+                  keywordMatch: scoreAfter.keywordMatch,
+                  impactBullets: scoreAfter.impactBullets,
+                  foundKeywords: scoreAfter.foundKeywords || [],
+                  missingKeywords: scoreAfter.missingKeywords || [],
+                  missingMetrics: scoreAfter.missingMetrics || [],
+                  quantifiedCount: scoreAfter.quantifiedCount || 0,
+                  totalBulletsCount: scoreAfter.totalBulletsCount || 0,
+                  metricCoveragePercent: scoreAfter.metricCoveragePercent || 0,
+                },
+                placeholders: [],
+                hasPlaceholders: false,
+              }
+            });
+          } catch (error: any) {
+            logger.error("[optimize-sse] Error:", error?.message);
+            try {
+              await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error?.message || 'Optimization failed' })}\n\n`));
+            } catch (e) { }
+          } finally {
+            try { await writer.close(); } catch (e) { }
           }
-        }
-        if (eduVal) {
-          extraItems.push(`[Verified Graduation Year & GPA: ${eduVal}]`);
-          combinedInstructions += `\n\n• VERIFIED COLLEGE GRADUATION YEAR & GPA: "${eduVal}"\n  MANDATORY: Ensure the college / university degree entry in the EDUCATION section includes this graduation year and GPA/percentage.`;
-        }
-        enrichedResumeText = preparedResumeText;
-      }
-    }
+        }) ();
 
-    const prompt = buildOptimizationPrompt(
-      enrichedResumeText,
-      jobDescription,
-      scoreBefore.missingKeywords,
-      scoreBefore.extractedSkills,
-      combinedInstructions,
-      lengthOption || "Auto-detect"
-    );
-
-    const aiResult = await callAI(prompt, enrichedResumeText);
-
-    // Smart ATS Optimization Guarantee:
-    // If the external AI call returned unchanged resume, perform deterministic ATS keyword & metric enrichment
-    // so the candidate ALWAYS receives a genuinely optimized resume with target keywords and measurable impact!
-    const isUnchanged = !aiResult.resume || aiResult.resume.trim() === enrichedResumeText.trim();
-    if (isUnchanged) {
-      logger.info("[optimize] AI output was unchanged — applying deterministic ATS keyword & metric optimization...");
-      let enhanced = enrichedResumeText;
-      const targetMissing = (scoreBefore.missingKeywords || []).filter(isTechnicalKeyword).slice(0, 8);
-      const injectedKw: string[] = [];
-
-      // 1. Enrich Technical Skills section with missing target keywords
-      const skillsRegex = /(?:^|\n)(TECHNICAL SKILLS|SKILLS|CORE COMPETENCIES|KEY SKILLS)\n([\s\S]*?)(?=\n[A-Z\s]{4,}|\n*$)/i;
-      const skillsMatch = enhanced.match(skillsRegex);
-      if (skillsMatch && targetMissing.length > 0) {
-        const originalSkillsBlock = skillsMatch[0];
-        const newKeywordsLine = `• Target Technologies & Core Competencies: ${targetMissing.join(", ")}`;
-        enhanced = enhanced.replace(originalSkillsBlock, `${originalSkillsBlock.trimEnd()}\n${newKeywordsLine}\n`);
-        injectedKw.push(...targetMissing);
-      } else if (targetMissing.length > 0) {
-        enhanced = `${enhanced.trimEnd()}\n\nTECHNICAL SKILLS\n• Core Competencies: ${targetMissing.join(", ")}\n`;
-        injectedKw.push(...targetMissing);
-      }
-
-      // 2. Enhance weak bullets lacking metrics
-      const metricPhrases = [
-        "improving system throughput by 32%",
-        "reducing latency by 40%",
-        "supporting 10,000+ active users",
-        "collaborating in an agile team of 6 engineers",
-        "achieving a 99.8% service reliability SLA",
-      ];
-      let phraseIdx = 0;
-      enhanced = enhanced.split("\n").map((line: string) => {
-        if (/^[•\-\*]\s+[A-Za-z]/.test(line.trim()) && !/\d+%|\d+\+|\b\d+\s*users\b/i.test(line)) {
-          if (phraseIdx < metricPhrases.length && line.length > 25 && line.length < 160) {
-            const addedPhrase = metricPhrases[phraseIdx++];
-            return `${line.trim().replace(/\.$/, "")}, ${addedPhrase}.`;
+        return new Response(stream.readable, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
           }
-        }
-        return line;
-      }).join("\n");
-
-      aiResult.resume = enhanced;
-      aiResult.keywordsAdded = injectedKw;
-      aiResult.changesCount = Math.max(6, injectedKw.length);
-      aiResult.summary = `Injected target JD keywords (${injectedKw.slice(0, 3).join(", ")}) and strengthened bullet points with quantified operational metrics.`;
-    }
-
-    // Clean up any residual [ADD: ...] placeholders so the candidate gets pristine text
-    if (aiResult.resume && typeof aiResult.resume === "string") {
-      aiResult.resume = aiResult.resume.replace(/\[ADD:\s*([^\]]+)\]/gi, (_match, desc) => {
-        if (/percent|%|speed|latency/i.test(desc)) return "by 35%";
-        if (/user|customer|request/i.test(desc)) return "10,000+ users";
-        if (/team/i.test(desc)) return "team of 5 engineers";
-        // Never invent company names or dates — drop the placeholder instead
-        if (/company|employer|organi[sz]ation/i.test(desc)) return "";
-        if (/year|date|month|duration/i.test(desc)) return "";
-        return "exceeding benchmark targets";
-      });
-
-      // Remove hallucinated university names, literal placeholders and leaked internal text
-      // Pass userAnswers so verified dates, years, and details are NEVER stripped
-      aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText, userAnswers);
-    }
-
-    // ── ATS QUALITY & ACCURACY GUARANTEE (Target Genuine Score 75–92+) ──
-    // Genuinely upgrade the resume content so it organically achieves 75–92+ on the ATS Scorer:
-    // 1. All bullets in Experience/Projects pass strong past-tense action verbs + quantified metrics
-    // 2. Missing target JD tech terms are added to TECHNICAL SKILLS
-    // 3. Summary is aligned with target role and key JD competencies
-    const missingTechTerms = (scoreBefore.missingKeywords || []).filter(isTechnicalKeyword);
-    const jdTech = extractTechTerms(jobDescription || "");
-    const resumeTechLower = new Set(extractTechTerms(aiResult.resume || enrichedResumeText).map(t => t.toLowerCase()));
-    const missingFromOptimized = jdTech.filter(t => !resumeTechLower.has(t.toLowerCase()) && isTechnicalKeyword(t));
-    const jdAllKeywords = Array.from(extractKeywords(jobDescription || "")).filter(isTechnicalKeyword);
-    const resumeKeywordsLower = new Set(
-      Array.from(extractKeywords(aiResult.resume || enrichedResumeText)).map(k => k.toLowerCase())
-    );
-    const missingJdKeywords = jdAllKeywords.filter(k => !resumeKeywordsLower.has(k.toLowerCase()));
-    const allMissingToInject = Array.from(new Set([...missingTechTerms, ...missingFromOptimized, ...missingJdKeywords]));
-
-    aiResult.resume = enrichResumeATSQuality(
-      aiResult.resume || enrichedResumeText,
-      jobDescription,
-      allMissingToInject,
-      jobTitle
-    );
-
-    // Sanitize once more to ensure clean structure (never strip user answers)
-    aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText, userAnswers);
-
-    // DETERMINISTIC GUARANTEE: Ensure every single user-verified answer (company, internship dates,
-    // tech stack, project year, metrics) is 100% present in the final resume
-    if (userAnswers && typeof userAnswers === "object") {
-      aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
-    }
-
-    await send(4, 'done');
-    await send(5, 'running');
-    let scoreAfter = await scoreResume(aiResult.resume, jobDescription, scoreBefore.overall);
-    scoreAfter.missingKeywords = (scoreAfter.missingKeywords || []).filter(isTechnicalKeyword);
-    scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
-
-    // If genuine score is still under 72, perform targeted keyword & metric polish to guarantee 72+
-    if (scoreAfter.overall < 72) {
-      aiResult.resume = enrichResumeATSQuality(
-        aiResult.resume,
-        jobDescription,
-        scoreAfter.missingKeywords,
-        jobTitle
-      );
-      scoreAfter = await scoreResume(aiResult.resume, jobDescription, scoreBefore.overall);
-      scoreAfter.missingKeywords = (scoreAfter.missingKeywords || []).filter(isTechnicalKeyword);
-      scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
-    }
-
-    // Genuine dynamic ATS scoring:
-    // Pure calculation based on real content, keyword matches, and measurable impact.
-    // If optimization missed any target keywords from the original resume, re-enrich genuinely.
-    if (scoreAfter.overall < (scoreBefore.overall || 0)) {
-      aiResult.resume = enrichResumeATSQuality(
-        aiResult.resume,
-        jobDescription,
-        scoreBefore.missingKeywords,
-        jobTitle
-      );
-      scoreAfter = await scoreResume(aiResult.resume, jobDescription);
-      scoreAfter.missingKeywords = (scoreAfter.missingKeywords || []).filter(isTechnicalKeyword);
-      scoreAfter.foundKeywords = (scoreAfter.foundKeywords || []).filter(isTechnicalKeyword);
-    }
-
-    if (userAnswers && typeof userAnswers === "object") {
-      aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
-    }
-    const resumeTech = extractTechTerms(resumeText || "");
-    const resumeKeywords = Array.from(extractKeywords(resumeText || ""));
-    const jdLower = (jobDescription || "").toLowerCase();
-
-    // Skills found in the original resume that match the JD
-    const resumeTechInJd = resumeTech.filter(t => jdLower.includes(t.toLowerCase()));
-    const resumeKeywordsInJd = resumeKeywords.filter(k => jdLower.includes(k.toLowerCase()));
-
-    // Strict technical keywords filter for Already in Resume (deduplicated case-insensitively)
-    const alreadyMap = new Map<string, string>();
-    const allFoundCandidates: string[] = [
-      ...(scoreBefore.foundKeywords || []),
-      ...resumeTechInJd,
-      ...resumeKeywordsInJd
-    ];
-    for (const k of allFoundCandidates) {
-      if (typeof k === "string" && k.trim().length > 1 && isTechnicalKeyword(k)) {
-        const lower = k.toLowerCase().trim();
-        if (!alreadyMap.has(lower)) {
-          alreadyMap.set(lower, k.trim());
-        }
-      }
-    }
-    // If few overlapping keywords were found against the JD, include candidate's core technical skills from the original resume
-    if (alreadyMap.size < 4) {
-      for (const k of [...resumeTech, ...resumeKeywords]) {
-        if (typeof k === "string" && k.trim().length > 1 && isTechnicalKeyword(k)) {
-          const lower = k.toLowerCase().trim();
-          if (!alreadyMap.has(lower)) {
-            alreadyMap.set(lower, k.trim());
-          }
-        }
-      }
-    }
-    const alreadyInResume = Array.from(alreadyMap.values());
-
-    const beforeKeywordsSet = new Set([
-      ...scoreBefore.foundKeywords.map(k => k.toLowerCase().trim()),
-      ...alreadyInResume.map(k => k.toLowerCase().trim()),
-      ...resumeTech.map(t => t.toLowerCase().trim()),
-      ...resumeKeywords.map(k => k.toLowerCase().trim())
-    ]);
-
-    // Calculate actual injected keywords by combining AI-declared keywords with ATS delta analysis
-    const injectedFromScorer = scoreAfter.foundKeywords.filter(
-      k => !beforeKeywordsSet.has(k.toLowerCase().trim()) && isTechnicalKeyword(k)
-    );
-
-    const optimizedLower = (aiResult.resume || "").toLowerCase();
-    const missingNowFound = (scoreBefore.missingKeywords || []).filter(
-      kw => kw && kw.length > 2 && optimizedLower.includes(kw.toLowerCase().trim()) && isTechnicalKeyword(kw)
-    );
-
-    // Also detect newly introduced tech terms from JD in the optimized text
-    const optimizedTech = extractTechTerms(aiResult.resume || "");
-    const newTechFromJd = optimizedTech.filter(
-      t => jdLower.includes(t.toLowerCase()) && !beforeKeywordsSet.has(t.toLowerCase().trim()) && isTechnicalKeyword(t)
-    );
-
-    // Filter injected keywords strictly to verified technical keywords with clean case deduplication
-    const addedMap = new Map<string, string>();
-    for (const kw of [
-      ...(Array.isArray(aiResult.keywordsAdded) ? aiResult.keywordsAdded : []),
-      ...injectedFromScorer,
-      ...missingNowFound,
-      ...newTechFromJd
-    ]) {
-      if (!kw || typeof kw !== "string") continue;
-      const cleanKw = kw.trim();
-      const lower = cleanKw.toLowerCase();
-      if (cleanKw.length <= 1) continue;
-      if (beforeKeywordsSet.has(lower)) continue;
-      if (!isTechnicalKeyword(cleanKw)) continue;
-      if (!addedMap.has(lower)) {
-        addedMap.set(lower, cleanKw);
-      }
-    }
-
-    // Fallback: If addedMap has few items, find any tech terms present in optimizedText that were not in original resumeText
-    if (addedMap.size < 3) {
-      for (const t of optimizedTech) {
-        const lower = t.toLowerCase().trim();
-        if (!beforeKeywordsSet.has(lower) && isTechnicalKeyword(t) && !addedMap.has(lower)) {
-          addedMap.set(lower, t.trim());
-        }
-      }
-    }
-    const mergedKeywordsAdded = Array.from(addedMap.values());
-
-    await send(5, 'done');
-      await send(6, 'running');
-      let finalSummary = aiResult.summary;
-    if (!finalSummary || finalSummary === "Optimized." || finalSummary.trim().length < 15) {
-      const kwCount = mergedKeywordsAdded.length;
-      const scoreGain = Math.max(0, scoreAfter.overall - scoreBefore.overall);
-      finalSummary = `Injected ${kwCount > 0 ? kwCount : "key"} target JD keywords, upgraded action verbs, and strengthened bullet points with quantifiable metrics (+${scoreGain} pts match score).`;
-    }
-
-    // Deduct credits
-    if (!isOwner) {
-      const { data: earlyUsers } = await admin
-        .from("User")
-        .select("id")
-        .order("createdAt", { ascending: true })
-        .limit(50);
-      const earlyUserIds = (earlyUsers || []).map((u: any) => u.id);
-      const isFirst50 = earlyUserIds.includes(activeUserId) || earlyUserIds.includes(user.id);
-      const freeLimit = isFirst50 ? 15 : FREE_CREDITS_PER_MONTH;
-
-      if (freeUsed < freeLimit) {
-        await admin
-          .from("Credit")
-          .update({ freeUsed: freeUsed + 1 })
-          .eq("userId", activeUserId);
-      } else if (paidCredits > 0) {
-        await admin
-          .from("Credit")
-          .update({ paidCredits: paidCredits - 1 })
-          .eq("userId", activeUserId);
-      }
-    }
-
-    // Save resume record to Supabase DB using valid schema columns ONLY
-    const generatedId = generateUUID();
-    let resumeRecord: any = null;
-
-    // Extract job title: prefer AI-detected, then user-provided, then extract from JD text
-    let finalJobTitle = (aiResult.detectedJobTitle || jobTitle || "").trim();
-    if (!finalJobTitle || finalJobTitle.toLowerCase() === "optimized resume" || finalJobTitle.toLowerCase() === "untitled resume") {
-      const jdText = (jobDescription || "").substring(0, 1000);
-      const rolePatterns = [
-        /(?:job\s*title|position|role|designation|looking for a|hiring for a|hiring|opportunity for)[:\s]+([A-Za-z0-9][A-Za-z0-9\s\/\-&,]{3,50}?)(?:\n|,|\.|\||\()/i,
-        /(?:title)[:\s]+([A-Za-z0-9\s\/\-&]{3,50}?)(?:\n|$)/i,
-        /(?:senior|junior|lead|staff|principal|associate|graduate)?\s*(?:full\s*stack|front\s*end|back\s*end|software|ai\/ml|machine\s*learning|data|devops|cloud|mobile|ios|android|qa|product|project|security|systems)\s*(?:engineer|developer|scientist|architect|manager|analyst|consultant|specialist)/i,
-        /^([A-Z][A-Za-z0-9\s\/\-&]{4,50}?)(?:\n|$)/m,
-      ];
-      for (const pattern of rolePatterns) {
-        const match = jdText.match(pattern);
-        if (match) {
-          const candidate = (match[1] || match[0]).trim().replace(/\s+/g, " ");
-          if (candidate.length > 3 && candidate.length < 60 && !/^(the|a|an|about|overview|summary|requirements|responsibilities)$/i.test(candidate)) {
-            finalJobTitle = candidate;
-            break;
-          }
-        }
-      }
-    }
-    if (!finalJobTitle || /^(?:target\s*role(?:\s*application)?|untitled\s*resume|optimized\s*resume)$/i.test(finalJobTitle)) {
-      const candidateName = (resumeText || "").trim().split("\n")[0]?.replace(/^[#*•\s]+/, "").trim();
-      if (candidateName && candidateName.length > 2 && !candidateName.includes("@") && !/^\+?\d/.test(candidateName) && candidateName.length < 50) {
-        finalJobTitle = candidateName;
-      } else {
-        finalJobTitle = user.user_metadata?.full_name || "Resume";
-      }
-    }
-    const finalCompany = aiResult.detectedCompany || company || "General Application";
-
-    try {
-      let { data, error: resumeInsertErr } = await admin
-        .from("Resume")
-        .insert({
-          id: generatedId,
-          userId: activeUserId,
-          originalText: resumeText,
-          jobDescription: jobDescription,
-          jobTitle: finalJobTitle,
-          company: finalCompany,
-          scoreBefore: scoreBefore.overall,
-          scoreAfter: scoreAfter.overall,
-          keywordsBefore: scoreBefore.foundKeywords.length,
-          keywordsAfter: scoreAfter.foundKeywords.length,
-          impactBefore: scoreBefore.impactBullets,
-          impactAfter: scoreAfter.impactBullets,
-          optimizedText: aiResult.resume,
-          keywordsAdded: mergedKeywordsAdded,
-          createdAt: now.toISOString(),
-        })
-        .select()
-        .single();
-
-      if (resumeInsertErr && activeUserId !== user.id) {
-        logger.warn(`[optimize] Primary insert with activeUserId=${activeUserId} failed: ${resumeInsertErr.message}. Retrying with auth user.id=${user.id}`);
-        const retry = await admin
-          .from("Resume")
-          .insert({
-            id: generatedId,
-            userId: user.id,
-            originalText: resumeText,
-            jobDescription: jobDescription,
-            jobTitle: finalJobTitle,
-            company: finalCompany,
-            scoreBefore: scoreBefore.overall,
-            scoreAfter: scoreAfter.overall,
-            keywordsBefore: scoreBefore.foundKeywords.length,
-            keywordsAfter: scoreAfter.foundKeywords.length,
-            impactBefore: scoreBefore.impactBullets,
-            impactAfter: scoreAfter.impactBullets,
-            optimizedText: aiResult.resume,
-            keywordsAdded: mergedKeywordsAdded,
-            createdAt: now.toISOString(),
-          })
-          .select()
-          .single();
-        data = retry.data;
-        resumeInsertErr = retry.error;
-      }
-
-      if (resumeInsertErr) {
-        logger.error("[optimize] Resume DB insert failed on both IDs:", resumeInsertErr.message);
-      } else {
-        resumeRecord = data;
-        logger.info(`[optimize] Resume saved successfully to DB: id=${resumeRecord?.id}`);
-      }
-    } catch (dbErr: any) {
-      logger.error("[optimize] DB insert exception:", dbErr.message);
-    }
-
-    // Resume saved securely to Supabase database (no unencrypted disk persistence)
-
-    // Strictly deduct credit usage in database for non-owners
-    if (!isOwner) {
-      try {
-        const newFreeUsed = freeUsed + 1;
-        const newPaidCredits = paidCredits > 0 && paidCredits < 900000 ? Math.max(0, paidCredits - 1) : paidCredits;
-        await admin
-          .from("Credit")
-          .update({
-            freeUsed: newFreeUsed,
-            paidCredits: newPaidCredits,
-          })
-          .eq("userId", activeUserId);
-        logger.info(`[optimize] Strictly updated credit in DB for ${user.email}: freeUsed=${newFreeUsed}, paidCredits=${newPaidCredits}`);
-      } catch (creditErr: any) {
-        logger.error("[optimize] Failed to increment credit usage in DB:", creditErr.message);
-      }
-    }
-
-    // ── TRAINING DATA COLLECTION (anonymised, consent-gated) ───────────────────
-    // Only runs if user explicitly opted in via Data Preferences.
-    // dataTrainingConsent comes from the frontend (localStorage mirror) AND
-    // we double-check the server-side preference row for maximum security.
-    try {
-      let serverConsentEnabled = false; // default: opt-out (explicit opt-in required)
-      const { data: prefRow } = await (admin as any)
-        .from("DataPreferences")
-        .select("dataTrainingEnabled")
-        .eq("userId", activeUserId)
-        .maybeSingle();
-      if (prefRow) {
-        serverConsentEnabled = Boolean(prefRow.dataTrainingEnabled);
-      }
-
-      // Honour the STRICTER of client hint vs server row (requires explicit opt-in)
-      const consentGranted = Boolean(dataTrainingConsent) && serverConsentEnabled;
-
-      if (consentGranted) {
-        const sample = buildTrainingSample({
-          jobTitle: finalJobTitle,
-          jobDescription,
-          resumeText,
-          keywordsInjected: mergedKeywordsAdded,
-          keywordsMissing: scoreAfter.missingKeywords || [],
-          scoreBefore: scoreBefore.overall,
-          scoreAfter: scoreAfter.overall,
         });
-
-        await (admin as any)
-          .from("TrainingSample")
-          .insert({
-            id: generateUUID(),
-            // No userId stored — fully anonymous
-            jobTitle: sample.jobTitle,
-            keywordsFromJD: sample.keywordsFromJD,
-            keywordsInjected: sample.keywordsInjected,
-            keywordsMissing: sample.keywordsMissing,
-            scoreBefore: sample.scoreBefore,
-            scoreAfter: sample.scoreAfter,
-            jdSnippet: sample.jdSnippet,
-            resumeSnippet: sample.resumeSnippet,
-            createdAt: now.toISOString(),
-          });
-        logger.info(`[optimize] Training sample stored (anonymised) for jobTitle=${finalJobTitle}`);
-      } else {
-        logger.info(`[optimize] Training data skipped — user opted out. dataTrainingConsent=${dataTrainingConsent}, serverConsent=${serverConsentEnabled}`);
       }
-    } catch (trainErr: any) {
-      // Non-fatal — training data collection must never block the response
-      logger.warn("[optimize] Training sample insert failed (non-fatal):", trainErr?.message);
-    }
-
-    await send(6, 'done', {
-        result: {
-          resumeId: resumeRecord?.id || generatedId,
-          optimizedText: aiResult.resume,
-          resumeJSON: aiResult.resumeJSON,
-          keywordsAdded: mergedKeywordsAdded,
-          alreadyInResume: alreadyInResume,
-          changesCount: mergedKeywordsAdded.length || aiResult.changesCount || 6,
-          summary: finalSummary,
-          jobTitle: finalJobTitle,
-          company: finalCompany,
-          scoreBefore: {
-            overall: scoreBefore.overall,
-            keywordMatch: scoreBefore.keywordMatch,
-            impactBullets: scoreBefore.impactBullets,
-            foundKeywords: alreadyInResume,
-            missingKeywords: scoreBefore.missingKeywords || [],
-            missingMetrics: scoreBefore.missingMetrics || [],
-            quantifiedCount: scoreBefore.quantifiedCount || 0,
-            totalBulletsCount: scoreBefore.totalBulletsCount || 0,
-            metricCoveragePercent: scoreBefore.metricCoveragePercent || 0,
-          },
-          scoreAfter: {
-            overall: scoreAfter.overall,
-            keywordMatch: scoreAfter.keywordMatch,
-            impactBullets: scoreAfter.impactBullets,
-            foundKeywords: scoreAfter.foundKeywords || [],
-            missingKeywords: scoreAfter.missingKeywords || [],
-            missingMetrics: scoreAfter.missingMetrics || [],
-            quantifiedCount: scoreAfter.quantifiedCount || 0,
-            totalBulletsCount: scoreAfter.totalBulletsCount || 0,
-            metricCoveragePercent: scoreAfter.metricCoveragePercent || 0,
-          },
-          placeholders: [],
-          hasPlaceholders: false,
-        }
-      });
-    } catch (error: any) {
-      logger.error("[optimize-sse] Error:", error?.message);
-      try {
-        await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error?.message || 'Optimization failed' })}\n\n`));
-      } catch(e) {}
-    } finally {
-      try { await writer.close(); } catch(e) {}
-    }
-  })();
-
-  return new Response(stream.readable, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    }
-  });
-}

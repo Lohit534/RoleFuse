@@ -89,13 +89,13 @@ export const MAX_JD_CHARS = 6000;
 export const MIN_RESUME_CHARS = 100;
 export const MIN_JD_CHARS = 50;
 
-// Owner email configuration with environment variables and verified owner fallback
+// Owner email configuration loaded strictly from environment variables (never hardcoded in codebase)
 export const OWNER_EMAIL =
   process.env.NEXT_PUBLIC_ADMIN_EMAIL ||
   process.env.NEXT_PUBLIC_OWNER_EMAIL ||
   process.env.OWNER_EMAIL ||
   process.env.ADMIN_EMAIL ||
-  "lohithpeyyala@gmail.com";
+  "";
 
 export const isOwnerEmail = (email?: string): boolean => {
   if (!email) return false;
@@ -106,8 +106,5 @@ export const isOwnerEmail = (email?: string): boolean => {
     process.env.ADMIN_EMAIL ||
     "";
   const ownerEmails = rawOwners.split(",").map(e => e.toLowerCase().trim()).filter(Boolean);
-  if (!ownerEmails.includes("lohithpeyyala@gmail.com")) {
-    ownerEmails.push("lohithpeyyala@gmail.com");
-  }
   return ownerEmails.includes(email.toLowerCase().trim());
 };

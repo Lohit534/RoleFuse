@@ -75,6 +75,78 @@ function findWeakBulletsLocally(
   return results;
 }
 
+function extractInternshipContext(text: string): { title: string; subtitle: string } {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let foundSection = false;
+  let roleTitle = "";
+  let companyOrDetails = "";
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (/(?:EXPERIENCE|WORK EXPERIENCE|INTERNSHIPS?|EMPLOYMENT HISTORY)\b/i.test(l)) {
+      foundSection = true;
+      continue;
+    }
+    if (foundSection && /(?:EDUCATION|PROJECTS?|TECHNICAL SKILLS|SKILLS|CERTIFICATIONS?|LANGUAGES?)\b/i.test(l)) {
+      break;
+    }
+
+    if (foundSection || /\b(intern|internship|trainee|apprentice)\b/i.test(l)) {
+      if (!roleTitle && !l.startsWith("•") && !l.startsWith("-") && !l.startsWith("*")) {
+        roleTitle = l.replace(/^[#*•\s\-_]+/, "").replace(/[:\-_]+$/, "").trim();
+        if (i + 1 < lines.length && !lines[i + 1].startsWith("•") && !lines[i + 1].startsWith("-") && !lines[i + 1].startsWith("*")) {
+          companyOrDetails = lines[i + 1].replace(/^[#*•\s\-_]+/, "").replace(/[:\-_]+$/, "").trim();
+        }
+        break;
+      }
+    }
+  }
+
+  return {
+    title: roleTitle || "Internship / Work Experience",
+    subtitle: companyOrDetails || "Role & Organization details from your resume",
+  };
+}
+
+function extractProjectContext(text: string): { title: string; subtitle: string } {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  let foundProj = false;
+  let projTitle = "";
+  let projDetails = "";
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (/(?:PROJECTS?|ACADEMIC PROJECTS?|KEY PROJECTS?)\b/i.test(l)) {
+      foundProj = true;
+      continue;
+    }
+    if (foundProj && /(?:EDUCATION|EXPERIENCE|WORK EXPERIENCE|INTERNSHIPS?|SKILLS|CERTIFICATIONS?)\b/i.test(l)) {
+      break;
+    }
+
+    if (foundProj && !l.startsWith("•") && !l.startsWith("-") && !l.startsWith("*") && l.length > 3) {
+      if (!projTitle) {
+        if (l.includes("—") || l.includes(" - ") || l.includes("|")) {
+          const parts = l.split(/\s*[—|\-]\s*/);
+          projTitle = parts[0].trim();
+          projDetails = parts.slice(1).join(" | ").trim();
+        } else {
+          projTitle = l.trim();
+          if (i + 1 < lines.length && !lines[i + 1].startsWith("•") && !lines[i + 1].startsWith("-")) {
+            projDetails = lines[i + 1].trim();
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  return {
+    title: projTitle || "Key Resume Project",
+    subtitle: projDetails || "Project details from your resume",
+  };
+}
+
 export function gatherAllMissingQuestions(resumeText: string, jobDescription?: string) {
   const questions: Array<{
     id: string;
@@ -83,10 +155,14 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
     originalBullet?: string;
     question: string;
     hint: string;
+    contextTitle?: string;
+    contextSubtitle?: string;
   }> = [];
 
   const text = resumeText || "";
   const upperText = text.toUpperCase();
+  const internCtx = extractInternshipContext(text);
+  const projCtx = extractProjectContext(text);
 
   // 1. Internship / Work Experience Duration & Dates Detection
   const hasInternship = /\b(intern|internship|trainee|apprentice)\b/i.test(text);
@@ -104,8 +180,10 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
       id: "internship_duration",
       category: "year_date",
       title: "Internship / Work Duration & Period",
-      question: "What was the duration or time period (start & end months/year) for your internship or work experience?",
+      question: `What was the duration or time period (start & end months/year) for: ${internCtx.title}?`,
       hint: "e.g., June 2023 – August 2023 (3 Months) or May 2024 – July 2024",
+      contextTitle: internCtx.title,
+      contextSubtitle: internCtx.subtitle,
     });
   }
 
@@ -122,8 +200,10 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
       id: "tech_stack",
       category: "tech_stack",
       title: "Internship & Project Tech Stack",
-      question: "Which technologies, frameworks, and programming languages did you use during your internship and key projects?",
+      question: `Which technologies and tools did you use during your ${internCtx.title}?`,
       hint: "e.g., React.js, Node.js, Express, PostgreSQL, Tailwind CSS, Git",
+      contextTitle: internCtx.title,
+      contextSubtitle: internCtx.subtitle,
     });
   }
 
@@ -134,8 +214,10 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
       id: "project_year",
       category: "year_date",
       title: "Project Completion Year(s)",
-      question: "Which year(s) did you build or complete your key project(s)? (e.g., 2025, 2024)",
-      hint: "e.g., Distributed Task Scheduling Engine (2025), API Gateway (2024)",
+      question: `Which year(s) did you build or complete "${projCtx.title}"?`,
+      hint: "e.g., 2025, 2024 (or May 2024 – Aug 2024)",
+      contextTitle: projCtx.title,
+      contextSubtitle: projCtx.subtitle,
     });
   }
 
@@ -154,6 +236,8 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
         title: "Target Job Skills Alignment",
         question: `Do you have experience with ${topMissing.join(", ")}? Enter any you have worked with:`,
         hint: `e.g., ${topMissing.join(", ")}`,
+        contextTitle: "Target Job Alignment",
+        contextSubtitle: `Key technical skills from job description: ${topMissing.join(", ")}`,
       });
     }
   }
@@ -168,6 +252,8 @@ export function gatherAllMissingQuestions(resumeText: string, jobDescription?: s
       originalBullet: b.originalBullet,
       question: b.question,
       hint: b.hint,
+      contextTitle: "Target Resume Bullet",
+      contextSubtitle: b.originalBullet,
     });
   }
 

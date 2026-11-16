@@ -95,8 +95,8 @@ export default function ResumeViewer({
   const [savingLibrary, setSavingLibrary] = useState(false);
   const [isSavedInLibrary, setIsSavedInLibrary] = useState(false);
 
-  // Layout & Template State
-  const [isFullLength, setIsFullLength] = useState(false);
+  // Layout & Template State (default to full page for natural, smooth page scrolling without scroll trapping)
+  const [isFullLength, setIsFullLength] = useState(true);
   const [templateStyle, setTemplateStyle] = useState<"academic" | "modern" | "clean">("academic");
 
   // Parse blocks for rendering

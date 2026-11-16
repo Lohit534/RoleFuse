@@ -27,6 +27,8 @@ interface MissingQuestion {
   question: string;
   hint?: string;
   originalBullet?: string;
+  contextTitle?: string;
+  contextSubtitle?: string;
 }
 
 interface OptimizingProgressProps {
@@ -503,6 +505,21 @@ export default function OptimizingProgress({
             </span>
           </div>
 
+          {/* 2-Line Reference Context Box (What internship / project / bullet is being asked about) */}
+          {(currentQ.contextTitle || currentQ.contextSubtitle || currentQ.originalBullet) && (
+            <div className="bg-white border border-teal-200/90 rounded-md p-3 mb-3 shadow-2xs">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[#087F6E] mb-1">
+                Target Resume Reference
+              </div>
+              <div className="text-xs sm:text-sm font-bold text-slate-900 leading-snug">
+                {currentQ.contextTitle || (currentQ.originalBullet ? "Target Resume Bullet" : currentQ.field)}
+              </div>
+              <div className="text-[11px] sm:text-xs text-slate-600 italic mt-0.5 leading-relaxed">
+                {currentQ.contextSubtitle || currentQ.originalBullet || currentQ.hint}
+              </div>
+            </div>
+          )}
+
           <div className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
             {currentQ.field}
           </div>
@@ -510,15 +527,6 @@ export default function OptimizingProgress({
           <div className="text-sm sm:text-base font-bold text-slate-900 mb-1.5 leading-snug">
             {currentQ.question}
           </div>
-
-          {currentQ.originalBullet && (
-            <div className="text-xs text-slate-700 italic bg-white border border-slate-200 rounded-md p-2.5 sm:p-3 mt-2 leading-relaxed">
-              <span className="font-bold text-slate-400 block mb-0.5 uppercase tracking-wider text-[9px] not-italic">
-                Target Resume Bullet:
-              </span>
-              &ldquo;{currentQ.originalBullet}&rdquo;
-            </div>
-          )}
         </div>
 
         {/* Input Field with Maximum Visibility and Rectangle Shape */}
