@@ -71,8 +71,14 @@ export const metadata: Metadata = {
     "resume keyword matcher",
     "rolefuse score",
     "rolefuse app",
-    "rolefuse ats score"
+    "rolefuse ats score",
+    "nsw-I-HR2IAX7LA75LSGHTF8HPWDV28BSRGRULI27TR9XPREBA5T1EATLMP0WBUJBBV10BLANWC0A0G19NAAVWX67VTPWYDCXOPBS4PK-3P1YLV36CX0BPKEJB5-YP6TKYE5"
   ],
+  verification: {
+    other: {
+      "norton-safeweb-site-verification": "I-HR2IAX7LA75LSGHTF8HPWDV28BSRGRULI27TR9XPREBA5T1EATLMP0WBUJBBV10BLANWC0A0G19NAAVWX67VTPWYDCXOPBS4PK-3P1YLV36CX0BPKEJB5-YP6TKYE5",
+    },
+  },
   alternates: {
     canonical: "https://rolefuse.in",
   },
@@ -154,13 +160,6 @@ const structuredData = {
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "All",
       "browserRequirements": "Requires JavaScript. Requires HTML5.",
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "ratingCount": "1420",
-        "bestRating": "5",
-        "worstRating": "1"
-      },
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -249,6 +248,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`h-full ${inter.variable} ${plusJakarta.variable} ${jetbrainsMono.variable}`}>
       <head>
+        <meta name="norton-safeweb-site-verification" content="I-HR2IAX7LA75LSGHTF8HPWDV28BSRGRULI27TR9XPREBA5T1EATLMP0WBUJBBV10BLANWC0A0G19NAAVWX67VTPWYDCXOPBS4PK-3P1YLV36CX0BPKEJB5-YP6TKYE5" />
         <meta name="theme-color" content="#FFFFFF" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
