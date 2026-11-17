@@ -19,12 +19,12 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/dashboard/", "/auth/callback", "/auth/confirm"],
+        disallow: ["/api/", "/auth/callback", "/auth/confirm"],
       },
       {
         userAgent: "Googlebot",
         allow: "/",
-        disallow: ["/api/", "/dashboard/"],
+        disallow: ["/api/"],
       },
       {
         userAgent: "Googlebot-Image",
@@ -38,7 +38,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
           "/icon-48.png",
           "/favicon.ico",
         ],
-        disallow: ["/api/", "/dashboard/"],
+        disallow: ["/api/"],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

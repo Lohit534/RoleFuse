@@ -11,7 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: "/ats-optimizer", changeFrequency: "weekly", priority: 0.9 },
     { url: "/resume-builder", changeFrequency: "weekly", priority: 0.9 },
     { url: "/products", changeFrequency: "weekly", priority: 0.8 },
-    { url: "/dashboard/pricing", changeFrequency: "weekly", priority: 0.8 },
+    { url: "/pricing", changeFrequency: "weekly", priority: 0.8 },
     { url: "/resources", changeFrequency: "weekly", priority: 0.8 },
     { url: "/resources/ats-formatting-mistakes", changeFrequency: "monthly", priority: 0.7 },
     { url: "/resources/best-free-resume-builders", changeFrequency: "monthly", priority: 0.7 },
