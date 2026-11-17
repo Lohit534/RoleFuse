@@ -276,7 +276,7 @@ export function isTechnicalKeyword(term: string): boolean {
     "rag": true, "nosql": true, "sql": true, "bi": true, "sre": true, "qa": true,
     "tdd": true, "bdd": true, "oop": true, "api": true, "apis": true,
     "etl": true, "aws lambda": true, "docker container": true, "docker containers": true,
-    "scikitlearn": true, "scikit-learn": true, "drf": true, "ann": true, "cnn": true,
+    "scikitlearn": true, "scikit-learn": true, "scitktlearn": true, "sklearn": true, "drf": true, "ann": true, "cnn": true,
     "rnn": true, "lstm": true, "svm": true, "knn": true, "gan": true, "dsa": true,
     "kaggle": true, "fine-tuning": true, "finetuning": true, "fine tuning": true,
     "embeddings": true, "embedding": true, "vector search": true, "semantic search": true,
@@ -415,4 +415,50 @@ export function extractKeywords(text: string): Set<string> {
   }
 
   return keywords;
+}
+
+export function canonicalizeSkill(skill: string): string {
+  const clean = (skill || "").trim();
+  const lower = clean.toLowerCase();
+  const compact = lower.replace(/[^a-z0-9]/g, "");
+
+  if (
+    /^(?:scitktlearn|scikitlearn|scikit-learn|sklearn|scikit|sci-kit|scikit\s*learn)$/i.test(lower) ||
+    /^(?:scitktlearn|scikitlearn|sklearn)$/i.test(compact)
+  ) {
+    return "scikit-learn";
+  }
+  if (/^(?:tensorflow|tensor-flow|tf)$/i.test(lower) || compact === "tensorflow") {
+    return "TensorFlow";
+  }
+  if (compact === "django") {
+    return "Django";
+  }
+  if (/^(?:react|reactjs|react\.js)$/i.test(lower) || compact === "reactjs" || compact === "react") {
+    return "React";
+  }
+  if (/^(?:node|nodejs|node\.js)$/i.test(lower) || compact === "nodejs" || compact === "node") {
+    return "Node.js";
+  }
+  if (/^(?:express|expressjs|express\.js)$/i.test(lower) || compact === "expressjs") {
+    return "Express.js";
+  }
+  if (/^(?:postgres|postgresql|postgre\s*sql)$/i.test(lower) || compact === "postgres" || compact === "postgresql") {
+    return "PostgreSQL";
+  }
+  if (/^(?:mongo|mongodb)$/i.test(lower) || compact === "mongodb") {
+    return "MongoDB";
+  }
+  if (/^(?:tailwind|tailwindcss|tailwind\s*css)$/i.test(lower) || compact === "tailwindcss" || compact === "tailwind") {
+    return "Tailwind CSS";
+  }
+  if (/^(?:nextjs|next\.js|next\s*js)$/i.test(lower) || compact === "nextjs") {
+    return "Next.js";
+  }
+  return clean;
+}
+
+export function normSkillKey(skill: string): string {
+  const canon = canonicalizeSkill(skill);
+  return canon.toLowerCase().replace(/[^a-z0-9]/g, "");
 }

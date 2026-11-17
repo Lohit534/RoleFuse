@@ -10,7 +10,7 @@
  * Keeping ONE implementation guarantees the Missing Metrics box and the
  * Bullet Improver always evaluate exactly the same bullets with the same rules.
  */
-import { extractActionVerbs } from "./keywords";
+import { extractActionVerbs, canonicalizeSkill, normSkillKey } from "./keywords";
 
 export const BULLET_MARKER_REGEX = /^\s*([•\-\*–—+o\u2022\u25cf\u2043▸►→▪◦\u2023\u25e6\u2219\u25aa\u25ab\u25a0\u25cb\u25a1\u2713\u2714\u2794\u27a4\u25ba\u25c4·]|\d+[.)]|[a-zA-Z][.)])\s+/;
 
@@ -450,8 +450,16 @@ export function enrichResumeATSQuality(
       if (targetCategoryMatch && targetCategoryMatch.index !== undefined) {
         const fullMatch = targetCategoryMatch[0];
         const existingLine = targetCategoryMatch[1];
-        const existingLower = text.toLowerCase();
-        const trulyNew = techMissing.filter(t => !existingLower.includes(t.toLowerCase().trim()));
+        const existingKeys = new Set(existingLine.split(/,\s*/).map(normSkillKey));
+        const trulyNew: string[] = [];
+        for (const t of techMissing) {
+          const canon = canonicalizeSkill(t);
+          const key = normSkillKey(canon);
+          if (!existingKeys.has(key)) {
+            existingKeys.add(key);
+            trulyNew.push(canon);
+          }
+        }
         if (trulyNew.length > 0) {
           const updatedLine = `${fullMatch.trimEnd()}, ${trulyNew.join(", ")}`;
           text = text.replace(fullMatch, updatedLine);
@@ -459,8 +467,16 @@ export function enrichResumeATSQuality(
       } else if (!hasFrameworks && coreCompMatch && coreCompMatch.index !== undefined) {
         const fullMatch = coreCompMatch[0];
         const existingLine = coreCompMatch[1];
-        const existingLower = existingLine.toLowerCase();
-        const trulyNew = techMissing.filter(t => !existingLower.includes(t.toLowerCase()));
+        const existingKeys = new Set(existingLine.split(/,\s*/).map(normSkillKey));
+        const trulyNew: string[] = [];
+        for (const t of techMissing) {
+          const canon = canonicalizeSkill(t);
+          const key = normSkillKey(canon);
+          if (!existingKeys.has(key)) {
+            existingKeys.add(key);
+            trulyNew.push(canon);
+          }
+        }
         if (trulyNew.length > 0) {
           const updatedLine = `${fullMatch.trimEnd()}, ${trulyNew.join(", ")}`;
           text = text.replace(fullMatch, updatedLine);

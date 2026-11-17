@@ -194,6 +194,7 @@ export function buildOptimizationPrompt(
     "AWARDS & CERTIFICATIONS:\n" +
     "  Header: AWARDS & CERTIFICATIONS (ALL CAPS)\n" +
     "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section with header 'AWARDS & CERTIFICATIONS'. Do NOT create two separate sections.\n" +
+    "  - NEVER repeat the section header 'AWARDS & CERTIFICATIONS' or insert 'Awards & Certifications' or 'Certifications' as a subheader inside the section. Output the header ONCE and list all items as direct bullets.\n" +
     "  ABSOLUTE RULE — NEVER MERGE INTO PROJECTS: Certifications and achievements MUST appear in their own dedicated section under 'AWARDS & CERTIFICATIONS' between PROJECTS and EDUCATION. NEVER append them as bullets under a project!\n" +
     "  CERTIFICATIONS format: • Certification Name – Providing Organization / Platform (e.g. • Python Foundations – Infosys Springboard, • Python Programming – CodeTantra, • Foundations of Cybersecurity – Google)\n" +
     "  CRITICAL FOR CERTIFICATIONS: Keep the EXACT Certification Name and EXACT Providing Company Name as provided by the candidate. NEVER swap them, NEVER change company names, and NEVER write wordy sentences or explanations.\n" +

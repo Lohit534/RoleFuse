@@ -1,3 +1,5 @@
+import { canonicalizeSkill, normSkillKey } from "../ats/keywords";
+
 // Rolefuse Resume Parser (Shared across PDF, DOCX, and live web preview)
 // Strictly follows the ATS resume template specification
 
@@ -353,6 +355,34 @@ function extractRightGrade(line: string): { left: string; grade: string } {
   return { left: line.replace(/[\s|–—\-,:]+$/, "").trim(), grade: "" };
 }
 
+function extractRightDateAndGrade(line: string): { left: string; date: string; grade: string } {
+  let remaining = line.replace(/[\s|–—\-,:]+$/, "").trim();
+  let date = "";
+  let grade = "";
+
+  const gradeMatch = remaining.match(GRADE_REGEX_END);
+  if (gradeMatch) {
+    grade = gradeMatch[0].trim();
+    remaining = remaining.slice(0, gradeMatch.index).trim().replace(/[\s|–—\-,:]+$/, "").trim();
+  }
+
+  const dateMatch = remaining.match(DATE_REGEX_END);
+  if (dateMatch) {
+    date = dateMatch[0].trim();
+    remaining = remaining.slice(0, dateMatch.index).trim().replace(/[\s|–—\-,:]+$/, "").trim();
+  }
+
+  if (!grade) {
+    const secondGradeMatch = remaining.match(GRADE_REGEX_END);
+    if (secondGradeMatch) {
+      grade = secondGradeMatch[0].trim();
+      remaining = remaining.slice(0, secondGradeMatch.index).trim().replace(/[\s|–—\-,:]+$/, "").trim();
+    }
+  }
+
+  return { left: remaining, date, grade };
+}
+
 // ── Canonical Section Map ───────────────────────────────────────────────────
 
 const SECTION_HEADERS_MAP: Record<string, string> = {
@@ -561,7 +591,6 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
   const summary = rawSections['SUMMARY'].map(l => stripMarkdownAsterisks(l)).join(' ').trim();
 
   // Skills: Deduplicate by label so duplicate categories never appear
-  const normSkill = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
   const skillsMap = new Map<string, SkillCategory>();
   for (const line of rawSections['SKILLS']) {
     const clean = stripMarkdownAsterisks(line).replace(/^[•\-*\u2022]\s*/, '').trim();
@@ -575,8 +604,8 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
       } else {
         // Merge unique comma-separated skills
         const existing = skillsMap.get(normKey)!;
-        const set = new Set(existing.skills.split(',').map(normSkill));
-        const newTerms = val.split(',').map(s => s.trim()).filter(s => !set.has(normSkill(s)));
+        const set = new Set(existing.skills.split(',').map(normSkillKey));
+        const newTerms = val.split(',').map(s => s.trim()).filter(s => !set.has(normSkillKey(s)));
         if (newTerms.length > 0) {
           existing.skills += ', ' + newTerms.join(', ');
         }
@@ -593,8 +622,8 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
         const fwKey = Array.from(skillsMap.keys()).find(key => key.includes('framework') || key.includes('libraries'));
         if (coreCat && fwKey) {
           const fw = skillsMap.get(fwKey)!;
-          const fwSet = new Set(fw.skills.split(',').map(normSkill));
-          const newTerms = coreCat.skills.split(',').map(s => s.trim()).filter(s => s.length > 1 && !fwSet.has(normSkill(s)));
+          const fwSet = new Set(fw.skills.split(',').map(normSkillKey));
+          const newTerms = coreCat.skills.split(',').map(s => s.trim()).filter(s => s.length > 1 && !fwSet.has(normSkillKey(s)));
           if (newTerms.length > 0) {
             fw.skills += ', ' + newTerms.join(', ');
           }
@@ -604,7 +633,7 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
     }
   }
 
-  // Filter out any leaked sentence fragments or soft skills from skill lines and deduplicate items internally
+  // Filter out any leaked sentence fragments or soft skills from skill lines and deduplicate items internally with canonical names
   const JUNK_SKILL_RE = /troubleshoot\s*network|issues\s*across|title\s*network|monitor\s*network|enterprise\s*monitoring|monitoring\s*tools|problem\s*solving/i;
   for (const [key, cat] of Array.from(skillsMap.entries())) {
     const seenNorm = new Set<string>();
@@ -613,10 +642,11 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
       const cleanItem = s.trim();
       if (!cleanItem || cleanItem.length <= 1) continue;
       if (JUNK_SKILL_RE.test(cleanItem)) continue;
-      const norm = normSkill(cleanItem);
+      const canon = canonicalizeSkill(cleanItem);
+      const norm = normSkillKey(canon);
       if (!seenNorm.has(norm)) {
         seenNorm.add(norm);
-        uniqueTerms.push(cleanItem);
+        uniqueTerms.push(canon);
       }
     }
     if (uniqueTerms.length === 0) {
@@ -776,9 +806,11 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
   for (const line of rawCertLines) {
     const clean = stripMarkdownAsterisks(line).replace(/^[•\-*\u2022]\s*/, '').trim();
     if (!clean) continue;
-    // Filter out section header leakage like "& ACHIEVEMENTS" or "CERTIFICATIONS & ACHIEVEMENTS"
+    // Filter out section header leakage like "& ACHIEVEMENTS" or "CERTIFICATIONS & ACHIEVEMENTS" or "Awards & Certifications"
     if (/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(clean)) continue;
     if (/^(?:AWARDS|CERTIFICATIONS)\s*(&|AND)\s*(?:CERTIFICATIONS|ACHIEVEMENTS|AWARDS)\s*$/i.test(clean)) continue;
+    if (/^(?:awards\s*(?:&|and)\s*certifications|certifications\s*(?:&|and)\s*awards|certifications?|achievements?|awards?)$/i.test(clean)) continue;
+    if (/^(?:awards\s*(?:&|and)\s*certifications|certifications\s*(?:&|and)\s*awards|certifications?|achievements?|awards?)$/i.test(clean)) continue;
     if (PURE_DATE_REGEX.test(clean)) {
       orphanedDates.push(clean);
     } else if (PURE_GRADE_REGEX.test(clean)) {
@@ -795,12 +827,12 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
   const isInstitutionName = (str: string): boolean => {
     const s = str.trim();
     return /\b(university|college|school|institute|academy|campus|vidya|vidyalaya|polytechnic)\b/i.test(s) &&
-      !/\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|secondary\s*school\s*certificate|matriculation|diploma|phd|doctorate)\b/i.test(s);
+      !/\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|b\.?\s*s\.?|b\.?\s*a\.?|b\.?\s*com\.?|bba|mba|intermediate|12th|hsc|ssc|10th|secondary\s*school(?:\s*certificate)?|matriculation|diploma|phd|doctorate)\b/i.test(s);
   };
 
   const isDegreeLine = (str: string): boolean => {
     if (isInstitutionName(str)) return false;
-    return /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|high\s*school\s*(?:certificate|diploma)|matriculation|secondary|diploma|phd|doctorate|degree)\b/i.test(str);
+    return /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|b\.?\s*s\.?|b\.?\s*a\.?|b\.?\s*com\.?|bba|mba|intermediate|12th|class\s*(?:x|xii|10th?|12th?)|hsc|ssc|10th|high\s*school\s*(?:certificate|diploma)|secondary\s*school(?:\s*certificate)?|matriculation|secondary|diploma|phd|doctorate|degree)\b/i.test(str);
   };
 
   for (let i = 0; i < rawEduLines.length; i++) {
@@ -826,9 +858,8 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
       }
     }
 
-    const { left: degLeft, date } = extractRightDate(rawLine);
-    const { left: instLeft, grade } = extractRightGrade(degLeft);
-    const cleanLeft = stripMarkdownAsterisks(instLeft).replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+    const { left: parsedLeft, date, grade } = extractRightDateAndGrade(rawLine);
+    const cleanLeft = stripMarkdownAsterisks(parsedLeft).replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
 
     if (isDegreeLine(rawLine) || !currentEdu || (currentEdu.institution && !currentEdu.degree)) {
       currentEdu = {
@@ -866,12 +897,34 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
   for (let i = 0; i < education.length - 1; i++) {
     const cur = education[i];
     const next = education[i + 1];
-    if (cur.degree && !cur.institution && next.degree && (isInstitutionName(next.degree) || !isDegreeLine(next.degree))) {
-      cur.institution = next.degree;
+    const nextInst = next.institution || next.degree;
+    if (cur.degree && !cur.institution && nextInst && (isInstitutionName(nextInst) || !isDegreeLine(nextInst))) {
+      cur.institution = nextInst;
       if (!cur.yearOrDates && next.yearOrDates) cur.yearOrDates = next.yearOrDates;
       if (!cur.grade && next.grade) cur.grade = next.grade;
       education.splice(i + 1, 1);
       i--;
+    }
+  }
+
+  // Global pass: if any entry has a degree (e.g. SSC, Intermediate) with NO institution,
+  // and there is another orphan entry whose degree is an institution name, merge them!
+  for (let i = 0; i < education.length; i++) {
+    const cur = education[i];
+    if (cur.degree && !cur.institution && isDegreeLine(cur.degree)) {
+      for (let j = 0; j < education.length; j++) {
+        if (i === j) continue;
+        const other = education[j];
+        const otherText = other.institution || other.degree;
+        if (otherText && (isInstitutionName(otherText) || !isDegreeLine(otherText))) {
+          cur.institution = otherText;
+          if (!cur.yearOrDates && other.yearOrDates) cur.yearOrDates = other.yearOrDates;
+          if (!cur.grade && other.grade) cur.grade = other.grade;
+          education.splice(j, 1);
+          if (j < i) i--;
+          break;
+        }
+      }
     }
   }
 
@@ -882,8 +935,13 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
     edu.grade = stripMarkdownAsterisks(edu.grade).trim();
     edu.yearOrDates = stripMarkdownAsterisks(edu.yearOrDates).trim();
 
-    const isInst = (s: string) => /\b(university|college|school|institute|academy|campus|vidya|vidyalaya|polytechnic)\b/i.test(s);
-    const isDeg = (s: string) => /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|high\s*school|matriculation|secondary|diploma|phd|doctorate|degree)\b/i.test(s);
+    const isInst = (s: string) =>
+      /\b(university|college|school|institute|academy|campus|vidya|vidyalaya|polytechnic)\b/i.test(s) &&
+      !/\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|secondary\s*school(?:\s*certificate)?|matriculation|diploma|phd|doctorate)\b/i.test(s);
+
+    const isDeg = (s: string) =>
+      /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|intermediate|12th|hsc|ssc|10th|secondary\s*school(?:\s*certificate)?|secondary|matriculation|diploma|phd|doctorate|degree)\b/i.test(s) &&
+      !/\b(university|college|school|institute|academy|campus|vidya|vidyalaya|polytechnic)\b/i.test(s.replace(/secondary\s*school(?:\s*certificate)?|high\s*school\s*(?:certificate|diploma)/gi, ''));
 
     if (isInst(edu.degree) && isDeg(edu.institution)) {
       const temp = edu.degree;
@@ -931,6 +989,51 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
     }
   }
 
+  // Level-based education consolidation (guarantees split degrees / schools at the same tier are unified into 1 entry)
+  const getLevel = (edu: EducationItem): string => {
+    const text = (edu.degree + " " + edu.institution).toLowerCase();
+    if (/\b(master|m\.?\s*tech|ms|msc|mca|phd|doctorate)\b/i.test(text)) return 'master';
+    if (/\b(bachelor|b\.?\s*tech|b\.?\s*e|bca|bsc|b\.?\s*s\.?|b\.?\s*a\.?|b\.?\s*com\.?|undergraduate|degree)\b/i.test(text)) return 'bachelor';
+    if (/\b(diploma|polytechnic)\b/i.test(text)) return 'diploma';
+    if (/\b(intermediate|12th|class\s*xii|hsc|junior\s*college|senior\s*secondary|higher\s*secondary|mpc|bipc)\b/i.test(text)) return 'intermediate';
+    if (/\b(10th|class\s*x|ssc|matriculation|secondary|high\s*school)\b/i.test(text)) return 'secondary';
+    return 'other';
+  };
+
+  const isDegCheck = (s: string) =>
+    /\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|b\.?\s*s\.?|b\.?\s*a\.?|b\.?\s*com\.?|bba|mba|intermediate|12th|hsc|ssc|10th|secondary\s*school(?:\s*certificate)?|secondary|matriculation|diploma|phd|doctorate|degree)\b/i.test(s) &&
+    !/\b(university|college|school|institute|academy|campus|vidya|vidyalaya|polytechnic)\b/i.test(s.replace(/secondary\s*school(?:\s*certificate)?|high\s*school\s*(?:certificate|diploma)/gi, ''));
+
+  const isInstCheck = (s: string) =>
+    /\b(university|college|school|institute|academy|campus|vidya|vidyalaya|polytechnic)\b/i.test(s) &&
+    !/\b(bachelor|master|b\.?\s*tech|m\.?\s*tech|b\.?\s*e|bsc|msc|bca|mca|b\.?\s*s\.?|b\.?\s*a\.?|b\.?\s*com\.?|bba|mba|intermediate|12th|hsc|ssc|10th|secondary\s*school(?:\s*certificate)?|matriculation|diploma|phd|doctorate)\b/i.test(s);
+
+  for (let i = 0; i < education.length; i++) {
+    const curLevel = getLevel(education[i]);
+    if (curLevel === 'other') continue;
+
+    for (let j = i + 1; j < education.length; j++) {
+      const otherLevel = getLevel(education[j]);
+      if (curLevel === otherLevel) {
+        const a = education[i];
+        const b = education[j];
+
+        if (!a.degree && b.degree) a.degree = b.degree;
+        else if (b.degree && isDegCheck(b.degree) && !isDegCheck(a.degree)) a.degree = b.degree;
+
+        if (!a.institution && b.institution) a.institution = b.institution;
+        else if (!a.institution && b.degree && isInstCheck(b.degree)) a.institution = b.degree;
+        else if (b.institution && isInstCheck(b.institution) && !isInstCheck(a.institution)) a.institution = b.institution;
+
+        if (!a.yearOrDates && b.yearOrDates) a.yearOrDates = b.yearOrDates;
+        if (!a.grade && b.grade) a.grade = b.grade;
+
+        education.splice(j, 1);
+        j--;
+      }
+    }
+  }
+
   // Strict Reverse-Chronological Education Sequence:
   // 1. Master / PhD / Doctorate
   // 2. Bachelor / B.Tech / B.E / B.Sc / BCA / Degree
@@ -940,7 +1043,7 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
   const getEduRank = (edu: EducationItem): number => {
     const text = (edu.degree + " " + edu.institution).toLowerCase();
     if (/\b(master|m\.?\s*tech|ms|msc|mca|phd|doctorate)\b/i.test(text)) return 1;
-    if (/\b(bachelor|b\.?\s*tech|b\.?\s*e|bca|bsc|undergraduate|degree)\b/i.test(text)) return 2;
+    if (/\b(bachelor|b\.?\s*tech|b\.?\s*e|bca|bsc|b\.?\s*s\.?|b\.?\s*a\.?|b\.?\s*com\.?|undergraduate|degree)\b/i.test(text)) return 2;
     if (/\b(diploma|polytechnic)\b/i.test(text)) return 3;
     if (/\b(intermediate|12th|class\s*xii|hsc|junior\s*college|senior\s*secondary)\b/i.test(text)) return 4;
     if (/\b(10th|class\s*x|ssc|matriculation|secondary|high\s*school)\b/i.test(text)) return 5;
@@ -955,31 +1058,29 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
     return yearB - yearA;
   });
 
-  // Parse Certifications items
+  // Parse Certifications items with deduplication and subheader suppression
   const certifications: CertificationItem[] = [];
-  let currentCert: CertificationItem | null = null;
+  const seenCerts = new Set<string>();
 
   for (let i = 0; i < cleanCertLines.length; i++) {
     const rawLine = cleanCertLines[i];
-    const isBullet = /^[•\-*\u2022]/.test(rawLine);
     const clean = stripMarkdownAsterisks(rawLine.replace(/^[•\-*\u2022]\s*/, '')).trim();
     if (!clean) continue;
     if (/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(clean)) continue;
     if (/^(?:AWARDS|CERTIFICATIONS)\s*(&|AND)\s*(?:CERTIFICATIONS|ACHIEVEMENTS|AWARDS)\s*$/i.test(clean)) continue;
+    if (/^(?:awards\s*(?:&|and)\s*certifications|certifications\s*(?:&|and)\s*awards|certifications?|achievements?|awards?)$/i.test(clean)) continue;
 
-    if (isBullet || !currentCert) {
-      const { title, rest } = splitCertText(clean);
-      currentCert = {
-        title,
-        boldPrefix: title,
-        rest,
-        raw: clean
-      };
-      certifications.push(currentCert);
-    } else if (currentCert) {
-      currentCert.rest += ' ' + clean;
-      currentCert.raw += ' ' + clean;
-    }
+    const normKey = clean.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (seenCerts.has(normKey)) continue;
+    seenCerts.add(normKey);
+
+    const { title, rest } = splitCertText(clean);
+    certifications.push({
+      title,
+      boldPrefix: title,
+      rest,
+      raw: clean
+    });
   }
 
   // Languages: filter out AI / prompt leakage

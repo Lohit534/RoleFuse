@@ -9,6 +9,7 @@
  *    reaches the live preview, PDF and DOCX exporters.
  */
 import { detectSectionHeader, looksLikeSentenceBullet, BULLET_MARKER_REGEX } from "./ats/bullets";
+import { canonicalizeSkill, normSkillKey } from "./ats/keywords";
 
 const MONTHS: Record<string, number> = {
   jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, sept: 8, oct: 9, nov: 10, dec: 11,
@@ -124,6 +125,8 @@ export function getPageBudget(resumeText: string): PageBudget {
   };
 }
 
+export { canonicalizeSkill, normSkillKey } from "./ats/keywords";
+
 const PLACEHOLDER_SEGMENT = /^(?:university name|institution name|college name|school name|company name|city,?\s*country|city|country|location|n\/a|na|tbd|\[[^\]]*\]|_+)$/i;
 
 /** Removes hallucinated / unwanted text the AI may add (all exporters read this text). */
@@ -155,6 +158,7 @@ export function sanitizeOptimizedResume(
   // FIX: Track section header object directly — not just name string — so isEducation / isCert
   // checks use the actual canonical header and never bleed across section boundaries.
   let currentHeader: { name: string; scorable: boolean } | null = null;
+  const seenHeaders = new Set<string>();
 
   for (const rawLine of lines) {
     let line = rawLine;
@@ -163,7 +167,17 @@ export function sanitizeOptimizedResume(
     if (/USER[\s-]*VERIFIED|^\s*\[Verified|\[.*Technologies.*\]|YEARS & DETAILS|^-{3,}.*-{3,}$/i.test(line.trim())) continue;
 
     const header = detectSectionHeader(line);
-    if (header) currentHeader = header;
+    if (header) {
+      const normName = header.name.toUpperCase().trim();
+      if (seenHeaders.has(normName)) {
+        // DUPLICATE SECTION HEADER DETECTED (e.g. repeated AWARDS & CERTIFICATIONS)!
+        // Do NOT emit a second section header — keep items unified under the original section.
+        currentHeader = header;
+        continue;
+      }
+      seenHeaders.add(normName);
+      currentHeader = header;
+    }
 
     const sectionName = currentHeader?.name ?? "";
 
@@ -231,6 +245,11 @@ export function sanitizeOptimizedResume(
     // FIX: Use exact header name so education lines are NEVER processed as certifications
     const isCert = !header && /^(CERTIFICATIONS|CERTIFICATIONS & ACHIEVEMENTS|CERTIFICATIONS AND ACHIEVEMENTS|ACHIEVEMENTS & CERTIFICATIONS|ACHIEVEMENTS AND CERTIFICATIONS|CERTIFICATES|LICENSES|AWARDS & CERTIFICATIONS|CERTIFICATIONS & AWARDS)$/.test(sectionName);
     if (isCert && line.trim()) {
+      // Strip any internal repeated subheaders e.g. "Awards & Certifications" or "Certifications"
+      const cleanCertLine = line.replace(/^[•\-\*\s]+/, "").trim();
+      if (/^(?:awards\s*(?:&|and)\s*certifications|certifications\s*(?:&|and)\s*awards|certifications?|achievements?|awards?)$/i.test(cleanCertLine)) {
+        continue;
+      }
       const yearMatches = Array.from(line.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => m[1]);
       for (const yr of yearMatches) {
         if (!allowedSource.includes(yr)) {
@@ -449,17 +468,27 @@ export function sanitizeOptimizedResume(
         coreLineIdx = i;
       }
 
-      // Filter individual soft skills / junk phrases from each line
+      // Filter individual soft skills / junk phrases from each line AND deduplicate items internally with canonical naming
       if (line.includes(":")) {
         const colon = line.indexOf(":");
         const label = line.slice(0, colon).trim();
-        const items = line.slice(colon + 1).split(/,\s*/).map(s => s.trim()).filter(s => s.length > 1 && !JUNK_OR_SOFT_SKILL_RE.test(s));
-        if (items.length === 0) {
+        const rawItems = line.slice(colon + 1).split(/,\s*/).map(s => s.trim()).filter(s => s.length > 1 && !JUNK_OR_SOFT_SKILL_RE.test(s));
+        const seen = new Set<string>();
+        const dedupedItems: string[] = [];
+        for (const item of rawItems) {
+          const canon = canonicalizeSkill(item);
+          const key = normSkillKey(canon);
+          if (!seen.has(key)) {
+            seen.add(key);
+            dedupedItems.push(canon);
+          }
+        }
+        if (dedupedItems.length === 0) {
           out.splice(i, 1);
           skillsEnd--;
           i--;
         } else {
-          out[i] = `${label}: ${items.join(", ")}`;
+          out[i] = `${label}: ${dedupedItems.join(", ")}`;
         }
       }
     }
@@ -468,25 +497,17 @@ export function sanitizeOptimizedResume(
     if (fwLineIdx !== -1 && coreLineIdx !== -1) {
       const fwLine = out[fwLineIdx];
       const coreLine = out[coreLineIdx];
-      const normSkill = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
       const fwItems = fwLine.slice(fwLine.indexOf(":") + 1).split(/,\s*/).map(s => s.trim()).filter(Boolean);
-      const fwNormSet = new Set(fwItems.map(normSkill));
       const coreItems = coreLine.slice(coreLine.indexOf(":") + 1).split(/,\s*/).map(s => s.trim()).filter(Boolean);
-      for (const ci of coreItems) {
-        const norm = normSkill(ci);
-        if (!fwNormSet.has(norm) && !JUNK_OR_SOFT_SKILL_RE.test(ci)) {
-          fwItems.push(ci);
-          fwNormSet.add(norm);
-        }
-      }
-      // Deduplicate fwItems internally
-      const finalFwItems: string[] = [];
       const seenFw = new Set<string>();
-      for (const it of fwItems) {
-        const norm = normSkill(it);
-        if (!seenFw.has(norm) && !JUNK_OR_SOFT_SKILL_RE.test(it)) {
-          seenFw.add(norm);
-          finalFwItems.push(it);
+      const finalFwItems: string[] = [];
+      for (const it of [...fwItems, ...coreItems]) {
+        if (JUNK_OR_SOFT_SKILL_RE.test(it)) continue;
+        const canon = canonicalizeSkill(it);
+        const key = normSkillKey(canon);
+        if (!seenFw.has(key)) {
+          seenFw.add(key);
+          finalFwItems.push(canon);
         }
       }
       out[fwLineIdx] = `${fwLine.slice(0, fwLine.indexOf(":")).trim()}: ${finalFwItems.join(", ")}`;
@@ -789,59 +810,55 @@ export function ensureUserAnswersInResume(
       const fwMatch = skillsBlock.match(/^(?:Frameworks\s*&\s*Libraries|Frameworks|Libraries):\s*([^\r\n]+)/im);
       const coreTechMatch = skillsBlock.match(/^(?:Core Technologies|Core Competencies):\s*([^\r\n]+)/im);
 
-      const normSkill = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (fwMatch) {
         // Frameworks & Libraries exists: ALWAYS merge terms into it, and remove any redundant Core Technologies
-        const existingFw = fwMatch[1];
-        const existingNormSet = new Set(existingFw.split(/,\s*/).map(normSkill));
-        const toAdd = terms.filter((t) => !existingNormSet.has(normSkill(t)));
-        
-        // Also absorb any Core Technologies items into Frameworks
+        const existingFw = fwMatch[1].split(/,\s*/).map((t) => t.trim()).filter(Boolean);
+        const coreItems = coreTechMatch ? coreTechMatch[1].split(/,\s*/).map((t) => t.trim()).filter(Boolean) : [];
         if (coreTechMatch) {
-          const coreItems = coreTechMatch[1].split(/,\s*/).map((t) => t.trim());
-          for (const ci of coreItems) {
-            const norm = normSkill(ci);
-            if (ci && !existingNormSet.has(norm) && !toAdd.some((a) => normSkill(a) === norm)) {
-              toAdd.push(ci);
-              existingNormSet.add(norm);
-            }
-          }
           out = out.replace(coreTechMatch[0] + "\n", "").replace(coreTechMatch[0], "");
         }
 
-        if (toAdd.length > 0) {
-          const allFw = [...existingFw.split(/,\s*/).map((t) => t.trim()), ...toAdd].filter(Boolean);
-          const seen = new Set<string>();
-          const dedupedFw: string[] = [];
-          for (const item of allFw) {
-            const norm = normSkill(item);
-            if (!seen.has(norm)) {
-              seen.add(norm);
-              dedupedFw.push(item);
-            }
+        const allFw = [...existingFw, ...coreItems, ...terms];
+        const seen = new Set<string>();
+        const dedupedFw: string[] = [];
+        for (const item of allFw) {
+          const canon = canonicalizeSkill(item);
+          const key = normSkillKey(canon);
+          if (!seen.has(key)) {
+            seen.add(key);
+            dedupedFw.push(canon);
           }
-          const updatedLine = `${fwMatch[0].split(":")[0]}: ${dedupedFw.join(", ")}`;
-          out = out.replace(fwMatch[0], updatedLine);
         }
+        const updatedLine = `${fwMatch[0].split(":")[0]}: ${dedupedFw.join(", ")}`;
+        out = out.replace(fwMatch[0], updatedLine);
       } else if (coreTechMatch) {
         // If no Frameworks & Libraries exists, rename Core Technologies to Frameworks & Libraries
-        const existingCore = coreTechMatch[1];
-        const existingNormSet = new Set(existingCore.split(/,\s*/).map(normSkill));
-        const toAdd = terms.filter((t) => !existingNormSet.has(normSkill(t)));
-        const allItems = [...existingCore.split(/,\s*/).map((t) => t.trim()), ...toAdd].filter(Boolean);
+        const existingCore = coreTechMatch[1].split(/,\s*/).map((t) => t.trim()).filter(Boolean);
+        const allItems = [...existingCore, ...terms];
         const seen = new Set<string>();
         const dedupedItems: string[] = [];
         for (const item of allItems) {
-          const norm = normSkill(item);
-          if (!seen.has(norm)) {
-            seen.add(norm);
-            dedupedItems.push(item);
+          const canon = canonicalizeSkill(item);
+          const key = normSkillKey(canon);
+          if (!seen.has(key)) {
+            seen.add(key);
+            dedupedItems.push(canon);
           }
         }
         const updatedLine = `Frameworks & Libraries: ${dedupedItems.join(", ")}`;
         out = out.replace(coreTechMatch[0], updatedLine);
       } else if (terms.length > 0) {
-        const newSkillsLine = `Frameworks & Libraries: ${terms.join(", ")}`;
+        const seen = new Set<string>();
+        const dedupedTerms: string[] = [];
+        for (const item of terms) {
+          const canon = canonicalizeSkill(item);
+          const key = normSkillKey(canon);
+          if (!seen.has(key)) {
+            seen.add(key);
+            dedupedTerms.push(canon);
+          }
+        }
+        const newSkillsLine = `Frameworks & Libraries: ${dedupedTerms.join(", ")}`;
         const updatedSkillsBlock = `${skillsBlock.trimEnd()}\n${newSkillsLine}\n`;
         out = out.replace(skillsBlock, updatedSkillsBlock);
       }

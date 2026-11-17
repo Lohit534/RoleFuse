@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { isAdminEmail } from "@/lib/auth";
+import { checkIsAdmin } from "@/lib/auth-client";
 import { 
   Loader2, 
   ShieldCheck, 
@@ -14,59 +14,149 @@ import {
   MessageSquare, 
   Lock, 
   CheckCircle2,
-  Activity
+  Activity,
+  ArrowRight,
+  Shield,
+  RotateCcw
 } from "lucide-react";
 
 export default function LoginPage() {
+  const [authMode, setAuthMode] = useState<"otp" | "password">("otp");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [magicLoading, setMagicLoading] = useState(false);
-  const [magicSent, setMagicSent] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
 
   useEffect(() => {
+    let mounted = true;
+
+    // Check for error param in URL
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlError = urlParams.get("error");
+      if (urlError) setError(decodeURIComponent(urlError));
+    }
+
+    const verifyAndRedirect = async (session: any) => {
+      if (!session?.user) {
+        if (mounted) setChecking(false);
+        return;
+      }
+      const isAllowed = await checkIsAdmin(session.user, session.access_token);
+      if (isAllowed && mounted) {
+        window.location.href = "/dashboard";
+        return;
+      }
+      if (mounted) setChecking(false);
+    };
+
     // 1. Listen for auth state transitions (handles incoming OAuth tokens & hash redirects)
     const { data: authListener } = (supabase as any).auth.onAuthStateChange(
-      (event: string, session: any) => {
-        if (session?.user && isAdminEmail(session.user.email)) {
-          window.location.href = "/dashboard";
+      async (_event: string, session: any) => {
+        if (session?.user) {
+          await verifyAndRedirect(session);
         }
       }
     );
 
     // 2. Immediate session evaluation
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user && isAdminEmail(data.session.user.email)) {
-        window.location.href = "/dashboard";
-        return;
-      }
-      setChecking(false);
+      verifyAndRedirect(data.session);
     });
 
     return () => {
+      mounted = false;
       authListener?.subscription?.unsubscribe();
     };
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!email.trim()) {
+      setError("Please enter your admin email address.");
+      return;
+    }
+    setError("");
+    setInfo("");
+    setLoading(true);
+    try {
+      const { error: otpError } = await (supabase as any).auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (otpError) throw otpError;
+      setOtpSent(true);
+      setInfo(`A 6-digit OTP code has been sent to ${email.trim()}. Enter it below, or click the magic link in your email.`);
+    } catch (err: any) {
+      setError(err.message || "Failed to dispatch verification code.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode.trim()) {
+      setError("Please enter the verification code from your email.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      const { data, error: verifyErr } = await (supabase as any).auth.verifyOtp({
+        email: email.trim(),
+        token: otpCode.trim(),
+        type: "email",
+      });
+      if (verifyErr) throw verifyErr;
+
+      const user = data?.user || data?.session?.user;
+      const token = data?.session?.access_token;
+      if (!user) throw new Error("Verification succeeded, but session could not be established.");
+
+      const isAllowed = await checkIsAdmin(user, token);
+      if (!isAllowed) {
+        await (supabase as any).auth.signOut();
+        throw new Error("Access restricted: This account is authenticated but does not possess administrator privileges in the database.");
+      }
+
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      setError(err.message || "Invalid or expired verification code.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ 
+        email: email.trim(), 
+        password 
+      });
       if (authError) {
         if (authError.message?.toLowerCase().includes("invalid login credentials")) {
-          throw new Error("Invalid password. If you originally registered via Google or Magic Link, use the options below.");
+          throw new Error("Invalid password. If you originally registered via Google or Email OTP, use those options.");
         }
         throw authError;
       }
-      if (!isAdminEmail(data.user?.email)) {
+
+      const isAllowed = await checkIsAdmin(data.user, data.session?.access_token);
+      if (!isAllowed) {
         await supabase.auth.signOut();
-        throw new Error("Access restricted: This account does not possess administrator privileges.");
+        throw new Error("Access restricted: This account does not possess administrator privileges in the database.");
       }
+
       window.location.href = "/dashboard";
     } catch (err: any) {
       setError(err.message || "Authentication failed.");
@@ -89,29 +179,6 @@ export default function LoginPage() {
     } catch (err: any) {
       setError(err.message || "Google sign-in failed.");
       setLoading(false);
-    }
-  };
-
-  const handleMagicLink = async () => {
-    if (!email.trim()) {
-      setError("Please enter your admin email above first.");
-      return;
-    }
-    setError("");
-    setMagicLoading(true);
-    try {
-      const { error: otpError } = await (supabase as any).auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      if (otpError) throw otpError;
-      setMagicSent(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to send magic link.");
-    } finally {
-      setMagicLoading(false);
     }
   };
 
@@ -219,7 +286,7 @@ export default function LoginPage() {
 
       {/* ── RIGHT PANE: Authentication Box ── */}
       <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-16 relative bg-slate-50/50">
-        <div className="w-full max-w-md space-y-6">
+        <div className="w-full max-w-md space-y-5">
 
           {/* Mobile Top Header (only visible on mobile) */}
           <div className="flex lg:hidden items-center justify-center gap-2 mb-2 select-none">
@@ -235,34 +302,188 @@ export default function LoginPage() {
               Administrator Login
             </h1>
             <p className="text-xs text-slate-500 font-medium">
-              Enter your credentials to access the management portal.
+              Verify your administrator identity to access the console.
             </p>
           </div>
 
           {/* Login Card */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-5 shadow-lg relative">
             
-            {magicSent ? (
-              <div className="text-center space-y-4 py-4">
-                <div className="h-12 w-12 rounded-full bg-teal-50 border border-teal-200 text-[#0d6e5a] flex items-center justify-center mx-auto">
-                  <Mail className="h-6 w-6" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-base font-bold text-slate-900">Magic Login Link Dispatched</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    A secure sign-in token has been sent to <span className="text-[#0d6e5a] font-semibold">{email}</span>. Click the link in your email to authenticate.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setMagicSent(false)}
-                  className="text-xs text-[#0d6e5a] hover:text-[#094d3f] underline font-semibold pt-2 block mx-auto cursor-pointer"
-                >
-                  Return to Password Login
-                </button>
+            {/* Quick Google Sign In */}
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full h-11 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 hover:text-slate-900 flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.4 9 5 12 5z" />
+                <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z" />
+                <path fill="#FBBC05" d="M5.6 14.7c-.2-.7-.4-1.5-.4-2.7 0-1.1.2-2 .4-2.7L1.9 6.4C.7 8.8 0 10.8 0 12s.7 3.2 1.9 5.6l3.7-2.9z" />
+                <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.3L1.9 16C3.7 19.8 7.5 23 12 23z" />
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-2 select-none">
+              <div className="h-px flex-1 bg-slate-200" />
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">or sign in with</span>
+              <div className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            {/* Auth Mode Toggle Tabs (Email OTP vs Password) */}
+            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl select-none">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("otp");
+                  setError("");
+                  setInfo("");
+                }}
+                className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  authMode === "otp"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <Mail className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                <span>Email OTP</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("password");
+                  setError("");
+                  setInfo("");
+                }}
+                className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  authMode === "password"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <KeyRound className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                <span>Password</span>
+              </button>
+            </div>
+
+            {/* MODE 1: EMAIL OTP SIGN IN */}
+            {authMode === "otp" && (
+              <div>
+                {!otpSent ? (
+                  <form onSubmit={handleSendOtp} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                        Admin Email
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="admin@rolefuse.in"
+                        className="w-full bg-white text-slate-900 border border-slate-200 rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none focus:border-[#0d6e5a] focus:ring-2 focus:ring-[#0d6e5a]/20 transition-all font-medium"
+                      />
+                    </div>
+
+                    {error && (
+                      <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700 font-medium leading-relaxed">
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full h-11 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 bg-[#0d6e5a] hover:bg-[#094d3f] shadow-sm"
+                    >
+                      {loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Mail className="h-4 w-4" />
+                          <span>Send 6-Digit OTP</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleVerifyOtp} className="space-y-4">
+                    <div className="bg-teal-50/80 border border-teal-200/80 rounded-xl p-3 text-xs text-[#0d6e5a] font-medium leading-relaxed">
+                      {info || `Verification code dispatched to ${email}.`}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Shield className="h-3.5 w-3.5 text-[#0d6e5a]" />
+                        6-Digit Verification Code
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={8}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="123456"
+                        autoFocus
+                        className="w-full bg-white text-slate-900 text-center tracking-widest text-lg font-mono font-bold border border-slate-200 rounded-xl px-4 py-2.5 placeholder-slate-300 outline-none focus:border-[#0d6e5a] focus:ring-2 focus:ring-[#0d6e5a]/20 transition-all"
+                      />
+                    </div>
+
+                    {error && (
+                      <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700 font-medium leading-relaxed">
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full h-11 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 bg-[#0d6e5a] hover:bg-[#094d3f] shadow-sm"
+                    >
+                      {loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Verify OTP & Enter Console</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="flex items-center justify-between pt-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleSendOtp()}
+                        disabled={loading}
+                        className="text-[#0d6e5a] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        <span>Resend Code</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOtpSent(false);
+                          setOtpCode("");
+                          setError("");
+                          setInfo("");
+                        }}
+                        className="text-slate-500 hover:text-slate-800 underline font-medium cursor-pointer"
+                      >
+                        Change Email
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
-            ) : (
-              <form onSubmit={handleLogin} className="space-y-4">
-                {/* Email input */}
+            )}
+
+            {/* MODE 2: PASSWORD SIGN IN */}
+            {authMode === "password" && (
+              <form onSubmit={handlePasswordLogin} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Mail className="h-3.5 w-3.5 text-[#0d6e5a]" />
@@ -273,12 +494,11 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.com"
+                    placeholder="admin@rolefuse.in"
                     className="w-full bg-white text-slate-900 border border-slate-200 rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none focus:border-[#0d6e5a] focus:ring-2 focus:ring-[#0d6e5a]/20 transition-all font-medium"
                   />
                 </div>
 
-                {/* Password input */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -305,72 +525,32 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Error Banner */}
                 {error && (
-                  <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-xs text-rose-700 font-medium leading-relaxed">
+                  <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700 font-medium leading-relaxed">
                     {error}
                   </div>
                 )}
 
-                {/* Submit button */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 mt-1 bg-[#0d6e5a] hover:bg-[#094d3f] shadow-sm"
+                  className="w-full h-11 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 bg-[#0d6e5a] hover:bg-[#094d3f] shadow-sm"
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>
                       <Lock className="h-4 w-4" />
-                      Authenticate to Console
+                      <span>Authenticate with Password</span>
                     </>
                   )}
                 </button>
-
-                {/* Alternative login methods */}
-                <div className="pt-2 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-px flex-1 bg-slate-200" />
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">or authenticate with</span>
-                    <div className="h-px flex-1 bg-slate-200" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {/* Google OAuth */}
-                    <button
-                      type="button"
-                      onClick={handleGoogleLogin}
-                      disabled={loading}
-                      className="h-10 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 hover:text-slate-900 flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
-                    >
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24">
-                        <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.4 9 5 12 5z" />
-                        <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z" />
-                        <path fill="#FBBC05" d="M5.6 14.7c-.2-.7-.4-1.5-.4-2.7 0-1.1.2-2 .4-2.7L1.9 6.4C.7 8.8 0 10.8 0 12s.7 3.2 1.9 5.6l3.7-2.9z" />
-                        <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.3L1.9 16C3.7 19.8 7.5 23 12 23z" />
-                      </svg>
-                      Google
-                    </button>
-
-                    {/* Magic Link */}
-                    <button
-                      type="button"
-                      onClick={handleMagicLink}
-                      disabled={magicLoading || loading}
-                      className="h-10 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 hover:text-slate-900 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-                    >
-                      {magicLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5 text-[#0d6e5a]" />}
-                      Magic Link
-                    </button>
-                  </div>
-                </div>
               </form>
             )}
 
           </div>
 
-          <p className="text-center text-[11px] text-slate-500 font-medium">
+          <p className="text-center text-[11px] text-slate-500 font-medium select-none">
             Strictly restricted to RoleFuse administrators. Unauthorized access attempts are monitored and logged.
           </p>
         </div>

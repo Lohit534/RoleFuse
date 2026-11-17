@@ -4,7 +4,14 @@ import { getSupabase } from "@/lib/supabase";
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const errorDescription = requestUrl.searchParams.get("error_description");
   const next = requestUrl.searchParams.get("next") ?? "/dashboard";
+
+  if (errorDescription) {
+    return NextResponse.redirect(
+      new URL(`/?error=${encodeURIComponent(errorDescription)}`, requestUrl.origin)
+    );
+  }
 
   if (code) {
     const supabase = getSupabase();
@@ -13,6 +20,10 @@ export async function GET(request: Request) {
       const redirectUrl = new URL(next, requestUrl.origin);
       redirectUrl.hash = `access_token=${data.session.access_token}&refresh_token=${data.session.refresh_token}&expires_in=${data.session.expires_in}&token_type=bearer`;
       return NextResponse.redirect(redirectUrl);
+    } else if (error) {
+      return NextResponse.redirect(
+        new URL(`/?error=${encodeURIComponent(error.message)}`, requestUrl.origin)
+      );
     }
   }
 

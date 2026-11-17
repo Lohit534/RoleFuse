@@ -687,14 +687,14 @@ export default function ResumeViewer({
                     <div className={`flex flex-row flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} font-bold text-black leading-snug select-text`}>
                       <span className="min-w-0">{renderHighlightedText(block.degree)}</span>
                       {block.dates ? (
-                        <span className="font-semibold text-black ml-auto">{renderHighlightedText(block.dates)}</span>
+                        <span className="font-semibold text-black ml-auto shrink-0">{renderHighlightedText(block.dates)}</span>
                       ) : null}
                     </div>
                     {block.school || block.gpa ? (
-                      <div className={`flex flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} italic text-black leading-snug select-text`}>
+                      <div className={`flex flex-row flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} italic text-black leading-snug select-text`}>
                         <span className="min-w-0">{renderHighlightedText(block.school)}</span>
                         {block.gpa ? (
-                          <span className="ml-auto not-italic">{renderHighlightedText(block.gpa)}</span>
+                          <span className="ml-auto not-italic font-normal shrink-0">{renderHighlightedText(block.gpa)}</span>
                         ) : null}
                       </div>
                     ) : null}

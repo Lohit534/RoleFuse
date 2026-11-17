@@ -29,17 +29,23 @@ export async function verifyAdmin(request: NextRequest): Promise<{ user: any; to
         data.user.app_metadata?.role === "admin" ||
         data.user.app_metadata?.role === "owner" ||
         data.user.user_metadata?.role === "admin" ||
-        data.user.user_metadata?.role === "owner";
+        data.user.user_metadata?.role === "owner" ||
+        data.user.user_metadata?.isAdmin === true ||
+        data.user.app_metadata?.isAdmin === true;
 
       // 2. Check Database record in public.User
       let isDbAdmin = false;
-      if (email) {
+      if (email || data.user.id) {
         try {
-          const { data: dbUser } = await adminClient
-            .from("User")
-            .select("role, isAdmin")
-            .eq("email", email.toLowerCase().trim())
-            .maybeSingle();
+          let query = (adminClient as any).from("User").select("role, isAdmin");
+          if (email && data.user.id) {
+            query = query.or(`email.eq.${email.toLowerCase().trim()},id.eq.${data.user.id}`);
+          } else if (email) {
+            query = query.eq("email", email.toLowerCase().trim());
+          } else {
+            query = query.eq("id", data.user.id);
+          }
+          const { data: dbUser } = await query.maybeSingle();
           if (dbUser && (dbUser.role === "admin" || dbUser.role === "owner" || dbUser.isAdmin === true)) {
             isDbAdmin = true;
           }

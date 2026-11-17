@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { isAdminEmail } from "@/lib/auth";
+import { checkIsAdmin } from "@/lib/auth-client";
 import {
   Loader2, LogOut, LayoutDashboard, Users, MessageSquare, Inbox,
   Search, TrendingUp, TrendingDown, Wallet, FileText,
@@ -104,10 +105,17 @@ export default function AdminDashboard() {
   useEffect(() => {
     let resolved = false;
 
-    const checkAndInit = (session: any) => {
+    const checkAndInit = async (session: any) => {
       const user = session?.user;
       const token = session?.access_token;
-      if (!user || !isAdminEmail(user.email)) {
+      if (!user) {
+        window.location.href = "/";
+        return;
+      }
+      const isAllowed = await checkIsAdmin(user, token);
+      if (!isAllowed) {
+        toast.error("Access restricted: administrator privileges required.");
+        await (supabase as any).auth.signOut().catch(() => {});
         window.location.href = "/";
         return;
       }
@@ -121,22 +129,24 @@ export default function AdminDashboard() {
     };
 
     const { data: authListener } = (supabase as any).auth.onAuthStateChange(
-      (_event: string, session: any) => {
-        if (session?.user) checkAndInit(session);
+      async (_event: string, session: any) => {
+        if (session?.user) await checkAndInit(session);
       }
     );
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (data.session) {
-        checkAndInit(data.session);
+        await checkAndInit(data.session);
       } else {
         if (typeof window !== "undefined" && window.location.hash.includes("access_token")) return;
-        supabase.auth.getUser().then(({ data: userData }) => {
-          if (userData?.user && isAdminEmail(userData.user.email)) {
-            supabase.auth.getSession().then(({ data: freshSession }) => {
-              if (freshSession?.session) checkAndInit(freshSession.session);
-            });
-            return;
+        supabase.auth.getUser().then(async ({ data: userData }) => {
+          if (userData?.user) {
+            const freshSession = (await supabase.auth.getSession()).data.session;
+            const isAllowed = await checkIsAdmin(userData.user, freshSession?.access_token);
+            if (isAllowed && freshSession) {
+              await checkAndInit(freshSession);
+              return;
+            }
           }
           if (!resolved) window.location.href = "/";
         }).catch(() => { if (!resolved) window.location.href = "/"; });
