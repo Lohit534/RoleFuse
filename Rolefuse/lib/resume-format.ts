@@ -217,27 +217,51 @@ export function sanitizeOptimizedResume(
     // Education: Only process lines when STRICTLY in an education section — not certifications or achievements
     const isEducation = !header && /^(EDUCATION|ACADEMIC BACKGROUND|ACADEMICS|QUALIFICATIONS)$/.test(sectionName);
     if (isEducation && line.trim()) {
-      // Split by commas but keep pipes (degree | dates) intact
-      const [left, ...rest] = line.split(/\s+\|\s+/);
-      const segments = left.split(/\s*,\s*/).filter((s) => s.length > 0);
-      const seen = new Set<string>();
-      const kept: string[] = [];
-      for (const seg of segments) {
-        const s = seg.trim();
-        const key = s.toLowerCase();
-        if (!s || PLACEHOLDER_SEGMENT.test(s) || seen.has(key)) continue;
-        // Fabricated parent university / extra institution not present in the original resume
-        if (kept.length > 0 && /\b(university|vidyapeeth|vishwavidyalaya|deemed|affiliated|autonomous)\b/i.test(s)) {
-          const distinctive = key
-            .split(/[^a-z0-9]+/)
-            .filter((w) => w.length > 2 && !/^(university|universit|the|and|for|affiliated|autonomous|deemed|to)$/.test(w));
-          const existsInOriginal = originalLower.includes(key) || (distinctive.length > 0 && distinctive.some((w) => originalLower.includes(w)));
-          if (!existsInOriginal) continue;
+      // Split at pipes to separate degree/institution from dates/GPA
+      const pipeParts = line.split(/\s+\|\s+/);
+      const sanitizedParts: string[] = [];
+
+      for (const part of pipeParts) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+
+        // If this part is a date range or grade, keep as-is (never strip)
+        const isDateOrGrade = /\b(?:19|20)\d{2}\b/.test(trimmed) ||
+          /\b(?:CGPA|GPA|CPI|SGPA|Percentage|Grade|Score)\s*:?\s*[\dX\.]+/i.test(trimmed);
+        if (isDateOrGrade) {
+          sanitizedParts.push(trimmed);
+          continue;
         }
-        seen.add(key);
-        kept.push(s);
+
+        // For the institution/degree name part: only strip pure AI placeholder segments
+        // Split by comma only to remove fabricated "University Name" / "City, Country" placeholders
+        const segments = trimmed.split(/\s*,\s*/).filter(s => s.length > 0);
+        const seen = new Set<string>();
+        const kept: string[] = [];
+        for (const seg of segments) {
+          const s = seg.trim();
+          const key = s.toLowerCase();
+          if (!s || PLACEHOLDER_SEGMENT.test(s) || seen.has(key)) continue;
+          // Only strip a comma-segment if it's a university/vidyapeeth-style suffix
+          // AND it's genuinely not in the original resume
+          if (kept.length > 0 && /\b(university|vidyapeeth|vishwavidyalaya|deemed|affiliated|autonomous)\b/i.test(s)) {
+            const distinctive = key
+              .split(/[^a-z0-9]+/)
+              .filter(w => w.length > 2 && !/^(university|universit|the|and|for|affiliated|autonomous|deemed|to)$/.test(w));
+            const existsInOriginal = originalLower.includes(key) ||
+              (distinctive.length > 0 && distinctive.some(w => originalLower.includes(w)));
+            if (!existsInOriginal) continue;
+          }
+          seen.add(key);
+          kept.push(s);
+        }
+        // Always keep the first institution/degree segment even if not found in original
+        // (the AI may have legitimately reformatted it)
+        const result = kept.length > 0 ? kept.join(', ') : segments[0]?.trim() || '';
+        if (result) sanitizedParts.push(result);
       }
-      line = [kept.join(", "), ...rest].filter((p) => p && p.trim()).join(" | ").replace(/\s{2,}/g, " ");
+
+      line = sanitizedParts.join(' | ').replace(/\s{2,}/g, ' ');
       if (!line.trim()) continue;
     }
 

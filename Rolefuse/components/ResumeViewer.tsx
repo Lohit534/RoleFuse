@@ -528,22 +528,29 @@ export default function ResumeViewer({
                       else if (lower.includes("linkedin")) iconType = "linkedin";
                       else if (lower.includes("github")) iconType = "github";
 
-                      let cleanHandle = seg.text
-                        .replace(/^https?:\/\/(www\.)?/i, "")
-                        .replace(/^(?:linkedin profile|github profile|portfolio|linkedin|github|email|phone|mobile|tel|cell|location|address)\b\s*[:\-]?\s*/i, "")
-                        .replace(/\/$/, "")
-                        .replace(/^mailto:/, "")
-                        .replace(/^tel:/, "")
-                        .trim();
-                      if (!cleanHandle) {
-                        cleanHandle = iconType === "linkedin" ? "LinkedIn" : (iconType === "github" ? "GitHub" : (seg.url || "Link"));
+                      // For LinkedIn/GitHub always show clean label; for others strip http/mailto prefixes
+                      let cleanHandle: string;
+                      if (iconType === "linkedin") {
+                        cleanHandle = "LinkedIn";
+                      } else if (iconType === "github") {
+                        cleanHandle = "GitHub";
+                      } else {
+                        cleanHandle = seg.text
+                          .replace(/^https?:\/\/(www\.)?/i, "")
+                          .replace(/^(?:portfolio|email|phone|mobile|tel|cell|location|address)\b\s*[:\-]?\s*/i, "")
+                          .replace(/\/$/, "")
+                          .replace(/^mailto:/, "")
+                          .replace(/^tel:/, "")
+                          .trim();
+                        if (!cleanHandle) cleanHandle = seg.url || "Link";
                       }
 
-                      const isActualUrl = (s?: string) => Boolean(s && (s.includes(".com") || s.includes("/") || s.startsWith("http")));
+                      const isActualUrl = (s?: string) => Boolean(s && (s.includes(".com") || s.includes(".in") || s.includes("/") || s.startsWith("http")));
+                      const ensureHttps = (u: string) => u.startsWith("http") ? u : `https://${u}`;
                       let linkHref = seg.url && isActualUrl(seg.url)
-                        ? seg.url
+                        ? ensureHttps(seg.url)
                         : (isActualUrl(seg.text)
-                          ? (seg.text.startsWith("http") ? seg.text : `https://${seg.text.replace(/^(?:linkedin|github):?\s*/i, "")}`)
+                          ? ensureHttps(seg.text.replace(/^(?:linkedin|github):?\s*/i, ""))
                           : null);
 
                       if (!linkHref) {

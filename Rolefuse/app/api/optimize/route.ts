@@ -836,29 +836,7 @@ export async function POST(request: NextRequest) {
               finalSummary = `Injected ${kwCount > 0 ? kwCount : "key"} target JD keywords, upgraded action verbs, and strengthened bullet points with quantifiable metrics (+${scoreGain} pts match score).`;
             }
 
-            // Deduct credits
-            if (!isOwner) {
-              const { data: earlyUsers } = await admin
-                .from("User")
-                .select("id")
-                .order("createdAt", { ascending: true })
-                .limit(50);
-              const earlyUserIds = (earlyUsers || []).map((u: any) => u.id);
-              const isFirst50 = earlyUserIds.includes(activeUserId) || earlyUserIds.includes(user.id);
-              const freeLimit = isFirst50 ? 15 : FREE_CREDITS_PER_MONTH;
-
-              if (freeUsed < freeLimit) {
-                await admin
-                  .from("Credit")
-                  .update({ freeUsed: freeUsed + 1 })
-                  .eq("userId", activeUserId);
-              } else if (paidCredits > 0) {
-                await admin
-                  .from("Credit")
-                  .update({ paidCredits: paidCredits - 1 })
-                  .eq("userId", activeUserId);
-              }
-            }
+            // Credit deduction is handled once after resume save (see below)
 
             // Save resume record to Supabase DB using valid schema columns ONLY
             const generatedId = generateUUID();
@@ -957,21 +935,41 @@ export async function POST(request: NextRequest) {
 
             // Resume saved securely to Supabase database (no unencrypted disk persistence)
 
-            // Strictly deduct credit usage in database for non-owners
+            // Deduct one credit for non-owner users — paid credits first, then free credits
             if (!isOwner) {
               try {
-                const newFreeUsed = freeUsed + 1;
-                const newPaidCredits = paidCredits > 0 && paidCredits < 900000 ? Math.max(0, paidCredits - 1) : paidCredits;
-                await admin
-                  .from("Credit")
-                  .update({
-                    freeUsed: newFreeUsed,
-                    paidCredits: newPaidCredits,
-                  })
-                  .eq("userId", activeUserId);
-                logger.info(`[optimize] Strictly updated credit in DB for ${user.email}: freeUsed=${newFreeUsed}, paidCredits=${newPaidCredits}`);
+                const { data: earlyUsersForCredit } = await admin
+                  .from("User")
+                  .select("id")
+                  .order("createdAt", { ascending: true })
+                  .limit(50);
+                const earlyIdsForCredit = (earlyUsersForCredit || []).map((u: any) => u.id);
+                const isFirst50ForCredit = earlyIdsForCredit.includes(activeUserId) || earlyIdsForCredit.includes(user.id);
+                const freeLimitForCredit = isFirst50ForCredit ? 15 : FREE_CREDITS_PER_MONTH;
+
+                let updatePayload: Record<string, number>;
+                if (paidCredits > 0 && paidCredits < 900000) {
+                  // User has paid credits — deduct from paid only, leave freeUsed unchanged
+                  updatePayload = { paidCredits: Math.max(0, paidCredits - 1) };
+                  logger.info(`[optimize] Deducted 1 paid credit for ${user.email}: paidCredits=${paidCredits - 1}`);
+                } else if (freeUsed < freeLimitForCredit) {
+                  // No paid credits — deduct from free allowance
+                  updatePayload = { freeUsed: freeUsed + 1 };
+                  logger.info(`[optimize] Deducted 1 free credit for ${user.email}: freeUsed=${freeUsed + 1}/${freeLimitForCredit}`);
+                } else {
+                  // Edge case: no credits left (should not reach here due to pre-check above)
+                  logger.warn(`[optimize] No credits to deduct for ${user.email} — skipping`);
+                  updatePayload = {};
+                }
+
+                if (Object.keys(updatePayload).length > 0) {
+                  await admin
+                    .from("Credit")
+                    .update(updatePayload)
+                    .eq("userId", activeUserId);
+                }
               } catch (creditErr: any) {
-                logger.error("[optimize] Failed to increment credit usage in DB:", creditErr.message);
+                logger.error("[optimize] Failed to deduct credit in DB:", creditErr.message);
               }
             }
 

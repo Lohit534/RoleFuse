@@ -501,9 +501,10 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
         if (!contacts.some(c => c.type === 'linkedin')) {
           const display = cleanTok.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
           const hasUrl = cleanTok.includes('.com') || cleanTok.includes('/');
+          // Always store a normalised https:// URL; fallback scan will upgrade it if needed
           contacts.push({
             type: 'linkedin',
-            text: display,
+            text: display || 'LinkedIn',
             url: hasUrl ? (cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}`) : undefined
           });
         }
@@ -511,9 +512,10 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
         if (!contacts.some(c => c.type === 'github')) {
           const display = cleanTok.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
           const hasUrl = cleanTok.includes('.com') || cleanTok.includes('/');
+          // Always store a normalised https:// URL; fallback scan will upgrade it if needed
           contacts.push({
             type: 'github',
-            text: display,
+            text: display || 'GitHub',
             url: hasUrl ? (cleanTok.startsWith('http') ? cleanTok : `https://${cleanTok}`) : undefined
           });
         }
@@ -540,9 +542,8 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
     const existingLi = contacts.find(c => c.type === 'linkedin');
     if (existingLi) {
       existingLi.url = fullLiUrl;
-      if (!existingLi.text || existingLi.text.toLowerCase() === 'linkedin') {
-        existingLi.text = 'LinkedIn';
-      }
+      // Always show clean label "LinkedIn" (not raw URL) in the preview
+      existingLi.text = 'LinkedIn';
     } else {
       contacts.push({ type: 'linkedin', text: 'LinkedIn', url: fullLiUrl });
     }
@@ -553,9 +554,8 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
     const existingGh = contacts.find(c => c.type === 'github');
     if (existingGh) {
       existingGh.url = fullGhUrl;
-      if (!existingGh.text || existingGh.text.toLowerCase() === 'github') {
-        existingGh.text = 'GitHub';
-      }
+      // Always show clean label "GitHub" (not raw URL) in the preview
+      existingGh.text = 'GitHub';
     } else {
       contacts.push({ type: 'github', text: 'GitHub', url: fullGhUrl });
     }
@@ -861,7 +861,8 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
     const { left: parsedLeft, date, grade } = extractRightDateAndGrade(rawLine);
     const cleanLeft = stripMarkdownAsterisks(parsedLeft).replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
 
-    if (isDegreeLine(rawLine) || !currentEdu || (currentEdu.institution && !currentEdu.degree)) {
+    // Use cleanLeft (degree/institution name without date/grade) for classification
+    if (isDegreeLine(cleanLeft) || !currentEdu || (currentEdu.institution && !currentEdu.degree)) {
       currentEdu = {
         degree: cleanLeft,
         institution: '',
