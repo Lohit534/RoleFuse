@@ -205,7 +205,12 @@ export async function POST(request: NextRequest) {
         throw new Error(`Job description is too short. Please provide at least ${MIN_JD_CHARS} characters.`);
       }
 
-      const isOwner = isOwnerEmail(user.email);
+      let isOwner =
+        isOwnerEmail(user.email) ||
+        user.app_metadata?.role === "admin" ||
+        user.app_metadata?.role === "owner" ||
+        user.user_metadata?.role === "admin" ||
+        user.user_metadata?.role === "owner";
       const admin = getAdminClient() as any;
       const now = new Date();
 
@@ -214,13 +219,16 @@ export async function POST(request: NextRequest) {
       try {
         const { data: existingUser } = await admin
           .from("User")
-          .select("id, createdAt")
+          .select("id, createdAt, role, isAdmin")
           .eq("email", user.email.toLowerCase().trim())
           .maybeSingle();
 
         if (existingUser) {
           activeUserId = existingUser.id;
-          logger.info(`[optimize] Found existing User record for email ${user.email} with ID ${existingUser.id}. Reusing this ID.`);
+          if (existingUser.role === "admin" || existingUser.role === "owner" || existingUser.isAdmin === true) {
+            isOwner = true;
+          }
+          logger.info(`[optimize] Found existing User record for email ${user.email} with ID ${existingUser.id} (isOwner=${isOwner}). Reusing this ID.`);
 
           if (user.created_at) {
             const dbTime = existingUser.createdAt ? new Date(existingUser.createdAt).toISOString() : null;
@@ -935,42 +943,54 @@ export async function POST(request: NextRequest) {
 
             // Resume saved securely to Supabase database (no unencrypted disk persistence)
 
-            // Deduct one credit for non-owner users — paid credits first, then free credits
+            // Deduct one credit for normal (non-owner) users — paid credits first, then free credits
             if (!isOwner) {
               try {
-                const { data: earlyUsersForCredit } = await admin
-                  .from("User")
-                  .select("id")
-                  .order("createdAt", { ascending: true })
-                  .limit(50);
-                const earlyIdsForCredit = (earlyUsersForCredit || []).map((u: any) => u.id);
-                const isFirst50ForCredit = earlyIdsForCredit.includes(activeUserId) || earlyIdsForCredit.includes(user.id);
-                const freeLimitForCredit = isFirst50ForCredit ? 15 : FREE_CREDITS_PER_MONTH;
+                // Fetch live Credit row directly by userId (matching activeUserId or user.id)
+                let { data: liveCredit } = await admin
+                  .from("Credit")
+                  .select("*")
+                  .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+                  .maybeSingle();
 
-                let updatePayload: Record<string, number>;
-                if (paidCredits > 0 && paidCredits < 900000) {
-                  // User has paid credits — deduct from paid only, leave freeUsed unchanged
-                  updatePayload = { paidCredits: Math.max(0, paidCredits - 1) };
-                  logger.info(`[optimize] Deducted 1 paid credit for ${user.email}: paidCredits=${paidCredits - 1}`);
-                } else if (freeUsed < freeLimitForCredit) {
-                  // No paid credits — deduct from free allowance
-                  updatePayload = { freeUsed: freeUsed + 1 };
-                  logger.info(`[optimize] Deducted 1 free credit for ${user.email}: freeUsed=${freeUsed + 1}/${freeLimitForCredit}`);
-                } else {
-                  // Edge case: no credits left (should not reach here due to pre-check above)
-                  logger.warn(`[optimize] No credits to deduct for ${user.email} — skipping`);
-                  updatePayload = {};
-                }
+                if (liveCredit) {
+                  let updatePayload: Record<string, number> = {};
+                  const currentPaid = liveCredit.paidCredits ?? 0;
+                  const currentFree = liveCredit.freeUsed ?? 0;
 
-                if (Object.keys(updatePayload).length > 0) {
+                  if (currentPaid > 0 && currentPaid < 900000) {
+                    // Normal user with paid plan/credits -> deduct 1 paid credit
+                    updatePayload = { paidCredits: Math.max(0, currentPaid - 1) };
+                    logger.info(`[optimize] Deducted 1 paid credit for normal user ${user.email}: new paidCredits=${currentPaid - 1}`);
+                  } else {
+                    // Normal user on free tier -> increment freeUsed by 1
+                    const newFreeUsed = currentFree + 1;
+                    updatePayload = { freeUsed: newFreeUsed };
+                    logger.info(`[optimize] Deducted 1 free credit for normal user ${user.email}: freeUsed=${newFreeUsed}`);
+                  }
+
                   await admin
                     .from("Credit")
                     .update(updatePayload)
-                    .eq("userId", activeUserId);
+                    .eq("id", liveCredit.id);
+                } else {
+                  // Fallback insert if credit record did not exist
+                  await admin
+                    .from("Credit")
+                    .insert({
+                      userId: activeUserId,
+                      freeUsed: 1,
+                      paidCredits: 0,
+                      billingCycle: "monthly",
+                      resetAt: now.toISOString(),
+                    });
+                  logger.info(`[optimize] Created Credit record with 1 free credit used for normal user ${user.email}`);
                 }
               } catch (creditErr: any) {
                 logger.error("[optimize] Failed to deduct credit in DB:", creditErr.message);
               }
+            } else {
+              logger.info(`[optimize] Admin user ${user.email} has unlimited optimizations — 0 credits deducted.`);
             }
 
             // ── TRAINING DATA COLLECTION (anonymised, consent-gated) ───────────────────

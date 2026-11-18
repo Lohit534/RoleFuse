@@ -405,18 +405,25 @@ export function enrichResumeATSQuality(
   let text = resumeText;
   const jdLower = (jobDescription || "").toLowerCase();
 
-  // 1. Bullet Polish: Upgrade scorable bullets lacking metrics or action verbs
+  // 1. Bullet Polish: Clean leading filler and normalize action verbs cleanly.
+  // CRITICAL: Do NOT fabricate synthetic metrics in bulk during full optimization!
+  // Realistic, authentic bullets are preserved so the initial ATS score is accurate and honest.
+  // The candidate can then use the manual "Bullet Improver" in the dashboard to review and
+  // upgrade specific bullets with quantified metrics, which dynamically increases their score!
   const scorable = extractScorableBullets(text);
   for (const b of scorable) {
     const hasVerb = hasStrongActionVerb(b.cleanText);
-    const hasMetric = hasQuantifiedMetric(b.cleanText);
-
-    if (!hasVerb || !hasMetric) {
-      const upgraded = enforceVerbAndMetric(b.cleanText, b.cleanText);
-      const prefixMatch = b.rawLine.match(/^\s*([•\-\*–—+o\u2022\u25cf\u2043▸►→▪◦\u2023\u25e6\u2219\u25aa\u25ab\u25a0\u25cb\u25a1\u2713\u2714\u2794\u27a4\u25ba\u25c4·]|\d+[.)])\s*/);
-      const prefix = prefixMatch ? prefixMatch[0] : "• ";
-      const formattedReplacement = `${prefix}${upgraded}`;
-      text = text.replace(b.rawLine, formattedReplacement);
+    if (!hasVerb) {
+      let cleaned = b.cleanText.replace(LEADING_FILLER, "").trim();
+      cleaned = normalizeVerbTense(cleaned);
+      if (!hasLeadingActionVerb(cleaned)) {
+        cleaned = normalizeVerbTense(cleaned.replace(WEAK_PREFIX_REGEX, "").replace(LEADING_FILLER, "").trim());
+      }
+      if (cleaned && cleaned !== b.cleanText) {
+        const prefixMatch = b.rawLine.match(/^\s*([•\-\*–—+o\u2022\u25cf\u2043▸►→▪◦\u2023\u25e6\u2219\u25aa\u25ab\u25a0\u25cb\u25a1\u2713\u2714\u2794\u27a4\u25ba\u25c4·]|\d+[.)])\s*/);
+        const prefix = prefixMatch ? prefixMatch[0] : "• ";
+        text = text.replace(b.rawLine, `${prefix}${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`);
+      }
     }
   }
 

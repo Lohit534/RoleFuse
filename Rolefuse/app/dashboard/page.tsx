@@ -343,6 +343,31 @@ export default function DashboardPage() {
   const [isSavedToResumes, setIsSavedToResumes] = useState(false);
   const [savingToResumes, setSavingToResumes] = useState(false);
 
+  const fetchUserCredits = async (userId?: string) => {
+    try {
+      const creditsRes = await fetch("/api/credits");
+      if (creditsRes.ok) {
+        const creditsData = await creditsRes.json();
+        setUserCredits(creditsData);
+        let plan = "free";
+        if (creditsData.isOwner) {
+          plan = "owner";
+        } else if (creditsData.planId === "promax" && !creditsData.isFirst50) {
+          plan = "promax";
+        } else if (creditsData.planId === "premium" || creditsData.isFirst50 || creditsData.paidCredits > 0) {
+          plan = "premium";
+        } else {
+          plan = creditsData.planId || "free";
+        }
+        setUserPlan(plan);
+        const uid = userId || user?.id;
+        if (uid) localStorage.setItem(`fastHire_plan_${uid}`, plan);
+      }
+    } catch (e) {
+      // silent
+    }
+  };
+
   const handleSaveToResumes = async () => {
     if (!user) {
       toast.error("Please sign in to save resumes to your library.");
@@ -753,37 +778,7 @@ export default function DashboardPage() {
         } catch (e) {}
 
         // Fetch plan/credits details safely in separate block
-        try {
-          const creditsRes = await fetch("/api/credits");
-          if (creditsRes.ok) {
-            const creditsData = await creditsRes.json();
-            setUserCredits(creditsData);
-            let plan = "free";
-            if (creditsData.isOwner) {
-              plan = "owner";
-            } else if (
-              creditsData.planId === "promax" &&
-              !creditsData.isFirst50
-            ) {
-              plan = "promax";
-            } else if (
-              creditsData.planId === "premium" ||
-              creditsData.isFirst50 ||
-              creditsData.paidCredits > 0
-            ) {
-              plan = "premium";
-            } else {
-              plan =
-                creditsData.planId ||
-                localStorage.getItem(`fastHire_plan_${data.user.id}`) ||
-                "free";
-            }
-            setUserPlan(plan);
-            localStorage.setItem(`fastHire_plan_${data.user.id}`, plan);
-          }
-        } catch (creditsErr) {
-          // silent — failed to load credits info
-        }
+        await fetchUserCredits(data.user.id);
       } catch (err) {
         // silent — auth check failed, redirecting
         router.push("/auth/login");
@@ -921,6 +916,9 @@ export default function DashboardPage() {
     setPendingPlaceholders([]);
 
     setOptimizing(false);
+
+    // Refresh user credit balance in real time so UI immediately reflects deducted credit
+    fetchUserCredits();
 
     // Save active optimization session so page reload / refresh keeps the result view intact
     saveActiveSession({

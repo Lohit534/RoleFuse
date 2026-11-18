@@ -163,17 +163,6 @@ export async function GET(request: NextRequest) {
         });
       }
       creditRow = newCredit;
-    } else if (isFirst50 && creditRow.paidCredits === 0 && creditRow.billingCycle !== "admin_free" && creditRow.billingCycle !== "free") {
-      // Upgrade free tier credits to Premium Pro plan (20 credits/month) for first 50 members
-      const { data: updatedCredit } = await admin
-        .from("Credit")
-        .update({ paidCredits: PRO_CREDITS_PER_MONTH, billingCycle: "yearly" })
-        .eq("userId", activeUserId)
-        .select()
-        .single();
-      if (updatedCredit) {
-        creditRow = updatedCredit;
-      }
     }
 
     if (!creditRow) {
