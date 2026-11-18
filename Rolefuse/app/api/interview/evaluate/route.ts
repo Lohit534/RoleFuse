@@ -38,11 +38,13 @@ export async function POST(request: NextRequest) {
         .eq("id", activeUserId)
         .maybeSingle();
 
-      const { data: creditRow } = await admin
+      const { data: creditRows } = await admin
         .from("Credit")
         .select("*")
-        .eq("userId", activeUserId)
-        .maybeSingle();
+        .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+        .limit(1);
+
+      const creditRow = creditRows?.[0] || null;
 
       const isProMax =
         userRow?.planTier === "promax" ||

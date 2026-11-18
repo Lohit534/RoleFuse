@@ -137,14 +137,27 @@ export function sanitizeOptimizedResume(
 ): string {
   if (!optimized) return optimized;
 
-  // Pre-clean: strip leaked internal verification blocks and repair run-on punctuation
+  // Pre-clean: strip leaked internal verification blocks, unwanted symbols, and repair run-on punctuation
   let preCleaned = optimized
     .replace(/---+\s*USER[\s\S]*?---+/gi, "")
     .replace(/\[Verified[\s\S]*?\]/gi, "")
+    .replace(/\[ADD:\s*[^\]]+\]/gi, "")
+    .replace(/\[(?:Company Name|Employer Name|Insert [^\]]+|Select [^\]]+)\]/gi, "")
+    .replace(/\b(?:XYZ\s*Corp|ABC\s*Corp|Company\s*Name|Employer\s*Name)\b/gi, "")
     .replace(/YEARS\s*&\s*DETAILS/gi, "")
     .replace(/([.,;:!])([A-Za-z])/g, "$1 $2")
     .replace(/\bPromptEngineering\b/g, "Prompt Engineering")
-    .replace(/\bandRAG\b/g, "and RAG");
+    .replace(/\bandRAG\b/g, "and RAG")
+    // Remove unwanted raw markdown artifacts & horizontal dividers
+    .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^---+$/gm, "")
+    // Remove unwanted N/A, NA, null, undefined in pipe segments
+    .replace(/\s*\|\s*(?:N\/?A|None|null|undefined|TBD|TBA)(?=\s*\||\s*$)/gi, "")
+    .replace(/^(?:N\/?A|None|null|undefined|TBD|TBA)\s*\|\s*/gi, "")
+    .replace(/\s*\|\s*\|\s*/g, " | ")
+    .replace(/\s*\|\s*$/gm, "");
 
   // If user provided verified answers (dates, company, tech stack, years), include them in allowed source
   // so their legitimate answers are NEVER stripped as AI hallucinations.

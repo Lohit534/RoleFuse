@@ -19,7 +19,7 @@ export default function CreditBadge({ refreshKey = 0 }: CreditBadgeProps) {
     async function fetchCredits() {
       try {
         setLoading(true);
-        const res = await fetch("/api/credits");
+        const res = await fetch(`/api/credits?t=${Date.now()}`, { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           if (active) {
@@ -36,7 +36,19 @@ export default function CreditBadge({ refreshKey = 0 }: CreditBadgeProps) {
     }
     fetchCredits();
 
-    const handleCreditsUpdated = () => {
+    const handleCreditsUpdated = (e?: any) => {
+      if (typeof e?.detail?.creditsRemaining === "number") {
+        const newRem = e.detail.creditsRemaining;
+        setCredits((prev) =>
+          prev
+            ? {
+                ...prev,
+                paidCredits: prev.isOwner ? 999999 : newRem,
+                freeRemaining: prev.isOwner ? 999999 : newRem,
+              }
+            : prev
+        );
+      }
       fetchCredits();
     };
     window.addEventListener("credits-updated", handleCreditsUpdated);

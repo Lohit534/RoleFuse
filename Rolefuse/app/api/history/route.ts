@@ -79,11 +79,13 @@ export async function GET(request: NextRequest) {
           }
         } catch (_e) {}
 
-        const { data: creditRow } = await admin
+        const { data: creditRows } = await admin
           .from("Credit")
           .select("paidCredits, planId, billingCycle")
           .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
-          .maybeSingle();
+          .limit(1);
+
+        const creditRow = creditRows?.[0] || null;
 
         const isKnownProMax = Boolean(process.env.PRO_MAX_EMAILS && process.env.PRO_MAX_EMAILS.toLowerCase().includes(userEmail));
 

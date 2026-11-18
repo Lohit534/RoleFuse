@@ -56,6 +56,7 @@ export default function BulletImprover({
     Record<number, ImprovementResult | null>
   >({});
   const [usedThisSession, setUsedThisSession] = useState(0);
+  const [filterMode, setFilterMode] = useState<"needs-improvement" | "all">("needs-improvement");
 
   const limit = getAutoImproveLimit(userPlan);
   const storageKey = `fastHire_autoImprove_count_${userId}_${getMonthKey()}`;
@@ -197,8 +198,6 @@ export default function BulletImprover({
       </div>
     );
   }
-
-  const [filterMode, setFilterMode] = useState<"needs-improvement" | "all">("needs-improvement");
 
   const stats = bulletItems.reduce(
     (acc, curr) => {

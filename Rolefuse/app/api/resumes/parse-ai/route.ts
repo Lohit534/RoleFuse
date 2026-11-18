@@ -24,13 +24,23 @@ export async function POST(request: NextRequest) {
     const isOwner = isOwnerEmail(user.email);
     if (!isOwner) {
       const admin = getAdminClient() as any;
-      const { data: creditRow } = await admin
+      let activeUserId = user.id;
+      if (user.email) {
+        const { data: dbUser } = await admin
+          .from("User")
+          .select("id")
+          .eq("email", user.email.toLowerCase().trim())
+          .maybeSingle();
+        if (dbUser?.id) activeUserId = dbUser.id;
+      }
+
+      const { data: creditRows } = await admin
         .from("Credit")
         .select("paidCredits")
-        .eq("userId", user.id)
-        .maybeSingle();
+        .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+        .limit(1);
 
-      const paidCredits = creditRow?.paidCredits ?? 0;
+      const paidCredits = creditRows?.[0]?.paidCredits ?? 0;
       let tier = "free";
       if (paidCredits >= 900000) tier = "promax";
       else if (paidCredits > 0) tier = "premium";

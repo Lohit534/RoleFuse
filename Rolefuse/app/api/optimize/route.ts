@@ -219,15 +219,12 @@ export async function POST(request: NextRequest) {
       try {
         const { data: existingUser } = await admin
           .from("User")
-          .select("id, createdAt, role, isAdmin")
+          .select("id, createdAt")
           .eq("email", user.email.toLowerCase().trim())
           .maybeSingle();
 
         if (existingUser) {
           activeUserId = existingUser.id;
-          if (existingUser.role === "admin" || existingUser.role === "owner" || existingUser.isAdmin === true) {
-            isOwner = true;
-          }
           logger.info(`[optimize] Found existing User record for email ${user.email} with ID ${existingUser.id} (isOwner=${isOwner}). Reusing this ID.`);
 
           if (user.created_at) {
@@ -284,11 +281,24 @@ export async function POST(request: NextRequest) {
         const earlyUserIds = (earlyUsers || []).map((u: any) => u.id);
         const isFirst50 = earlyUserIds.includes(activeUserId) || earlyUserIds.includes(user.id);
 
-        let { data: creditRow, error: creditFetchErr } = await admin
-          .from("Credit")
-          .select("*")
-          .eq("userId", activeUserId)
-          .maybeSingle();
+        let creditRow: any = null;
+        let creditFetchErr: any = null;
+        try {
+          const res = await admin
+            .from("Credit")
+            .select("*")
+            .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+            .limit(1);
+
+          creditFetchErr = res.error;
+          if (creditFetchErr) {
+            logger.error("[optimize] Credit fetch error:", creditFetchErr.message);
+          } else if (res.data && res.data.length > 0) {
+            creditRow = res.data[0];
+          }
+        } catch (e: any) {
+          logger.error("[optimize] Credit query exception:", e?.message);
+        }
 
         if (!creditRow && !creditFetchErr) {
           const initialPaidCredits = isFirst50 ? PRO_CREDITS_PER_MONTH : 0;
@@ -323,19 +333,31 @@ export async function POST(request: NextRequest) {
             await admin
               .from("Credit")
               .update({ paidCredits: 0, expiresAt: null, billingCycle: rolloverCycleStr })
-              .eq("userId", activeUserId)
+              .eq("id", creditRow.id)
               .catch(() => { });
           }
 
-          const resetAt = new Date(creditRow.resetAt);
-          const isNewMonth =
-            now.getMonth() !== resetAt.getMonth() ||
-            now.getFullYear() !== resetAt.getFullYear();
+          const resetAt = creditRow.resetAt ? new Date(creditRow.resetAt) : null;
+          const isValidResetAt = resetAt && !isNaN(resetAt.getTime());
+          const isNewMonth = Boolean(
+            isValidResetAt &&
+            (now.getFullYear() > resetAt.getFullYear() ||
+             (now.getFullYear() === resetAt.getFullYear() && now.getMonth() > resetAt.getMonth()))
+          );
+
+          if (!isValidResetAt) {
+            await admin
+              .from("Credit")
+              .update({ resetAt: now.toISOString() })
+              .eq("id", creditRow.id)
+              .catch(() => { });
+            creditRow.resetAt = now.toISOString();
+          }
 
           freeUsed = isNewMonth ? 0 : (creditRow.freeUsed || 0);
           paidCredits = isNewMonth
             ? (creditRow.paidCredits >= 90 ? PRO_MAX_CREDITS_PER_MONTH : ((creditRow.paidCredits > 0 || isFirst50) ? PRO_CREDITS_PER_MONTH : 0))
-            : (creditRow.paidCredits || (isFirst50 ? PRO_CREDITS_PER_MONTH : 0));
+            : (creditRow.paidCredits ?? (isFirst50 ? PRO_CREDITS_PER_MONTH : 0));
 
           if (isNewMonth) {
             await admin
@@ -345,19 +367,28 @@ export async function POST(request: NextRequest) {
                 paidCredits: paidCredits,
                 resetAt: now.toISOString()
               })
-              .eq("userId", activeUserId);
+              .eq("id", creditRow.id);
           }
 
           isUnlimited = isOwner;
 
-          // Check if user has available credits (either paid credits > 0 or remaining free credits)
+          // Strict pricing & credit enforcement
           if (!isUnlimited) {
-            const hasPaidCredits = paidCredits > 0;
-            const freeAllowance = isFirst50 ? 15 : FREE_CREDITS_PER_MONTH;
-            const hasFreeCredits = freeUsed < freeAllowance;
+            const isPaidPlan =
+              creditRow.billingCycle === "admin_promax" ||
+              creditRow.billingCycle === "admin_premium" ||
+              creditRow.billingCycle === "monthly" ||
+              creditRow.billingCycle === "yearly" ||
+              isFirst50;
 
-            if (!hasPaidCredits && !hasFreeCredits) {
-              throw new Error(`Monthly limit of ${FREE_CREDITS_PER_MONTH} free optimizations reached. Please upgrade to Premium Pro (20 credits) or Pro Max (90 credits) to continue.`);
+            if (isPaidPlan && (creditRow.paidCredits > 0 || isFirst50)) {
+              if (paidCredits <= 0) {
+                throw new Error("You have used all credits in your plan. Please upgrade to Pro Max (90 credits) or wait for your next billing cycle to continue.");
+              }
+            } else {
+              if (freeUsed >= FREE_CREDITS_PER_MONTH) {
+                throw new Error(`Monthly limit of ${FREE_CREDITS_PER_MONTH} free optimizations reached. Please upgrade to Premium Pro (20 credits) or Pro Max (90 credits) to continue.`);
+              }
             }
           }
         }
@@ -943,15 +974,18 @@ export async function POST(request: NextRequest) {
 
             // Resume saved securely to Supabase database (no unencrypted disk persistence)
 
+            let remainingCreditsAfterDeduction: number | null = null;
             // Deduct one credit for normal (non-owner) users — paid credits first, then free credits
             if (!isOwner) {
               try {
                 // Fetch live Credit row directly by userId (matching activeUserId or user.id)
-                let { data: liveCredit } = await admin
+                let { data: liveCreditRows } = await admin
                   .from("Credit")
                   .select("*")
                   .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
-                  .maybeSingle();
+                  .limit(1);
+
+                const liveCredit = liveCreditRows?.[0] || null;
 
                 if (liveCredit) {
                   let updatePayload: Record<string, number> = {};
@@ -960,19 +994,28 @@ export async function POST(request: NextRequest) {
 
                   if (currentPaid > 0 && currentPaid < 900000) {
                     // Normal user with paid plan/credits -> deduct 1 paid credit
-                    updatePayload = { paidCredits: Math.max(0, currentPaid - 1) };
-                    logger.info(`[optimize] Deducted 1 paid credit for normal user ${user.email}: new paidCredits=${currentPaid - 1}`);
+                    const newPaid = Math.max(0, currentPaid - 1);
+                    updatePayload = { paidCredits: newPaid };
+                    remainingCreditsAfterDeduction = newPaid;
+                    logger.info(`[optimize] Deducted 1 paid credit for normal user ${user.email}: new paidCredits=${newPaid}`);
                   } else {
                     // Normal user on free tier -> increment freeUsed by 1
                     const newFreeUsed = currentFree + 1;
                     updatePayload = { freeUsed: newFreeUsed };
+                    remainingCreditsAfterDeduction = Math.max(0, FREE_CREDITS_PER_MONTH - newFreeUsed);
                     logger.info(`[optimize] Deducted 1 free credit for normal user ${user.email}: freeUsed=${newFreeUsed}`);
                   }
 
-                  await admin
+                  const { error: updateErr } = await admin
                     .from("Credit")
                     .update(updatePayload)
                     .eq("id", liveCredit.id);
+
+                  if (updateErr) {
+                    logger.error("[optimize] Failed updating Credit by id, falling back to userId:", updateErr.message);
+                    await admin.from("Credit").update(updatePayload).eq("userId", activeUserId);
+                    await admin.from("Credit").update(updatePayload).eq("userId", user.id);
+                  }
                 } else {
                   // Fallback insert if credit record did not exist
                   await admin
@@ -984,12 +1027,14 @@ export async function POST(request: NextRequest) {
                       billingCycle: "monthly",
                       resetAt: now.toISOString(),
                     });
+                  remainingCreditsAfterDeduction = Math.max(0, FREE_CREDITS_PER_MONTH - 1);
                   logger.info(`[optimize] Created Credit record with 1 free credit used for normal user ${user.email}`);
                 }
               } catch (creditErr: any) {
                 logger.error("[optimize] Failed to deduct credit in DB:", creditErr.message);
               }
             } else {
+              remainingCreditsAfterDeduction = 999999;
               logger.info(`[optimize] Admin user ${user.email} has unlimited optimizations — 0 credits deducted.`);
             }
 
@@ -1049,6 +1094,7 @@ export async function POST(request: NextRequest) {
             await send(6, 'done', {
               result: {
                 resumeId: resumeRecord?.id || generatedId,
+                creditsRemaining: remainingCreditsAfterDeduction,
                 optimizedText: aiResult.resume,
                 resumeJSON: aiResult.resumeJSON,
                 keywordsAdded: mergedKeywordsAdded,

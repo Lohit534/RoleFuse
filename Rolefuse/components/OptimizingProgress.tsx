@@ -136,7 +136,33 @@ export default function OptimizingProgress({
     );
     setTimeout(() => {
       if (isMountedRef.current) onComplete(result);
-    }, 500);
+    }, 450);
+  };
+
+  const syncBackendStep = (stepNum: number, status: "running" | "done") => {
+    if (!isMountedRef.current || awaitingInputRef.current) return;
+    currentStepRef.current = stepNum;
+    setCurrentStepId(stepNum);
+
+    const stepTargets: Record<number, number> = {
+      1: 16,
+      2: 32,
+      3: 48,
+      4: 70,
+      5: 86,
+      6: 94,
+      7: 98,
+    };
+    const target = stepTargets[stepNum] || Math.min(96, stepNum * 14);
+    setProgress((prev) => Math.max(prev, target));
+
+    setSteps((prev) =>
+      prev.map((s) => {
+        if (s.id < stepNum) return { ...s, status: "done", duration: s.duration || "1.8s" };
+        if (s.id === stepNum) return { ...s, status };
+        return { ...s, status: "pending" };
+      })
+    );
   };
 
   const advanceToNext = (fromStep: number) => {
@@ -315,20 +341,14 @@ export default function OptimizingProgress({
               }
 
               if (data.step) {
-                if (data.status === "done") {
-                  backendStepDoneRef.current[data.step] = true;
-                }
+                backendStepDoneRef.current[data.step] = data.status === "done";
+                syncBackendStep(data.step, data.status || "running");
               }
 
               if (data.result) {
                 clearTimeout(hardTimeout);
                 backendResultRef.current = data.result;
-                // If UI has already reached step 7, complete smoothly after step 7 runs
-                if (currentStepRef.current >= 7) {
-                  setTimeout(() => {
-                    if (isMountedRef.current) finishOptimization(data.result);
-                  }, 1500);
-                }
+                finishOptimization(data.result);
               }
             } catch (e) {
               // Ignore incomplete chunks
@@ -439,18 +459,15 @@ export default function OptimizingProgress({
               return;
             }
 
-            if (data.step && data.status === "done") {
-              backendStepDoneRef.current[data.step] = true;
+            if (data.step) {
+              backendStepDoneRef.current[data.step] = data.status === "done";
+              syncBackendStep(data.step, data.status || "running");
             }
 
             if (data.result) {
               clearTimeout(hardTimeout2);
               backendResultRef.current = data.result;
-              if (currentStepRef.current >= 7) {
-                setTimeout(() => {
-                  if (isMountedRef.current) finishOptimization(data.result);
-                }, 1500);
-              }
+              finishOptimization(data.result);
             }
           } catch (e) {
             // Ignore incomplete chunks

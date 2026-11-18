@@ -291,11 +291,26 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
   const isLocked = !isPaidUser;
   
   // Dynamic keyword & tech skill extraction
-  const rawKeywordsAdded = Array.isArray(resume.keywordsAdded) ? resume.keywordsAdded.filter(Boolean) : [];
-  const optimizedTech = extractTechTerms(resume.optimizedText || "");
-  const originalTech = extractTechTerms(resume.originalText || "");
-  const jdTech = extractTechTerms(resume.jobDescription || "");
-  const originalTechSet = new Set(originalTech.map(t => t.toLowerCase()));
+  const rawKeywordsAdded = React.useMemo(
+    () => (Array.isArray(resume.keywordsAdded) ? resume.keywordsAdded.filter(Boolean) : []),
+    [resume.keywordsAdded]
+  );
+  const optimizedTech = React.useMemo(
+    () => extractTechTerms(resume.optimizedText || ""),
+    [resume.optimizedText]
+  );
+  const originalTech = React.useMemo(
+    () => extractTechTerms(resume.originalText || ""),
+    [resume.originalText]
+  );
+  const jdTech = React.useMemo(
+    () => extractTechTerms(resume.jobDescription || ""),
+    [resume.jobDescription]
+  );
+  const originalTechSet = React.useMemo(
+    () => new Set(originalTech.map((t) => t.toLowerCase())),
+    [originalTech]
+  );
 
   // Injected keywords: explicit keywordsAdded OR new tech terms in optimizedText
   const newlyAddedTech = optimizedTech.filter(t => !originalTechSet.has(t.toLowerCase()));

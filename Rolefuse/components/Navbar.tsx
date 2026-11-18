@@ -206,7 +206,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
 
     async function fetchCredits() {
       try {
-        const res = await fetch("/api/credits");
+        const res = await fetch(`/api/credits?t=${Date.now()}`, { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           setCredits(data);
@@ -226,7 +226,19 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
     }
     fetchCredits();
 
-    const handleCreditsUpdated = () => {
+    const handleCreditsUpdated = (e?: any) => {
+      if (typeof e?.detail?.creditsRemaining === "number") {
+        const newRem = e.detail.creditsRemaining;
+        setCredits((prev) =>
+          prev
+            ? {
+                ...prev,
+                paidCredits: prev.isOwner ? 999999 : newRem,
+                freeRemaining: prev.isOwner ? 999999 : newRem,
+              }
+            : prev
+        );
+      }
       fetchCredits();
     };
     window.addEventListener("credits-updated", handleCreditsUpdated);
@@ -1219,25 +1231,28 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
                             </Link>
                           </div>
 
-                          {/* Progress dots */}
-                          <div className="flex items-center gap-0.5 w-full overflow-hidden py-0.5">
-                            {Array.from({ length: 24 }).map((_, i) => {
-                              const maxVal = isOwner ? 24 : totalFree;
-                              const currentVal = isOwner ? 24 : freeRemaining;
-                              const filledCount = Math.round((Math.min(currentVal, maxVal) / maxVal) * 24);
-                              const isActive = isOwner || i < filledCount;
-                              return (
-                                <span
-                                  key={i}
-                                  className={`h-1 flex-1 rounded-full transition-all ${
-                                    isActive
-                                      ? "bg-[#087F6E] shadow-[0_0_3px_rgba(8,127,110,0.6)]"
-                                      : "bg-slate-200"
-                                  }`}
-                                />
-                              );
-                            })}
-                          </div>
+                          {/* Progress dots: 20 dots for 20-credit Pro users, 90 dots for 90-credit Pro Max users */}
+                          {(() => {
+                            const dotCount = isOwner ? 20 : isProMax ? 90 : isPremium ? 20 : 2;
+                            const filledCount = isOwner ? dotCount : Math.min(dotCount, Math.max(0, freeRemaining));
+                            return (
+                              <div className={`flex items-center ${isProMax ? "gap-[1px]" : "gap-1"} w-full overflow-hidden py-0.5`}>
+                                {Array.from({ length: dotCount }).map((_, i) => {
+                                  const isActive = i < filledCount;
+                                  return (
+                                    <span
+                                      key={i}
+                                      className={`${isProMax ? "h-1" : "h-1.5"} flex-1 rounded-full transition-all ${
+                                        isActive
+                                          ? "bg-[#087F6E] shadow-[0_0_2px_rgba(8,127,110,0.8)]"
+                                          : "bg-slate-200"
+                                      }`}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
 
                           {/* Upgrades */}
                           {!isProMax && !isOwner ? (

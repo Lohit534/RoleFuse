@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
         await admin
           .from("Credit")
           .update({ paidCredits: (referrerCredit.paidCredits || 0) + 1 })
-          .eq("userId", referrerId);
+          .eq("id", referrerCredit.id);
       }
     } catch (e) {
       logger.warn("[referral POST] Failed updating referrer credit DB:", e);
@@ -280,7 +280,7 @@ export async function POST(request: NextRequest) {
           await admin
             .from("Credit")
             .update({ paidCredits: (friendCredit.paidCredits || 0) + 1 })
-            .eq("userId", newUserId);
+            .eq("id", friendCredit.id);
         } else {
           await admin.from("Credit").insert({
             userId: newUserId,

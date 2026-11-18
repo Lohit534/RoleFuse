@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         await admin
           .from("Credit")
           .update({ paidCredits: newPaidCredits })
-          .eq("userId", creditTargetId);
+          .eq("id", userCreditRow.id);
         remainingCredits = newPaidCredits;
         logger.info(`[interview-generate] Deducted 2 credits for ${user.email}. Remaining credits: ${newPaidCredits}`);
       } catch (deductErr: any) {

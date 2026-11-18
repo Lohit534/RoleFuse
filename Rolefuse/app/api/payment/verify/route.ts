@@ -122,11 +122,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch existing credit row to check for rollover credits (Option 3: Rollover on Renewal)
-    const { data: existingCredit } = await admin
+    const { data: existingCreditRows } = await admin
       .from("Credit")
       .select("id, billingCycle, paidCredits")
-      .eq("userId", activeUserId)
-      .maybeSingle();
+      .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+      .limit(1);
+
+    const existingCredit = existingCreditRows?.[0] || null;
 
     // Option 3: Check for banked rollover credits from previously expired plan
     let rolloverCredits = 0;
@@ -155,7 +157,7 @@ export async function POST(request: NextRequest) {
           expiresAt: expiresAt.toISOString(),
           resetAt: now.toISOString(),
         })
-        .eq("userId", activeUserId);
+        .eq("id", existingCredit.id);
     } else {
       const newId = "credit-" + Math.random().toString(36).substring(2, 11);
       query = admin

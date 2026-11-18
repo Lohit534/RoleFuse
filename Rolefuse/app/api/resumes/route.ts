@@ -174,12 +174,12 @@ export async function POST(request: NextRequest) {
     // Enforce resumes built from scratch limit (empty jobDescription)
     const isOwner = isOwnerEmail(user.email);
     if (!isOwner && (!body.jobDescription || body.jobDescription.trim() === "")) {
-      const { data: creditRow } = await admin
+      const { data: creditRows } = await admin
         .from("Credit")
         .select("paidCredits")
-        .eq("userId", activeUserId)
-        .maybeSingle();
-      const paidCredits = creditRow?.paidCredits ?? 0;
+        .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+        .limit(1);
+      const paidCredits = creditRows?.[0]?.paidCredits ?? 0;
 
       let tier = "free";
       if (paidCredits >= 900000) tier = "promax";

@@ -49,12 +49,13 @@ export async function POST(request: NextRequest) {
         .eq("id", activeUserId)
         .maybeSingle();
 
-      const { data: creditRow } = await admin
+      const { data: creditRows } = await admin
         .from("Credit")
         .select("*")
-        .eq("userId", activeUserId)
-        .maybeSingle();
+        .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+        .limit(1);
 
+      const creditRow = creditRows?.[0] || null;
       userCreditRow = creditRow;
 
       const hasPaidCredits = (creditRow?.paidCredits ?? 0) > 0;
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
           await admin
             .from("Credit")
             .update({ paidCredits: newPaidCredits })
-            .eq("userId", activeUserId);
+            .eq("id", userCreditRow.id);
           remainingCredits = newPaidCredits;
           logger.info(`[cover-letter] Deducted 1 paid credit for ${user.email}. Remaining: ${newPaidCredits}`);
         } else {
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
           await admin
             .from("Credit")
             .update({ freeUsed: newFreeUsed })
-            .eq("userId", activeUserId);
+            .eq("id", userCreditRow.id);
           remainingCredits = 0;
           logger.info(`[cover-letter] Incremented freeUsed for ${user.email}: ${newFreeUsed}`);
         }

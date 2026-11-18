@@ -12,6 +12,9 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { FREE_CREDITS_PER_MONTH, PRO_CREDITS_PER_MONTH, PRO_MAX_CREDITS_PER_MONTH, isOwnerEmail } from "@/types";
 import { logger } from "@/lib/logger";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   try {
     // 1. Verify auth session
@@ -39,15 +42,12 @@ export async function GET(request: NextRequest) {
       if (user.email) {
         const { data: existingUser } = await admin
           .from("User")
-          .select("id, createdAt, role, isAdmin")
+          .select("id, createdAt")
           .eq("email", user.email.toLowerCase().trim())
           .maybeSingle();
 
         if (existingUser) {
           activeUserId = existingUser.id;
-          if (existingUser.role === "admin" || existingUser.role === "owner" || existingUser.isAdmin === true) {
-            isOwner = true;
-          }
           logger.info(`[credits] Found existing User record for email ${user.email} with ID ${existingUser.id} (isOwner=${isOwner}).`);
           
           // Auto-heal: sync real signup time from Auth to public.User table to fix early adopter ranks (e.g. user 3)
@@ -125,14 +125,21 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Fetch or create Credit row
-    let { data: creditRow, error: creditFetchErr } = await admin
-      .from("Credit")
-      .select("*")
-      .eq("userId", activeUserId)
-      .maybeSingle();
+    let creditRow: any = null;
+    try {
+      const { data: creditRows, error: creditFetchErr } = await admin
+        .from("Credit")
+        .select("*")
+        .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+        .limit(1);
 
-    if (creditFetchErr) {
-      logger.error("[credits] Credit fetch error:", creditFetchErr.message);
+      if (creditFetchErr) {
+        logger.error("[credits] Credit fetch error:", creditFetchErr.message);
+      } else if (creditRows && creditRows.length > 0) {
+        creditRow = creditRows[0];
+      }
+    } catch (e: any) {
+      logger.error("[credits] Credit query exception:", e?.message);
     }
 
     if (!creditRow) {
@@ -256,7 +263,7 @@ export async function GET(request: NextRequest) {
             billingCycle: "monthly",
             expiresAt: targetExpiryStr,
           })
-          .eq("userId", activeUserId);
+          .eq("id", creditRow.id);
         creditRow.paidCredits = PRO_MAX_CREDITS_PER_MONTH;
         creditRow.billingCycle = "monthly";
         creditRow.expiresAt = targetExpiryStr;
@@ -268,7 +275,7 @@ export async function GET(request: NextRequest) {
           await admin
             .from("Credit")
             .update({ expiresAt: targetExpiryStr })
-            .eq("userId", activeUserId);
+            .eq("id", creditRow.id);
           creditRow.expiresAt = targetExpiryStr;
         }
       }
@@ -280,7 +287,7 @@ export async function GET(request: NextRequest) {
         await admin
           .from("Credit")
           .update({ expiresAt: expiresAt.toISOString(), billingCycle: "yearly" })
-          .eq("userId", activeUserId);
+          .eq("id", creditRow.id);
       }
     }
 
@@ -313,7 +320,7 @@ export async function GET(request: NextRequest) {
           expiresAt: null,
           freeUsed: creditRow.freeUsed || 0,
         })
-        .eq("userId", activeUserId);
+        .eq("id", creditRow.id);
       
       logger.info(`[credits] Option 3: Plan expired for user ${user.email}. Saved ${leftoverCredits} rollover credits. Reverted to free tier.`);
     }
@@ -324,7 +331,7 @@ export async function GET(request: NextRequest) {
         await admin
           .from("Credit")
           .update({ paidCredits: PRO_CREDITS_PER_MONTH })
-          .eq("userId", activeUserId);
+          .eq("id", creditRow.id);
         creditRow.paidCredits = PRO_CREDITS_PER_MONTH;
         paidCredits = PRO_CREDITS_PER_MONTH;
         logger.info(`[credits] Auto-healed credits for user ${user.email} to ${PRO_CREDITS_PER_MONTH} Pro credits.`);
@@ -332,21 +339,30 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Monthly reset check
-    const resetAt = new Date(creditRow.resetAt);
-    const isNewMonth =
-      now.getMonth() !== resetAt.getMonth() ||
-      now.getFullYear() !== resetAt.getFullYear();
+    const resetAt = creditRow.resetAt ? new Date(creditRow.resetAt) : null;
+    const isValidResetAt = resetAt && !isNaN(resetAt.getTime());
+    const isNewMonth = Boolean(
+      isValidResetAt &&
+      (now.getFullYear() > resetAt.getFullYear() ||
+       (now.getFullYear() === resetAt.getFullYear() && now.getMonth() > resetAt.getMonth()))
+    );
 
-    if (isNewMonth) {
+    if (!isValidResetAt && creditRow?.id) {
+      await admin
+        .from("Credit")
+        .update({ resetAt: now.toISOString() })
+        .eq("id", creditRow.id);
+      creditRow.resetAt = now.toISOString();
+    }
+
+    if (isNewMonth && creditRow?.id) {
       freeUsed = 0;
       if (!isExpired && (isPaidProMax || isAdminPromax)) {
         paidCredits = PRO_MAX_CREDITS_PER_MONTH; // 90
       } else if (isAdminFree || isExpired) {
         paidCredits = 0;
-      } else if (!isExpired && (paidCredits > 0 || isFirst50 || isAdminPremium)) {
+      } else if (!isExpired && (isPaidPremium || isAdminPremium || isFirst50)) {
         paidCredits = PRO_CREDITS_PER_MONTH; // 20
-      } else {
-        paidCredits = 0;
       }
       // Sync new monthly values to DB
       await admin
@@ -356,7 +372,7 @@ export async function GET(request: NextRequest) {
           paidCredits: paidCredits, 
           resetAt: now.toISOString() 
         })
-        .eq("userId", activeUserId);
+        .eq("id", creditRow.id);
       // Update local creditRow to reflect new state
       creditRow.paidCredits = paidCredits;
       creditRow.freeUsed = 0;
@@ -370,7 +386,7 @@ export async function GET(request: NextRequest) {
       planId = "free";
     } else if (isPaidProMax || isAdminPromax || (paidCredits >= 90 && paidCredits < 900000 && !isExpired)) {
       planId = "promax";
-    } else if ((paidCredits > 0 || isFirst50 || isAdminPremium) && !isExpired) {
+    } else if ((paidCredits > 0 || isFirst50 || isAdminPremium || isPaidPremium) && !isExpired) {
       planId = "premium";
     } else {
       planId = "free";
@@ -409,6 +425,10 @@ export async function GET(request: NextRequest) {
         createdAt: latestPaymentRecord.createdAt,
         razorpayPaymentId: latestPaymentRecord.razorpayPaymentId || latestPaymentRecord.id,
       } : null,
+    }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+      },
     });
   } catch (error: any) {
     logger.error("[credits] GET Unhandled error:", error?.message);
@@ -494,11 +514,13 @@ export async function POST(request: NextRequest) {
 
     // Upsert or update the credit row
     // Fetch existing credit row to avoid not-null primary key constraint failures
-    const { data: existingCredit } = await admin
+    const { data: existingCreditRows } = await admin
       .from("Credit")
       .select("id, billingCycle, paidCredits")
-      .eq("userId", activeUserId)
-      .maybeSingle();
+      .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+      .limit(1);
+
+    const existingCredit = existingCreditRows?.[0] || null;
 
     // Option 3: If user had banked rollover credits from an earlier expired cycle, add them back upon renewal!
     let rolloverBonus = 0;
@@ -520,7 +542,7 @@ export async function POST(request: NextRequest) {
           expiresAt: expiresAt ? expiresAt.toISOString() : null,
           resetAt: now.toISOString(),
         })
-        .eq("userId", activeUserId);
+        .eq("id", existingCredit.id);
     } else {
       const newId = "credit-" + Math.random().toString(36).substring(2, 11);
       query = admin

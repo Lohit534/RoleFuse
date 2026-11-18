@@ -345,7 +345,7 @@ export default function DashboardPage() {
 
   const fetchUserCredits = async (userId?: string) => {
     try {
-      const creditsRes = await fetch("/api/credits");
+      const creditsRes = await fetch(`/api/credits?t=${Date.now()}`, { cache: "no-store" });
       if (creditsRes.ok) {
         const creditsData = await creditsRes.json();
         setUserCredits(creditsData);
@@ -362,6 +362,9 @@ export default function DashboardPage() {
         setUserPlan(plan);
         const uid = userId || user?.id;
         if (uid) localStorage.setItem(`fastHire_plan_${uid}`, plan);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("credits-updated"));
+        }
       }
     } catch (e) {
       // silent
@@ -918,6 +921,13 @@ export default function DashboardPage() {
     setOptimizing(false);
 
     // Refresh user credit balance in real time so UI immediately reflects deducted credit
+    if (typeof window !== "undefined" && data?.creditsRemaining !== undefined) {
+      window.dispatchEvent(
+        new CustomEvent("credits-updated", {
+          detail: { creditsRemaining: data.creditsRemaining },
+        })
+      );
+    }
     fetchUserCredits();
 
     // Save active optimization session so page reload / refresh keeps the result view intact
@@ -1614,16 +1624,30 @@ export default function DashboardPage() {
           /* RESULTS WORKSPACE ROW */
           <div ref={resultsRef} className="space-y-6">
 
-            {/* ATS Optimization Complete banner */}
-            <div className="bg-white border border-slate-200 p-4 sm:p-5 rounded-xl flex items-center gap-3 select-none shadow-sm">
-              <div>
-                <h2 className="text-sm font-black text-slate-900 tracking-tight">
-                  ATS Optimization Complete
-                </h2>
-                <p className="text-[11px] text-slate-500 font-medium">
-                  Your resume has been optimized with target keywords and
-                  metrics.
-                </p>
+            {/* Professional Executive ATS Optimization Complete Header Card */}
+            <div className="bg-white border border-slate-200/90 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs select-none">
+              <div className="flex items-center gap-3.5">
+                <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200/80 flex items-center justify-center shrink-0 text-[#087F6E]">
+                  <CheckCircle2 className="h-5 w-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-black text-slate-900 tracking-tight">
+                      ATS Optimization Complete
+                    </h2>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-black text-[#087F6E] uppercase tracking-wider">
+                      Verified
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    Your resume has been tailored with high-impact action verbs, target keywords, and quantified achievements.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 pt-1 sm:pt-0">
+                <span className="text-[11px] font-semibold text-slate-600 bg-slate-50 px-3 py-1 rounded-lg border border-slate-200/80">
+                  Ready for Job Application
+                </span>
               </div>
             </div>
 
