@@ -313,7 +313,7 @@ export default function ResumeViewer({
   const styleConfig = getStyleConfig();
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex flex-col h-full">
+    <div className="bg-white border border-slate-200 rounded-xl overflow-visible shadow-sm flex flex-col">
       {/* Top Header Panel: Title & Primary Actions */}
       <div className="bg-gradient-to-r from-slate-50 to-white px-3 sm:px-5 py-3 border-b border-slate-200 flex flex-col sm:flex-row gap-2.5 sm:gap-4 items-start sm:items-center justify-between">
         <div className="flex items-center gap-2">
@@ -458,15 +458,15 @@ export default function ResumeViewer({
         </button>
       </div>
 
-      {/* Resume Display Area */}
+      {/* Natural Document Paper Viewport (smooth page scrolling like in history without nested scroll trapping) */}
       <div
-        className={`flex-1 p-2 sm:p-5 md:p-8 bg-slate-100/60 select-text transition-all ${
-          isFullLength ? "overflow-visible min-h-[800px]" : "overflow-y-auto max-h-[720px] sm:max-h-[840px] overscroll-contain"
+        className={`flex-1 p-2 sm:p-3.5 md:p-5 bg-slate-100/60 select-text transition-all ${
+          isFullLength ? "overflow-visible min-h-[640px]" : "overflow-y-auto max-h-[720px] sm:max-h-[840px] overscroll-contain"
         }`}
       >
-        {/* Paper-like resume card */}
+        {/* Paper-like resume card matching history */}
         <div
-          className="w-full max-w-3xl mx-auto bg-white text-black rounded-sm sm:rounded-md p-5 sm:p-8 md:p-11 shadow-lg sm:shadow-2xl ring-1 ring-black/5 select-text relative break-words transition-all font-serif"
+          className="w-full max-w-3xl mx-auto bg-white border border-slate-200 text-black rounded-xl p-6 sm:p-10 shadow-sm relative break-words transition-all font-serif select-text min-h-[640px]"
           style={{ fontFamily: styleConfig.fontFamily, lineHeight: "1.35" }}
         >
           {blocks.map((block, idx) => {

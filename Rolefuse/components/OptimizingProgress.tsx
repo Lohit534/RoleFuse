@@ -124,15 +124,21 @@ export default function OptimizingProgress({
   const backendResultRef = useRef<any>(null);
   const backendStepDoneRef = useRef<Record<number, boolean>>({});
   const stepTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const stepStartTimesRef = useRef<Record<number, number>>({ 1: Date.now() });
 
   const finishOptimization = (result: any) => {
     setProgress(100);
+    const now = Date.now();
     setSteps((prev) =>
-      prev.map((s) => ({
-        ...s,
-        status: "done",
-        duration: s.duration || (s.id === 7 ? "1.6s" : "2.0s"),
-      }))
+      prev.map((s) => {
+        const start = stepStartTimesRef.current[s.id];
+        const calculatedDuration = start ? `${Math.max(0.8, (now - start) / 1000).toFixed(1)}s` : "1.8s";
+        return {
+          ...s,
+          status: "done",
+          duration: s.duration && s.duration !== "running..." ? s.duration : calculatedDuration,
+        };
+      })
     );
     setTimeout(() => {
       if (isMountedRef.current) onComplete(result);
@@ -141,24 +147,36 @@ export default function OptimizingProgress({
 
   const syncBackendStep = (stepNum: number, status: "running" | "done") => {
     if (!isMountedRef.current || awaitingInputRef.current) return;
+    const now = Date.now();
+    const prevStep = currentStepRef.current;
     currentStepRef.current = stepNum;
     setCurrentStepId(stepNum);
 
+    if (!stepStartTimesRef.current[stepNum]) {
+      stepStartTimesRef.current[stepNum] = now;
+    }
+
     const stepTargets: Record<number, number> = {
-      1: 16,
-      2: 32,
-      3: 48,
-      4: 70,
-      5: 86,
-      6: 94,
-      7: 98,
+      1: 15,
+      2: 28,
+      3: 42,
+      4: 64,
+      5: 80,
+      6: 91,
+      7: 96,
     };
-    const target = stepTargets[stepNum] || Math.min(96, stepNum * 14);
+    const target = stepTargets[stepNum] || Math.min(96, stepNum * 13);
     setProgress((prev) => Math.max(prev, target));
 
     setSteps((prev) =>
       prev.map((s) => {
-        if (s.id < stepNum) return { ...s, status: "done", duration: s.duration || "1.8s" };
+        if (s.id < stepNum) {
+          const sStart = stepStartTimesRef.current[s.id];
+          const dur = s.duration && s.duration !== "running..." && !s.duration.endsWith("..")
+            ? s.duration
+            : (sStart ? `${Math.max(1.0, (now - sStart) / 1000).toFixed(1)}s` : "2.4s");
+          return { ...s, status: "done", duration: dur };
+        }
         if (s.id === stepNum) return { ...s, status };
         return { ...s, status: "pending" };
       })
@@ -169,8 +187,12 @@ export default function OptimizingProgress({
     if (!isMountedRef.current || awaitingInputRef.current) return;
 
     const next = fromStep + 1;
+    const now = Date.now();
+    const fromStart = stepStartTimesRef.current[fromStep] || now;
+    const accurateDuration = `${Math.max(1.0, (now - fromStart) / 1000).toFixed(1)}s`;
+
     if (next > 7) {
-      // Step 7 has now completed running!
+      // Step 7 has completed running!
       if (backendResultRef.current) {
         finishOptimization(backendResultRef.current);
       } else {
@@ -198,12 +220,12 @@ export default function OptimizingProgress({
       return;
     }
 
-    // Mark previous step done with realistic display duration
-    const durationStr = fromStep === 1 ? "2.8s" : `${(1.6 + fromStep * 0.2).toFixed(1)}s`;
+    stepStartTimesRef.current[next] = now;
+
     setSteps((prev) =>
       prev.map((s) => {
-        if (s.id === fromStep) return { ...s, status: "done", duration: durationStr };
-        if (s.id === next) return { ...s, status: "running" };
+        if (s.id === fromStep) return { ...s, status: "done", duration: accurateDuration };
+        if (s.id === next) return { ...s, status: "running", duration: "0.1s" };
         return s;
       })
     );
@@ -211,52 +233,66 @@ export default function OptimizingProgress({
     currentStepRef.current = next;
     setCurrentStepId(next);
 
-    // Pacing: ensure each step is displayed nicely
-    // Step 7 ("Almost ready") is given 2.1s so the user clearly sees it running
+    // Realistic slow pacing so the user can easily follow each step
     const stepDelays: Record<number, number> = {
-      2: 2200,
-      3: 2000,
-      4: 2200,
-      5: 2000,
-      6: 1900,
-      7: 2100,
+      2: 3200,
+      3: 3600,
+      4: 4200,
+      5: 7200, // Experience rewrite is the heaviest step
+      6: 4500,
+      7: 3800,
     };
-    const delay = stepDelays[next] || 2000;
+    const delay = stepDelays[next] || 3500;
     stepTimerRef.current = setTimeout(() => {
       advanceToNext(next);
     }, delay);
   };
 
-  // 1. Continuous smooth loading: smooth micro-ticker & fun facts rotation
+  // 1. Continuous slow smooth progress & live stopwatch ticking per step
   useEffect(() => {
     isMountedRef.current = true;
+    stepStartTimesRef.current[1] = Date.now();
+
     let factIndex = 0;
     const factInterval = setInterval(() => {
       factIndex = (factIndex + 1) % FUN_FACTS.length;
       setFunFact(FUN_FACTS[factIndex]);
     }, 4500);
 
-    // Smoothly increments progress all the way up to 98% without lag or freezing
-    const smoothProgressInterval = setInterval(() => {
+    // Live stopwatch: ticks accurate elapsed seconds for the currently running step
+    const liveStopwatchInterval = setInterval(() => {
+      if (awaitingInputRef.current) return;
+      const curStep = currentStepRef.current;
+      const startTime = stepStartTimesRef.current[curStep];
+      if (!startTime) return;
+      const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1) + "s";
+      setSteps((prev) =>
+        prev.map((s) => (s.id === curStep && s.status === "running" ? { ...s, duration: elapsedSec } : s))
+      );
+    }, 120);
+
+    // Paced slow progress: steadily progresses up to 96% across ~30-45s without racing
+    const slowProgressInterval = setInterval(() => {
       if (awaitingInputRef.current) return;
       setProgress((prev) => {
-        if (prev < 98) {
-          const increment = prev < 70 ? 2 : 1;
-          return Math.min(98, prev + increment);
+        if (prev < 96) {
+          const increment = prev < 40 ? 0.7 : prev < 75 ? 0.5 : 0.25;
+          return Math.min(96, prev + increment);
         }
         return prev;
       });
-    }, 380);
+    }, 480);
 
     // Start Step 1 running, then advance to Step 2
     stepTimerRef.current = setTimeout(() => {
       advanceToNext(1);
-    }, 2200);
+    }, 3200);
 
     return () => {
       isMountedRef.current = false;
       clearInterval(factInterval);
-      clearInterval(smoothProgressInterval);
+      clearInterval(liveStopwatchInterval);
+      clearInterval(slowProgressInterval);
       if (stepTimerRef.current) clearTimeout(stepTimerRef.current);
     };
   }, []);
@@ -650,7 +686,7 @@ export default function OptimizingProgress({
         <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
           <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{Math.round(progress)}%</span>
           <span className="text-[10px] sm:text-xs text-[#087F6E] font-semibold mt-0.5">
-            {progress >= 100 ? "complete" : `~${Math.max(1, Math.round((100 - progress) * 0.22))}s left`}
+            {progress >= 100 ? "complete" : `~${Math.max(1, Math.round((100 - progress) * 0.35))}s left`}
           </span>
         </div>
       </div>
@@ -714,12 +750,13 @@ export default function OptimizingProgress({
               </div>
 
               {status === "done" ? (
-                <span className="text-[10px] sm:text-[11px] text-[#087F6E] font-medium shrink-0 ml-2">
+                <span className="text-[10px] sm:text-[11px] text-[#087F6E] font-medium shrink-0 ml-2 tabular-nums">
                   {s?.duration || "Done"}
                 </span>
               ) : status === "running" ? (
-                <span className="text-[10px] sm:text-[11px] text-[#087F6E] font-semibold shrink-0 ml-2">
-                  running
+                <span className="text-[10px] sm:text-[11px] text-[#087F6E] font-bold shrink-0 ml-2 tabular-nums flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#087F6E] animate-pulse" />
+                  <span>{s?.duration || "0.1s"}</span>
                 </span>
               ) : (
                 <span className="w-6 sm:w-8 shrink-0" />

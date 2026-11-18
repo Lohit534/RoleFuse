@@ -172,6 +172,19 @@ export function sanitizeOptimizedResume(
   // checks use the actual canonical header and never bleed across section boundaries.
   let currentHeader: { name: string; scorable: boolean } | null = null;
   const seenHeaders = new Set<string>();
+  const seenCertItems = new Set<string>();
+
+  const getCanonicalSectionKey = (headerName: string): string => {
+    const upper = headerName.toUpperCase().trim();
+    if (/CERTIF|AWARD|ACHIEVE/.test(upper)) return "AWARDS & CERTIFICATIONS";
+    if (/SKILL|COMPETENC/.test(upper)) return "TECHNICAL SKILLS";
+    if (/EXPERIENCE|INTERNSHIP|WORK|EMPLOYMENT/.test(upper)) return "EXPERIENCE";
+    if (/PROJECT/.test(upper)) return "PROJECTS";
+    if (/EDUCA|ACADEMIC|QUALIF/.test(upper)) return "EDUCATION";
+    if (/SUMMARY|PROFILE|OBJECTIVE/.test(upper)) return "SUMMARY";
+    if (/LANGUAG/.test(upper)) return "LANGUAGES";
+    return upper;
+  };
 
   for (const rawLine of lines) {
     let line = rawLine;
@@ -181,14 +194,14 @@ export function sanitizeOptimizedResume(
 
     const header = detectSectionHeader(line);
     if (header) {
-      const normName = header.name.toUpperCase().trim();
-      if (seenHeaders.has(normName)) {
-        // DUPLICATE SECTION HEADER DETECTED (e.g. repeated AWARDS & CERTIFICATIONS)!
+      const canonKey = getCanonicalSectionKey(header.name);
+      if (seenHeaders.has(canonKey)) {
+        // DUPLICATE SECTION HEADER DETECTED (e.g. repeated AWARDS & CERTIFICATIONS or Certifications)!
         // Do NOT emit a second section header — keep items unified under the original section.
         currentHeader = header;
         continue;
       }
-      seenHeaders.add(normName);
+      seenHeaders.add(canonKey);
       currentHeader = header;
     }
 
@@ -283,10 +296,17 @@ export function sanitizeOptimizedResume(
     const isCert = !header && /^(CERTIFICATIONS|CERTIFICATIONS & ACHIEVEMENTS|CERTIFICATIONS AND ACHIEVEMENTS|ACHIEVEMENTS & CERTIFICATIONS|ACHIEVEMENTS AND CERTIFICATIONS|CERTIFICATES|LICENSES|AWARDS & CERTIFICATIONS|CERTIFICATIONS & AWARDS)$/.test(sectionName);
     if (isCert && line.trim()) {
       // Strip any internal repeated subheaders e.g. "Awards & Certifications" or "Certifications"
-      const cleanCertLine = line.replace(/^[•\-\*\s]+/, "").trim();
-      if (/^(?:awards\s*(?:&|and)\s*certifications|certifications\s*(?:&|and)\s*awards|certifications?|achievements?|awards?)$/i.test(cleanCertLine)) {
+      const cleanCertLine = line.replace(/^[•\-\*\s]+/, "").replace(/[:\-_|]+$/, "").trim();
+      if (/^(?:awards?\s*(?:&|and)\s*certifications?|certifications?\s*(?:&|and)\s*awards?|certifications?\s*(?:&|and)\s*achievements?|achievements?\s*(?:&|and)\s*certifications?|certifications?|achievements?|awards?|certificates?|licenses?)$/i.test(cleanCertLine)) {
         continue;
       }
+      // Deduplicate certification entries within section
+      const certKey = cleanCertLine.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (seenCertItems.has(certKey)) {
+        continue;
+      }
+      seenCertItems.add(certKey);
+
       const yearMatches = Array.from(line.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((m) => m[1]);
       for (const yr of yearMatches) {
         if (!allowedSource.includes(yr)) {

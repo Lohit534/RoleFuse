@@ -426,13 +426,19 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
         )}
 
         {/* SECTION 5: AWARDS & CERTIFICATIONS */}
-        {parsed.certifications.filter(c => !/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(c.raw.trim())).length > 0 && (
+        {parsed.certifications.filter(c => {
+          const raw = c.raw.replace(/^[#*•\-\u2022\s]+/, '').replace(/[:\-_|]+$/, '').trim();
+          return raw.length > 0 && !/^(?:&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)|awards?\s*(?:&|and)\s*certifications?|certifications?\s*(?:&|and)\s*awards?|certifications?\s*(?:&|and)\s*achievements?|achievements?\s*(?:&|and)\s*certifications?|certifications?|achievements?|awards?|certificates?|licenses?)$/i.test(raw);
+        }).length > 0 && (
           <View wrap={false}>
             <View style={styles.sectionHeaderWrapper}>
               <Text style={styles.sectionHeader}>AWARDS & CERTIFICATIONS</Text>
             </View>
             {parsed.certifications
-              .filter(c => !/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(c.raw.trim()))
+              .filter(c => {
+                const raw = c.raw.replace(/^[#*•\-\u2022\s]+/, '').replace(/[:\-_|]+$/, '').trim();
+                return raw.length > 0 && !/^(?:&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)|awards?\s*(?:&|and)\s*certifications?|certifications?\s*(?:&|and)\s*awards?|certifications?\s*(?:&|and)\s*achievements?|achievements?\s*(?:&|and)\s*certifications?|certifications?|achievements?|awards?|certificates?|licenses?)$/i.test(raw);
+              })
               .map((cert, i) => (
                 <View key={i} style={styles.bulletRow}>
                   <Text style={styles.bulletDot}>•</Text>

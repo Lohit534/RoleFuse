@@ -802,20 +802,26 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
   const orphanedDates: string[] = [];
   const orphanedGrades: string[] = [];
   const cleanCertLines: string[] = [];
+  const seenCertRawKeys = new Set<string>();
+
+  const isCertHeaderOrSubheader = (str: string): boolean => {
+    const c = str.replace(/^[#*•\-\u2022\s]+/, '').replace(/[:\-_|]+$/, '').trim();
+    return /^(?:&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)|(?:AWARDS|CERTIFICATIONS)\s*(&|AND)\s*(?:CERTIFICATIONS|ACHIEVEMENTS|AWARDS)|awards?\s*(?:&|and)\s*certifications?|certifications?\s*(?:&|and)\s*awards?|certifications?\s*(?:&|and)\s*achievements?|achievements?\s*(?:&|and)\s*certifications?|certifications?|achievements?|awards?|certificates?|licenses?)$/i.test(c);
+  };
 
   for (const line of rawCertLines) {
     const clean = stripMarkdownAsterisks(line).replace(/^[•\-*\u2022]\s*/, '').trim();
     if (!clean) continue;
-    // Filter out section header leakage like "& ACHIEVEMENTS" or "CERTIFICATIONS & ACHIEVEMENTS" or "Awards & Certifications"
-    if (/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(clean)) continue;
-    if (/^(?:AWARDS|CERTIFICATIONS)\s*(&|AND)\s*(?:CERTIFICATIONS|ACHIEVEMENTS|AWARDS)\s*$/i.test(clean)) continue;
-    if (/^(?:awards\s*(?:&|and)\s*certifications|certifications\s*(?:&|and)\s*awards|certifications?|achievements?|awards?)$/i.test(clean)) continue;
-    if (/^(?:awards\s*(?:&|and)\s*certifications|certifications\s*(?:&|and)\s*awards|certifications?|achievements?|awards?)$/i.test(clean)) continue;
+    // Filter out section header leakage like "Awards & Certifications" or "& ACHIEVEMENTS"
+    if (isCertHeaderOrSubheader(clean)) continue;
     if (PURE_DATE_REGEX.test(clean)) {
       orphanedDates.push(clean);
     } else if (PURE_GRADE_REGEX.test(clean)) {
       orphanedGrades.push(clean);
     } else {
+      const norm = clean.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (seenCertRawKeys.has(norm)) continue;
+      seenCertRawKeys.add(norm);
       cleanCertLines.push(line);
     }
   }
@@ -1067,9 +1073,7 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
     const rawLine = cleanCertLines[i];
     const clean = stripMarkdownAsterisks(rawLine.replace(/^[•\-*\u2022]\s*/, '')).trim();
     if (!clean) continue;
-    if (/^&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)\s*$/i.test(clean)) continue;
-    if (/^(?:AWARDS|CERTIFICATIONS)\s*(&|AND)\s*(?:CERTIFICATIONS|ACHIEVEMENTS|AWARDS)\s*$/i.test(clean)) continue;
-    if (/^(?:awards\s*(?:&|and)\s*certifications|certifications\s*(?:&|and)\s*awards|certifications?|achievements?|awards?)$/i.test(clean)) continue;
+    if (isCertHeaderOrSubheader(clean)) continue;
 
     const normKey = clean.toLowerCase().replace(/[^a-z0-9]/g, '');
     if (seenCerts.has(normKey)) continue;
