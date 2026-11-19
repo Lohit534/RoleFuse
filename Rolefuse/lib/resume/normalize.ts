@@ -1,4 +1,4 @@
-import { ResumeData, ResumeExperience, ResumeProject, ResumeCertification } from "@/types/resume";
+import { ResumeData, ResumeExperience, ResumeProject, ResumeCertification, ResumeEducation } from "@/types/resume";
 
 // ── 1. CANONICAL TECH CASING & LEVENSHTEIN TYPO FIXER ─────────────────────────
 
@@ -175,13 +175,84 @@ export function normalizeDegree(degree: string): string {
 }
 
 /**
- * Normalizes title casing for certifications and cleans "Title – Issuer" spacing
+ * Normalizes an education entry and strips embedded dates or CGPA so they are never printed twice.
+ */
+export function normalizeEducationItem(edu: ResumeEducation): ResumeEducation {
+  let degree = normalizeDegree(edu.degree || "");
+  let institution = (edu.institution || "").trim();
+  let start = edu.start ? edu.start.trim() : undefined;
+  let end = edu.end ? edu.end.trim() : undefined;
+  let score = edu.score ? edu.score.trim() : undefined;
+
+  // 1. If degree has dates attached e.g. "B.Tech in CSE | 2022 - 2026" or "Intermediate | 2020 - 2022"
+  const dateInDegree = degree.match(/\s*\|\s*(\b(?:19|20)\d{2}\b(?:\s*[-–—\s]+\s*(?:(?:19|20)\d{2}|Present|Current))?)\s*$/i);
+  if (dateInDegree) {
+    if (!start && !end) {
+      const parts = dateInDegree[1].split(/\s*[-–—\s]+\s*/);
+      start = parts[0];
+      if (parts[1]) end = parts[1];
+    }
+    degree = degree.replace(dateInDegree[0], "").trim();
+  }
+
+  // 2. If degree has score attached e.g. "... | CGPA: 7.62"
+  const scoreInDegree = degree.match(/\s*\|\s*((?:CGPA|GPA|Percentage|Score)?\s*:?\s*[\d.]+(?:\s*\/\s*[\d.]+)?%?)\s*$/i);
+  if (scoreInDegree) {
+    if (!score) score = scoreInDegree[1];
+    degree = degree.replace(scoreInDegree[0], "").trim();
+  }
+
+  // 3. If institution has score attached e.g. "College Name | CGPA: 7.62" or "High School | GPA: 9.5"
+  const scoreInInst = institution.match(/\s*\|\s*((?:CGPA|GPA|Percentage|Score)?\s*:?\s*[\d.]+(?:\s*\/\s*[\d.]+)?%?)\s*$/i);
+  if (scoreInInst) {
+    if (!score) score = scoreInInst[1];
+    institution = institution.replace(scoreInInst[0], "").trim();
+  }
+
+  // 4. If institution has dates attached e.g. "College Name | 2022 - 2026"
+  const dateInInst = institution.match(/\s*\|\s*(\b(?:19|20)\d{2}\b(?:\s*[-–—\s]+\s*(?:(?:19|20)\d{2}|Present|Current))?)\s*$/i);
+  if (dateInInst) {
+    if (!start && !end) {
+      const parts = dateInInst[1].split(/\s*[-–—\s]+\s*/);
+      start = parts[0];
+      if (parts[1]) end = parts[1];
+    }
+    institution = institution.replace(dateInInst[0], "").trim();
+  }
+
+  // 5. Clean any trailing pipes or punctuation
+  degree = degree.replace(/[\s|–—\-,:]+$/, "").trim();
+  institution = institution.replace(/[\s|–—\-,:]+$/, "").trim();
+
+  return {
+    degree,
+    institution,
+    start,
+    end,
+    score,
+  };
+}
+
+/**
+ * Normalizes title casing for certifications and cleans "Title – Issuer" spacing.
+ * Strictly prevents duplicate issuer output (e.g. "Infosys Springboard – Infosys Springboard").
  */
 export function normalizeCertification(cert: ResumeCertification): ResumeCertification {
   let title = (cert.title || "").trim();
   let issuer = (cert.issuer || "").trim();
+  let year = cert.year ? String(cert.year).trim() : undefined;
 
-  // If title contains "–" or "-" or "|", parse into Title and Issuer if issuer is missing
+  // 1. Clean bullet prefixes if any
+  title = title.replace(/^[•\-\*–—\s]+/, "").trim();
+  issuer = issuer.replace(/^[•\-\*–—\s]+/, "").trim();
+
+  // 2. If title ends with issuer or contains "– Issuer" or "- Issuer" or "by Issuer"
+  if (issuer) {
+    const esc = issuer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    title = title.replace(new RegExp(`(?:\\s*[-–—|:]+\\s*|\\s+by\\s+|\\s+from\\s+)${esc}$`, "i"), "").trim();
+  }
+
+  // 3. If title contains "–" or "-" or "|" and issuer is empty, split into Title and Issuer
   if (!issuer && /[-–—|]/.test(title)) {
     const parts = title.split(/\s*[-–—|]\s*/);
     if (parts.length >= 2) {
@@ -190,11 +261,25 @@ export function normalizeCertification(cert: ResumeCertification): ResumeCertifi
     }
   }
 
-  // Normalize " – " spacing
-  title = title.replace(/\s*[-–—]\s*/g, " – ").trim();
-  issuer = issuer.replace(/\s*[-–—]\s*/g, " – ").trim();
+  // 4. Deduplicate repeated segments in issuer (e.g. "Infosys Springboard – Infosys Springboard", "CodeTantra – CodeTantra", "HackerRank – HackerRank")
+  if (issuer) {
+    const issuerParts = issuer.split(/\s*[-–—|]\s*/);
+    if (issuerParts.length >= 2 && issuerParts[0].toLowerCase() === issuerParts[1].toLowerCase()) {
+      issuer = issuerParts[0].trim();
+    }
+  }
 
-  // Title Case for certification title (skip small connector words)
+  // 5. If title still ends with issuer after splitting, strip it from title
+  if (issuer) {
+    const esc = issuer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    title = title.replace(new RegExp(`(?:\\s*[-–—|:]+\\s*|\\s+by\\s+|\\s+from\\s+)${esc}$`, "i"), "").trim();
+  }
+
+  // 6. Clean trailing separators
+  title = title.replace(/[\s|–—\-,:]+$/, "").trim();
+  issuer = issuer.replace(/[\s|–—\-,:]+$/, "").trim();
+
+  // 7. Title Case for certification title (skip small connector words)
   const SMALL_WORDS = new Set(["and", "or", "of", "the", "in", "on", "for", "to", "with", "by", "a", "an"]);
   title = title
     .split(/\s+/)
@@ -208,7 +293,7 @@ export function normalizeCertification(cert: ResumeCertification): ResumeCertifi
   return {
     title,
     issuer: issuer || undefined,
-    year: cert.year ? cert.year.trim() : undefined,
+    year: year || undefined,
   };
 }
 
@@ -385,23 +470,51 @@ export function normalizeResume(
       .trim();
   }
 
-  // 4. Skills (Canonical casing and deduplication)
-  const skills = (resume.skills || []).map((cat) => {
-    const seen = new Set<string>();
-    const cleanItems: string[] = [];
+  // 4. Skills (Preserve candidate's original skills + merge optimized skills + canonical casing)
+  const skillsMap = new Map<string, { label: string; items: string[]; itemSet: Set<string> }>();
+
+  // First, add all candidate's original skills so they are NEVER deleted or lost
+  if (opts.originalData?.skills) {
+    for (const cat of opts.originalData.skills) {
+      const label = cat.label.trim();
+      const normLabelKey = label.toLowerCase();
+      if (!skillsMap.has(normLabelKey)) {
+        skillsMap.set(normLabelKey, { label, items: [], itemSet: new Set() });
+      }
+      const target = skillsMap.get(normLabelKey)!;
+      for (const item of cat.items || []) {
+        const canonical = normalizeTechTerm(item);
+        const low = canonical.toLowerCase();
+        if (!target.itemSet.has(low) && canonical.length > 0) {
+          target.itemSet.add(low);
+          target.items.push(canonical);
+        }
+      }
+    }
+  }
+
+  // Then add optimized skills without removing existing skills
+  for (const cat of resume.skills || []) {
+    const label = cat.label.trim();
+    const normLabelKey = label.toLowerCase();
+    if (!skillsMap.has(normLabelKey)) {
+      skillsMap.set(normLabelKey, { label, items: [], itemSet: new Set() });
+    }
+    const target = skillsMap.get(normLabelKey)!;
     for (const item of cat.items || []) {
       const canonical = normalizeTechTerm(item);
       const low = canonical.toLowerCase();
-      if (!seen.has(low) && canonical.length > 0) {
-        seen.add(low);
-        cleanItems.push(canonical);
+      if (!target.itemSet.has(low) && canonical.length > 0) {
+        target.itemSet.add(low);
+        target.items.push(canonical);
       }
     }
-    return {
-      label: cat.label.trim(),
-      items: cleanItems,
-    };
-  }).filter((cat) => cat.items.length > 0);
+  }
+
+  const skills = Array.from(skillsMap.values()).map(c => ({
+    label: c.label,
+    items: c.items,
+  })).filter(c => c.items.length > 0);
 
   // 5. Experience
   const experience: ResumeExperience[] = (resume.experience || []).map((exp) => {
@@ -454,14 +567,8 @@ export function normalizeResume(
     new Set((resume.achievements || []).map((a) => a.replace(/^[•\-\*–—\s]+/, "").trim()).filter(Boolean))
   );
 
-  // 8. Education
-  const education = (resume.education || []).map((edu) => ({
-    degree: normalizeDegree(edu.degree),
-    institution: (edu.institution || "").trim(),
-    start: edu.start ? edu.start.trim() : undefined,
-    end: edu.end ? edu.end.trim() : undefined,
-    score: edu.score ? edu.score.trim() : undefined,
-  }));
+  // 8. Education (Strip embedded dates and CGPA so they are never printed twice)
+  const education = (resume.education || []).map((edu) => normalizeEducationItem(edu));
 
   // 9. Languages
   const languages = Array.from(

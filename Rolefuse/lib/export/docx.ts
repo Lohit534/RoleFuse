@@ -322,8 +322,23 @@ export async function generateDOCX(
     if (parsed.education.length > 0) {
       addSectionHeader("EDUCATION");
       for (const edu of parsed.education) {
-        const cleanDegree = edu.degree.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
-        const cleanInst = edu.institution.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+        let cleanDegree = edu.degree.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+        let cleanInst = edu.institution.replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+
+        // Strip dates from cleanDegree if attached (prevents duplicate dates)
+        const dateInDegree = cleanDegree.match(/\s*\|\s*(\b(?:19|20)\d{2}\b(?:\s*[-–—\s]+\s*(?:(?:19|20)\d{2}|Present|Current))?)\s*$/i);
+        if (dateInDegree) {
+          cleanDegree = cleanDegree.replace(dateInDegree[0], "").trim();
+        }
+
+        // Strip CGPA/score from cleanInst if attached (prevents duplicate CGPA)
+        const scoreInInst = cleanInst.match(/\s*\|\s*((?:CGPA|GPA|Percentage|Score)?\s*:?\s*[\d.]+(?:\s*\/\s*[\d.]+)?%?)\s*$/i);
+        if (scoreInInst) {
+          cleanInst = cleanInst.replace(scoreInInst[0], "").trim();
+        }
+
+        cleanDegree = cleanDegree.replace(/[\s|–—\-,:]+$/, "").trim();
+        cleanInst = cleanInst.replace(/[\s|–—\-,:]+$/, "").trim();
 
         // Line 1: "Degree" LEFT + "Year" RIGHT
         children.push(

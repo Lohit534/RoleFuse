@@ -194,9 +194,20 @@ export function splitCertText(text: string): { title: string; rest: string } {
   // Match "Title – Issuer"
   const sepMatch = clean.match(/^(.+?)\s*(?:[–—]|\||\s-\s|\bby\b|\bfrom\b)\s*([^–—\-|]+(?:\s*\(\d{4}\))?.*)$/i);
   if (sepMatch && sepMatch[1].trim().length >= 2 && sepMatch[1].trim().length <= 80) {
-    const title = sepMatch[1].trim();
-    const rest = ' – ' + sepMatch[2].replace(/^[–—\-|]\s*/, '').trim();
-    return { title, rest };
+    let title = sepMatch[1].trim();
+    let issuer = sepMatch[2].replace(/^[–—\-|]\s*/, '').trim();
+
+    // Deduplicate repeated issuer names like "Infosys Springboard – Infosys Springboard", "CodeTantra – CodeTantra"
+    const issuerParts = issuer.split(/\s*[-–—|]\s*/);
+    if (issuerParts.length >= 2 && issuerParts[0].toLowerCase() === issuerParts[1].toLowerCase()) {
+      issuer = issuerParts[0].trim();
+    }
+
+    // If title already ends with issuer, strip it
+    const esc = issuer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    title = title.replace(new RegExp(`(?:\\s*[-–—|:]+\\s*|\\s+by\\s+|\\s+from\\s+)${esc}$`, "i"), "").trim();
+
+    return { title, rest: issuer ? ' – ' + issuer : '' };
   }
 
   const m = clean.match(/^(.{2,80}?)(\s[–—-]\s.*|\s\(\d{4}\).*)$/);
@@ -485,27 +496,100 @@ export function adaptResumeDataToParsedResume(data: ResumeData): ParsedResume {
   });
 
   const certifications: (CertificationItem & ResumeCertification)[] = (data.certifications || []).map((cert) => {
-    const raw = [cert.title, cert.issuer].filter(Boolean).join(" – ") + (cert.year ? ` (${cert.year})` : "");
+    let cleanTitle = (cert.title || "").trim();
+    let cleanIssuer = (cert.issuer || "").trim();
+
+    // 1. Clean bullet prefixes if any
+    cleanTitle = cleanTitle.replace(/^[•\-\*–—\s]+/, "").trim();
+    cleanIssuer = cleanIssuer.replace(/^[•\-\*–—\s]+/, "").trim();
+
+    // 2. If cleanTitle ends with cleanIssuer or contains "– Issuer"
+    if (cleanIssuer) {
+      const esc = cleanIssuer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      cleanTitle = cleanTitle.replace(new RegExp(`(?:\\s*[-–—|:]+\\s*|\\s+by\\s+|\\s+from\\s+)${esc}$`, "i"), "").trim();
+    } else if (/[-–—|]/.test(cleanTitle)) {
+      const parts = cleanTitle.split(/\s*[-–—|]\s*/);
+      if (parts.length >= 2) {
+        cleanTitle = parts[0].trim();
+        cleanIssuer = parts.slice(1).join(" – ").trim();
+      }
+    }
+
+    // 3. Deduplicate repeated segments in cleanIssuer (e.g. "Infosys Springboard – Infosys Springboard", "CodeTantra – CodeTantra")
+    if (cleanIssuer) {
+      const issuerParts = cleanIssuer.split(/\s*[-–—|]\s*/);
+      if (issuerParts.length >= 2 && issuerParts[0].toLowerCase() === issuerParts[1].toLowerCase()) {
+        cleanIssuer = issuerParts[0].trim();
+      }
+    }
+
+    if (cleanIssuer) {
+      const esc = cleanIssuer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      cleanTitle = cleanTitle.replace(new RegExp(`(?:\\s*[-–—|:]+\\s*|\\s+by\\s+|\\s+from\\s+)${esc}$`, "i"), "").trim();
+    }
+
+    cleanTitle = cleanTitle.replace(/[\s|–—\-,:]+$/, "").trim();
+    cleanIssuer = cleanIssuer.replace(/[\s|–—\-,:]+$/, "").trim();
+
+    const raw = [cleanTitle, cleanIssuer].filter(Boolean).join(" – ") + (cert.year ? ` (${cert.year})` : "");
     return {
-      title: cert.title,
-      issuer: cert.issuer,
+      title: cleanTitle,
+      issuer: cleanIssuer || undefined,
       year: cert.year,
       raw,
-      boldPrefix: cert.title,
-      rest: cert.issuer ? ` – ${cert.issuer}` : "",
+      boldPrefix: cleanTitle,
+      rest: cleanIssuer ? ` – ${cleanIssuer}` : "",
     };
   });
 
   const education: (EducationItem & ResumeEducation)[] = (data.education || []).map((ed) => {
-    const dates = [ed.start, ed.end].filter(Boolean).join(" – ");
+    let degree = (ed.degree || "").trim();
+    let inst = (ed.institution || "").trim();
+    let start = ed.start ? ed.start.trim() : undefined;
+    let end = ed.end ? ed.end.trim() : undefined;
+    let score = ed.score ? ed.score.trim() : undefined;
+
+    // 1. Strip date from degree if already present (e.g. "B.Tech in CSE | 2022 - 2026")
+    const dateInDegree = degree.match(/\s*\|\s*(\b(?:19|20)\d{2}\b(?:\s*[-–—\s]+\s*(?:(?:19|20)\d{2}|Present|Current))?)\s*$/i);
+    if (dateInDegree) {
+      if (!start && !end) {
+        const parts = dateInDegree[1].split(/\s*[-–—\s]+\s*/);
+        start = parts[0];
+        if (parts[1]) end = parts[1];
+      }
+      degree = degree.replace(dateInDegree[0], "").trim();
+    }
+
+    // 2. Strip score from inst if already present (e.g. "... | CGPA: 7.62")
+    const scoreInInst = inst.match(/\s*\|\s*((?:CGPA|GPA|Percentage|Score)?\s*:?\s*[\d.]+(?:\s*\/\s*[\d.]+)?%?)\s*$/i);
+    if (scoreInInst) {
+      if (!score) score = scoreInInst[1];
+      inst = inst.replace(scoreInInst[0], "").trim();
+    }
+
+    // 3. Strip dates from inst if attached
+    const dateInInst = inst.match(/\s*\|\s*(\b(?:19|20)\d{2}\b(?:\s*[-–—\s]+\s*(?:(?:19|20)\d{2}|Present|Current))?)\s*$/i);
+    if (dateInInst) {
+      if (!start && !end) {
+        const parts = dateInInst[1].split(/\s*[-–—\s]+\s*/);
+        start = parts[0];
+        if (parts[1]) end = parts[1];
+      }
+      inst = inst.replace(dateInInst[0], "").trim();
+    }
+
+    degree = degree.replace(/[\s|–—\-,:]+$/, "").trim();
+    inst = inst.replace(/[\s|–—\-,:]+$/, "").trim();
+
+    const dates = [start, end].filter(Boolean).join(" – ");
     return {
-      degree: ed.degree,
-      institution: ed.institution,
-      start: ed.start,
-      end: ed.end,
-      score: ed.score,
+      degree,
+      institution: inst,
+      start,
+      end,
+      score,
       yearOrDates: dates,
-      grade: ed.score || "",
+      grade: score || "",
     };
   });
 
@@ -958,20 +1042,33 @@ export function parseResume(rawText: string | ResumeData, originalText?: string)
     if (PURE_DATE_REGEX.test(clean) || /^\b(19|20)\d{2}\s*[\–\—\-]\s*(?:(19|20)\d{2}|Present)\b/i.test(clean)) {
       if (currentEdu && !currentEdu.yearOrDates) {
         currentEdu.yearOrDates = clean;
-        continue;
       }
+      continue;
     }
 
     // Check if line is pure grade
     if (PURE_GRADE_REGEX.test(clean) || /^(?:CGPA|GPA)\s*:\s*[\dX\.]+/i.test(clean)) {
       if (currentEdu && !currentEdu.grade) {
         currentEdu.grade = clean;
-        continue;
       }
+      continue;
     }
 
     const { left: parsedLeft, date, grade } = extractRightDateAndGrade(rawLine);
     const cleanLeft = stripMarkdownAsterisks(parsedLeft).replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
+
+    // If cleanLeft is just a duplicate date or grade, skip it
+    if (!cleanLeft || PURE_DATE_REGEX.test(cleanLeft) || PURE_GRADE_REGEX.test(cleanLeft)) {
+      if (currentEdu) {
+        if (!currentEdu.yearOrDates && date) currentEdu.yearOrDates = date;
+        if (!currentEdu.grade && grade) currentEdu.grade = grade;
+      }
+      continue;
+    }
+
+    if (currentEdu && (cleanLeft === currentEdu.yearOrDates || cleanLeft === currentEdu.grade)) {
+      continue;
+    }
 
     // Use cleanLeft (degree/institution name without date/grade) for classification
     if (isDegreeLine(cleanLeft) || !currentEdu || (currentEdu.institution && !currentEdu.degree)) {

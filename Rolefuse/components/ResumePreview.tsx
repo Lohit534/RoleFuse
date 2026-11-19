@@ -230,16 +230,39 @@ export function ResumePreview({
             Awards &amp; Certifications
           </h2>
           <ul className="space-y-1 text-[11px] sm:text-[12px]">
-            {(resume.certifications || []).map((cert, idx) => (
-              <li key={`cert-${idx}`} className="flex items-start gap-2 leading-relaxed text-slate-900">
-                <span className="font-bold text-black select-none shrink-0">•</span>
-                <span className="flex-1">
-                  <strong className="font-bold text-black">{cert.title}</strong>
-                  {cert.issuer && ` – ${cert.issuer}`}
-                  {cert.year && ` (${cert.year})`}
-                </span>
-              </li>
-            ))}
+            {(resume.certifications || []).map((cert, idx) => {
+              let cleanTitle = (cert.title || "").trim();
+              let cleanIssuer = (cert.issuer || "").trim();
+
+              if (cleanIssuer) {
+                const esc = cleanIssuer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                cleanTitle = cleanTitle.replace(new RegExp(`(?:\\s*[-–—|:]+\\s*|\\s+by\\s+|\\s+from\\s+)${esc}$`, "i"), "").trim();
+                const parts = cleanIssuer.split(/\s*[-–—|]\s*/);
+                if (parts.length >= 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+                  cleanIssuer = parts[0].trim();
+                }
+              } else if (/[-–—|]/.test(cleanTitle)) {
+                const parts = cleanTitle.split(/\s*[-–—|]\s*/);
+                if (parts.length >= 2) {
+                  cleanTitle = parts[0].trim();
+                  cleanIssuer = parts.slice(1).join(" – ").trim();
+                }
+              }
+
+              cleanTitle = cleanTitle.replace(/[\s|–—\-,:]+$/, "").trim();
+              cleanIssuer = cleanIssuer.replace(/[\s|–—\-,:]+$/, "").trim();
+
+              return (
+                <li key={`cert-${idx}`} className="flex items-start gap-2 leading-relaxed text-slate-900">
+                  <span className="font-bold text-black select-none shrink-0">•</span>
+                  <span className="flex-1">
+                    <strong className="font-bold text-black">{cleanTitle}</strong>
+                    {cleanIssuer && ` – ${cleanIssuer}`}
+                    {cert.year && ` (${cert.year})`}
+                  </span>
+                </li>
+              );
+            })}
             {(resume.achievements || []).map((ach, idx) => (
               <li key={`ach-${idx}`} className="flex items-start gap-2 leading-relaxed text-slate-900">
                 <span className="font-bold text-black select-none shrink-0">•</span>
@@ -258,12 +281,50 @@ export function ResumePreview({
           </h2>
           <div className="space-y-2.5">
             {resume.education.map((edu, idx) => {
-              const dates = [edu.start, edu.end].filter(Boolean).join(" – ");
+              let cleanDegree = (edu.degree || "").trim();
+              let cleanInst = (edu.institution || "").trim();
+              let start = edu.start;
+              let end = edu.end;
+              let score = edu.score;
+
+              // 1. Strip date from cleanDegree if attached (prevents duplicate dates)
+              const dateInDegree = cleanDegree.match(/\s*\|\s*(\b(?:19|20)\d{2}\b(?:\s*[-–—\s]+\s*(?:(?:19|20)\d{2}|Present|Current))?)\s*$/i);
+              if (dateInDegree) {
+                if (!start && !end) {
+                  const parts = dateInDegree[1].split(/\s*[-–—\s]+\s*/);
+                  start = parts[0];
+                  if (parts[1]) end = parts[1];
+                }
+                cleanDegree = cleanDegree.replace(dateInDegree[0], "").trim();
+              }
+
+              // 2. Strip score from cleanInst if attached (prevents duplicate CGPA)
+              const scoreInInst = cleanInst.match(/\s*\|\s*((?:CGPA|GPA|Percentage|Score)?\s*:?\s*[\d.]+(?:\s*\/\s*[\d.]+)?%?)\s*$/i);
+              if (scoreInInst) {
+                if (!score) score = scoreInInst[1];
+                cleanInst = cleanInst.replace(scoreInInst[0], "").trim();
+              }
+
+              // 3. Strip dates from cleanInst if attached
+              const dateInInst = cleanInst.match(/\s*\|\s*(\b(?:19|20)\d{2}\b(?:\s*[-–—\s]+\s*(?:(?:19|20)\d{2}|Present|Current))?)\s*$/i);
+              if (dateInInst) {
+                if (!start && !end) {
+                  const parts = dateInInst[1].split(/\s*[-–—\s]+\s*/);
+                  start = parts[0];
+                  if (parts[1]) end = parts[1];
+                }
+                cleanInst = cleanInst.replace(dateInInst[0], "").trim();
+              }
+
+              cleanDegree = cleanDegree.replace(/[\s|–—\-,:]+$/, "").trim();
+              cleanInst = cleanInst.replace(/[\s|–—\-,:]+$/, "").trim();
+
+              const dates = [start, end].filter(Boolean).join(" – ");
               return (
                 <div key={idx} className="text-[11px] sm:text-[12px]">
                   {/* Degree Left, Dates Right (space-between) */}
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="font-bold text-black">{edu.degree}</span>
+                    <span className="font-bold text-black">{cleanDegree}</span>
                     {dates && (
                       <span className="text-[10.5px] sm:text-[11px] text-slate-600 font-medium shrink-0 tabular-nums">
                         {dates}
@@ -272,10 +333,10 @@ export function ResumePreview({
                   </div>
                   {/* Institution Left, Score Right-aligned */}
                   <div className="flex items-baseline justify-between gap-2 text-slate-700">
-                    <span>{edu.institution}</span>
-                    {edu.score && (
+                    <span>{cleanInst}</span>
+                    {score && (
                       <span className="italic font-medium text-slate-600 shrink-0 text-[10.5px] sm:text-[11px]">
-                        {edu.score}
+                        {score}
                       </span>
                     )}
                   </div>

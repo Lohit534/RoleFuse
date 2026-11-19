@@ -151,8 +151,11 @@ export function buildOptimizationPrompt(
     "  - Every skill line MUST strictly be in 'Category: val1, val2, val3' format on a single line.\n" +
     "  - NEVER output bullet lines like '• Technologies & Tools: ...' or '• Python, React'.\n" +
     "  CRITICAL CATEGORY AND SKILL RULES (USER MANDATE):\n" +
+    "  - MANDATORY SKILL PRESERVATION: NEVER delete, drop, or remove any of the candidate's existing technical skills from their original resume! All existing skills MUST be kept intact and preserved.\n" +
+    "  - ONLY add true, genuine matching technical skills that the candidate or JD supports. Do NOT invent unrelated skills.\n" +
+    "  - Categorize skills accurately: Do NOT dump Machine Learning / AI libraries (e.g. TensorFlow, scikit-learn, PyTorch) into 'Frameworks & Libraries' unless the candidate's original resume had them there. Keep technical categories accurate.\n" +
     "  - PRESERVE the candidate's existing skill categories from their original resume (e.g. Programming Languages, Frameworks & Libraries, Developer Tools).\n" +
-    "  - DO NOT invent or fabricate arbitrary new categories (NEVER add 'Developer Tools & Core Competencies', 'AI, Machine Learning & GenAI', 'Support & Operations', 'Communication & Professional').\n" +
+    "  - DO NOT invent or fabricate arbitrary new categories (NEVER add 'Developer Tools & Core Competencies', 'Support & Operations', 'Communication & Professional').\n" +
     "  - If the candidate's original resume had 'Core Technologies', use 'Frameworks & Libraries' instead. NEVER output both 'Core Technologies' and 'Frameworks & Libraries'.\n" +
     "  - Strictly ONLY include genuine technical keywords (programming languages, libraries, frameworks, databases, developer tools, networking protocols, cloud platforms).\n" +
     "  - ABSOLUTE PROHIBITION ON SOFT SKILLS: NEVER include soft skills, generic English phrases, job responsibilities, or non-technical words in Technical Skills (NEVER write 'Problem Solving', 'Documentation', 'Incident Management', 'Monitoring Tools', 'Troubleshoot Network', 'Title Network Product', 'Issues Across...', 'Time Management', 'Team Coordination', 'Stakeholder Communication').\n" +
@@ -194,6 +197,7 @@ export function buildOptimizationPrompt(
     "  CRITICAL EDUCATION RULES:\n" +
     "  - Line 1 MUST be the Degree or Qualification Name, NEVER the College Name!\n" +
     "  - Line 2 MUST be the Institution / University / School Name, NEVER the Degree Name!\n" +
+    "  - ZERO DUPLICATION: NEVER output dates or CGPA on separate extra lines! Each education entry is strictly TWO lines total: Line 1 has the dates, Line 2 has the CGPA/score. NEVER duplicate dates or CGPA.\n" +
     "  - NEVER output words like 'Graduated:', 'Passing Year:', 'Batch:' before dates. Just output the year or date range directly (e.g. '2026' or '2020 - 2022').\n" +
     "  - If Intermediate / High School has a stream (like MPC, BiPC, Science, Commerce), attach it directly to the degree on Line 1: 'Intermediate (MPC) | 2020 - 2022'.\n" +
     "  - NEVER delete, drop, or omit SSC or Intermediate! Retain all candidate schooling and degree records in this exact reverse-chronological sequence.\n\n" +
@@ -201,6 +205,7 @@ export function buildOptimizationPrompt(
     "  Header: AWARDS & CERTIFICATIONS (ALL CAPS)\n" +
     "  CRITICAL: COMBINE all certifications, achievements, awards, and honors into this SINGLE unified section with header 'AWARDS & CERTIFICATIONS'. Do NOT create two separate sections.\n" +
     "  - NEVER repeat the section header 'AWARDS & CERTIFICATIONS' or insert 'Awards & Certifications' or 'Certifications' as a subheader inside the section. Output the header ONCE and list all items as direct bullets.\n" +
+    "  - ZERO DUPLICATION: NEVER repeat the providing company or platform name twice! Strictly 'Certification Name – Provider Company' (e.g. '• Python Foundations – Infosys Springboard', NEVER '• Python Foundations – Infosys Springboard – Infosys Springboard').\n" +
     "  ABSOLUTE RULE — NEVER MERGE INTO PROJECTS: Certifications and achievements MUST appear in their own dedicated section under 'AWARDS & CERTIFICATIONS' between PROJECTS and EDUCATION. NEVER append them as bullets under a project!\n" +
     "  CERTIFICATIONS format: • Certification Name – Providing Organization / Platform (e.g. • Python Foundations – Infosys Springboard, • Python Programming – CodeTantra, • Foundations of Cybersecurity – Google)\n" +
     "  CRITICAL FOR CERTIFICATIONS: Keep the EXACT Certification Name and EXACT Providing Company Name as provided by the candidate. NEVER swap them, NEVER change company names, and NEVER write wordy sentences or explanations.\n" +

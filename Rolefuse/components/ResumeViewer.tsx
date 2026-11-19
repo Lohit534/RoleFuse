@@ -690,25 +690,52 @@ export default function ResumeViewer({
                     })}
                   </div>
                 );
-              case "education":
+              case "education": {
+                let cleanDegree = (block.degree || "").trim();
+                let cleanSchool = (block.school || "").trim();
+                const displayDates = block.dates ? block.dates.trim() : "";
+                const displayGpa = block.gpa ? block.gpa.trim() : "";
+
+                // Strip dates from cleanDegree if attached (prevents duplicate dates e.g. "B.Tech ... | 2022 - 2026")
+                const dateInDegree = cleanDegree.match(/\s*\|\s*(\b(?:19|20)\d{2}\b(?:\s*[-–—\s]+\s*(?:(?:19|20)\d{2}|Present|Current))?)\s*$/i);
+                if (dateInDegree) {
+                  cleanDegree = cleanDegree.replace(dateInDegree[0], "").trim();
+                }
+
+                // Strip CGPA/score from cleanSchool if attached (prevents duplicate CGPA e.g. "College ... | CGPA: 7.62")
+                const scoreInSchool = cleanSchool.match(/\s*\|\s*((?:CGPA|GPA|Percentage|Score)?\s*:?\s*[\d.]+(?:\s*\/\s*[\d.]+)?%?)\s*$/i);
+                if (scoreInSchool) {
+                  cleanSchool = cleanSchool.replace(scoreInSchool[0], "").trim();
+                }
+
+                // Strip dates from cleanSchool if attached
+                const dateInSchool = cleanSchool.match(/\s*\|\s*(\b(?:19|20)\d{2}\b(?:\s*[-–—\s]+\s*(?:(?:19|20)\d{2}|Present|Current))?)\s*$/i);
+                if (dateInSchool) {
+                  cleanSchool = cleanSchool.replace(dateInSchool[0], "").trim();
+                }
+
+                cleanDegree = cleanDegree.replace(/[\s|–—\-,:]+$/, "").trim();
+                cleanSchool = cleanSchool.replace(/[\s|–—\-,:]+$/, "").trim();
+
                 return (
                   <div key={idx} className="mb-1.5">
                     <div className={`flex flex-row flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} font-bold text-black leading-snug select-text`}>
-                      <span className="min-w-0">{renderHighlightedText(block.degree)}</span>
-                      {block.dates ? (
-                        <span className="font-semibold text-black ml-auto shrink-0">{renderHighlightedText(block.dates)}</span>
+                      <span className="min-w-0">{renderHighlightedText(cleanDegree)}</span>
+                      {displayDates ? (
+                        <span className="font-semibold text-black ml-auto shrink-0">{renderHighlightedText(displayDates)}</span>
                       ) : null}
                     </div>
-                    {block.school || block.gpa ? (
+                    {cleanSchool || displayGpa ? (
                       <div className={`flex flex-row flex-wrap justify-between items-baseline gap-x-2 ${styleConfig.bodySize} italic text-black leading-snug select-text`}>
-                        <span className="min-w-0">{renderHighlightedText(block.school)}</span>
-                        {block.gpa ? (
-                          <span className="ml-auto not-italic font-normal shrink-0">{renderHighlightedText(block.gpa)}</span>
+                        <span className="min-w-0">{renderHighlightedText(cleanSchool)}</span>
+                        {displayGpa ? (
+                          <span className="ml-auto not-italic font-normal shrink-0">{renderHighlightedText(displayGpa)}</span>
                         ) : null}
                       </div>
                     ) : null}
                   </div>
                 );
+              }
               case "bullet":
                 return (
                   <div key={idx} className={`flex items-start ${styleConfig.bodySize} mb-px pl-3 leading-relaxed select-text`}>
