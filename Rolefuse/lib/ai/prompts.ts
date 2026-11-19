@@ -99,21 +99,27 @@ export function buildOptimizationPrompt(
     "Your sole job: produce a maximally ATS-optimized resume that preserves the candidate's facts\n" +
     "while injecting every target keyword and rewriting every bullet for measurable impact.\n\n" +
     sep + "\n" +
-    "ABSOLUTE OUTPUT FORMAT CONTRACT -- EVERY RULE IS MANDATORY\n" +
+    "ABSOLUTE STRUCTURED OUTPUT CONTRACT -- EVERY RULE IS MANDATORY\n" +
     sep + "\n\n" +
-    "PLAIN TEXT RULES:\n" +
-    "- Return plain text ONLY in the \"resume\" field -- zero LaTeX, zero Markdown\n" +
-    "- No \\textbf \\section \\begin \\end \\item\n" +
-    "- No ** ## __ ~~ `` or any other Markdown inside resume text\n" +
-    "- Use real newline characters to separate lines -- NOT the literal string \\n\n" +
-    "- Maximum 2 blank lines between sections\n\n" +
+    "CRITICAL RULES FOR STRUCTURED RESUME DATA:\n" +
+    "1. Bullets MUST be plain strings WITHOUT bullet characters (NO •, -, *, etc. inside the string).\n" +
+    "2. NUMBER GUARD: Every number or metric MUST come from the original resume or user answers. If a bullet lacks a verified number, write \"[ADD: metric]\" instead of making up a fake number.\n" +
+    "3. KEYWORD INJECTION SCOPE: JD keywords go ONLY into skills, summary, and bullets that the original background supports. NEVER inject JD keywords into project or experience tags (tags must only contain technologies the candidate actually used in that project/role).\n" +
+    "4. KEYWORD FREQUENCY: Each keyword may appear at most 2 times across the entire resume.\n" +
+    "5. ANTI-PLAGIARISM: NEVER copy 6 or more consecutive words from the job description. Reframe and synthesize using the candidate's authentic facts.\n\n" +
     "TECH TERMS NEVER SPLIT ACROSS LINES:\n" +
-    "MySQL TypeScript JavaScript PostgreSQL MongoDB Spring Boot Node.js Next.js\n" +
-    "React.js Vue.js GraphQL FastAPI Django Kubernetes Docker TensorFlow PyTorch\n" +
-    "GitHub GitLab VS Code Power BI CI/CD Machine Learning Deep Learning DevOps\n" +
-    "REST API Microservices Cloud Native\n\n" +
-    "ATS-STANDARD TAILORED RESUME ORDER (Format as the gold-standard ATS tailored resume):\n" +
-    sectionOrderStr +
+    "MySQL, TypeScript, JavaScript, PostgreSQL, MongoDB, Spring Boot, Node.js, Next.js,\n" +
+    "React.js, Vue.js, GraphQL, FastAPI, Django, Kubernetes, Docker, TensorFlow, PyTorch,\n" +
+    "GitHub, GitLab, CI/CD, Machine Learning, Deep Learning, DevOps, REST APIs, Microservices.\n\n" +
+    "ATS-STANDARD SECTION ORDER:\n" +
+    "1. NAME & CONTACT\n" +
+    "2. SUMMARY\n" +
+    "3. SKILLS\n" +
+    "4. EXPERIENCE\n" +
+    "5. PROJECTS\n" +
+    "6. AWARDS & CERTIFICATIONS (merge achievements here)\n" +
+    "7. EDUCATION\n" +
+    "8. LANGUAGES\n\n" +
     "EXACT LINE FORMAT FOR EACH SECTION:\n\n" +
     "NAME LINE:\n" +
     "  Candidate full name -- e.g. DINESH KAARTHIK MOODE\n\n" +
@@ -344,23 +350,77 @@ export function buildOptimizationPrompt(
     sep + "\n" +
     "OUTPUT FORMAT\n" +
     sep + "\n" +
-    "Return ONLY this JSON -- no markdown, no preamble, no explanation:\n\n" +
+    "Return ONLY valid JSON matching this schema -- no markdown code fences, no preamble:\n\n" +
     "{\n" +
     "  \"detectedJobTitle\": \"Exact Job Title from the JD\",\n" +
     "  \"detectedCompany\": \"Exact Company Name from the JD (or General Application if not mentioned)\",\n" +
-    "  \"resume\": \"COMPLETE optimized resume -- every section, every role and project, fitted to the PAGE BUDGET. No placeholders.\",\n" +
+    "  \"resume\": {\n" +
+    "    \"name\": \"Candidate Full Name\",\n" +
+    "    \"role\": \"Target Job Title / Role Subtitle\",\n" +
+    "    \"contact\": {\n" +
+    "      \"phone\": \"Phone number from original resume\",\n" +
+    "      \"email\": \"Email from original resume\",\n" +
+    "      \"linkedin\": \"LinkedIn URL from original resume\",\n" +
+    "      \"github\": \"GitHub URL from original resume\",\n" +
+    "      \"portfolio\": \"Portfolio URL from original resume\",\n" +
+    "      \"location\": \"Location if in original resume, otherwise empty string\"\n" +
+    "    },\n" +
+    "    \"summary\": \"2-3 sentence executive professional summary integrating top target JD skills\",\n" +
+    "    \"skills\": [\n" +
+    "      { \"label\": \"Programming Languages\", \"items\": [\"Python\", \"Java\"] },\n" +
+    "      { \"label\": \"Frameworks & Libraries\", \"items\": [\"React.js\", \"Spring Boot\"] }\n" +
+    "    ],\n" +
+    "    \"experience\": [\n" +
+    "      {\n" +
+    "        \"title\": \"Job Title\",\n" +
+    "        \"company\": \"Company Name\",\n" +
+    "        \"start\": \"Jan 2023\",\n" +
+    "        \"end\": \"Present\",\n" +
+    "        \"tags\": [\"Original Tech 1\", \"Original Tech 2\"],\n" +
+    "        \"bullets\": [\n" +
+    "          \"Engineered 18+ REST APIs using Node.js, reducing latency by 35%.\"\n" +
+    "        ]\n" +
+    "      }\n" +
+    "    ],\n" +
+    "    \"projects\": [\n" +
+    "      {\n" +
+    "        \"name\": \"Project Title\",\n" +
+    "        \"tags\": [\"Tech 1\", \"Tech 2\"],\n" +
+    "        \"year\": \"2024\",\n" +
+    "        \"link\": \"github.com/user/repo\",\n" +
+    "        \"bullets\": [\n" +
+    "          \"Built real-time streaming pipeline processing 10k+ records/sec.\"\n" +
+    "        ]\n" +
+    "      }\n" +
+    "    ],\n" +
+    "    \"education\": [\n" +
+    "      {\n" +
+    "        \"degree\": \"B.Tech in Computer Science\",\n" +
+    "        \"institution\": \"University Name\",\n" +
+    "        \"start\": \"2020\",\n" +
+    "        \"end\": \"2024\",\n" +
+    "        \"score\": \"CGPA: 8.5/10\"\n" +
+    "      }\n" +
+    "    ],\n" +
+    "    \"certifications\": [\n" +
+    "      { \"title\": \"Python Foundations\", \"issuer\": \"Infosys Springboard\", \"year\": \"2024\" }\n" +
+    "    ],\n" +
+    "    \"achievements\": [\n" +
+    "      \"Solved 150+ Data Structures problems on LeetCode\"\n" +
+    "    ],\n" +
+    "    \"languages\": [\"English\", \"Telugu\"]\n" +
+    "  },\n" +
     "  \"keywordsAdded\": [\"keyword1\", \"keyword2\", \"keyword3\"],\n" +
     "  \"placeholders\": [\n" +
     "    {\n" +
-    "      \"line\": \"the full bullet or line that contains the placeholder\",\n" +
-    "      \"placeholder\": \"[ADD: quantified metric — e.g. '40%']\",\n" +
-    "      \"hint\": \"Add a specific percentage or number like 35% or 500+ to show your impact\",\n" +
+    "      \"line\": \"bullet text with placeholder\",\n" +
+    "      \"placeholder\": \"[ADD: metric]\",\n" +
+    "      \"hint\": \"Add your verified metric or scale (e.g. 35% or 500+)\",\n" +
     "      \"section\": \"PROFESSIONAL EXPERIENCE\"\n" +
     "    }\n" +
     "  ],\n" +
-    "  \"bulletsRewritten\": 8,\n" +
-    "  \"changesCount\": 15,\n" +
-    "  \"summary\": \"X keywords injected, Y bullets rewritten, Z placeholders need your input\"\n" +
+    "  \"changesCount\": 12,\n" +
+    "  \"summary\": \"Summary of keywords injected and bullet rewrites\"\n" +
     "}"
   );
 }

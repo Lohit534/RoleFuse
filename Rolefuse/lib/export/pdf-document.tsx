@@ -268,17 +268,20 @@ const styles = StyleSheet.create({
   },
 });
 
+import type { ResumeData } from "@/types/resume";
+
 interface ResumePDFProps {
-  text: string;
+  text: string | ResumeData;
   watermarked?: boolean;
   originalText?: string;
 }
 
 export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked = false, originalText }) => {
   const parsed = parseResume(text, originalText);
+  const docTitle = typeof text === "string" ? getCleanExportFilename(text, ".pdf") : `${parsed.name || "Resume"}_Optimized.pdf`;
 
   return (
-    <Document title={getCleanExportFilename(text, ".pdf")} author={parsed.name}>
+    <Document title={docTitle} author={parsed.name}>
       <Page size="A4" style={styles.page}>
         {/* Optional Watermark */}
         {watermarked && (
@@ -501,10 +504,20 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
   );
 };
 
-export async function generatePDF(resumeText: string, watermarked = false, originalText?: string): Promise<Buffer> {
+export async function generatePDF(
+  resumeInput: string | ResumeData,
+  watermarked = false,
+  originalText?: string,
+): Promise<Buffer> {
   try {
     logger.info(`Generating PDF matching ATS resume template (watermarked=${watermarked})...`);
-    const docElement = <ResumePDFDocument text={resumeText} watermarked={watermarked} originalText={originalText} />;
+    const docElement = (
+      <ResumePDFDocument
+        text={resumeInput}
+        watermarked={watermarked}
+        originalText={originalText}
+      />
+    );
     const buffer = await renderToBuffer(docElement);
     logger.info("PDF generation completed successfully.");
     return buffer;

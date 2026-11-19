@@ -156,7 +156,11 @@ export async function callGemini(
       const responseText = result.response.text();
       if (responseText && responseText.trim().length > 30) {
         const parsed = extractJSON(responseText, rawText);
-        if (parsed.resume && parsed.resume.trim().length > 30) {
+        const hasValidResume =
+          parsed.resume &&
+          (typeof parsed.resume === "object" ||
+            (typeof parsed.resume === "string" && parsed.resume.trim().length > 30));
+        if (hasValidResume || parsed.name) {
           logger.info(`[gemini] Successfully generated optimization via ${modelName}`);
           return parsed;
         }
@@ -190,7 +194,11 @@ export async function callGemini(
             restJson.candidates?.[0]?.content?.parts?.[0]?.text;
           if (candidateText && candidateText.trim().length > 30) {
             const parsed = extractJSON(candidateText, rawText);
-            if (parsed.resume && parsed.resume.trim().length > 30) {
+            const hasValidResume =
+              parsed.resume &&
+              (typeof parsed.resume === "object" ||
+                (typeof parsed.resume === "string" && parsed.resume.trim().length > 30));
+            if (hasValidResume || parsed.name) {
               logger.info(`[gemini] Successfully generated optimization via ${modelName} (REST)`);
               return parsed;
             }

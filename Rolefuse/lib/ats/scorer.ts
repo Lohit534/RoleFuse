@@ -131,10 +131,12 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
   const jdLower = (jobDescription || "").toLowerCase();
   const resumeCleanAlpha = resumeLower.replace(/[^a-z0-9]/g, "");
 
+  const isStandaloneResume = !jobDescription || jobDescription.trim().length < 20;
+
   // ── 1. DYNAMIC KEYWORD EXTRACTION & MATCHING ────────────────────────────
   const resumeKeywords = extractKeywords(resumeText);
-  const jdKeywords = extractKeywords(jobDescription);
-  const jdTechTerms = extractTechTerms(jobDescription);
+  const jdKeywords = isStandaloneResume ? new Set<string>() : extractKeywords(jobDescription);
+  const jdTechTerms = isStandaloneResume ? [] : extractTechTerms(jobDescription);
   const resumeTechTerms = extractTechTerms(resumeText);
 
   const foundKeywordsSet = new Set<string>();
@@ -181,110 +183,133 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
     }
   }
 
-  const foundKeywords = Array.from(foundKeywordsSet);
-  const missingKeywords = Array.from(missingKeywordsSet);
+  const foundKeywords = isStandaloneResume ? resumeTechTerms : Array.from(foundKeywordsSet);
+  const missingKeywords = isStandaloneResume ? [] : Array.from(missingKeywordsSet);
 
   // Dynamic Keyword Match calculation (honest, ATS-style):
-  // - exact JD skill match = 1.0 credit, closely related skill = 0.5 credit
-  //   (e.g. JavaScript for TypeScript/React, MySQL for PostgreSQL)
-  // - 70% hard technical skills, 30% other JD phrases
-  // - diminishing-returns curve (sqrt) like real ATS tools: the first matches
-  //   matter most, so a resume with SOME relevant skills is not scored near zero.
-  // If JD has few or no hardcoded tech terms, use all target keywords so non-dictionary roles (support, operations, QA, systems, etc.) are scored accurately
-  const effectiveTechTerms = jdTechTerms.length >= 3
-    ? jdTechTerms
-    : allTargetKeywords.filter(k => k.length > 2);
-
+  // - If standalone (no JD provided): score technical depth from resumeTechTerms (>= 8 skills is strong)
+  // - If JD provided: exact JD skill match = 1.0 credit, closely related skill = 0.5 credit
+  let keywordMatch: number;
+  let effectiveTechTerms: string[] = [];
   let techCredit = 0;
-  for (const t of effectiveTechTerms) {
-    const tl = t.toLowerCase();
-    if (foundKeywordsSet.has(t) || resumeLower.includes(tl)) {
-      techCredit += 1;
-    } else if ((RELATED_SKILLS[tl] || []).some(r => new RegExp(`(^|[^a-z])${r.replace(/[.+#]/g, "\\$&")}([^a-z]|$)`, "i").test(resumeLower))) {
-      techCredit += 0.5;
+
+  if (isStandaloneResume) {
+    const standaloneTechRatio = Math.min(1.0, resumeTechTerms.length / 8);
+    keywordMatch = Math.min(95, Math.max(50, Math.round(50 + standaloneTechRatio * 40)));
+    effectiveTechTerms = resumeTechTerms;
+  } else {
+    // If JD has few or no hardcoded tech terms, use all target keywords so non-dictionary roles (support, operations, QA, systems, etc.) are scored accurately
+    effectiveTechTerms = jdTechTerms.length >= 3
+      ? jdTechTerms
+      : allTargetKeywords.filter(k => k.length > 2);
+
+    for (const t of effectiveTechTerms) {
+      const tl = t.toLowerCase();
+      if (foundKeywordsSet.has(t) || resumeLower.includes(tl)) {
+        techCredit += 1;
+      } else if ((RELATED_SKILLS[tl] || []).some(r => new RegExp(`(^|[^a-z])${r.replace(/[.+#]/g, "\\$&")}([^a-z]|$)`, "i").test(resumeLower))) {
+        techCredit += 0.5;
+      }
     }
+    const techCoverage = effectiveTechTerms.length > 0 ? Math.min(1, techCredit / effectiveTechTerms.length) : 0;
+    const generalDenominator = foundKeywords.length + missingKeywords.length;
+    const generalCoverage = generalDenominator > 0 ? foundKeywords.length / generalDenominator : 0;
+    const keywordRatio = effectiveTechTerms.length >= 3
+      ? techCoverage * 0.7 + generalCoverage * 0.3
+      : generalCoverage > 0 ? generalCoverage : techCoverage;
+    keywordMatch = Math.min(97, Math.max(5, Math.round(Math.sqrt(keywordRatio) * 100)));
   }
-  const techCoverage = effectiveTechTerms.length > 0 ? Math.min(1, techCredit / effectiveTechTerms.length) : 0;
-  const generalDenominator = foundKeywords.length + missingKeywords.length;
-  const generalCoverage = generalDenominator > 0 ? foundKeywords.length / generalDenominator : 0;
-  const keywordRatio = effectiveTechTerms.length >= 3
-    ? techCoverage * 0.7 + generalCoverage * 0.3
-    : generalCoverage > 0 ? generalCoverage : techCoverage;
-  const keywordMatch = Math.min(97, Math.max(5, Math.round(Math.sqrt(keywordRatio) * 100)));
 
   // ── 2. DYNAMIC SEMANTIC & ROLE ALIGNMENT ────────────────────────────────
-  // Check target job titles against candidate resume headline/summary
-  // Multi-word specific titles matched first to avoid generic single-word false matches
-  const sortedTitles = [...COMMON_TITLES].sort((a, b) => b.length - a.length);
-  let titleScore = 5;
-  for (const title of sortedTitles) {
-    if (new RegExp(`\\b${title}\\b`, "i").test(jdLower)) {
+  let semanticMatch: number;
+
+  if (isStandaloneResume) {
+    let standaloneTitleScore = 15;
+    for (const title of COMMON_TITLES) {
       if (new RegExp(`\\b${title}\\b`, "i").test(resumeLower)) {
-        // Multi-word specific title match (e.g. "Senior Java Developer", "Backend Engineer")
-        titleScore = title.includes(" ") ? 25 : 15;
+        standaloneTitleScore = 25;
         break;
       }
     }
-  }
-
-  // Domain role matching if exact title string was not an identical match
-  if (titleScore < 20) {
-    const roleKeywordGroups = [
-      ["machine learning", "ml", "artificial intelligence"],
-      ["generative ai", "genai", "llm", "large language"],
-      ["data science", "data scientist", "data analyst", "data engineer"],
-      ["backend", "java developer", "python developer", "software developer"],
-      ["frontend", "react developer", "web developer", "ui engineer"],
-      ["full stack", "fullstack", "software engineer"],
-      ["devops", "cloud", "sre", "infrastructure"],
-      ["network", "support", "incident management", "troubleshooting", "product support", "systems engineer"],
-      ["quality assurance", "qa engineer", "testing", "software tester"],
-      ["security", "soc analyst", "cybersecurity", "information security"],
-    ];
-    for (const group of roleKeywordGroups) {
-      const inJd = group.some(k => jdLower.includes(k));
-      const inResume = group.some(k => resumeLower.includes(k));
-      if (inJd && inResume) {
-        titleScore = 22;
-        break;
+    const standaloneTechRatio = Math.min(1.0, resumeTechTerms.length / 8);
+    const standaloneTechScore = Math.round(standaloneTechRatio * 45);
+    const hasSummary = /\b(summary|objective|profile|about me)\b/i.test(resumeText);
+    const standaloneSummaryScore = hasSummary ? 18 : 10;
+    semanticMatch = Math.min(95, Math.max(50, standaloneTitleScore + standaloneTechScore + standaloneSummaryScore));
+  } else {
+    // Check target job titles against candidate resume headline/summary
+    // Multi-word specific titles matched first to avoid generic single-word false matches
+    const sortedTitles = [...COMMON_TITLES].sort((a, b) => b.length - a.length);
+    let titleScore = 5;
+    for (const title of sortedTitles) {
+      if (new RegExp(`\\b${title}\\b`, "i").test(jdLower)) {
+        if (new RegExp(`\\b${title}\\b`, "i").test(resumeLower)) {
+          // Multi-word specific title match (e.g. "Senior Java Developer", "Backend Engineer")
+          titleScore = title.includes(" ") ? 25 : 15;
+          break;
+        }
       }
     }
-  }
 
-  // Dynamic role matching from JD header/lines (e.g. "Network Product Support Engineer")
-  if (titleScore < 20) {
-    const roleHeaderMatch = jdLower.match(/(?:role|position|job\s*title|looking\s*for\s*a|hiring\s*(?:for)?\s*a?)[:\s]+([a-z0-9\s\/\-&]+?)(?:\n|,|\.|\()/i);
-    if (roleHeaderMatch && roleHeaderMatch[1]) {
-      const detectedRole = roleHeaderMatch[1].trim();
-      if (detectedRole.length > 3 && detectedRole.length < 50 && resumeLower.includes(detectedRole)) {
-        titleScore = 25;
+    // Domain role matching if exact title string was not an identical match
+    if (titleScore < 20) {
+      const roleKeywordGroups = [
+        ["machine learning", "ml", "artificial intelligence"],
+        ["generative ai", "genai", "llm", "large language"],
+        ["data science", "data scientist", "data analyst", "data engineer"],
+        ["backend", "java developer", "python developer", "software developer"],
+        ["frontend", "react developer", "web developer", "ui engineer"],
+        ["full stack", "fullstack", "software engineer"],
+        ["devops", "cloud", "sre", "infrastructure"],
+        ["network", "support", "incident management", "troubleshooting", "product support", "systems engineer"],
+        ["quality assurance", "qa engineer", "testing", "software tester"],
+        ["security", "soc analyst", "cybersecurity", "information security"],
+      ];
+      for (const group of roleKeywordGroups) {
+        const inJd = group.some(k => jdLower.includes(k));
+        const inResume = group.some(k => resumeLower.includes(k));
+        if (inJd && inResume) {
+          titleScore = 22;
+          break;
+        }
       }
     }
+
+    // Dynamic role matching from JD header/lines (e.g. "Network Product Support Engineer")
+    if (titleScore < 20) {
+      const roleHeaderMatch = jdLower.match(/(?:role|position|job\s*title|looking\s*for\s*a|hiring\s*(?:for)?\s*a?)[:\s]+([a-z0-9\s\/\-&]+?)(?:\n|,|\.|\()/i);
+      if (roleHeaderMatch && roleHeaderMatch[1]) {
+        const detectedRole = roleHeaderMatch[1].trim();
+        if (detectedRole.length > 3 && detectedRole.length < 50 && resumeLower.includes(detectedRole)) {
+          titleScore = 25;
+        }
+      }
+    }
+
+    // Tech stack domain overlap
+    const targetTechCount = Math.max(3, Math.min(10, effectiveTechTerms.length));
+    const techMatches = effectiveTechTerms.filter(t => {
+      const tl = t.toLowerCase();
+      const tClean = tl.replace(/[^a-z0-9]/g, "");
+      return resumeLower.includes(tl) || (tClean.length > 2 && resumeCleanAlpha.includes(tClean));
+    }).length;
+    const techRatio = targetTechCount > 0 ? Math.min(1.0, (techCredit || techMatches) / targetTechCount) : 0;
+    const techScore = Math.round(Math.sqrt(techRatio) * 55);
+
+    // Summary & narrative alignment
+    const hasSummary = /\b(summary|objective|profile|about me)\b/i.test(resumeText);
+    const summaryMatch = resumeText.match(/(?:(?:professional\s+)?summary|career\s+objective|objective|profile|about me)[^\n]*\n([\s\S]{0,800}?)(?:\n\s*\n|\n[A-Z][A-Z &]{3,}\n|$)/i);
+    const summaryText = (summaryMatch?.[1] || "").toLowerCase();
+    const summaryClean = summaryText.replace(/[^a-z0-9]/g, "");
+    const summaryJdTerms = effectiveTechTerms.filter(t => {
+      const tl = t.toLowerCase();
+      const tClean = tl.replace(/[^a-z0-9]/g, "");
+      return summaryText.includes(tl) || (tClean.length > 2 && summaryClean.includes(tClean));
+    }).length;
+    const summaryScore = !hasSummary ? 0 : summaryJdTerms >= 2 ? 20 : summaryJdTerms >= 1 ? 16 : 12;
+
+    semanticMatch = Math.min(97, Math.max(10, Math.round(titleScore + techScore + summaryScore)));
   }
-
-  // Tech stack domain overlap
-  const targetTechCount = Math.max(3, Math.min(10, effectiveTechTerms.length));
-  const techMatches = effectiveTechTerms.filter(t => {
-    const tl = t.toLowerCase();
-    const tClean = tl.replace(/[^a-z0-9]/g, "");
-    return resumeLower.includes(tl) || (tClean.length > 2 && resumeCleanAlpha.includes(tClean));
-  }).length;
-  const techRatio = targetTechCount > 0 ? Math.min(1.0, (techCredit || techMatches) / targetTechCount) : 0;
-  const techScore = Math.round(Math.sqrt(techRatio) * 55);
-
-  // Summary & narrative alignment
-  const hasSummary = /\b(summary|objective|profile|about me)\b/i.test(resumeText);
-  const summaryMatch = resumeText.match(/(?:(?:professional\s+)?summary|career\s+objective|objective|profile|about me)[^\n]*\n([\s\S]{0,800}?)(?:\n\s*\n|\n[A-Z][A-Z &]{3,}\n|$)/i);
-  const summaryText = (summaryMatch?.[1] || "").toLowerCase();
-  const summaryClean = summaryText.replace(/[^a-z0-9]/g, "");
-  const summaryJdTerms = effectiveTechTerms.filter(t => {
-    const tl = t.toLowerCase();
-    const tClean = tl.replace(/[^a-z0-9]/g, "");
-    return summaryText.includes(tl) || (tClean.length > 2 && summaryClean.includes(tClean));
-  }).length;
-  const summaryScore = !hasSummary ? 0 : summaryJdTerms >= 2 ? 20 : summaryJdTerms >= 1 ? 16 : 12;
-
-  const semanticMatch = Math.min(97, Math.max(10, Math.round(titleScore + techScore + summaryScore)));
 
   // ── 3. DYNAMIC IMPACT BULLETS & MISSING METRICS DETECTION ──────────────
   // Single canonical, section-aware extractor (shared with the Bullet Improver) so the
@@ -309,9 +334,9 @@ export function localScore(resumeText: string, jobDescription: string): ATSScore
     } else {
       // Any bullet that fails EITHER check is highlighted (same rule as Bullet Improver)
       missingMetrics.push(cleanBullet);
-      if (hasMetric) scoreSum += 75;      // Quantified but weak/no action verb
-      else if (hasVerb) scoreSum += 45;   // Action verb but no measurable outcome
-      else scoreSum += 25;                // Describes real work, but lacks both
+      if (hasMetric) scoreSum += 80;      // Quantified but weak/no action verb
+      else if (hasVerb) scoreSum += 70;   // Action verb but no measurable outcome (solid active work)
+      else scoreSum += 40;                // Describes real work, but lacks both
     }
   }
 
@@ -400,9 +425,8 @@ export async function scoreResume(
 
   // Dynamically reward verified bullet improvements made by the candidate
   if (bulletImprovementsCount && bulletImprovementsCount > 0) {
-    // Small, capped reward — the improved text itself is already re-measured above
-    score.overall = Math.min(MAX_ATS_SCORE, score.overall + Math.min(3, bulletImprovementsCount));
-    score.impactBullets = Math.min(100, score.impactBullets + bulletImprovementsCount * 2);
+    score.overall = Math.min(MAX_ATS_SCORE, score.overall + Math.min(15, bulletImprovementsCount * 2));
+    score.impactBullets = Math.min(100, score.impactBullets + bulletImprovementsCount * 4);
   }
 
   return score;

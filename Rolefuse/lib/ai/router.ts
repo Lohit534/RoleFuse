@@ -1,7 +1,10 @@
 import { callGroq } from "./groq";
 import { callGemini } from "./gemini";
 import { logger } from "../logger";
-import type { ResumeJSON } from "@/types/resume";
+import type { ResumeData, ResumeJSON } from "@/types/resume";
+import { isResumeData, resumeDataToText } from "@/types/resume";
+import { normalizeResume, validateResume } from "@/lib/resume/normalize";
+import { parseResume } from "../parser/resume-parser";
 
 /**
  * Untrusted Job Description Prompt-Injection Sanitizer
@@ -38,16 +41,20 @@ export function sanitizeJobDescription(rawJd: string): string {
 
 export interface AIResult {
   resume: string; // Plain text serialized from JSON (for display/scoring)
-  resumeJSON: ResumeJSON | null; // Structured JSON (for PDF rendering)
+  resumeData: ResumeData | null; // Structured ResumeData (for PDF/DOCX rendering & storage)
+  resumeJSON?: ResumeJSON | null; // Structured JSON (for backward compatibility)
   keywordsAdded: string[];
+  placeholders?: string[];
   changesCount: number;
   summary: string;
   detectedJobTitle?: string;
   detectedCompany?: string;
+  isValid?: boolean;
+  validationErrors?: string[];
 }
 
-// Serialize ResumeJSON back to plain text for display and ATS scoring
-export function serializeResumeJSONToText(json: ResumeJSON): string {
+// Serialize legacy ResumeJSON back to plain text for display and ATS scoring
+export function serializeResumeJSONToText(json: any): string {
   const lines: string[] = [];
 
   // Header
@@ -591,17 +598,25 @@ function cleanAndExtractJSON(raw: string): any {
   throw new Error("Unable to parse AI response as JSON");
 }
 
-function parseAIResponse(raw: string, fallbackText: string): AIResult {
+function parseAIResponse(
+  raw: string,
+  fallbackText: string,
+  userAnswers?: Record<string, string>,
+  originalResumeData?: ResumeData | null,
+): AIResult {
   const safeFallbackText =
     fallbackText && fallbackText.trim().length > 20 ? fallbackText : "";
   const defaultFallback: AIResult = {
     resume: safeFallbackText,
+    resumeData: originalResumeData || null,
     resumeJSON: null,
     keywordsAdded: [],
+    placeholders: [],
     changesCount: 0,
     summary: "Optimized.",
     detectedJobTitle: "Optimized Resume",
     detectedCompany: "General Application",
+    isValid: true,
   };
 
   let parsed: any;
@@ -615,27 +630,78 @@ function parseAIResponse(raw: string, fallbackText: string): AIResult {
     return defaultFallback;
   }
 
-  // Schema A: Flat "resume" string schema
+  // 1. Structured ResumeData schema (under parsed.resume or directly on parsed)
+  const candidateData: ResumeData | null = isResumeData(parsed?.resume)
+    ? (parsed.resume as ResumeData)
+    : isResumeData(parsed)
+    ? (parsed as ResumeData)
+    : null;
+
+  if (candidateData) {
+    const { normalized, placeholders: normPlaceholders } = normalizeResume(candidateData, {
+      originalText: fallbackText,
+      userAnswers,
+    });
+    const validation = validateResume(normalized, originalResumeData || undefined);
+    const plainText = resumeDataToText(normalized);
+
+    const keywords = Array.isArray(parsed.keywordsAdded) ? parsed.keywordsAdded : [];
+    const placeholders = Array.isArray(parsed.placeholders)
+      ? parsed.placeholders
+      : normPlaceholders.map((p) => p.placeholder);
+
+    return {
+      resume: plainText,
+      resumeData: normalized,
+      resumeJSON: null,
+      keywordsAdded: keywords,
+      placeholders,
+      changesCount:
+        typeof parsed.changesCount === "number"
+          ? parsed.changesCount
+          : keywords.length || 5,
+      summary: parsed.summaryChanges || parsed.summary || "Optimized.",
+      detectedJobTitle: parsed.detectedJobTitle || normalized.role,
+      detectedCompany: parsed.detectedCompany,
+      isValid: validation.valid,
+      validationErrors: validation.errors,
+    };
+  }
+
+  // 2. Schema A: Flat "resume" string schema
   if (typeof parsed?.resume === "string" && parsed.resume.trim().length > 30) {
     const sanitized = sanitizeResumeText(parsed.resume);
     const validated = validateAndRepairResumeFormat(sanitized);
+    const structured = parseResume(validated, fallbackText);
+    const { normalized, placeholders: normPlaceholders } = normalizeResume(structured, {
+      originalText: fallbackText,
+      userAnswers,
+    });
+    const validation = validateResume(normalized, originalResumeData || undefined);
+
     return {
       resume: validated,
+      resumeData: normalized,
       resumeJSON: null,
       keywordsAdded: Array.isArray(parsed.keywordsAdded)
         ? parsed.keywordsAdded
         : [],
+      placeholders: Array.isArray(parsed.placeholders)
+        ? parsed.placeholders
+        : normPlaceholders.map((p) => p.placeholder),
       changesCount:
         typeof parsed.changesCount === "number"
           ? parsed.changesCount
           : parsed.keywordsAdded?.length || 0,
       summary: parsed.summaryChanges || parsed.summary || "Optimized.",
-      detectedJobTitle: parsed.detectedJobTitle,
+      detectedJobTitle: parsed.detectedJobTitle || normalized.role,
       detectedCompany: parsed.detectedCompany,
+      isValid: validation.valid,
+      validationErrors: validation.errors,
     };
   }
 
-  // Schema B: Structured ResumeJSON schema
+  // 3. Schema B: Structured ResumeJSON schema
   if (parsed?.header?.name) {
     const json = parsed as ResumeJSON;
 
@@ -645,24 +711,32 @@ function parseAIResponse(raw: string, fallbackText: string): AIResult {
     }
 
     // Preserve LinkedIn / GitHub from original text if missing from AI output
-    if (!json.header.linkedin) {
+    if (!json.header?.linkedin) {
       const li = fallbackText.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w\-\.%]+\/?/i);
-      if (li) json.header.linkedin = li[0].startsWith('http') ? li[0] : 'https://' + li[0];
+      if (li && json.header) json.header.linkedin = li[0].startsWith('http') ? li[0] : 'https://' + li[0];
     }
-    if (!json.header.github) {
+    if (!json.header?.github) {
       const gh = fallbackText.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/?/i);
-      if (gh) json.header.github = gh[0].startsWith('http') ? gh[0] : 'https://' + gh[0];
+      if (gh && json.header) json.header.github = gh[0].startsWith('http') ? gh[0] : 'https://' + gh[0];
     }
 
     const plainText = serializeResumeJSONToText(json);
     const sanitized = sanitizeResumeText(plainText);
     const validated = validateAndRepairResumeFormat(sanitized);
+    const structured = parseResume(validated, fallbackText);
+    const { normalized } = normalizeResume(structured, {
+      originalText: fallbackText,
+      userAnswers,
+    });
+
     return {
       resume: validated,
+      resumeData: normalized,
       resumeJSON: json,
       keywordsAdded: Array.isArray(json.keywordsAdded)
         ? json.keywordsAdded
         : [],
+      placeholders: [],
       changesCount:
         typeof json.changesCount === "number"
           ? json.changesCount
@@ -670,6 +744,7 @@ function parseAIResponse(raw: string, fallbackText: string): AIResult {
       summary: json.summaryChanges || "Optimized.",
       detectedJobTitle: json.detectedJobTitle,
       detectedCompany: json.detectedCompany,
+      isValid: true,
     };
   }
 
@@ -681,16 +756,23 @@ function parseAIResponse(raw: string, fallbackText: string): AIResult {
 
 let isGroqKeyInvalid = false;
 
-export async function callAI(prompt: string, rawText = ""): Promise<AIResult> {
-  const safeRawText = sanitizeResumeText(rawText);
+async function executeAIOptimization(
+  prompt: string,
+  safeRawText: string,
+  userAnswers?: Record<string, string>,
+  originalResumeData?: ResumeData | null,
+): Promise<AIResult> {
   const defaultFallback: AIResult = {
     resume: safeRawText,
+    resumeData: originalResumeData || null,
     resumeJSON: null,
     keywordsAdded: [],
+    placeholders: [],
     changesCount: 0,
     summary: "Optimized.",
     detectedJobTitle: "Optimized Resume",
     detectedCompany: "General Application",
+    isValid: true,
   };
 
   const rawGroqKey = (process.env.GROQ_API_KEY || "").replace(/^["']|["']$/g, "").trim();
@@ -700,7 +782,7 @@ export async function callAI(prompt: string, rawText = ""): Promise<AIResult> {
     try {
       logger.info("AI Router: Routing optimization request to Groq...");
       const raw = await callGroqRaw(prompt);
-      const result = parseAIResponse(raw, safeRawText);
+      const result = parseAIResponse(raw, safeRawText, userAnswers, originalResumeData);
       if (result.resume && result.resume.trim().length > 50) {
         logger.info("AI Router: Successfully optimized using Groq.");
         return result;
@@ -716,7 +798,7 @@ export async function callAI(prompt: string, rawText = ""): Promise<AIResult> {
   try {
     logger.info("AI Router: Routing optimization request to Gemini...");
     const raw = await callGeminiRaw(prompt, safeRawText);
-    const result = parseAIResponse(raw, safeRawText);
+    const result = parseAIResponse(raw, safeRawText, userAnswers, originalResumeData);
     if (result.resume && result.resume.trim().length > 50) {
       logger.info("AI Router: Successfully optimized using Gemini.");
       return result;
@@ -729,6 +811,35 @@ export async function callAI(prompt: string, rawText = ""): Promise<AIResult> {
   }
 
   return defaultFallback;
+}
+
+export async function callAI(
+  prompt: string,
+  rawText = "",
+  userAnswers?: Record<string, string>,
+  originalResumeData?: ResumeData | null,
+): Promise<AIResult> {
+  const safeRawText = sanitizeResumeText(rawText);
+
+  let result = await executeAIOptimization(prompt, safeRawText, userAnswers, originalResumeData);
+
+  // Requirement 7: "If validation fails, retry once with the errors appended to the prompt."
+  if (result.isValid === false && result.validationErrors && result.validationErrors.length > 0) {
+    logger.warn(
+      `AI Router: Resume JSON failed validation: ${result.validationErrors.join("; ")}. Retrying once with errors appended...`
+    );
+    const retryPrompt = `${prompt}\n\nCRITICAL FIX REQUIRED (Your previous response failed these validations):\n${result.validationErrors.map((e) => `- ${e}`).join("\n")}\nPlease correct these errors and return the complete valid JSON object strictly matching the schema.`;
+    try {
+      const retryResult = await executeAIOptimization(retryPrompt, safeRawText, userAnswers, originalResumeData);
+      if (retryResult.resumeData && (retryResult.isValid || !result.isValid)) {
+        result = retryResult;
+      }
+    } catch (retryErr) {
+      logger.warn("AI Router: Validation retry failed:", retryErr);
+    }
+  }
+
+  return result;
 }
 
 const GROQ_MODELS = [

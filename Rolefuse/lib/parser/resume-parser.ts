@@ -1,4 +1,15 @@
 import { canonicalizeSkill, normSkillKey } from "../ats/keywords";
+import {
+  ResumeData,
+  ResumeContact,
+  ResumeSkillCategory,
+  ResumeExperience,
+  ResumeProject,
+  ResumeEducation,
+  ResumeCertification,
+  isResumeData,
+} from "@/types/resume";
+import { normalizeResume } from "@/lib/resume/normalize";
 
 // Rolefuse Resume Parser (Shared across PDF, DOCX, and live web preview)
 // Strictly follows the ATS resume template specification
@@ -46,17 +57,13 @@ export interface EducationItem {
   grade: string;
 }
 
-export interface ParsedResume {
-  name: string;
-  role: string;
+export interface ParsedResume extends ResumeData {
   contacts: ContactInfo[];
-  summary: string;
-  skills: SkillCategory[];
-  experience: ExperienceItem[];
-  projects: ProjectItem[];
-  certifications: CertificationItem[];
-  education: EducationItem[];
-  languages: string[];
+  skills: (SkillCategory & ResumeSkillCategory)[];
+  experience: (ExperienceItem & ResumeExperience)[];
+  projects: (ProjectItem & ResumeProject)[];
+  certifications: (CertificationItem & ResumeCertification)[];
+  education: (EducationItem & ResumeEducation)[];
 }
 
 // Backward-compatible Block types for ResumeViewer & exports
@@ -432,10 +439,109 @@ function matchSectionHeader(line: string): string | null {
   return null;
 }
 
+// ── Adapt ResumeData to ParsedResume (Guarantees 100% Dual-Format Compatibility) ──
+
+export function adaptResumeDataToParsedResume(data: ResumeData): ParsedResume {
+  const contacts: ContactInfo[] = [];
+  const c = data.contact || {};
+  if (c.phone) contacts.push({ type: "phone", text: c.phone, url: `tel:${c.phone.replace(/[^+\d]/g, "")}` });
+  if (c.email) contacts.push({ type: "email", text: c.email, url: `mailto:${c.email}` });
+  if (c.linkedin) contacts.push({ type: "linkedin", text: "LinkedIn", url: c.linkedin.startsWith("http") ? c.linkedin : `https://${c.linkedin}` });
+  if (c.github) contacts.push({ type: "github", text: "GitHub", url: c.github.startsWith("http") ? c.github : `https://${c.github}` });
+  if (c.portfolio) contacts.push({ type: "portfolio", text: "Portfolio", url: c.portfolio.startsWith("http") ? c.portfolio : `https://${c.portfolio}` });
+  if (c.location) contacts.push({ type: "other", text: c.location });
+
+  const skills: (SkillCategory & ResumeSkillCategory)[] = (data.skills || []).map((s) => ({
+    label: s.label,
+    items: s.items || [],
+    skills: (s.items || []).join(", "),
+  }));
+
+  const experience: (ExperienceItem & ResumeExperience)[] = (data.experience || []).map((e) => {
+    const dates = [e.start, e.end].filter(Boolean).join(" – ");
+    const tags = Array.isArray(e.tags) ? e.tags : [];
+    return {
+      title: e.title,
+      company: e.company,
+      start: e.start,
+      end: e.end,
+      dateRange: dates,
+      tags,
+      techTags: tags.join(", "),
+      bullets: e.bullets || [],
+    };
+  });
+
+  const projects: (ProjectItem & ResumeProject)[] = (data.projects || []).map((p) => {
+    const tags = Array.isArray(p.tags) ? p.tags : [];
+    return {
+      name: p.name,
+      tags,
+      techStack: tags.join(", "),
+      year: p.year || "",
+      link: p.link,
+      bullets: p.bullets || [],
+    };
+  });
+
+  const certifications: (CertificationItem & ResumeCertification)[] = (data.certifications || []).map((cert) => {
+    const raw = [cert.title, cert.issuer].filter(Boolean).join(" – ") + (cert.year ? ` (${cert.year})` : "");
+    return {
+      title: cert.title,
+      issuer: cert.issuer,
+      year: cert.year,
+      raw,
+      boldPrefix: cert.title,
+      rest: cert.issuer ? ` – ${cert.issuer}` : "",
+    };
+  });
+
+  const education: (EducationItem & ResumeEducation)[] = (data.education || []).map((ed) => {
+    const dates = [ed.start, ed.end].filter(Boolean).join(" – ");
+    return {
+      degree: ed.degree,
+      institution: ed.institution,
+      start: ed.start,
+      end: ed.end,
+      score: ed.score,
+      yearOrDates: dates,
+      grade: ed.score || "",
+    };
+  });
+
+  return {
+    name: data.name,
+    role: data.role || "",
+    contact: data.contact || {},
+    contacts,
+    summary: data.summary || "",
+    skills,
+    experience,
+    projects,
+    certifications,
+    education,
+    achievements: data.achievements || [],
+    languages: data.languages || [],
+  };
+}
+
 // ── Main Shared Parser ───────────────────────────────────────────────────────
 
-export function parseResume(rawText: string, originalText?: string): ParsedResume {
-  const rawLines = (rawText || "").split(/\r?\n/).map(l => l.trim());
+export function parseResume(rawText: string | ResumeData, originalText?: string): ParsedResume {
+  if (isResumeData(rawText)) {
+    return adaptResumeDataToParsedResume(rawText);
+  }
+
+  if (typeof rawText === "string" && rawText.trim().startsWith("{")) {
+    try {
+      const parsedJSON = JSON.parse(rawText);
+      if (isResumeData(parsedJSON) || (parsedJSON.name && (parsedJSON.experience || parsedJSON.skills))) {
+        return adaptResumeDataToParsedResume(parsedJSON);
+      }
+    } catch {}
+  }
+
+  const rawLines = (typeof rawText === "string" ? rawText : "").split(/\r?\n/).map(l => l.trim());
   let name = "";
   let role = "";
   const contacts: ContactInfo[] = [];
@@ -1102,18 +1208,181 @@ export function parseResume(rawText: string, originalText?: string): ParsedResum
     languages.push(clean);
   }
 
+  const contact: ResumeContact = {};
+  for (const c of contacts) {
+    if (c.type === "phone" && !contact.phone) contact.phone = c.text;
+    else if (c.type === "email" && !contact.email) contact.email = c.text;
+    else if (c.type === "linkedin" && !contact.linkedin) contact.linkedin = c.url || c.text;
+    else if (c.type === "github" && !contact.github) contact.github = c.url || c.text;
+    else if (c.type === "portfolio" && !contact.portfolio) contact.portfolio = c.url || c.text;
+    else if (c.type === "other" && !contact.location) contact.location = c.text;
+  }
+
+  const normalizedSkills: (SkillCategory & ResumeSkillCategory)[] = skills.map((s) => ({
+    label: s.label,
+    skills: s.skills,
+    items: s.skills.split(/,\s*/).map((t) => t.trim()).filter(Boolean),
+  }));
+
+  const normalizedExperience: (ExperienceItem & ResumeExperience)[] = experience.map((e) => {
+    const dates = e.dateRange || "";
+    const tags = e.techTags ? e.techTags.split(/,\s*/).map((t) => t.trim()).filter(Boolean) : [];
+    return {
+      title: e.title,
+      company: e.company,
+      start: dates.split(/\s*[-–—]\s*/)[0] || dates,
+      end: dates.split(/\s*[-–—]\s*/)[1] || undefined,
+      dateRange: e.dateRange,
+      tags,
+      techTags: e.techTags,
+      bullets: e.bullets || [],
+    };
+  });
+
+  const normalizedProjects: (ProjectItem & ResumeProject)[] = projects.map((p) => {
+    const tags = p.techStack ? p.techStack.split(/,\s*/).map((t) => t.trim()).filter(Boolean) : [];
+    return {
+      name: p.name,
+      tags,
+      techStack: p.techStack,
+      year: p.year,
+      bullets: p.bullets || [],
+    };
+  });
+
+  const normalizedEducation: (EducationItem & ResumeEducation)[] = education.map((ed) => {
+    const dates = ed.yearOrDates || "";
+    return {
+      degree: ed.degree,
+      institution: ed.institution,
+      start: dates.split(/\s*[-–—]\s*/)[0] || dates,
+      end: dates.split(/\s*[-–—]\s*/)[1] || undefined,
+      score: ed.grade || undefined,
+      yearOrDates: ed.yearOrDates,
+      grade: ed.grade,
+    };
+  });
+
+  const normalizedCerts: (CertificationItem & ResumeCertification)[] = certifications.map((c) => ({
+    ...c,
+    title: c.title || c.boldPrefix || c.raw,
+  }));
+
   return {
     name,
     role,
+    contact,
     contacts,
     summary,
-    skills,
-    experience,
-    projects,
-    certifications,
-    education,
-    languages
+    skills: normalizedSkills,
+    experience: normalizedExperience,
+    projects: normalizedProjects,
+    certifications: normalizedCerts,
+    education: normalizedEducation,
+    achievements: [],
+    languages,
   };
+}
+
+/**
+ * parseResumeAI: One AI call, temperature 0, JSON mode.
+ * Parses raw text into structured ResumeData without regex heuristics.
+ */
+export async function parseResumeAI(text: string): Promise<ResumeData> {
+  const prompt = `You are an elite, exact resume parser.
+Extract the candidate's authentic resume data into this structured JSON object.
+Do NOT fabricate, hallucinate, or invent details. Extract only what is present in the text.
+Bullets must be plain strings without bullet characters.
+
+RESUME TEXT:
+"""
+${text.slice(0, 10000)}
+"""
+
+JSON SCHEMA (return ONLY valid JSON):
+{
+  "name": "Candidate Full Name",
+  "role": "Role / Subtitle or empty string",
+  "contact": {
+    "phone": "Phone number or empty string",
+    "email": "Email address or empty string",
+    "linkedin": "LinkedIn URL or empty string",
+    "github": "GitHub URL or empty string",
+    "portfolio": "Portfolio URL or empty string",
+    "location": "City, State/Country or empty string"
+  },
+  "summary": "Professional summary or empty string",
+  "skills": [
+    { "label": "Category Name", "items": ["Skill 1", "Skill 2"] }
+  ],
+  "experience": [
+    {
+      "title": "Job Title",
+      "company": "Company Name",
+      "start": "Start Date",
+      "end": "End Date",
+      "tags": ["Technology 1", "Technology 2"],
+      "bullets": ["Accomplishment bullet"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Project Name",
+      "tags": ["Tech 1", "Tech 2"],
+      "year": "Year",
+      "link": "URL",
+      "bullets": ["Project bullet"]
+    }
+  ],
+  "education": [
+    {
+      "degree": "Degree (e.g. B.Tech in CSE)",
+      "institution": "University / College",
+      "start": "Start Year",
+      "end": "End Year",
+      "score": "CGPA / Percentage"
+    }
+  ],
+  "certifications": [
+    { "title": "Cert Name", "issuer": "Issuer Org", "year": "Year" }
+  ],
+  "achievements": ["Achievement bullet"],
+  "languages": ["Language 1"]
+}`;
+
+  try {
+    const apiKey = process.env.GROQ_API_KEY || "";
+    if (apiKey) {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0,
+          response_format: { type: "json_object" },
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const content = json.choices?.[0]?.message?.content;
+        if (content) {
+          const parsed = JSON.parse(content);
+          const { normalized } = normalizeResume(parsed, { originalText: text });
+          return normalized;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("parseResumeAI Groq call failed, falling back to deterministic parser:", err);
+  }
+
+  // Fallback: synchronous deterministic parser
+  return parseResume(text);
 }
 
 // ── Bridge to Legacy ParsedResumeBlock[] for ResumeViewer.tsx ────────────────

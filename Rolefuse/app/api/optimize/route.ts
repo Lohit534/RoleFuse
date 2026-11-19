@@ -8,6 +8,7 @@ import { scoreResume } from "@/lib/ats/scorer";
 import { sanitizeOptimizedResume, ensureUserAnswersInResume } from "@/lib/resume-format";
 import { enrichResumeATSQuality } from "@/lib/ats/bullets";
 import { extractKeywords, extractTechTerms, isTechnicalKeyword } from "@/lib/ats/keywords";
+import { parseResume, parseResumeAI } from "@/lib/parser/resume-parser";
 import { generateUUID } from "@/lib/utils";
 import { isOwnerEmail, FREE_CREDITS_PER_MONTH, PRO_CREDITS_PER_MONTH, PRO_MAX_CREDITS_PER_MONTH } from "@/types";
 import { buildTrainingSample } from "@/lib/anonymizer";
@@ -629,6 +630,13 @@ export async function POST(request: NextRequest) {
               }
             }
 
+            let originalResumeData = null;
+            try {
+              originalResumeData = parseResume(preparedResumeText);
+            } catch (err: any) {
+              logger.warn("[optimize] parseResume failed (non-fatal):", err?.message);
+            }
+
             const prompt = buildOptimizationPrompt(
               enrichedResumeText,
               jobDescription,
@@ -638,7 +646,7 @@ export async function POST(request: NextRequest) {
               lengthOption || "Auto-detect"
             );
 
-            const aiResult = await callAI(prompt, enrichedResumeText);
+            const aiResult = await callAI(prompt, enrichedResumeText, userAnswers, originalResumeData);
 
             // Smart ATS Optimization Guarantee:
             // If the external AI call returned unchanged resume, perform deterministic ATS keyword & metric enrichment
@@ -746,12 +754,12 @@ export async function POST(request: NextRequest) {
             // Genuine dynamic ATS scoring: Evaluated purely against technical keywords,
             // semantic role alignment, quantified impact metrics, and ATS structure.
 
-            // If genuine score is still under 72, perform targeted keyword & metric polish to guarantee 72+
-            if (scoreAfter.overall < 72) {
+            // If genuine score is still under 74, perform targeted keyword & metric polish to guarantee 74+
+            if (scoreAfter.overall < 74) {
               aiResult.resume = enrichResumeATSQuality(
                 aiResult.resume,
                 jobDescription,
-                scoreAfter.missingKeywords,
+                allMissingToInject,
                 jobTitle
               );
               scoreAfter = await scoreResume(aiResult.resume, jobDescription, scoreBefore.overall);
@@ -766,7 +774,7 @@ export async function POST(request: NextRequest) {
               aiResult.resume = enrichResumeATSQuality(
                 aiResult.resume,
                 jobDescription,
-                scoreBefore.missingKeywords,
+                allMissingToInject,
                 jobTitle
               );
               scoreAfter = await scoreResume(aiResult.resume, jobDescription);
@@ -1096,6 +1104,7 @@ export async function POST(request: NextRequest) {
                 resumeId: resumeRecord?.id || generatedId,
                 creditsRemaining: remainingCreditsAfterDeduction,
                 optimizedText: aiResult.resume,
+                resumeData: aiResult.resumeData,
                 resumeJSON: aiResult.resumeJSON,
                 keywordsAdded: mergedKeywordsAdded,
                 alreadyInResume: alreadyInResume,
@@ -1126,8 +1135,8 @@ export async function POST(request: NextRequest) {
                   totalBulletsCount: scoreAfter.totalBulletsCount || 0,
                   metricCoveragePercent: scoreAfter.metricCoveragePercent || 0,
                 },
-                placeholders: [],
-                hasPlaceholders: false,
+                placeholders: aiResult.placeholders || [],
+                hasPlaceholders: (aiResult.placeholders?.length ?? 0) > 0,
               }
             });
           } catch (error: any) {

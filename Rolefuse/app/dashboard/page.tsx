@@ -1116,7 +1116,10 @@ export default function DashboardPage() {
       let newScoreData: any = null;
 
       // Use jobDescription from state, or fall back to optimizeResult.jobDescription (persisted in result)
-      const effectiveJD = jobDescription?.trim() || optimizeResult?.jobDescription?.trim() || "";
+      const effectiveJD =
+        jobDescription?.trim() ||
+        optimizeResult?.jobDescription?.trim() ||
+        (typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_draft_jd") || "" : "");
 
       try {
         const afterRes = await fetch("/api/score", {
@@ -1137,25 +1140,29 @@ export default function DashboardPage() {
       }
 
       // Guard: bullet improvement must never lower the score, and must dynamically reward verified bullet improvements
-      if (newScoreData && afterScore?.overall) {
+      if (newScoreData) {
+        const prevOverall = afterScore?.overall || optimizeResult?.scoreAfter?.overall || 0;
+        const prevImpact = afterScore?.impactBullets || optimizeResult?.scoreAfter?.impactBullets || 0;
+        const prevKeyword = afterScore?.keywordMatch || optimizeResult?.scoreAfter?.keywordMatch || 0;
+
         if (wasBulletImproved) {
           // Candidate explicitly applied a verified bullet improvement (with metric + action verb)
-          // Compute dynamic increment based on total bullet count (e.g. 15 / total bullets = +2 to +3 pts)
+          // Compute dynamic increment based on total bullet count (e.g. 18 / total bullets = +2 to +4 pts)
           const bulletCount = Math.max(1, newScoreData.totalBulletsCount || 6);
-          const dynamicBoost = Math.min(3, Math.max(1, Math.round(18 / bulletCount)));
+          const dynamicBoost = Math.max(2, Math.min(4, Math.round(18 / bulletCount)));
 
-          if (newScoreData.overall <= afterScore.overall) {
-            newScoreData.overall = Math.min(MAX_ATS_SCORE, afterScore.overall + dynamicBoost);
-          }
-          newScoreData.keywordMatch = Math.max(afterScore.keywordMatch || 0, newScoreData.keywordMatch);
+          newScoreData.overall = Math.min(MAX_ATS_SCORE, Math.max(newScoreData.overall, prevOverall + dynamicBoost));
+          newScoreData.keywordMatch = Math.max(prevKeyword, newScoreData.keywordMatch);
           newScoreData.impactBullets = Math.min(100, Math.max(
-            (afterScore.impactBullets || 0) + dynamicBoost * 3,
+            prevImpact + dynamicBoost * 3,
             newScoreData.impactBullets
           ));
-        } else if (newScoreData.overall < afterScore.overall) {
-          newScoreData.overall = afterScore.overall;
-          newScoreData.keywordMatch = Math.max(afterScore.keywordMatch || 0, newScoreData.keywordMatch);
-          newScoreData.impactBullets = Math.max(afterScore.impactBullets || 0, newScoreData.impactBullets);
+
+          toast.success(`Bullet updated! ATS Score increased to ${newScoreData.overall}% (+${dynamicBoost} pts)`);
+        } else if (prevOverall > 0 && newScoreData.overall < prevOverall) {
+          newScoreData.overall = prevOverall;
+          newScoreData.keywordMatch = Math.max(prevKeyword, newScoreData.keywordMatch);
+          newScoreData.impactBullets = Math.max(prevImpact, newScoreData.impactBullets);
         }
       }
 
@@ -1770,6 +1777,7 @@ export default function DashboardPage() {
                 <ResumeViewer
                   text={optimizeResult.optimizedText}
                   originalText={originalResumeSnapshot || optimizeResult?.originalText || resumeText}
+                  resumeData={optimizeResult.resumeData}
                   resumeId={optimizeResult.resumeId}
                   jobDescription={jobDescription}
                   userId={user?.id || ""}

@@ -71,6 +71,7 @@ function renderContactIcon(type: "phone" | "email" | "linkedin" | "github" | "gl
 interface ResumeViewerProps {
   text: string;
   originalText?: string;
+  resumeData?: any;
   resumeId: string;
   jobDescription: string;
   userId?: string;
@@ -82,6 +83,7 @@ interface ResumeViewerProps {
 export default function ResumeViewer({
   text,
   originalText,
+  resumeData,
   resumeId,
   jobDescription,
   userId = "",

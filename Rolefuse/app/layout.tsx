@@ -80,7 +80,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://rolefuse.in",
+    canonical: "./",
   },
   openGraph: {
     title: "RoleFuse — Free AI ATS Resume Optimizer & ATS Scanner",

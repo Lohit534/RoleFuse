@@ -11,9 +11,10 @@ import {
 } from "docx";
 import { logger } from "../logger";
 import { parseResume, stripMarkdownAsterisks } from "../parser/resume-parser";
+import type { ResumeData } from "@/types/resume";
 
-const FONT = "Calibri";
-const BODY_SIZE = 22; // 11pt Calibri throughout
+const FONT = "Times New Roman";
+const BODY_SIZE = 22; // 11pt throughout
 const RIGHT_TAB_POSITION = 9000; // 9000 twips as specified
 
 function run(text: string, opts: Record<string, any> = {}): TextRun {
@@ -64,10 +65,14 @@ function bullet(text: string, boldPrefix = "", rest = ""): Paragraph {
   });
 }
 
-export async function generateDOCX(resumeText: string, watermarked = false, originalText?: string): Promise<Buffer> {
+export async function generateDOCX(
+  resumeInput: string | ResumeData,
+  watermarked = false,
+  originalText?: string,
+): Promise<Buffer> {
   try {
     logger.info(`Generating DOCX matching ATS resume template (watermarked=${watermarked})...`);
-    const parsed = parseResume(resumeText, originalText);
+    const parsed = parseResume(resumeInput, originalText);
     const children: Paragraph[] = [];
 
     // Optional Watermark
