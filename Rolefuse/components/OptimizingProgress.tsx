@@ -149,8 +149,15 @@ export default function OptimizingProgress({
     if (!isMountedRef.current || awaitingInputRef.current) return;
     const now = Date.now();
     const prevStep = currentStepRef.current;
-    currentStepRef.current = stepNum;
-    setCurrentStepId(stepNum);
+
+    // CRITICAL: Never let a stale/out-of-order SSE event regress the UI step counter.
+    // If the timer-driven UI has already advanced past this backend step, only mark
+    // earlier steps as "done" — never move currentStepId backward or reset future steps.
+    const effectiveStep = Math.max(stepNum, prevStep);
+    if (stepNum >= prevStep) {
+      currentStepRef.current = stepNum;
+      setCurrentStepId(stepNum);
+    }
 
     if (!stepStartTimesRef.current[stepNum]) {
       stepStartTimesRef.current[stepNum] = now;
@@ -170,6 +177,9 @@ export default function OptimizingProgress({
 
     setSteps((prev) =>
       prev.map((s) => {
+        // Always keep steps that are already "done" as done — never regress a green tick
+        if (s.status === "done") return s;
+
         if (s.id < stepNum) {
           const sStart = stepStartTimesRef.current[s.id];
           const dur = s.duration && s.duration !== "running..." && !s.duration.endsWith("..")
@@ -178,7 +188,9 @@ export default function OptimizingProgress({
           return { ...s, status: "done", duration: dur };
         }
         if (s.id === stepNum) return { ...s, status };
-        return { ...s, status: "pending" };
+        // Only mark future steps as pending if we haven't already passed them
+        if (s.id > effectiveStep) return { ...s, status: "pending" };
+        return s;
       })
     );
   };

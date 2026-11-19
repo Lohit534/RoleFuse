@@ -22,17 +22,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!jobDescription || typeof jobDescription !== "string" || jobDescription.trim().length < MIN_JD_CHARS) {
-      return NextResponse.json(
-        { error: `Job description must be at least ${MIN_JD_CHARS} characters.` },
-        { status: 400 }
-      );
-    }
+    // jobDescription is optional — scoring still works for formatting/impact metrics without it.
+    // When JD is missing/empty, keyword match will be 0 but other sub-scores are still computed.
+    const effectiveJD = typeof jobDescription === "string" && jobDescription.trim().length >= MIN_JD_CHARS
+      ? jobDescription
+      : "";
 
     logger.info(`Scoring resume for user ${user?.email || "guest"}...`);
 
     // 4. Scoring (Always free, no Prisma write or credit deductions)
-    const scoreResult = await scoreResume(resumeText, jobDescription, scoreBefore, bulletImprovementsCount);
+    const scoreResult = await scoreResume(resumeText, effectiveJD, scoreBefore, bulletImprovementsCount);
 
     return NextResponse.json(scoreResult);
   } catch (error: any) {

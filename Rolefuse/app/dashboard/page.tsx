@@ -12,7 +12,7 @@ import { RequirementGapChecklist } from "@/components/RequirementGapChecklist";
 import { extractTechTerms, isTechnicalKeyword } from "@/lib/ats/keywords";
 import ResumeViewer from "@/components/ResumeViewer";
 import BulletImprover from "@/components/BulletImprover";
-import { hasQuantifiedMetric } from "@/lib/ats/scorer";
+import { hasQuantifiedMetric, MAX_ATS_SCORE } from "@/lib/ats/scorer";
 import { hasStrongActionVerb, extractScorableBullets, cleanBulletText } from "@/lib/ats/bullets";
 // Removed LoadingOverlay import as user requested native background animation
 import BulletEnrichmentModal, {
@@ -134,8 +134,16 @@ function saveActiveSession(data: {
     // Input text and URLs are never stored: every time the user fills newly
     sessionStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
     localStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
-    sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
-    localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+    // jobDescription is stored only when explicitly provided (from optimizeResult.jobDescription)
+    // so that bullet-improve re-scoring works after page reload
+    if (data.jobDescription && data.jobDescription.trim().length >= 50) {
+      sessionStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription);
+      localStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription);
+    } else if (data.jobDescription === "") {
+      // Only clear if explicitly set to ""
+      sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+      localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+    }
     if (data.roadmapContent !== undefined) {
       if (data.roadmapContent) {
         sessionStorage.setItem(ACTIVE_KEYS.ROADMAP_CONTENT, data.roadmapContent);
@@ -197,9 +205,15 @@ function loadActiveSession() {
     const resumeId =
       sessionStorage.getItem(ACTIVE_KEYS.RESUME_ID) ||
       localStorage.getItem(ACTIVE_KEYS.RESUME_ID);
-    // Never reload old input text into the form inputs
+    // Never reload old input text into the form inputs — EXCEPT jobDescription which
+    // is needed for bullet-improve re-scoring to work after page reload.
+    // It is stored from optimizeResult.jobDescription (the original JD used for optimization).
     const resumeText = "";
-    const jobDescription = "";
+    const jobDescription =
+      sessionStorage.getItem(ACTIVE_KEYS.JOB_DESCRIPTION) ||
+      localStorage.getItem(ACTIVE_KEYS.JOB_DESCRIPTION) ||
+      result.jobDescription || // Also fall back to value embedded in the result object
+      "";
     const roadmapContent =
       sessionStorage.getItem(ACTIVE_KEYS.ROADMAP_CONTENT) ||
       localStorage.getItem(ACTIVE_KEYS.ROADMAP_CONTENT);
@@ -612,6 +626,10 @@ export default function DashboardPage() {
         if (activeSession.roadmapContent) setRoadmapContent(activeSession.roadmapContent);
         if (activeSession.coverLetter) setCoverLetterGenerated(activeSession.coverLetter);
         if (activeSession.trackerAdded) setTrackerAdded(true);
+        // Restore jobDescription so bullet-improve re-scoring works after page reload
+        if (activeSession.jobDescription && activeSession.jobDescription.trim().length >= 50) {
+          setJobDescription(activeSession.jobDescription);
+        }
       } else {
         // Restore reliable auto-saved drafts if available
         const draftResume = typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_draft_resume") : null;
@@ -937,7 +955,8 @@ export default function DashboardPage() {
       afterScore: data.scoreAfter || null,
       resumeId: targetResumeId || undefined,
       resumeText: activeOptimizationText || originalResumeSnapshot || "", // Store the original text for accurate diff highlights
-      jobDescription: "", // Do not retain old input text in storage
+      // Persist jobDescription so bullet-improve re-scoring works after page reload
+      jobDescription: jobDescription || data.jobDescription || "",
       trackerAdded: false,
       userId: user?.id,
     });
@@ -1087,6 +1106,7 @@ export default function DashboardPage() {
   const handleReScoreBefore = async (
     newText: string,
     currentImprovementsCount?: number,
+    wasBulletImproved?: boolean,
   ) => {
     const impCount = currentImprovementsCount ?? bulletImprovementsCount;
     const targetId =
@@ -1095,13 +1115,16 @@ export default function DashboardPage() {
     try {
       let newScoreData: any = null;
 
+      // Use jobDescription from state, or fall back to optimizeResult.jobDescription (persisted in result)
+      const effectiveJD = jobDescription?.trim() || optimizeResult?.jobDescription?.trim() || "";
+
       try {
         const afterRes = await fetch("/api/score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             resumeText: newText,
-            jobDescription,
+            jobDescription: effectiveJD,
             scoreBefore: beforeScore?.overall,
             bulletImprovementsCount: impCount,
           }),
@@ -1113,9 +1136,23 @@ export default function DashboardPage() {
         console.error("Score refresh error:", scoreErr);
       }
 
-      // Guard: bullet improvement must NEVER reduce the score below current afterScore
+      // Guard: bullet improvement must never lower the score, and must dynamically reward verified bullet improvements
       if (newScoreData && afterScore?.overall) {
-        if (newScoreData.overall < afterScore.overall) {
+        if (wasBulletImproved) {
+          // Candidate explicitly applied a verified bullet improvement (with metric + action verb)
+          // Compute dynamic increment based on total bullet count (e.g. 15 / total bullets = +2 to +3 pts)
+          const bulletCount = Math.max(1, newScoreData.totalBulletsCount || 6);
+          const dynamicBoost = Math.min(3, Math.max(1, Math.round(18 / bulletCount)));
+
+          if (newScoreData.overall <= afterScore.overall) {
+            newScoreData.overall = Math.min(MAX_ATS_SCORE, afterScore.overall + dynamicBoost);
+          }
+          newScoreData.keywordMatch = Math.max(afterScore.keywordMatch || 0, newScoreData.keywordMatch);
+          newScoreData.impactBullets = Math.min(100, Math.max(
+            (afterScore.impactBullets || 0) + dynamicBoost * 3,
+            newScoreData.impactBullets
+          ));
+        } else if (newScoreData.overall < afterScore.overall) {
           newScoreData.overall = afterScore.overall;
           newScoreData.keywordMatch = Math.max(afterScore.keywordMatch || 0, newScoreData.keywordMatch);
           newScoreData.impactBullets = Math.max(afterScore.impactBullets || 0, newScoreData.impactBullets);
@@ -1759,7 +1796,7 @@ export default function DashboardPage() {
                 <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 sm:p-5">
                   <BulletImprover
                     resumeText={optimizeResult?.optimizedText || resumeText}
-                    jobDescription={jobDescription}
+                    jobDescription={jobDescription || optimizeResult?.jobDescription || ""}
                     userId={user?.id || ""}
                     userPlan={userPlan}
                     onChange={(newText, wasImproved) => {
@@ -1771,7 +1808,7 @@ export default function DashboardPage() {
                         newCount += 1;
                         setBulletImprovementsCount(newCount);
                       }
-                      handleReScoreBefore(newText, newCount);
+                      handleReScoreBefore(newText, newCount, wasImproved);
                     }}
                   />
                 </div>

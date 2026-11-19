@@ -1103,6 +1103,7 @@ export async function POST(request: NextRequest) {
                 summary: finalSummary,
                 jobTitle: finalJobTitle,
                 company: finalCompany,
+                jobDescription: jobDescription,
                 scoreBefore: {
                   overall: scoreBefore.overall,
                   keywordMatch: scoreBefore.keywordMatch,
