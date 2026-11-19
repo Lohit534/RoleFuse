@@ -317,9 +317,9 @@ export default function LandingView() {
 
               {/* Main Headline */}
               <h1 className="font-heading text-[38px] sm:text-[48px] lg:text-[58px] font-extrabold tracking-[-0.03em] leading-[1.08] text-[#111827]">
-                Stop Getting Rejected.
+                <span className="text-[#087F6E]">RoleFuse</span> — Stop Getting Rejected.
                 <br />
-                <span className="text-[#087F6E]">Start Getting Interviews.</span>
+                <span>Start Getting Interviews.</span>
               </h1>
 
               {/* Supporting Copy */}
