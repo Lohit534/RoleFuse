@@ -7,9 +7,13 @@ if (typeof window !== "undefined") {
     localStorage.removeItem("fasthire-resume-storage");
     localStorage.removeItem("fastHire_activeResumeText");
     localStorage.removeItem("fastHire_activeJobDescription");
+    localStorage.removeItem("fastHire_dashboard_draft_resume");
+    localStorage.removeItem("fastHire_dashboard_draft_jd");
     sessionStorage.removeItem("fasthire-resume-storage");
     sessionStorage.removeItem("fastHire_activeResumeText");
     sessionStorage.removeItem("fastHire_activeJobDescription");
+    sessionStorage.removeItem("fastHire_dashboard_draft_resume");
+    sessionStorage.removeItem("fastHire_dashboard_draft_jd");
   } catch {}
 }
 
@@ -48,9 +52,13 @@ export const useResumeStore = create<ResumeState>()((set) => ({
         localStorage.removeItem("fasthire-resume-storage");
         localStorage.removeItem("fastHire_activeResumeText");
         localStorage.removeItem("fastHire_activeJobDescription");
+        localStorage.removeItem("fastHire_dashboard_draft_resume");
+        localStorage.removeItem("fastHire_dashboard_draft_jd");
         sessionStorage.removeItem("fasthire-resume-storage");
         sessionStorage.removeItem("fastHire_activeResumeText");
         sessionStorage.removeItem("fastHire_activeJobDescription");
+        sessionStorage.removeItem("fastHire_dashboard_draft_resume");
+        sessionStorage.removeItem("fastHire_dashboard_draft_jd");
       } catch {}
     }
     set(initialState);

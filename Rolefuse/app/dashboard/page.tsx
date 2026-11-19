@@ -131,19 +131,11 @@ function saveActiveSession(data: {
       sessionStorage.setItem(ACTIVE_KEYS.RESUME_ID, data.resumeId || "");
       localStorage.setItem(ACTIVE_KEYS.RESUME_ID, data.resumeId || "");
     }
-    // Input text and URLs are never stored: every time the user fills newly
+    // Input text and URLs are never stored: every time the user fills fresh inputs
     sessionStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
     localStorage.removeItem(ACTIVE_KEYS.RESUME_TEXT);
-    // jobDescription is stored only when explicitly provided (from optimizeResult.jobDescription)
-    // so that bullet-improve re-scoring works after page reload
-    if (data.jobDescription && data.jobDescription.trim().length >= 50) {
-      sessionStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription);
-      localStorage.setItem(ACTIVE_KEYS.JOB_DESCRIPTION, data.jobDescription);
-    } else if (data.jobDescription === "") {
-      // Only clear if explicitly set to ""
-      sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
-      localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
-    }
+    sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+    localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
     if (data.roadmapContent !== undefined) {
       if (data.roadmapContent) {
         sessionStorage.setItem(ACTIVE_KEYS.ROADMAP_CONTENT, data.roadmapContent);
@@ -205,15 +197,9 @@ function loadActiveSession() {
     const resumeId =
       sessionStorage.getItem(ACTIVE_KEYS.RESUME_ID) ||
       localStorage.getItem(ACTIVE_KEYS.RESUME_ID);
-    // Never reload old input text into the form inputs — EXCEPT jobDescription which
-    // is needed for bullet-improve re-scoring to work after page reload.
-    // It is stored from optimizeResult.jobDescription (the original JD used for optimization).
+    // Inputs are never prefilled with old data — start completely fresh
     const resumeText = "";
-    const jobDescription =
-      sessionStorage.getItem(ACTIVE_KEYS.JOB_DESCRIPTION) ||
-      localStorage.getItem(ACTIVE_KEYS.JOB_DESCRIPTION) ||
-      result.jobDescription || // Also fall back to value embedded in the result object
-      "";
+    const jobDescription = "";
     const roadmapContent =
       sessionStorage.getItem(ACTIVE_KEYS.ROADMAP_CONTENT) ||
       localStorage.getItem(ACTIVE_KEYS.ROADMAP_CONTENT);
@@ -550,21 +536,6 @@ export default function DashboardPage() {
     return () => window.removeEventListener("open-optimize-editor", handleOpenEditor);
   }, [resetStore, setResumeText, setJobDescription]);
 
-  // Reliable auto-save of dashboard draft inputs
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (resumeText && resumeText.trim().length > 0) {
-      localStorage.setItem("fastHire_dashboard_draft_resume", resumeText);
-    }
-  }, [resumeText]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (jobDescription && jobDescription.trim().length > 0) {
-      localStorage.setItem("fastHire_dashboard_draft_jd", jobDescription);
-    }
-  }, [jobDescription]);
-
   useEffect(() => {
     if (sampleLoadedRef.current) return;
 
@@ -626,16 +597,19 @@ export default function DashboardPage() {
         if (activeSession.roadmapContent) setRoadmapContent(activeSession.roadmapContent);
         if (activeSession.coverLetter) setCoverLetterGenerated(activeSession.coverLetter);
         if (activeSession.trackerAdded) setTrackerAdded(true);
-        // Restore jobDescription so bullet-improve re-scoring works after page reload
-        if (activeSession.jobDescription && activeSession.jobDescription.trim().length >= 50) {
-          setJobDescription(activeSession.jobDescription);
-        }
+        // Form inputs always stay fresh and empty for the candidate
+        setResumeText("");
+        setJobDescription("");
       } else {
-        // Restore reliable auto-saved drafts if available
-        const draftResume = typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_draft_resume") : null;
-        const draftJD = typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_draft_jd") : null;
-        if (draftResume) setResumeText(draftResume);
-        if (draftJD) setJobDescription(draftJD);
+        setResumeText("");
+        setJobDescription("");
+      }
+      // Ensure any lingering draft keys from past sessions are permanently wiped
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("fastHire_dashboard_draft_resume");
+        localStorage.removeItem("fastHire_dashboard_draft_jd");
+        localStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
+        sessionStorage.removeItem(ACTIVE_KEYS.JOB_DESCRIPTION);
       }
     }
   }, [setResumeText, setJobDescription]);
@@ -1119,7 +1093,7 @@ export default function DashboardPage() {
       const effectiveJD =
         jobDescription?.trim() ||
         optimizeResult?.jobDescription?.trim() ||
-        (typeof window !== "undefined" ? localStorage.getItem("fastHire_dashboard_draft_jd") || "" : "");
+        "";
 
       try {
         const afterRes = await fetch("/api/score", {
