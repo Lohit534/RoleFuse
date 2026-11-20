@@ -10,6 +10,7 @@
  */
 import { detectSectionHeader, looksLikeSentenceBullet, BULLET_MARKER_REGEX } from "./ats/bullets";
 import { canonicalizeSkill, normSkillKey } from "./ats/keywords";
+import { extractProfileUrls } from "./resume/normalize";
 
 const MONTHS: Record<string, number> = {
   jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, sept: 8, oct: 9, nov: 10, dec: 11,
@@ -145,7 +146,9 @@ export function sanitizeOptimizedResume(
     .replace(/\[(?:Company Name|Employer Name|Insert [^\]]+|Select [^\]]+)\]/gi, "")
     .replace(/\b(?:XYZ\s*Corp|ABC\s*Corp|Company\s*Name|Employer\s*Name)\b/gi, "")
     .replace(/YEARS\s*&\s*DETAILS/gi, "")
-    .replace(/([.,;:!])([A-Za-z])/g, "$1 $2")
+    // Repair run-on punctuation between prose sentences without breaking URLs, domains, or emails
+    .replace(/(?<=[a-z]{2,}[.!?])(?=[A-Z][a-z])/g, " ")
+    .replace(/\b(linkedin|github)\.\s+com\b/gi, "$1.com")
     .replace(/\bPromptEngineering\b/g, "Prompt Engineering")
     .replace(/\bandRAG\b/g, "and RAG")
     // Remove unwanted raw markdown artifacts & horizontal dividers
@@ -600,33 +603,10 @@ export function preserveCandidateContactDetails(optimized: string, original: str
   const emailMatch = originalHeader.match(/[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}/i);
   const originalEmail = emailMatch ? emailMatch[0].trim() : null;
 
-  // Extract LinkedIn from original (handles custom URLs, in/ links, with or without https, and country subdomains like in.linkedin.com)
-  const linkedinMatch = originalHeader.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub|profile)?\/?[\w\-–_.]+/i) ||
-                        originalHeader.match(/(?:linkedin|li)\s*[:=]\s*(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?(?:linkedin\.com\/(?:in\/)?)?([a-zA-Z0-9\-_.]+)/i);
-  let originalLinkedin: string | null = null;
-  if (linkedinMatch) {
-    const rawVal = (linkedinMatch[1] && !linkedinMatch[0].includes("linkedin.com") ? linkedinMatch[1] : linkedinMatch[0]).replace(/[.,;|]+$/, "").trim();
-    if (!/^(?:github|portfolio|email|phone|website|mobile)$/i.test(rawVal)) {
-      originalLinkedin = rawVal.includes("linkedin.com") ? rawVal : `linkedin.com/in/${rawVal}`;
-      if (!originalLinkedin.startsWith("http") && !originalLinkedin.toLowerCase().includes("linkedin.com")) {
-        originalLinkedin = `linkedin.com/in/${originalLinkedin.replace(/^https?:\/\/(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in\/)?/i, "")}`;
-      }
-    }
-  }
-
-  // Extract GitHub from original
-  const githubMatch = originalHeader.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-–_.]+/i) ||
-                      originalHeader.match(/(?:github|gh)\s*[:=]\s*(?:https?:\/\/)?(?:www\.)?(?:github\.com\/)?([a-zA-Z0-9\-_.]+)/i);
-  let originalGithub: string | null = null;
-  if (githubMatch) {
-    const rawVal = (githubMatch[1] && !githubMatch[0].includes("github.com") ? githubMatch[1] : githubMatch[0]).replace(/[.,;|]+$/, "").trim();
-    if (!/^(?:linkedin|portfolio|email|phone|website|mobile)$/i.test(rawVal)) {
-      originalGithub = rawVal.includes("github.com") ? rawVal : `github.com/${rawVal}`;
-      if (!originalGithub.startsWith("http") && !originalGithub.toLowerCase().includes("github.com")) {
-        originalGithub = `github.com/${originalGithub.replace(/^https?:\/\/(?:www\.)?github\.com\//i, "")}`;
-      }
-    }
-  }
+  // Extract LinkedIn & GitHub from original text using universal extractor
+  const extractedProfiles = extractProfileUrls(original);
+  const originalLinkedin = extractedProfiles.linkedin || null;
+  const originalGithub = extractedProfiles.github || null;
 
   // Extract location ONLY from the actual contact block (top 6 lines before any section), NEVER from education/body!
   const locationMatch = originalContactBlock.match(/\b([A-Z][a-zA-Z\s.-]+,\s*(?:India|USA|UK|Canada|Telangana|Andhra Pradesh|Karnataka|Maharashtra|Tamil Nadu|Delhi|California|New York|Texas|WA|NY|CA|TX|IL|FL))\b/i);
@@ -688,14 +668,14 @@ export function preserveCandidateContactDetails(optimized: string, original: str
         }
       } else if (/linkedin/i.test(p)) {
         if (!liFound) {
-          const actualLi = (p.includes(".com") || p.includes("/")) ? p : (originalLinkedin || p);
-          contactParts.push(actualLi);
+          const actualLi = (originalLinkedin || p).replace(/\blinkedin\.\s+com\b/gi, "linkedin.com");
+          contactParts.push(actualLi.startsWith("http") ? actualLi : (actualLi.includes("linkedin.com") ? `https://${actualLi}` : (originalLinkedin || actualLi)));
           liFound = true;
         }
       } else if (/github/i.test(p)) {
         if (!ghFound) {
-          const actualGh = (p.includes(".com") || p.includes("/")) ? p : (originalGithub || p);
-          contactParts.push(actualGh);
+          const actualGh = (originalGithub || p).replace(/\bgithub\.\s+com\b/gi, "github.com");
+          contactParts.push(actualGh.startsWith("http") ? actualGh : (actualGh.includes("github.com") ? `https://${actualGh}` : (originalGithub || actualGh)));
           ghFound = true;
         }
       } else if (!contactParts.some(existing => existing.toLowerCase() === p.toLowerCase())) {

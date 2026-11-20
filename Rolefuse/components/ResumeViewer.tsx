@@ -24,6 +24,7 @@ import {
 } from "@/lib/export/pdf-document";
 import { useUpgradeModalStore } from "@/store/useUpgradeModalStore";
 import { generateUUID } from "@/lib/utils";
+import { extractProfileUrls } from "@/lib/resume/normalize";
 
 function getPdfDownloadLimit(plan: string): number {
   if (plan === "promax" || plan === "owner") return 30;
@@ -515,6 +516,20 @@ export default function ResumeViewer({
                   seenTypes.add(iconType);
                   return true;
                 });
+
+                // Fallback: If originalText had LinkedIn or GitHub and they were omitted, restore them
+                if (originalText) {
+                  const extracted = extractProfileUrls(originalText);
+                  if (!seenTypes.has("linkedin") && extracted.linkedin) {
+                    cleanSegments.push({ text: "LinkedIn", url: extracted.linkedin, isLink: true });
+                    seenTypes.add("linkedin");
+                  }
+                  if (!seenTypes.has("github") && extracted.github) {
+                    cleanSegments.push({ text: "GitHub", url: extracted.github, isLink: true });
+                    seenTypes.add("github");
+                  }
+                }
+
                 if (cleanSegments.length === 0) return null;
                 return (
                   <div
@@ -558,6 +573,19 @@ export default function ResumeViewer({
                       if (!linkHref) {
                         if (iconType === "email") linkHref = `mailto:${cleanHandle}`;
                         else if (iconType === "phone") linkHref = `tel:${cleanHandle.replace(/[^+\d]/g, "")}`;
+                        else if (iconType === "linkedin") {
+                          const rawVal = seg.url || seg.text || "";
+                          const cleanRaw = rawVal.replace(/^(?:linkedin|li)\s*[:|–—\-]?\s*/i, "").trim();
+                          if (cleanRaw && cleanRaw.toLowerCase() !== "linkedin") {
+                            linkHref = cleanRaw.startsWith("http") ? cleanRaw : `https://${cleanRaw.includes("linkedin.com") ? cleanRaw : `www.linkedin.com/in/${cleanRaw.replace(/^\/?in\//i, "")}`}`;
+                          }
+                        } else if (iconType === "github") {
+                          const rawVal = seg.url || seg.text || "";
+                          const cleanRaw = rawVal.replace(/^(?:github|gh)\s*[:|–—\-]?\s*@?/i, "").trim();
+                          if (cleanRaw && cleanRaw.toLowerCase() !== "github") {
+                            linkHref = cleanRaw.startsWith("http") ? cleanRaw : `https://${cleanRaw.includes("github.com") ? cleanRaw : `github.com/${cleanRaw}`}`;
+                          }
+                        }
                       }
 
                       const el =

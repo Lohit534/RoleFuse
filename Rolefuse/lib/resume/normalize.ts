@@ -151,6 +151,136 @@ export function normalizeTechTerm(term: string): string {
   return clean;
 }
 
+// ── 1.1 PROFILE URL EXTRACTION & NORMALIZATION ─────────────────────────────────
+
+export interface ProfileUrls {
+  linkedin?: string;
+  github?: string;
+  portfolio?: string;
+}
+
+/**
+ * Normalizes any profile link, username handle, or markdown link into a valid https:// URL.
+ */
+export function normalizeProfileUrl(raw: string, type: "linkedin" | "github" | "portfolio"): string {
+  if (!raw) return "";
+  let clean = raw.trim();
+
+  // 1. Markdown link: [Title](https://...)
+  const mdMatch = clean.match(/\[[^\]]*\]\((https?:\/\/[^\)]+)\)/i);
+  if (mdMatch && mdMatch[1]) {
+    clean = mdMatch[1].trim();
+  }
+
+  // 2. Remove leading label prefixes e.g. "LinkedIn:", "GitHub:", "Portfolio - "
+  clean = clean.replace(/^(?:linkedin|github|portfolio|website|profile|site)\s*[:|–—\-]?\s*/i, "").trim();
+
+  // 3. Remove trailing punctuation
+  clean = clean.replace(/[,;.\)>\]]+$/, "").trim();
+
+  if (!clean) return "";
+
+  // 4. Fix accidental spaces inserted into domain extensions e.g. "linkedin. com" -> "linkedin.com"
+  clean = clean.replace(/\b(linkedin|github)\.\s+com\b/gi, "$1.com");
+
+  if (type === "linkedin") {
+    if (/^https?:\/\//i.test(clean)) return clean;
+    if (/(?:[a-z]{2,3}\.)?linkedin\.com/i.test(clean)) {
+      return `https://${clean.replace(/^www\./i, "www.")}`;
+    }
+    if (/^in\/[\w\-–_.]+/i.test(clean)) {
+      return `https://www.linkedin.com/${clean}`;
+    }
+    if (!/^(?:linkedin|profile|http|www)$/i.test(clean)) {
+      return `https://www.linkedin.com/in/${clean}`;
+    }
+  } else if (type === "github") {
+    if (/^https?:\/\//i.test(clean)) return clean;
+    if (/github\.com/i.test(clean)) {
+      return `https://${clean.replace(/^www\./i, "")}`;
+    }
+    const handle = clean.replace(/^@/, "");
+    if (!/^(?:github|http|www)$/i.test(handle)) {
+      return `https://github.com/${handle}`;
+    }
+  } else if (type === "portfolio") {
+    if (/^https?:\/\//i.test(clean)) return clean;
+    if (/\.[a-z]{2,}/i.test(clean)) return `https://${clean}`;
+  }
+
+  return clean;
+}
+
+/**
+ * Robust regex-based extractor for LinkedIn, GitHub, and portfolio URLs from any resume text.
+ */
+export function extractProfileUrls(text: string): ProfileUrls {
+  const result: ProfileUrls = {};
+  if (!text) return result;
+
+  // 1. Markdown links e.g. [LinkedIn](https://www.linkedin.com/in/username)
+  const mdLi = text.match(/\[(?:linkedin|profile)\]\((https?:\/\/[^\)]+)\)/i);
+  if (mdLi && mdLi[1]) {
+    result.linkedin = normalizeProfileUrl(mdLi[1], "linkedin");
+  }
+
+  const mdGh = text.match(/\[(?:github|gh)\]\((https?:\/\/[^\)]+)\)/i);
+  if (mdGh && mdGh[1]) {
+    result.github = normalizeProfileUrl(mdGh[1], "github");
+  }
+
+  // 2. Full or partial LinkedIn URL
+  if (!result.linkedin) {
+    const liMatch =
+      text.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub|profile)?\/?[\w\-–_.%]+\/?/i) ||
+      text.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/[\w\-–_.%]+\/?/i);
+    if (liMatch) {
+      result.linkedin = normalizeProfileUrl(liMatch[0], "linkedin");
+    }
+  }
+
+  // 3. Fallback handle format e.g. "LinkedIn: payyavula-lohit" or "LinkedIn: in/payyavula-lohit"
+  if (!result.linkedin) {
+    const liHandleMatch = text.match(/(?:linkedin|li)\s*[:|–—\-]\s*(?:in\/)?([a-zA-Z0-9\-_]{3,40})/i);
+    if (liHandleMatch && liHandleMatch[1] && !/^(?:com|org|net|github|portfolio|email|phone)$/i.test(liHandleMatch[1])) {
+      result.linkedin = normalizeProfileUrl(liHandleMatch[1], "linkedin");
+    }
+  }
+
+  // 4. Full or partial GitHub URL
+  if (!result.github) {
+    const ghMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-–_.%]+(?:\/[\w\-–_.%]+)?\/? */i);
+    if (ghMatch) {
+      result.github = normalizeProfileUrl(ghMatch[0], "github");
+    }
+  }
+
+  // 5. Fallback handle format e.g. "GitHub: lohit04" or "GitHub: @lohit04"
+  if (!result.github) {
+    const ghHandleMatch = text.match(/(?:github|gh)\s*[:|–—\-]\s*@?([a-zA-Z0-9\-_]{2,40})/i);
+    if (ghHandleMatch && ghHandleMatch[1] && !/^(?:com|org|net|linkedin|portfolio|email|phone)$/i.test(ghHandleMatch[1])) {
+      result.github = normalizeProfileUrl(ghHandleMatch[1], "github");
+    }
+  }
+
+  // 6. Portfolio / personal site
+  const allHttps = text.match(/https?:\/\/[^\s\|\)\]\,>\"\'\'<]{8,}/g) || [];
+  for (const raw of allHttps) {
+    const url = raw.replace(/[,;.\)>\]]+$/, "");
+    if (
+      !url.includes("linkedin.com") &&
+      !url.includes("github.com") &&
+      !url.includes("mailto:") &&
+      !result.portfolio
+    ) {
+      result.portfolio = url;
+      break;
+    }
+  }
+
+  return result;
+}
+
 // ── 2. EDUCATION & CERTIFICATION FORMATTING ───────────────────────────────────
 
 /**
@@ -452,13 +582,33 @@ export function normalizeResume(
   const role = resume.role ? resume.role.trim() : opts.originalData?.role;
 
   // 2. Contact
+  let phone = resume.contact?.phone || opts.originalData?.contact?.phone;
+  let email = resume.contact?.email || opts.originalData?.contact?.email;
+  let linkedin = resume.contact?.linkedin || opts.originalData?.contact?.linkedin;
+  let github = resume.contact?.github || opts.originalData?.contact?.github;
+  let portfolio = resume.contact?.portfolio || opts.originalData?.contact?.portfolio;
+  let location = resume.contact?.location || opts.originalData?.contact?.location;
+
+  // Fallback: If linkedin, github, or portfolio is missing, extract from original combined text
+  if (!linkedin || !github || !portfolio) {
+    const extracted = extractProfileUrls(originalTextCombined);
+    if (!linkedin && extracted.linkedin) linkedin = extracted.linkedin;
+    if (!github && extracted.github) github = extracted.github;
+    if (!portfolio && extracted.portfolio) portfolio = extracted.portfolio;
+  }
+
+  // Normalize URLs to full, clean https:// format
+  if (linkedin) linkedin = normalizeProfileUrl(linkedin, "linkedin");
+  if (github) github = normalizeProfileUrl(github, "github");
+  if (portfolio) portfolio = normalizeProfileUrl(portfolio, "portfolio");
+
   const contact = {
-    phone: resume.contact?.phone || opts.originalData?.contact?.phone,
-    email: resume.contact?.email || opts.originalData?.contact?.email,
-    linkedin: resume.contact?.linkedin || opts.originalData?.contact?.linkedin,
-    github: resume.contact?.github || opts.originalData?.contact?.github,
-    portfolio: resume.contact?.portfolio || opts.originalData?.contact?.portfolio,
-    location: resume.contact?.location || opts.originalData?.contact?.location,
+    phone,
+    email,
+    linkedin,
+    github,
+    portfolio,
+    location,
   };
 
   // 3. Summary
@@ -626,6 +776,20 @@ export function validateResume(resume: ResumeData, original?: ResumeData): Valid
       errors.push("Missing contact info (email/phone): copied from original resume.");
     } else {
       errors.push("Missing contact details: neither phone nor email provided.");
+    }
+  }
+
+  // Preserve candidate's authentic profile URLs if missing in repaired contact
+  if (original?.contact) {
+    if (!repaired.contact) repaired.contact = {};
+    if (!repaired.contact.linkedin && original.contact.linkedin) {
+      repaired.contact.linkedin = original.contact.linkedin;
+    }
+    if (!repaired.contact.github && original.contact.github) {
+      repaired.contact.github = original.contact.github;
+    }
+    if (!repaired.contact.portfolio && original.contact.portfolio) {
+      repaired.contact.portfolio = original.contact.portfolio;
     }
   }
 

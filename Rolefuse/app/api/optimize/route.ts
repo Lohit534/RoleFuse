@@ -9,6 +9,7 @@ import { sanitizeOptimizedResume, ensureUserAnswersInResume } from "@/lib/resume
 import { enrichResumeATSQuality } from "@/lib/ats/bullets";
 import { extractKeywords, extractTechTerms, isTechnicalKeyword } from "@/lib/ats/keywords";
 import { parseResume, parseResumeAI } from "@/lib/parser/resume-parser";
+import { extractProfileUrls } from "@/lib/resume/normalize";
 import { generateUUID } from "@/lib/utils";
 import { isOwnerEmail, FREE_CREDITS_PER_MONTH, PRO_CREDITS_PER_MONTH, PRO_MAX_CREDITS_PER_MONTH } from "@/types";
 import { buildTrainingSample } from "@/lib/anonymizer";
@@ -99,48 +100,6 @@ function extractPlaceholders(
 const MIN_RESUME_CHARS = 100;
 const MIN_JD_CHARS = 50;
 
-/**
- * Fast regex-based extractor for LinkedIn, GitHub, and portfolio URLs.
- * Called before the AI optimization so profile links are always preserved
- * in the output without requiring an extra AI detection pass.
- */
-function extractProfileUrls(text: string): { linkedin?: string; github?: string; portfolio: string[] } {
-  const result: { linkedin?: string; github?: string; portfolio: string[] } = { portfolio: [] };
-
-  // LinkedIn profile URL (handles country subdomains in.linkedin.com, www.linkedin.com, /in/, /pub/, etc.)
-  const liMatch = text.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub|profile)?\/?[\w\-\.%]+\/?/i) ||
-    text.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/[\w\-\.%]+\/?/i);
-  if (liMatch) {
-    const url = liMatch[0];
-    result.linkedin = url.startsWith('http') ? url : 'https://' + url;
-  }
-
-  // GitHub profile URL (avoid matching deep repo paths — only user root)
-  const ghMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/? */i);
-  if (ghMatch) {
-    const url = ghMatch[0].trim().replace(/[,;.\)]+$/, '');
-    result.github = url.startsWith('http') ? url : 'https://' + url;
-  }
-
-  // Any other http(s) URLs that are not LinkedIn or GitHub (portfolio / personal site)
-  const allHttps = text.match(/https?:\/\/[^\s\|\)\]\,>\"\'\'<]{8,}/g) || [];
-  const seen = new Set<string>();
-  for (const raw of allHttps) {
-    const url = raw.replace(/[,;.\)>\]]+$/, '');
-    if (
-      !url.includes('linkedin.com') &&
-      !url.includes('github.com') &&
-      !url.includes('mailto:') &&
-      !seen.has(url)
-    ) {
-      seen.add(url);
-      result.portfolio.push(url);
-    }
-  }
-
-  return result;
-}
-
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new TransformStream();
@@ -195,7 +154,7 @@ export async function POST(request: NextRequest) {
       const urlPreservationLines: string[] = [];
       if (profileUrls.linkedin) urlPreservationLines.push(`LinkedIn: ${profileUrls.linkedin}`);
       if (profileUrls.github) urlPreservationLines.push(`GitHub: ${profileUrls.github}`);
-      for (const u of profileUrls.portfolio) urlPreservationLines.push(`Portfolio/Site: ${u}`);
+      if (profileUrls.portfolio) urlPreservationLines.push(`Portfolio/Site: ${profileUrls.portfolio}`);
       // ─────────────────────────────────────────────────────────────────────────
 
       if (!resumeText || resumeText.length < MIN_RESUME_CHARS) {
@@ -633,6 +592,18 @@ export async function POST(request: NextRequest) {
             let originalResumeData = null;
             try {
               originalResumeData = parseResume(preparedResumeText);
+              if (originalResumeData) {
+                if (!originalResumeData.contact) originalResumeData.contact = {};
+                if (profileUrls.linkedin && !originalResumeData.contact.linkedin) {
+                  originalResumeData.contact.linkedin = profileUrls.linkedin;
+                }
+                if (profileUrls.github && !originalResumeData.contact.github) {
+                  originalResumeData.contact.github = profileUrls.github;
+                }
+                if (profileUrls.portfolio && !originalResumeData.contact.portfolio) {
+                  originalResumeData.contact.portfolio = profileUrls.portfolio;
+                }
+              }
             } catch (err: any) {
               logger.warn("[optimize] parseResume failed (non-fatal):", err?.message);
             }
@@ -743,6 +714,20 @@ export async function POST(request: NextRequest) {
             // tech stack, project year, metrics) is 100% present in the final resume
             if (userAnswers && typeof userAnswers === "object") {
               aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
+            }
+
+            // Guarantee profile links are preserved in aiResult.resumeData
+            if (aiResult.resumeData) {
+              if (!aiResult.resumeData.contact) aiResult.resumeData.contact = {};
+              if (profileUrls.linkedin && !aiResult.resumeData.contact.linkedin) {
+                aiResult.resumeData.contact.linkedin = profileUrls.linkedin;
+              }
+              if (profileUrls.github && !aiResult.resumeData.contact.github) {
+                aiResult.resumeData.contact.github = profileUrls.github;
+              }
+              if (profileUrls.portfolio && !aiResult.resumeData.contact.portfolio) {
+                aiResult.resumeData.contact.portfolio = profileUrls.portfolio;
+              }
             }
 
             await send(4, 'done');

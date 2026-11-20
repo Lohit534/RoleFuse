@@ -9,7 +9,7 @@ import {
   ResumeCertification,
   isResumeData,
 } from "@/types/resume";
-import { normalizeResume } from "@/lib/resume/normalize";
+import { normalizeResume, extractProfileUrls, normalizeProfileUrl } from "@/lib/resume/normalize";
 
 // Rolefuse Resume Parser (Shared across PDF, DOCX, and live web preview)
 // Strictly follows the ATS resume template specification
@@ -452,14 +452,34 @@ function matchSectionHeader(line: string): string | null {
 
 // ── Adapt ResumeData to ParsedResume (Guarantees 100% Dual-Format Compatibility) ──
 
-export function adaptResumeDataToParsedResume(data: ResumeData): ParsedResume {
+export function adaptResumeDataToParsedResume(data: ResumeData, originalText?: string): ParsedResume {
   const contacts: ContactInfo[] = [];
   const c = data.contact || {};
+  let liUrl = c.linkedin;
+  let ghUrl = c.github;
+  let portUrl = c.portfolio;
+
+  if ((!liUrl || !ghUrl || !portUrl) && originalText) {
+    const fallbackExtracted = extractProfileUrls(originalText);
+    if (!liUrl && fallbackExtracted.linkedin) liUrl = fallbackExtracted.linkedin;
+    if (!ghUrl && fallbackExtracted.github) ghUrl = fallbackExtracted.github;
+    if (!portUrl && fallbackExtracted.portfolio) portUrl = fallbackExtracted.portfolio;
+  }
+
   if (c.phone) contacts.push({ type: "phone", text: c.phone, url: `tel:${c.phone.replace(/[^+\d]/g, "")}` });
   if (c.email) contacts.push({ type: "email", text: c.email, url: `mailto:${c.email}` });
-  if (c.linkedin) contacts.push({ type: "linkedin", text: "LinkedIn", url: c.linkedin.startsWith("http") ? c.linkedin : `https://${c.linkedin}` });
-  if (c.github) contacts.push({ type: "github", text: "GitHub", url: c.github.startsWith("http") ? c.github : `https://${c.github}` });
-  if (c.portfolio) contacts.push({ type: "portfolio", text: "Portfolio", url: c.portfolio.startsWith("http") ? c.portfolio : `https://${c.portfolio}` });
+  if (liUrl) {
+    const fullLi = normalizeProfileUrl(liUrl, "linkedin");
+    contacts.push({ type: "linkedin", text: "LinkedIn", url: fullLi });
+  }
+  if (ghUrl) {
+    const fullGh = normalizeProfileUrl(ghUrl, "github");
+    contacts.push({ type: "github", text: "GitHub", url: fullGh });
+  }
+  if (portUrl) {
+    const fullPort = normalizeProfileUrl(portUrl, "portfolio");
+    contacts.push({ type: "portfolio", text: "Portfolio", url: fullPort });
+  }
   if (c.location) contacts.push({ type: "other", text: c.location });
 
   const skills: (SkillCategory & ResumeSkillCategory)[] = (data.skills || []).map((s) => ({
@@ -613,14 +633,14 @@ export function adaptResumeDataToParsedResume(data: ResumeData): ParsedResume {
 
 export function parseResume(rawText: string | ResumeData, originalText?: string): ParsedResume {
   if (isResumeData(rawText)) {
-    return adaptResumeDataToParsedResume(rawText);
+    return adaptResumeDataToParsedResume(rawText, originalText);
   }
 
   if (typeof rawText === "string" && rawText.trim().startsWith("{")) {
     try {
       const parsedJSON = JSON.parse(rawText);
       if (isResumeData(parsedJSON) || (parsedJSON.name && (parsedJSON.experience || parsedJSON.skills))) {
-        return adaptResumeDataToParsedResume(parsedJSON);
+        return adaptResumeDataToParsedResume(parsedJSON, originalText);
       }
     } catch {}
   }
@@ -722,33 +742,32 @@ export function parseResume(rawText: string | ResumeData, originalText?: string)
     lineIdx++;
   }
 
-  // Ensure profile links (LinkedIn, GitHub) have exact clickable URLs extracted from rawText or originalText
+  // Ensure profile links (LinkedIn, GitHub, Portfolio) have exact clickable URLs extracted from rawText or originalText
   const fullScanText = `${rawText}\n${originalText || ''}`;
-  const liUrlMatch = fullScanText.match(/(?:https?:\/\/)?(?:www\.)?(?:[a-z]{2,3}\.)?linkedin\.com\/(?:in|pub|profile)?\/?[\w\-\.%]+\/?/i);
-  const ghUrlMatch = fullScanText.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-\.%]+(?:\/[\w\-\.%]+)?\/?/i);
+  const profileLinks = extractProfileUrls(fullScanText);
 
-  if (liUrlMatch) {
-    const fullLiUrl = liUrlMatch[0].startsWith('http') ? liUrlMatch[0] : `https://${liUrlMatch[0]}`;
+  if (profileLinks.linkedin) {
     const existingLi = contacts.find(c => c.type === 'linkedin');
     if (existingLi) {
-      existingLi.url = fullLiUrl;
-      // Always show clean label "LinkedIn" (not raw URL) in the preview
+      existingLi.url = profileLinks.linkedin;
       existingLi.text = 'LinkedIn';
     } else {
-      contacts.push({ type: 'linkedin', text: 'LinkedIn', url: fullLiUrl });
+      contacts.push({ type: 'linkedin', text: 'LinkedIn', url: profileLinks.linkedin });
     }
   }
 
-  if (ghUrlMatch) {
-    const fullGhUrl = ghUrlMatch[0].startsWith('http') ? ghUrlMatch[0] : `https://${ghUrlMatch[0]}`;
+  if (profileLinks.github) {
     const existingGh = contacts.find(c => c.type === 'github');
     if (existingGh) {
-      existingGh.url = fullGhUrl;
-      // Always show clean label "GitHub" (not raw URL) in the preview
+      existingGh.url = profileLinks.github;
       existingGh.text = 'GitHub';
     } else {
-      contacts.push({ type: 'github', text: 'GitHub', url: fullGhUrl });
+      contacts.push({ type: 'github', text: 'GitHub', url: profileLinks.github });
     }
+  }
+
+  if (profileLinks.portfolio && !contacts.some(c => c.type === 'portfolio')) {
+    contacts.push({ type: 'portfolio', text: 'Portfolio', url: profileLinks.portfolio });
   }
 
   // 2. Sections grouping

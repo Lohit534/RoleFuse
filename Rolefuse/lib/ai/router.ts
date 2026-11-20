@@ -641,6 +641,7 @@ function parseAIResponse(
     const { normalized, placeholders: normPlaceholders } = normalizeResume(candidateData, {
       originalText: fallbackText,
       userAnswers,
+      originalData: originalResumeData || undefined,
     });
     const validation = validateResume(normalized, originalResumeData || undefined);
     const plainText = resumeDataToText(normalized);
@@ -676,6 +677,7 @@ function parseAIResponse(
     const { normalized, placeholders: normPlaceholders } = normalizeResume(structured, {
       originalText: fallbackText,
       userAnswers,
+      originalData: originalResumeData || undefined,
     });
     const validation = validateResume(normalized, originalResumeData || undefined);
 
@@ -727,6 +729,7 @@ function parseAIResponse(
     const { normalized } = normalizeResume(structured, {
       originalText: fallbackText,
       userAnswers,
+      originalData: originalResumeData || undefined,
     });
 
     return {

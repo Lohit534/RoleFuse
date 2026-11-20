@@ -3,6 +3,7 @@
 import React from "react";
 import { ResumeData, isResumeData } from "@/types/resume";
 import { parseResume } from "@/lib/parser/resume-parser";
+import { extractProfileUrls, normalizeProfileUrl } from "@/lib/resume/normalize";
 
 interface ResumePreviewProps {
   data: ResumeData | string;
@@ -33,21 +34,29 @@ export function ResumePreview({
   const { contact } = resume;
   const contactParts: Array<{ text: string; url?: string }> = [];
 
+  let liUrl = contact?.linkedin;
+  let ghUrl = contact?.github;
+  let portUrl = contact?.portfolio;
+
+  if ((!liUrl || !ghUrl || !portUrl) && originalText) {
+    const extracted = extractProfileUrls(originalText);
+    if (!liUrl && extracted.linkedin) liUrl = extracted.linkedin;
+    if (!ghUrl && extracted.github) ghUrl = extracted.github;
+    if (!portUrl && extracted.portfolio) portUrl = extracted.portfolio;
+  }
+
   if (contact?.phone) contactParts.push({ text: contact.phone });
   if (contact?.email) contactParts.push({ text: contact.email, url: `mailto:${contact.email}` });
-  if (contact?.linkedin) {
-    const raw = contact.linkedin;
-    const url = raw.startsWith("http") ? raw : `https://${raw}`;
+  if (liUrl) {
+    const url = normalizeProfileUrl(liUrl, "linkedin");
     contactParts.push({ text: "LinkedIn", url });
   }
-  if (contact?.github) {
-    const raw = contact.github;
-    const url = raw.startsWith("http") ? raw : `https://${raw}`;
+  if (ghUrl) {
+    const url = normalizeProfileUrl(ghUrl, "github");
     contactParts.push({ text: "GitHub", url });
   }
-  if (contact?.portfolio) {
-    const raw = contact.portfolio;
-    const url = raw.startsWith("http") ? raw : `https://${raw}`;
+  if (portUrl) {
+    const url = normalizeProfileUrl(portUrl, "portfolio");
     contactParts.push({ text: "Portfolio", url });
   }
   if (contact?.location) contactParts.push({ text: contact.location });
