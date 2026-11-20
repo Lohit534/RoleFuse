@@ -50,6 +50,8 @@ function CoverLetterContent() {
   const [user, setUser] = useState<any>(null);
   const [userPlan, setUserPlan] = useState<"free" | "premium" | "promax">("free");
   const [isAllowed, setIsAllowed] = useState(true);
+  const [isOwnerUser, setIsOwnerUser] = useState(false);
+  const [coverLetterUsage, setCoverLetterUsage] = useState<{ used: number; limit: number }>({ used: 0, limit: 1 });
 
   // Form states
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
@@ -82,6 +84,7 @@ function CoverLetterContent() {
         // Check plan access & remaining credits
         let allowed = true;
         let plan: "free" | "premium" | "promax" = "free";
+        let ownerFlag = false;
         try {
           const credRes = await fetch("/api/credits");
           if (credRes.ok) {
@@ -90,7 +93,11 @@ function CoverLetterContent() {
             const isProMax = credData.planId === "promax";
             const isPro = credData.planId === "premium" || credData.isFirst50 || (credData.paidCredits > 0);
 
-            if (isOwner || isProMax) {
+            if (isOwner) {
+              plan = "promax";
+              allowed = true;
+              ownerFlag = true;
+            } else if (isProMax) {
               plan = "promax";
               allowed = true;
             } else if (isPro) {
@@ -107,9 +114,22 @@ function CoverLetterContent() {
 
         if (user.email && isOwnerEmail(user.email)) {
           allowed = true;
+          ownerFlag = true;
         }
+
+        const monthKey = new Date().toISOString().slice(0, 7);
+        const countKey = `fastHire_coverLetters_count_${user.id}_${monthKey}`;
+        let localUsed = parseInt(localStorage.getItem(countKey) || "0", 10);
+        let limit = ownerFlag ? 999999 : plan === "promax" ? 15 : plan === "premium" ? 5 : 1;
+        if (!ownerFlag && plan === "free" && (!allowed || localUsed >= 1)) {
+          allowed = false;
+          localUsed = Math.max(1, localUsed);
+        }
+
         setIsAllowed(allowed);
         setUserPlan(plan);
+        setIsOwnerUser(ownerFlag);
+        setCoverLetterUsage({ used: localUsed, limit });
 
         // Populate from Chrome Extension query parameters if present
         const queryTitle = searchParams.get("title");
@@ -159,13 +179,25 @@ function CoverLetterContent() {
   // Generate Cover Letter
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAllowed) {
-      toast.error("You have used your 1 free sample. Please upgrade to continue.");
+
+    const monthKey = new Date().toISOString().slice(0, 7);
+    const storageKey = `fastHire_coverLetters_count_${user?.id || "guest"}_${monthKey}`;
+    const currentUsed = parseInt(localStorage.getItem(storageKey) || "0", 10);
+    const limit = isOwnerUser ? 999999 : userPlan === "promax" ? 15 : userPlan === "premium" ? 5 : 1;
+
+    if (!isOwnerUser && (!isAllowed || currentUsed >= limit)) {
+      toast.error(
+        userPlan === "free"
+          ? "You have used your 1 free sample cover letter. Please upgrade to continue."
+          : `You have reached your monthly quota of ${limit} cover letters on ${userPlan === "promax" ? "Pro Max" : "Premium Pro"}.`
+      );
       useUpgradeModalStore.getState().openModal({
-        badge: "PRO",
-        title: "Upgrade to Premium Pro",
+        badge: userPlan === "free" ? "PRO" : "MAX",
+        title: userPlan === "free" ? "Upgrade to Premium Pro" : "Upgrade to Pro Max",
         description:
-          "You have used your 1 free sample cover letter. Upgrade to Premium Pro to generate 5 tailored cover letters per month, or Pro Max for 15 per month.",
+          userPlan === "free"
+            ? "You have used your 1 free sample cover letter. Upgrade to Premium Pro to generate 5 tailored cover letters per month, or Pro Max for 15 per month."
+            : `You have reached your monthly quota of ${limit} cover letters. Upgrade to Pro Max for 15 cover letters per month or renew your plan.`,
       });
       return;
     }
@@ -188,7 +220,8 @@ function CoverLetterContent() {
           jobDescription,
           jobTitle: jobTitle.trim() || undefined,
           company: company.trim() || undefined,
-          tone
+          tone,
+          resumeId: selectedResumeId || undefined,
         })
       });
 
@@ -206,6 +239,10 @@ function CoverLetterContent() {
 
       setCoverLetter(data.coverLetter);
       toast.success("Personalized cover letter generated!");
+
+      const newCount = (data.usage?.used && typeof data.usage.used === "number") ? data.usage.used : currentUsed + 1;
+      localStorage.setItem(storageKey, String(newCount));
+      setCoverLetterUsage({ used: newCount, limit });
 
       // Persist to user's local cover letters cache so dashboard checklist recognizes it
       try {
@@ -380,10 +417,26 @@ function CoverLetterContent() {
           {/* Left Form: Inputs & Configuration */}
           <Card className="lg:col-span-5 bg-white border-slate-200 shadow-sm rounded-2xl overflow-hidden">
             <CardContent className="p-5 sm:p-6 space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-[#087F6E]" />
                   <h2 className="font-extrabold text-sm text-slate-900">Application Parameters</h2>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                    !isOwnerUser && coverLetterUsage.used >= coverLetterUsage.limit
+                      ? "bg-rose-50 text-rose-700 border-rose-200"
+                      : "bg-teal-50 text-[#087F6E] border-teal-200"
+                  }`}>
+                    {isOwnerUser
+                      ? "Owner: Unlimited"
+                      : userPlan === "promax"
+                      ? `Pro Max: ${coverLetterUsage.used}/${coverLetterUsage.limit} used (${Math.max(0, coverLetterUsage.limit - coverLetterUsage.used)} left)`
+                      : userPlan === "premium"
+                      ? `Premium Pro: ${coverLetterUsage.used}/${coverLetterUsage.limit} used (${Math.max(0, coverLetterUsage.limit - coverLetterUsage.used)} left)`
+                      : `Free: ${coverLetterUsage.used}/${coverLetterUsage.limit} sample used (${Math.max(0, coverLetterUsage.limit - coverLetterUsage.used)} left)`
+                    }
+                  </span>
                 </div>
               </div>
 
@@ -587,9 +640,11 @@ function CoverLetterContent() {
                 <div className="space-y-1.5 pt-1">
                   <Button
                     type="submit"
-                    disabled={generating || jobDescription.trim().length < 50}
-                    className={`w-full h-10 font-bold text-xs rounded-md flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
-                      jobDescription.trim().length >= 50 && !generating
+                    disabled={generating || jobDescription.trim().length < 50 || (!isOwnerUser && coverLetterUsage.used >= coverLetterUsage.limit)}
+                    className={`w-full h-10 font-bold text-xs rounded-md flex items-center justify-center gap-2 shadow-xs transition-all ${
+                      !isOwnerUser && coverLetterUsage.used >= coverLetterUsage.limit
+                        ? "bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300"
+                        : jobDescription.trim().length >= 50 && !generating
                         ? "bg-[#0A66C2] hover:bg-[#084e96] text-white cursor-pointer"
                         : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
                     }`}
@@ -599,11 +654,18 @@ function CoverLetterContent() {
                         <Loader2 className="h-4 w-4 animate-spin text-white" />
                         Analyzing Resume &amp; Drafting Letter...
                       </>
+                    ) : !isOwnerUser && coverLetterUsage.used >= coverLetterUsage.limit ? (
+                      <span>Monthly Quota Reached ({coverLetterUsage.used}/{coverLetterUsage.limit}) — Please Upgrade</span>
                     ) : (
                       <span>Generate Personalized Cover Letter</span>
                     )}
                   </Button>
-                  {jobDescription.trim().length < 50 && (
+                  {!isOwnerUser && coverLetterUsage.used >= coverLetterUsage.limit && (
+                    <span className="text-[11px] text-rose-600 font-semibold text-center block">
+                      You have reached your {userPlan === "promax" ? "Pro Max (15/mo)" : userPlan === "premium" ? "Premium Pro (5/mo)" : "Free (1 sample)"} cover letter limit. Upgrade to unlock more!
+                    </span>
+                  )}
+                  {(!isOwnerUser && coverLetterUsage.used < coverLetterUsage.limit || isOwnerUser) && jobDescription.trim().length < 50 && (
                     <span className="text-[11px] text-amber-600 font-medium text-center block">
                       {jobDescription.trim().length === 0
                         ? "Paste target job description above (min 50 chars) to generate letter"

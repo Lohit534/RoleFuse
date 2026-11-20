@@ -86,24 +86,44 @@ export default function JobTrackerPage() {
         const user = data.user;
         setUserId(user.id);
 
-        // Load cached jobs immediately
+        // 1. Load cached jobs immediately from localStorage
+        let loadedJobs: Job[] = [];
         const storedJobs = localStorage.getItem(`fastHire_jobs_${user.id}`);
         if (storedJobs) {
           try {
             const parsed = JSON.parse(storedJobs);
             if (Array.isArray(parsed)) {
-              const valid = parsed.filter(
+              loadedJobs = parsed.filter(
                 (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
               );
-              setJobs(valid);
-              if (valid.length !== parsed.length) {
-                localStorage.setItem(`fastHire_jobs_${user.id}`, JSON.stringify(valid));
-              }
-              if (valid.length > 0) {
-                setAuthLoading(false);
-              }
             }
           } catch (e) {}
+        }
+
+        // 2. Check Supabase user_metadata (restores jobs if user logged out or opened on a new device/browser)
+        const cloudJobs = user.user_metadata?.tracked_jobs;
+        if (Array.isArray(cloudJobs) && cloudJobs.length > 0) {
+          const validCloud = cloudJobs.filter(
+            (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
+          );
+          if (loadedJobs.length === 0) {
+            loadedJobs = validCloud;
+            localStorage.setItem(`fastHire_jobs_${user.id}`, JSON.stringify(validCloud));
+          } else if (validCloud.length > loadedJobs.length) {
+            const idMap = new Map<string, Job>();
+            for (const j of validCloud) idMap.set(j.id, j);
+            for (const j of loadedJobs) idMap.set(j.id, j);
+            loadedJobs = Array.from(idMap.values());
+            localStorage.setItem(`fastHire_jobs_${user.id}`, JSON.stringify(loadedJobs));
+          }
+        } else if (loadedJobs.length > 0) {
+          // Sync existing local jobs to cloud so they persist on logout & relogin
+          supabase.auth.updateUser({ data: { tracked_jobs: loadedJobs } }).catch(() => {});
+        }
+
+        setJobs(loadedJobs);
+        if (loadedJobs.length > 0) {
+          setAuthLoading(false);
         }
 
         // Fetch user's saved resumes via history API
@@ -134,13 +154,24 @@ export default function JobTrackerPage() {
     initPage();
   }, [router]);
 
-  // Persist jobs state
-  const saveJobsToLocalStorage = (newJobs: Job[]) => {
+  // Persist jobs state locally and sync to Supabase user account
+  const saveJobsToLocalStorage = async (newJobs: Job[]) => {
     if (!userId) return;
     localStorage.setItem(`fastHire_jobs_${userId}`, JSON.stringify(newJobs));
     setJobs(newJobs);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("fastHire_jobs_updated"));
+    }
+
+    // Sync to Supabase user_metadata so jobs persist across logout & relogin and across devices
+    try {
+      await supabase.auth.updateUser({
+        data: {
+          tracked_jobs: newJobs,
+        },
+      });
+    } catch (e) {
+      console.warn("Failed to sync tracked jobs to Supabase account:", e);
     }
   };
 

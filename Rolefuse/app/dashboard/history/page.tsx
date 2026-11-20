@@ -224,7 +224,6 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
     }
     return null;
   });
-  const [generatingLetter, setGeneratingLetter] = useState(false);
   const [showRoadmapAccordion, setShowRoadmapAccordion] = useState(false);
   const [activeTab, setActiveTab] = useState<"resume" | "changes" | "breakdown" | "roadmap" | "cover_letter">("resume");
   const [showShareModal, setShowShareModal] = useState(false);
@@ -504,11 +503,27 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
   const handleGenerateRoadmap = async () => {
     // Strict Plan Restriction: Only Pro, Pro Max, and Owner users can access Skill Roadmaps
     if (userPlan === "free") {
-      toast.error("Skills learning roadmaps are a Pro & Pro Max feature. Please upgrade your plan to unlock instant career roadmaps!");
+      toast.error("Skills learning roadmaps are a Premium Pro (5/mo) & Pro Max (15/mo) feature. Please upgrade your plan to unlock instant career roadmaps!");
       setTimeout(() => {
         router.push("/dashboard/pricing");
       }, 1800);
       return;
+    }
+
+    const isOwner = userPlan === "owner";
+    if (!isOwner) {
+      const monthKey = new Date().toISOString().slice(0, 7);
+      const limit = userPlan === "promax" ? 15 : 5;
+      const storageKey = `fastHire_roadmaps_count_${resume.userId || "anon"}_${monthKey}`;
+      const currentCount = parseInt(localStorage.getItem(storageKey) || "0", 10);
+      if (currentCount >= limit) {
+        toast.error(`You have reached your monthly limit of ${limit} roadmaps on ${userPlan === "promax" ? "Pro Max" : "Premium Pro"}.`);
+        setTimeout(() => {
+          router.push("/dashboard/pricing");
+        }, 1500);
+        return;
+      }
+      localStorage.setItem(storageKey, (currentCount + 1).toString());
     }
 
     if (selectedRoadmapSkills.length === 0) {
@@ -557,42 +572,6 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
       toast.success(`Generated 90-day roadmap for ${selectedRoadmapSkills.length} selected skill${selectedRoadmapSkills.length > 1 ? "s" : ""}!`);
     } finally {
       setRoadmapLoading(false);
-    }
-  };
-
-  const handleGenerateCoverLetter = async () => {
-    setGeneratingLetter(true);
-    try {
-      const res = await fetch("/api/cover-letter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resumeText: resume.optimizedText || resume.originalText,
-          jobDescription: resume.jobDescription,
-          jobTitle: resume.jobTitle,
-          company: resume.company,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to generate cover letter.");
-      }
-
-      const data = await res.json();
-      setCoverLetterGenerated(data.coverLetter);
-      if (typeof window !== "undefined") {
-        localStorage.setItem(`fastHire_coverLetter_${resume.id}`, data.coverLetter);
-      }
-      fetch("/api/history", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeId: resume.id, coverLetter: data.coverLetter }),
-      }).catch(() => {});
-    } catch (e: any) {
-      toast.error(e.message || "Failed to generate cover letter.");
-    } finally {
-      setGeneratingLetter(false);
     }
   };
 
@@ -1567,12 +1546,23 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
           </div>
 
           {/* Action Row */}
-          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
-            <span className="text-xs text-slate-500">
-              {selectedRoadmapSkills.length === 0
-                ? "Click 1 to 3 skills above to build your roadmap."
-                : `Selected: ${selectedRoadmapSkills.join(", ")}`}
-            </span>
+          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 flex-wrap">
+            <div className="space-y-0.5">
+              <span className="text-xs text-slate-500 block">
+                {selectedRoadmapSkills.length === 0
+                  ? "Click 1 to 3 skills above to build your roadmap."
+                  : `Selected: ${selectedRoadmapSkills.join(", ")}`}
+              </span>
+              <span className="text-[11px] font-semibold text-slate-400 block">
+                {userPlan === "owner"
+                  ? "Owner: Unlimited roadmaps"
+                  : userPlan === "promax"
+                  ? "Pro Max: Up to 15 roadmaps/month"
+                  : userPlan === "premium"
+                  ? "Premium Pro: Up to 5 roadmaps/month"
+                  : "Free Tier: Roadmaps available on Premium Pro (5/mo) & Pro Max (15/mo)"}
+              </span>
+            </div>
             <Button
               onClick={handleGenerateRoadmap}
               disabled={selectedRoadmapSkills.length === 0 || roadmapLoading}
@@ -1617,52 +1607,52 @@ function DetailView({ resume, userPlan, onBack, onDelete }: DetailViewProps) {
       {/* ─── TAB 5: COVER LETTER ─── */}
       {activeTab === "cover_letter" && (
         <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-md bg-[#0d6e5a] flex items-center justify-center text-white shadow-xs shrink-0">
                 <FileText className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h3 className="text-base font-black text-slate-900">Tailored Cover Letter Generator</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Generate a personalized cover letter aligned with this job specification</p>
+                <h3 className="text-base font-black text-slate-900">Tailored Cover Letter</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Stored cover letter for this job application</p>
               </div>
             </div>
+            {coverLetterGenerated && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <Check className="h-3 w-3" />
+                Saved in History
+              </span>
+            )}
           </div>
 
-          <p className="text-xs text-slate-600 leading-relaxed font-medium">
-            RoleFuse uses your optimized resume highlights and the target job description to draft an executive-level cover letter.
-          </p>
-
-          {!coverLetterGenerated && !generatingLetter && (
-            <Button
-              onClick={handleGenerateCoverLetter}
-              className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-5 rounded-md shadow-xs transition-colors cursor-pointer"
-            >
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-              Generate Cover Letter
-            </Button>
-          )}
-
-          {generatingLetter && (
-            <div className="flex items-center gap-2.5 text-xs text-slate-600 py-8 justify-center bg-slate-50 border border-slate-200 rounded-xl">
-              <Loader2 className="h-4 w-4 animate-spin text-[#0d6e5a]" />
-              <span>Drafting tailored cover letter...</span>
-            </div>
-          )}
-
-          {coverLetterGenerated && (
-            <div className="space-y-3 select-text">
+          {coverLetterGenerated ? (
+            <div className="space-y-4 select-text">
               <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl text-xs text-slate-800 leading-relaxed font-serif shadow-xs select-text">
                 <pre className="whitespace-pre-wrap font-serif select-text">{coverLetterGenerated}</pre>
               </div>
-              <Button
-                onClick={() => {
-                  navigator.clipboard.writeText(coverLetterGenerated);
-                }}
-                className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs h-8 rounded-md shadow-xs cursor-pointer"
-              >
-                Copy Cover Letter
-              </Button>
+              <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(coverLetterGenerated);
+                    toast.success("Cover letter copied to clipboard!");
+                  }}
+                  className="bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 text-xs h-8 px-3 rounded-md shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy Cover Letter
+                </Button>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Retained in history according to your {userPlan === "promax" ? "Pro Max (4 months)" : userPlan === "owner" ? "Owner (unlimited)" : "Premium Pro (2 months)"} plan retention window.
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50/70 border border-dashed border-slate-200 rounded-2xl p-8 text-center space-y-2">
+              <FileText className="h-8 w-8 text-slate-400 mx-auto" />
+              <p className="text-sm font-semibold text-slate-700">No cover letter generated for this scan</p>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Cover letters created in Cover Letter Studio or generated during resume optimization are automatically saved and retained in your history ({userPlan === "promax" ? "4 months" : userPlan === "owner" ? "unlimited" : "2 months"}).
+              </p>
             </div>
           )}
         </div>

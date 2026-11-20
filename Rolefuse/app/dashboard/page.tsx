@@ -431,6 +431,8 @@ export default function DashboardPage() {
   );
   const [roadmapContent, setRoadmapContent] = useState<string | null>(null);
   const [roadmapLoading, setRoadmapLoading] = useState(false);
+  const [roadmapUsageCount, setRoadmapUsageCount] = useState<number>(0);
+  const [coverLettersCount, setCoverLettersCount] = useState<number>(0);
   const [coverLetterGenerated, setCoverLetterGenerated] = useState<
     string | null
   >(null);
@@ -510,6 +512,7 @@ export default function DashboardPage() {
     interview: number;
     offer: number;
     nextInterview: string | null;
+    latestJob?: string | null;
   }>({
     total: 0,
     saved: 0,
@@ -517,6 +520,7 @@ export default function DashboardPage() {
     interview: 0,
     offer: 0,
     nextInterview: null,
+    latestJob: null,
   });
 
   useEffect(() => {
@@ -643,6 +647,13 @@ export default function DashboardPage() {
         }
 
         setUser(data.user);
+        if (typeof window !== "undefined") {
+          const monthKey = new Date().toISOString().slice(0, 7);
+          const rmKey = `fastHire_roadmaps_count_${data.user.id}_${monthKey}`;
+          const clKey = `fastHire_coverLetters_count_${data.user.id}_${monthKey}`;
+          setRoadmapUsageCount(parseInt(localStorage.getItem(rmKey) || "0", 10));
+          setCoverLettersCount(parseInt(localStorage.getItem(clKey) || "0", 10));
+        }
         // If restored session belonged to a different user, clear it
         const savedUserId =
           (typeof window !== "undefined" &&
@@ -667,52 +678,56 @@ export default function DashboardPage() {
 
         // Load Job Tracker counts for overview card
         try {
+          let validJobs: any[] = [];
           const storedJobsStr = localStorage.getItem(`fastHire_jobs_${data.user.id}`);
           if (storedJobsStr) {
-            const parsed = JSON.parse(storedJobsStr);
-            if (Array.isArray(parsed)) {
-              // Sanitize: remove blank/empty placeholder jobs (no company AND no title)
-              const validJobs = parsed.filter(
-                (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
-              );
-              // Persist cleaned list if entries were removed
-              if (validJobs.length !== parsed.length) {
-                localStorage.setItem(`fastHire_jobs_${data.user.id}`, JSON.stringify(validJobs));
+            try {
+              const parsed = JSON.parse(storedJobsStr);
+              if (Array.isArray(parsed)) {
+                validJobs = parsed.filter(
+                  (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
+                );
               }
-              const totalCount = validJobs.length;
-              const savedCount = validJobs.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
-              const appliedCount = validJobs.filter((j: any) => j.status === "applied").length;
-              const interviewCount = validJobs.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
-              const offerCount = validJobs.filter((j: any) => j.status === "offered" || j.status === "offer").length;
-              const upcoming = validJobs.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
-              setJobTrackerStats({
-                total: totalCount,
-                saved: savedCount,
-                applied: appliedCount,
-                interview: interviewCount,
-                offer: offerCount,
-                nextInterview: upcoming ? upcoming.date : null,
-              });
-            } else {
-              setJobTrackerStats({
-                total: 0,
-                saved: 0,
-                applied: 0,
-                interview: 0,
-                offer: 0,
-                nextInterview: null,
-              });
-            }
-          } else {
-            setJobTrackerStats({
-              total: 0,
-              saved: 0,
-              applied: 0,
-              interview: 0,
-              offer: 0,
-              nextInterview: null,
-            });
+            } catch (e) {}
           }
+
+          // If local storage is empty, restore from Supabase account user_metadata
+          const cloudJobs = data.user.user_metadata?.tracked_jobs;
+          if (Array.isArray(cloudJobs) && cloudJobs.length > 0) {
+            const validCloud = cloudJobs.filter(
+              (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
+            );
+            if (validJobs.length === 0) {
+              validJobs = validCloud;
+              localStorage.setItem(`fastHire_jobs_${data.user.id}`, JSON.stringify(validCloud));
+            } else if (validCloud.length > validJobs.length) {
+              const idMap = new Map<string, any>();
+              for (const j of validCloud) idMap.set(j.id, j);
+              for (const j of validJobs) idMap.set(j.id, j);
+              validJobs = Array.from(idMap.values());
+              localStorage.setItem(`fastHire_jobs_${data.user.id}`, JSON.stringify(validJobs));
+            }
+          } else if (validJobs.length > 0) {
+            supabase.auth.updateUser({ data: { tracked_jobs: validJobs } }).catch(() => {});
+          }
+
+          const totalCount = validJobs.length;
+          const savedCount = validJobs.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
+          const appliedCount = validJobs.filter((j: any) => j.status === "applied").length;
+          const interviewCount = validJobs.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
+          const offerCount = validJobs.filter((j: any) => j.status === "offered" || j.status === "offer").length;
+          const upcoming = validJobs.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
+          const latest = validJobs[0];
+
+          setJobTrackerStats({
+            total: totalCount,
+            saved: savedCount,
+            applied: appliedCount,
+            interview: interviewCount,
+            offer: offerCount,
+            nextInterview: upcoming ? upcoming.date : null,
+            latestJob: latest ? `${latest.title || "Job"} at ${latest.company || "Company"}` : null,
+          });
         } catch (e) {}
 
         // Load Latest Scan Information for overview card
@@ -787,37 +802,39 @@ export default function DashboardPage() {
     if (!user?.id) return;
     const syncStats = () => {
       try {
+        let validJobs: any[] = [];
         const storedJobsStr = localStorage.getItem(`fastHire_jobs_${user.id}`);
         if (storedJobsStr) {
-          const parsed = JSON.parse(storedJobsStr);
-          if (Array.isArray(parsed)) {
-            const validJobs = parsed.filter(
-              (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
-            );
-            const totalCount = validJobs.length;
-            const savedCount = validJobs.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
-            const appliedCount = validJobs.filter((j: any) => j.status === "applied").length;
-            const interviewCount = validJobs.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
-            const offerCount = validJobs.filter((j: any) => j.status === "offered" || j.status === "offer").length;
-            const upcoming = validJobs.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
-            setJobTrackerStats({
-              total: totalCount,
-              saved: savedCount,
-              applied: appliedCount,
-              interview: interviewCount,
-              offer: offerCount,
-              nextInterview: upcoming ? upcoming.date : null,
-            });
-            return;
-          }
+          try {
+            const parsed = JSON.parse(storedJobsStr);
+            if (Array.isArray(parsed)) {
+              validJobs = parsed.filter(
+                (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
+              );
+            }
+          } catch (e) {}
         }
+        if (validJobs.length === 0 && Array.isArray(user.user_metadata?.tracked_jobs)) {
+          validJobs = user.user_metadata.tracked_jobs.filter(
+            (j: any) => j && typeof j === "object" && (String(j.company || "").trim() || String(j.title || "").trim())
+          );
+        }
+        const totalCount = validJobs.length;
+        const savedCount = validJobs.filter((j: any) => j.status === "wishlist" || j.status === "saved").length;
+        const appliedCount = validJobs.filter((j: any) => j.status === "applied").length;
+        const interviewCount = validJobs.filter((j: any) => j.status === "interviewing" || j.status === "interview").length;
+        const offerCount = validJobs.filter((j: any) => j.status === "offered" || j.status === "offer").length;
+        const upcoming = validJobs.find((j: any) => (j.status === "interviewing" || j.status === "interview") && j.date);
+        const latest = validJobs[0];
+
         setJobTrackerStats({
-          total: 0,
-          saved: 0,
-          applied: 0,
-          interview: 0,
-          offer: 0,
-          nextInterview: null,
+          total: totalCount,
+          saved: savedCount,
+          applied: appliedCount,
+          interview: interviewCount,
+          offer: offerCount,
+          nextInterview: upcoming ? upcoming.date : null,
+          latestJob: latest ? `${latest.title || "Job"} at ${latest.company || "Company"}` : null,
         });
       } catch (e) {
         setJobTrackerStats({
@@ -827,6 +844,7 @@ export default function DashboardPage() {
           interview: 0,
           offer: 0,
           nextInterview: null,
+          latestJob: null,
         });
       }
     };
@@ -1016,17 +1034,16 @@ export default function DashboardPage() {
       (userCredits?.paidCredits && userCredits.paidCredits > 0) ||
       (userCredits?.freeRemaining && userCredits.freeRemaining > 0);
 
-    if (
-      !hasAvailableCredits &&
-      userPlan === "free" &&
-      userCredits &&
-      (userCredits.freeRemaining <= 0)
-    ) {
+    const isOwner = userPlan === "owner" || (user?.email && isOwnerEmail(user.email));
+
+    if (!isOwner && userCredits && !hasAvailableCredits) {
       useUpgradeModalStore.getState().openModal({
         badge: "UPGRADE REQUIRED",
-        title: "Free Optimizations Used Up",
+        title: "All Credits Used — Please Upgrade",
         description:
-          "You have used your free optimizations. Upgrade to Premium Pro (20 optimizations) or Pro Max (90 optimizations) to continue.",
+          userPlan === "free"
+            ? "You have used your free optimizations (none remaining). Upgrade to Premium Pro (20 optimizations) or Pro Max (90 optimizations) to continue."
+            : `You have used all credits in your ${userPlan === "premium" ? "Premium Pro" : "Pro Max"} plan (none remaining). Upgrade or renew now to continue optimizing resumes.`,
       });
       return;
     }
@@ -1217,15 +1234,19 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAddToTracker = () => {
+  const handleAddToTracker = async () => {
     if (!user || !optimizeResult) return;
     const currentJobsString =
       localStorage.getItem(`fastHire_jobs_${user.id}`) || "[]";
-    let currentJobs = [];
+    let currentJobs: any[] = [];
     try {
       currentJobs = JSON.parse(currentJobsString);
+      if (!Array.isArray(currentJobs)) currentJobs = [];
     } catch (e) {
       currentJobs = [];
+    }
+    if (currentJobs.length === 0 && Array.isArray(user.user_metadata?.tracked_jobs)) {
+      currentJobs = user.user_metadata.tracked_jobs;
     }
 
     const newJob = {
@@ -1237,10 +1258,18 @@ export default function DashboardPage() {
       notes: "Added automatically from optimization results screen.",
     };
 
+    const updatedJobs = [newJob, ...currentJobs];
     localStorage.setItem(
       `fastHire_jobs_${user.id}`,
-      JSON.stringify([newJob, ...currentJobs]),
+      JSON.stringify(updatedJobs),
     );
+    window.dispatchEvent(new Event("fastHire_jobs_updated"));
+    try {
+      await supabase.auth.updateUser({
+        data: { tracked_jobs: updatedJobs },
+      });
+    } catch (e) {}
+
     setTrackerAdded(true);
     saveActiveSession({
       trackerAdded: true,
@@ -1368,6 +1397,8 @@ export default function DashboardPage() {
       }
       const content: string = data.roadmap;
       setRoadmapContent(content);
+      const newRmUsage = data.usage?.used ?? (roadmapUsageCount + 1);
+      setRoadmapUsageCount(newRmUsage);
       saveActiveSession({
         roadmapContent: content,
         userId: user?.id,
@@ -1423,6 +1454,7 @@ export default function DashboardPage() {
 
     setGeneratingLetter(true);
     try {
+      const targetId = currentResumeId || optimizeResult?.resumeId || optimizeResult?.id;
       const res = await fetch("/api/cover-letter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1431,6 +1463,7 @@ export default function DashboardPage() {
           jobDescription,
           jobTitle: optimizeResult?.jobTitle,
           company: optimizeResult?.company,
+          resumeId: targetId || undefined,
         }),
       });
 
@@ -1441,6 +1474,8 @@ export default function DashboardPage() {
 
       const data = await res.json();
       setCoverLetterGenerated(data.coverLetter);
+      const newClUsage = data.usage?.used ?? (coverLettersCount + 1);
+      setCoverLettersCount(newClUsage);
       saveActiveSession({
         coverLetter: data.coverLetter,
         userId: user?.id,
@@ -1478,7 +1513,6 @@ export default function DashboardPage() {
         );
       }
 
-      const targetId = currentResumeId || optimizeResult?.resumeId || optimizeResult?.id;
       if (targetId) {
         if (typeof window !== "undefined") {
           localStorage.setItem(`fastHire_coverLetter_${targetId}`, data.coverLetter);
@@ -1883,15 +1917,26 @@ export default function DashboardPage() {
               </div>
 
               {/* Action Row */}
-              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
-                <span className="text-xs text-slate-500">
-                  {selectedRoadmapSkills.length === 0
-                    ? "Click 1 to 3 skills above to build your roadmap."
-                    : `Selected: ${selectedRoadmapSkills.join(", ")}`}
-                </span>
+              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100 flex-wrap">
+                <div className="space-y-0.5">
+                  <span className="text-xs text-slate-500 block">
+                    {selectedRoadmapSkills.length === 0
+                      ? "Click 1 to 3 skills above to build your roadmap."
+                      : `Selected: ${selectedRoadmapSkills.join(", ")}`}
+                  </span>
+                  <span className="text-[11px] font-semibold text-slate-400 block">
+                    {userPlan === "owner"
+                      ? "Owner: Unlimited roadmaps"
+                      : userPlan === "promax"
+                      ? `Pro Max: ${roadmapUsageCount}/15 roadmaps used (${Math.max(0, 15 - roadmapUsageCount)} left this month)`
+                      : userPlan === "premium"
+                      ? `Premium Pro: ${roadmapUsageCount}/5 roadmaps used (${Math.max(0, 5 - roadmapUsageCount)} left this month)`
+                      : "Free Plan: Roadmaps available on Premium Pro (5/mo) & Pro Max (15/mo)"}
+                  </span>
+                </div>
                 <Button
                   onClick={handleGenerateRoadmap}
-                  disabled={selectedRoadmapSkills.length === 0 || roadmapLoading}
+                  disabled={selectedRoadmapSkills.length === 0 || roadmapLoading || (userPlan !== "owner" && userPlan !== "free" && roadmapUsageCount >= (userPlan === "promax" ? 15 : 5))}
                   className="bg-[#0d6e5a] hover:bg-[#094d3f] text-white font-bold text-xs h-9 px-4 rounded-md shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   {roadmapLoading ? (
@@ -1899,7 +1944,9 @@ export default function DashboardPage() {
                   ) : (
                     <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                   )}
-                  Generate Complete Roadmap ({selectedRoadmapSkills.length}/3)
+                  {userPlan !== "owner" && userPlan !== "free" && roadmapUsageCount >= (userPlan === "promax" ? 15 : 5)
+                    ? `Quota Reached (${roadmapUsageCount}/${userPlan === "promax" ? 15 : 5})`
+                    : `Generate Complete Roadmap (${selectedRoadmapSkills.length}/3)`}
                 </Button>
               </div>
 
@@ -2360,14 +2407,28 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Sub-footer: Next Interview */}
+                  {/* Sub-footer: Next Interview or Latest Tracked Job */}
                   <div className="pt-3 border-t border-slate-100 mt-3 space-y-1">
                     <p className="text-[10px] sm:text-[11px] font-semibold text-slate-600">
-                      Next Interview
+                      {jobTrackerStats.nextInterview ? "Next Interview" : (jobTrackerStats.latestJob ? "Latest Tracked Job" : "Next Interview")}
                     </p>
-                    <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <span>{jobTrackerStats.nextInterview || "No upcoming interview"}</span>
+                    <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-500 min-w-0">
+                      {jobTrackerStats.nextInterview ? (
+                        <>
+                          <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{jobTrackerStats.nextInterview}</span>
+                        </>
+                      ) : jobTrackerStats.latestJob ? (
+                        <>
+                          <Briefcase className="h-3.5 w-3.5 text-[#087F6E] shrink-0" />
+                          <span className="truncate font-medium text-slate-700">{jobTrackerStats.latestJob}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span>No upcoming interview</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </Link>

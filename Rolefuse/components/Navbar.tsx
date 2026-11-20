@@ -282,6 +282,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
           const k = localStorage.key(i);
           if (
             k &&
+            !k.startsWith("fastHire_jobs_") &&
             (k.startsWith("sb-") ||
               k.startsWith("fastHire_") ||
               k === "fasthire-resume-storage")

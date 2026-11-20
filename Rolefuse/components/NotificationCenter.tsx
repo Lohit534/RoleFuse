@@ -66,6 +66,46 @@ export function getActiveNotifications(
 
   const notifications: AppNotification[] = [];
 
+  // 1. Credit notifications based on remaining credits
+  const availableCredits =
+    planId === "free"
+      ? (credits.freeRemaining ?? 0)
+      : (credits.paidCredits ?? credits.freeRemaining ?? 0);
+
+  // Single 1 credit remaining notification
+  if (availableCredits === 1) {
+    const notifId = `credit_single_1_${currentMonthKey}`;
+    if (!dismissedIds.includes(notifId)) {
+      notifications.push({
+        id: notifId,
+        type: "alert",
+        title: "1 Credit Remaining — Please Upgrade",
+        message: "You have only 1 optimization credit available. Upgrade your plan now to ensure uninterrupted AI resume tailoring, cover letter generation, and exports.",
+        tag: "1 Credit Left",
+        actionText: "Upgrade Plan",
+        actionHref: "/dashboard/pricing",
+        dateStr: "Action Required",
+      });
+    }
+  }
+
+  // All credits exhausted (0 credits remaining - none to use) notification
+  if (availableCredits <= 0) {
+    const notifId = `credit_exhausted_none_${currentMonthKey}`;
+    if (!dismissedIds.includes(notifId)) {
+      notifications.push({
+        id: notifId,
+        type: "alert",
+        title: "All Credits Used — None Remaining (Please Upgrade)",
+        message: "You have 0 credits remaining (none to use). All optimization credits for your current cycle have been used up. Please upgrade your plan to continue using AI resume optimizations, cover letters, and roadmaps.",
+        tag: "None Available",
+        actionText: "Upgrade Now",
+        actionHref: "/dashboard/pricing",
+        dateStr: "Exhausted",
+      });
+    }
+  }
+
   // Check 24-hour expiration for paid plans
   if (isPaid && credits.expiresAt) {
     const expiry = new Date(credits.expiresAt);

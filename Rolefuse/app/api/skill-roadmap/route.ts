@@ -130,12 +130,106 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { getAdminClient } = await import("@/lib/supabase/admin");
+    const { isOwnerEmail } = await import("@/types");
+    const admin = getAdminClient();
+    const isOwner = isOwnerEmail(user.email);
+
+    let activeUserId = user.id;
+    try {
+      if (user.email) {
+        const { data: existingUser } = await admin
+          .from("User")
+          .select("id")
+          .eq("email", user.email.toLowerCase().trim())
+          .maybeSingle();
+        if (existingUser?.id) activeUserId = existingUser.id;
+      }
+    } catch (_e) {}
+
+    let userPlan = "free";
+    let roadmapLimit = 0;
+    let currentRoadmapCount = 0;
+
+    if (!isOwner) {
+      const { data: userRow } = await admin
+        .from("User")
+        .select("planTier")
+        .eq("id", activeUserId)
+        .maybeSingle();
+
+      const { data: creditRows } = await admin
+        .from("Credit")
+        .select("*")
+        .or(`userId.eq.${activeUserId},userId.eq.${user.id}`)
+        .limit(1);
+
+      const creditRow = creditRows?.[0] || null;
+      const isProMax =
+        userRow?.planTier === "promax" ||
+        creditRow?.planId === "promax" ||
+        creditRow?.billingCycle === "admin_promax" ||
+        (creditRow?.paidCredits >= 90 && creditRow?.paidCredits < 900000);
+
+      const isPremium =
+        userRow?.planTier === "premium" ||
+        creditRow?.planId === "premium" ||
+        creditRow?.billingCycle === "admin_premium" ||
+        creditRow?.billingCycle === "monthly" ||
+        creditRow?.billingCycle === "yearly" ||
+        (creditRow?.paidCredits > 0);
+
+      if (isProMax) {
+        userPlan = "promax";
+        roadmapLimit = 15;
+      } else if (isPremium) {
+        userPlan = "premium";
+        roadmapLimit = 5;
+      } else {
+        userPlan = "free";
+        roadmapLimit = 0;
+      }
+
+      if (userPlan === "free") {
+        return NextResponse.json(
+          { error: "Skills learning roadmaps are a Premium Pro (5/month) and Pro Max (15/month) feature. Please upgrade your plan to unlock personalized career roadmaps." },
+          { status: 403 }
+        );
+      }
+
+      // Check monthly usage from Resume records
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const userIds = Array.from(new Set([activeUserId, user.id, user.email].filter(Boolean)));
+      const { count: monthlyRoadmapCount } = await admin
+        .from("Resume")
+        .select("id", { count: "exact", head: true })
+        .in("userId", userIds)
+        .not("roadmap", "is", null)
+        .gte("createdAt", startOfMonth.toISOString());
+
+      currentRoadmapCount = monthlyRoadmapCount || 0;
+      if (currentRoadmapCount >= roadmapLimit) {
+        return NextResponse.json(
+          {
+            error: `You have reached your monthly quota of ${roadmapLimit} skill roadmaps on ${userPlan === "promax" ? "Pro Max" : "Premium Pro"}. ${userPlan === "promax" ? "Please wait for your next billing cycle reset." : "Please upgrade to Pro Max for 15 roadmaps per month."}`,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const prompt = buildSkillRoadmapPrompt(skills, jobTitle, company, jobDescription, resumeText);
 
     logger.info(`[skill-roadmap] Generating AI roadmap for: ${skills.join(", ")} (Role: ${jobTitle || "N/A"})`);
     const roadmap = await callAIText(prompt);
 
-    return NextResponse.json({ roadmap });
+    return NextResponse.json({
+      roadmap,
+      usage: isOwner ? { used: 0, limit: 999999 } : { used: currentRoadmapCount + 1, limit: roadmapLimit },
+    });
   } catch (error: any) {
     logger.error("[skill-roadmap] API Route error:", error?.message);
     return NextResponse.json(
