@@ -1,13 +1,16 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../logger";
 
-// Active supported Gemini models in priority order (verified against Google AI API)
+// Active supported Gemini models — verified live from your API key (generateContent capable)
+// Ordered by speed + reliability. gemini-4-hydrogen is high-quality but can 503 under load.
 export const GEMINI_MODELS = [
-  "gemini-4-hydrogen",       // Tier 1: Gemini 4 Hydrogen — 1M context, highest intelligence, thinking model
-  "gemini-2.0-flash",        // Tier 2: Fastest Gemini 2 Flash — best for structured JSON
-  "gemini-2.0-flash-lite",   // Tier 3: Lightweight flash variant — low latency fallback
-  "gemini-1.5-flash",        // Tier 4: Stable 1.5 Flash — reliable & widely available
-  "gemini-1.5-flash-8b",     // Tier 5: 8B variant — last resort speed fallback
+  "gemini-3.8-flash",        // Tier 1: Fastest confirmed working flash — primary workhorse
+  "gemini-3.6-flash",        // Tier 2: Stable flash fallback
+  "gemini-3.5-flash",        // Tier 3: Proven flash, widely available
+  "gemini-2.5-flash",        // Tier 4: Stable 2.5 Flash — broadly reliable
+  "gemini-3.1-flash-lite",   // Tier 5: Lightweight fast fallback
+  "gemini-4-hydrogen",       // Tier 6: Most capable but can 503 under high load
+  "gemini-2.5-pro",          // Tier 7: Pro model — slower but highly capable last resort
 ];
 
 // Robust multi-tier parser: extracts resume data from clean JSON, messy JSON, or plain text
