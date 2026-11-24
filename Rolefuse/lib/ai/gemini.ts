@@ -1,16 +1,19 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../logger";
 
-// Active supported Gemini models — verified live from your API key (generateContent capable)
-// Ordered by speed + reliability. gemini-4-hydrogen is high-quality but can 503 under load.
+// Active Gemini models — live-tested against your API key, ordered by confirmed availability.
+// gemini-3.6-flash and gemini-flash-lite-latest confirmed ✅ working now.
+// Others (3.8-flash, 3.7-flash, 4-hydrogen, 3.1-flash-lite) confirmed on this key but
+// currently returning 503 under load — kept as ordered fallbacks.
 export const GEMINI_MODELS = [
-  "gemini-3.8-flash",        // Tier 1: Fastest confirmed working flash — primary workhorse
-  "gemini-3.6-flash",        // Tier 2: Stable flash fallback
-  "gemini-3.5-flash",        // Tier 3: Proven flash, widely available
-  "gemini-2.5-flash",        // Tier 4: Stable 2.5 Flash — broadly reliable
-  "gemini-3.1-flash-lite",   // Tier 5: Lightweight fast fallback
-  "gemini-4-hydrogen",       // Tier 6: Most capable but can 503 under high load
-  "gemini-2.5-pro",          // Tier 7: Pro model — slower but highly capable last resort
+  "gemini-3.6-flash",        // Tier 1: ✅ Confirmed live & fast — primary workhorse
+  "gemini-flash-lite-latest", // Tier 2: ✅ Confirmed live — lightweight alias always stable
+  "gemini-3.8-flash",        // Tier 3: Confirmed on key, may 503 under load
+  "gemini-3.7-flash",        // Tier 4: Confirmed on key, may 503 under load
+  "gemini-3.5-flash",        // Tier 5: Confirmed on key fallback
+  "gemini-3.1-flash-lite",   // Tier 6: Confirmed on key, lightweight
+  "gemini-4-hydrogen",       // Tier 7: Most capable but 503s under heavy load
+  "gemini-3.1-flash-lite-preview", // Tier 8: Preview fallback
 ];
 
 // Robust multi-tier parser: extracts resume data from clean JSON, messy JSON, or plain text
