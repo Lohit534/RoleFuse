@@ -75,24 +75,24 @@ export async function generateDOCX(
     const parsed = parseResume(resumeInput, originalText);
     const children: Paragraph[] = [];
 
-    // Optional Watermark
+    // Optional Watermark (Free tier)
     if (watermarked) {
       children.push(
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: [
-            run("ROLEFUSE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)", {
+            run("ROLEFUSE AI", {
               bold: true,
-              color: "CC0000",
-              size: 20,
+              color: "555555",
+              size: 17, // 8.5pt
             }),
           ],
-          spacing: { after: 120 },
+          spacing: { after: 60 },
         })
       );
     }
 
-    // 1. Name — 20pt bold centered
+    // 1. Name — 19pt bold centered
     if (parsed.name) {
       children.push(
         new Paragraph({
@@ -101,16 +101,16 @@ export async function generateDOCX(
             new TextRun({
               text: stripMarkdownAsterisks(parsed.name),
               font: FONT,
-              size: 40, // 20pt
+              size: 38, // 19pt
               bold: true,
             }),
           ],
-          spacing: { after: 40 },
+          spacing: { after: 30 },
         })
       );
     }
 
-    // Role — 11pt italic centered
+    // Role — 10.5pt italic centered
     if (parsed.role) {
       children.push(
         new Paragraph({
@@ -119,32 +119,39 @@ export async function generateDOCX(
             new TextRun({
               text: stripMarkdownAsterisks(parsed.role),
               font: FONT,
-              size: 22, // 11pt
+              size: 21, // 10.5pt
               italics: true,
             }),
           ],
-          spacing: { after: 40 },
+          spacing: { after: 30 },
         })
       );
     }
 
-    // 2. Contact row — 9.5pt centered gray, separated by spaces, all on one line
-    // 3. Horizontal rule after contact (bottom border single 6pt black)
+    // 2. Contact row — centered, separated by bullets, no bottom line
     const uniqueContacts = parsed.contacts.filter((c, idx, arr) => arr.findIndex(x => x.type === c.type) === idx);
     if (uniqueContacts.length > 0) {
       const contactRuns: (TextRun | ExternalHyperlink)[] = [];
       uniqueContacts.forEach((c, idx) => {
-        const linkUrl = c.url || (c.type === "email" ? `mailto:${c.text}` : (c.type === "phone" ? `tel:${c.text.replace(/[^+\d]/g, "")}` : null));
+        let displayPhone = c.text;
+        if (c.type === "phone") {
+          const cleaned = c.text.trim();
+          if (/^(\+)?91\s*\d{10}$/.test(cleaned)) {
+            displayPhone = cleaned.replace(/^(\+)?91\s*/, "+91 ");
+          } else if (/^91\s*\d+/.test(cleaned)) {
+            displayPhone = `+${cleaned}`;
+          }
+        }
+        const linkUrl = c.url || (c.type === "email" ? `mailto:${c.text}` : (c.type === "phone" ? `tel:${displayPhone.replace(/[^+\d]/g, "")}` : null));
         if (linkUrl) {
           contactRuns.push(
             new ExternalHyperlink({
               children: [
                 new TextRun({
-                  text: c.text,
+                  text: displayPhone,
                   font: FONT,
                   size: 19, // 9.5pt
-                  color: "0000EE",
-                  underline: {},
+                  color: "000000",
                 }),
               ],
               link: linkUrl,
@@ -153,10 +160,10 @@ export async function generateDOCX(
         } else {
           contactRuns.push(
             new TextRun({
-              text: c.text,
+              text: displayPhone,
               font: FONT,
               size: 19, // 9.5pt
-              color: "444444",
+              color: "000000",
             })
           );
         }
@@ -166,7 +173,7 @@ export async function generateDOCX(
               text: "   •   ",
               font: FONT,
               size: 19,
-              color: "888888",
+              color: "666666",
             })
           );
         }
@@ -176,20 +183,12 @@ export async function generateDOCX(
         new Paragraph({
           alignment: AlignmentType.CENTER,
           children: contactRuns,
-          border: {
-            bottom: {
-              color: "000000",
-              space: 4,
-              style: BorderStyle.SINGLE,
-              size: 6, // 0.75pt line
-            },
-          },
-          spacing: { after: 120 },
+          spacing: { after: 60 },
         })
       );
     }
 
-    // Helper for Section Headers: 11pt bold allCaps with bottom border single 6pt black
+    // Helper for Section Headers: 10.5pt bold allCaps with bottom border single 6pt black
     const addSectionHeader = (title: string) => {
       children.push(
         new Paragraph({
@@ -197,7 +196,7 @@ export async function generateDOCX(
             new TextRun({
               text: title.toUpperCase(),
               font: FONT,
-              size: 22, // 11pt
+              size: 21, // 10.5pt
               bold: true,
               allCaps: true,
             }),
@@ -210,7 +209,7 @@ export async function generateDOCX(
               size: 6,
             },
           },
-          spacing: { before: 200, after: 80 }, // 10pt before, 4pt after
+          spacing: { before: 120, after: 30 }, // tightened spacing
         })
       );
     };
@@ -259,7 +258,7 @@ export async function generateDOCX(
 
         // Line 1: "Job Title – Company" LEFT + "Date Range" RIGHT
         children.push(
-          twoCol(fullTitle, exp.dateRange, { bold: true }, { color: "555555" }, 20)
+          twoCol(fullTitle, exp.dateRange, { bold: true }, { color: "000000" }, 20)
         );
 
         // Line 2: "Tech stack tags" left in gray italic
@@ -342,12 +341,12 @@ export async function generateDOCX(
 
         // Line 1: "Degree" LEFT + "Year" RIGHT
         children.push(
-          twoCol(cleanDegree, edu.yearOrDates, { bold: true }, { color: "555555" }, 15)
+          twoCol(cleanDegree, edu.yearOrDates, { bold: true }, { color: "000000" }, 15)
         );
 
-        // Line 2: "Institution" LEFT + "CGPA/GPA" RIGHT, separated by 4pt space (80 twips)
+        // Line 2: "Institution" LEFT + "CGPA/GPA" RIGHT, separated by space
         children.push(
-          twoCol(cleanInst, edu.grade, { italics: true }, { color: "555555", italics: true }, 80)
+          twoCol(cleanInst, edu.grade, { italics: true }, { color: "000000" }, 50)
         );
       }
     }
@@ -360,7 +359,7 @@ export async function generateDOCX(
       }
     }
 
-    // Document creation with 720 twips (0.5 inch) margins all sides
+    // Document creation with 576 twips (0.4 inch) margins all sides
     const doc = new Document({
       styles: {
         default: {
@@ -374,10 +373,10 @@ export async function generateDOCX(
           properties: {
             page: {
               margin: {
-                top: 720,
-                bottom: 720,
-                left: 720,
-                right: 720,
+                top: 576,
+                bottom: 576,
+                left: 576,
+                right: 576,
               },
             },
           },

@@ -38,7 +38,7 @@ export default function Footer() {
 
   return (
     <footer className="w-full bg-white border-t border-slate-200 pt-10 sm:pt-12 md:pt-14 pb-28 sm:pb-12 md:pb-14 mt-auto text-slate-800 font-sans relative z-10">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1536px] 2xl:max-w-[1680px] px-4 sm:px-8 lg:px-12">
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 md:gap-10 mb-8 sm:mb-10">
           
           {/* Brand & Mission Tagline */}

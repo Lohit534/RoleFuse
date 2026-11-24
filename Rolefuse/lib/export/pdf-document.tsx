@@ -88,8 +88,8 @@ const ContactIcon: React.FC<{ type: string }> = ({ type }) => {
   }
 
   return (
-    <Svg width={8} height={8} viewBox="0 0 24 24" style={{ marginRight: 3 }}>
-      <Path d={path} fill="#444444" />
+    <Svg width={8.5} height={8.5} viewBox="0 0 24 24" style={{ marginRight: 3, alignSelf: "center" }}>
+      <Path d={path} fill="#000000" />
     </Svg>
   );
 };
@@ -98,36 +98,37 @@ const ContactIcon: React.FC<{ type: string }> = ({ type }) => {
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Times-Roman",
-    fontSize: 10.5,
-    lineHeight: 1.4,
-    paddingTop: 36,
-    paddingBottom: 36,
-    paddingHorizontal: 42,
+    fontSize: 10,
+    lineHeight: 1.28,
+    paddingTop: 24,
+    paddingBottom: 24,
+    paddingHorizontal: 36,
     color: "#000000",
     backgroundColor: "#FFFFFF",
   },
   watermark: {
     fontFamily: "Times-Bold",
-    fontSize: 9,
-    color: "#CC0000",
+    fontSize: 8.5,
+    letterSpacing: 1.5,
+    color: "#555555",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 5,
     textTransform: "uppercase",
   },
-  // 1. Name: Times-Bold 20pt centered
+  // 1. Name: Times-Bold 19pt centered
   name: {
     fontFamily: "Times-Bold",
-    fontSize: 20,
+    fontSize: 19,
     textAlign: "center",
     marginBottom: 2,
     color: "#000000",
   },
-  // Role: Times-Italic 11pt centered marginBottom 3
+  // Role: Times-Italic 10.5pt centered marginBottom 2
   role: {
     fontFamily: "Times-Italic",
-    fontSize: 11,
+    fontSize: 10.5,
     textAlign: "center",
-    marginBottom: 3,
+    marginBottom: 2,
     color: "#000000",
   },
   // 2. Contact row: centered, icons before each, separated by spaces, all on one line
@@ -136,61 +137,54 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     flexWrap: "wrap",
-    marginBottom: 5,
+    marginBottom: 3,
   },
   contactItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 6,
+    marginHorizontal: 5,
     marginVertical: 1,
   },
   contactText: {
     fontFamily: "Times-Roman",
     fontSize: 9.5,
-    color: "#444444",
+    color: "#000000",
   },
-  // 3. Horizontal rule after contact
-  contactDivider: {
-    borderBottomWidth: 0.75,
-    borderBottomColor: "#000000",
-    width: "100%",
-    marginBottom: 6,
-  },
-  // SECTION HEADERS: Times-Bold 11pt uppercase, borderBottom 0.75pt solid black paddingBottom 2, 10pt margin top, 4pt margin bottom
+  // SECTION HEADERS: Times-Bold 10.5pt uppercase, borderBottom 0.75pt solid black paddingBottom 1.5, 6pt margin top, 2pt margin bottom
   sectionHeaderWrapper: {
-    marginTop: 10,
-    marginBottom: 4,
+    marginTop: 6,
+    marginBottom: 2,
   },
   sectionHeader: {
     fontFamily: "Times-Bold",
-    fontSize: 11,
+    fontSize: 10.5,
     textTransform: "uppercase",
     borderBottomWidth: 0.75,
     borderBottomColor: "#000000",
-    paddingBottom: 2,
+    paddingBottom: 1.5,
     color: "#000000",
   },
   // Summary
   summaryText: {
     fontFamily: "Times-Roman",
-    fontSize: 10.5,
-    lineHeight: 1.4,
+    fontSize: 10,
+    lineHeight: 1.28,
     textAlign: "justify",
     color: "#000000",
   },
   // Skills: "Bold Label: normal value" on each line, plain lines only (no bullets)
   skillLine: {
     flexDirection: "row",
-    marginBottom: 2,
+    marginBottom: 1.5,
   },
   skillLabel: {
     fontFamily: "Times-Bold",
-    fontSize: 10.5,
+    fontSize: 10,
     color: "#000000",
   },
   skillValue: {
     fontFamily: "Times-Roman",
-    fontSize: 10.5,
+    fontSize: 10,
     color: "#000000",
   },
   // Experience / Projects / Education common rows
@@ -202,14 +196,14 @@ const styles = StyleSheet.create({
   },
   leftBold: {
     fontFamily: "Times-Bold",
-    fontSize: 10.5,
+    fontSize: 10,
     color: "#000000",
     flex: 1,
   },
   rightDate: {
     fontFamily: "Times-Roman",
     fontSize: 10,
-    color: "#555555",
+    color: "#000000",
     textAlign: "right",
     marginLeft: 8,
   },
@@ -222,19 +216,19 @@ const styles = StyleSheet.create({
   },
   leftItalic: {
     fontFamily: "Times-Italic",
-    fontSize: 10,
+    fontSize: 9.5,
     color: "#000000",
     flex: 1,
   },
   techTagsItalic: {
     fontFamily: "Times-Italic",
-    fontSize: 10,
-    color: "#666666",
+    fontSize: 9.5,
+    color: "#555555",
   },
   rightGradeItalic: {
-    fontFamily: "Times-Italic",
-    fontSize: 10,
-    color: "#555555",
+    fontFamily: "Times-Roman",
+    fontSize: 9.5,
+    color: "#000000",
     textAlign: "right",
     marginLeft: 8,
   },
@@ -242,7 +236,7 @@ const styles = StyleSheet.create({
   bulletRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 1.5,
+    marginBottom: 1,
     paddingLeft: 6,
   },
   bulletDot: {
@@ -254,17 +248,17 @@ const styles = StyleSheet.create({
   bulletText: {
     flex: 1,
     fontFamily: "Times-Roman",
-    fontSize: 10.5,
-    lineHeight: 1.4,
+    fontSize: 10,
+    lineHeight: 1.28,
     textAlign: "justify",
     color: "#000000",
   },
   boldInline: {
     fontFamily: "Times-Bold",
   },
-  // Education entry spacing: 4pt space between entries
+  // Education entry spacing: 2.5pt space between entries
   eduEntry: {
-    marginBottom: 4,
+    marginBottom: 2.5,
   },
 });
 
@@ -283,17 +277,17 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
   return (
     <Document title={docTitle} author={parsed.name}>
       <Page size="A4" style={styles.page}>
-        {/* Optional Watermark */}
+        {/* Free Tier Watermark */}
         {watermarked && (
           <Text style={styles.watermark}>
-            ROLEFUSE AI — FREE TIER PREVIEW (UPGRADE TO PRO TO DOWNLOAD)
+            ROLEFUSE AI
           </Text>
         )}
 
-        {/* 1. Name — large centered bold (20pt) */}
+        {/* 1. Name — large centered bold (19pt) */}
         {parsed.name ? <Text style={styles.name}>{parsed.name}</Text> : null}
 
-        {/* Role — Times-Italic 11pt centered marginBottom 3 */}
+        {/* Role — Times-Italic 10.5pt centered marginBottom 2 */}
         {parsed.role ? <Text style={styles.role}>{parsed.role}</Text> : null}
 
         {/* 2. Contact row — centered, icons before each, separated by spaces, all on one line */}
@@ -302,16 +296,25 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
             {parsed.contacts
               .filter((c, idx, arr) => arr.findIndex(x => x.type === c.type) === idx)
               .map((c, i) => {
-                const linkUrl = c.url || (c.type === "email" ? `mailto:${c.text}` : (c.type === "phone" ? `tel:${c.text.replace(/[^+\d]/g, "")}` : null));
+                let displayPhone = c.text;
+                if (c.type === "phone") {
+                  const cleaned = c.text.trim();
+                  if (/^(\+)?91\s*\d{10}$/.test(cleaned)) {
+                    displayPhone = cleaned.replace(/^(\+)?91\s*/, "+91 ");
+                  } else if (/^91\s*\d+/.test(cleaned)) {
+                    displayPhone = `+${cleaned}`;
+                  }
+                }
+                const linkUrl = c.url || (c.type === "email" ? `mailto:${c.text}` : (c.type === "phone" ? `tel:${displayPhone.replace(/[^+\d]/g, "")}` : null));
                 return (
                   <View key={i} style={styles.contactItem}>
                     <ContactIcon type={c.type} />
                     {linkUrl ? (
                       <Link src={linkUrl} style={{ ...styles.contactText, textDecoration: 'none' }}>
-                        {c.text}
+                        {displayPhone}
                       </Link>
                     ) : (
-                      <Text style={styles.contactText}>{c.text}</Text>
+                      <Text style={styles.contactText}>{displayPhone}</Text>
                     )}
                   </View>
                 );
@@ -319,15 +322,12 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
           </View>
         )}
 
-        {/* 3. Horizontal rule after contact */}
-        <View style={styles.contactDivider} />
-
-        {/* 4. Sections in strict order:
+        {/* 3. Sections in strict order:
             SUMMARY → SKILLS → EXPERIENCE → PROJECTS → AWARDS & CERTIFICATIONS → EDUCATION → LANGUAGES */}
 
         {/* SECTION 1: SUMMARY */}
         {parsed.summary ? (
-          <View wrap={false}>
+          <View>
             <View style={styles.sectionHeaderWrapper}>
               <Text style={styles.sectionHeader}>SUMMARY</Text>
             </View>
@@ -337,12 +337,12 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
 
         {/* SECTION 2: SKILLS */}
         {parsed.skills.length > 0 && (
-          <View wrap={false}>
+          <View>
             <View style={styles.sectionHeaderWrapper}>
               <Text style={styles.sectionHeader}>SKILLS</Text>
             </View>
             {parsed.skills.map((s, i) => (
-              <View key={i} style={styles.skillLine}>
+              <View key={i} style={styles.skillLine} wrap={false}>
                 <Text>
                   <Text style={styles.skillLabel}>{s.label}: </Text>
                   <Text style={styles.skillValue}>{s.skills}</Text>
@@ -367,7 +367,7 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
               const cleanTech = (exp.techTags || "").replace(/[\s|–—\-,:]+$/, "").replace(/^[\s|–—\-,:]+/, "").trim();
 
               return (
-                <View key={i} style={{ marginBottom: 3 }} wrap={false}>
+                <View key={i} style={{ marginBottom: 2.5 }} wrap={false}>
                   {/* Line 1: "Job Title – Company" LEFT + "Date Range" RIGHT */}
                   <View style={styles.twoColRow}>
                     <Text style={styles.leftBold}>{fullTitle}</Text>
@@ -376,7 +376,7 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
 
                   {/* Line 2: "Tech stack tags" left in gray italic */}
                   {cleanTech ? (
-                    <View style={{ marginBottom: 2 }}>
+                    <View style={{ marginBottom: 1.5 }}>
                       <Text style={styles.techTagsItalic}>{cleanTech}</Text>
                     </View>
                   ) : null}
@@ -408,7 +408,7 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
                 : cleanProjName;
 
               return (
-                <View key={i} style={{ marginBottom: 3 }} wrap={false}>
+                <View key={i} style={{ marginBottom: 2.5 }} wrap={false}>
                   {/* Line 1: "Project Name — Tech Stack" LEFT + "Year" RIGHT */}
                   <View style={styles.twoColRow}>
                     <Text style={styles.leftBold}>{projectTitle}</Text>
@@ -433,7 +433,7 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
           const raw = c.raw.replace(/^[#*•\-\u2022\s]+/, '').replace(/[:\-_|]+$/, '').trim();
           return raw.length > 0 && !/^(?:&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)|awards?\s*(?:&|and)\s*certifications?|certifications?\s*(?:&|and)\s*awards?|certifications?\s*(?:&|and)\s*achievements?|achievements?\s*(?:&|and)\s*certifications?|certifications?|achievements?|awards?|certificates?|licenses?)$/i.test(raw);
         }).length > 0 && (
-          <View wrap={false}>
+          <View>
             <View style={styles.sectionHeaderWrapper}>
               <Text style={styles.sectionHeader}>AWARDS & CERTIFICATIONS</Text>
             </View>
@@ -443,7 +443,7 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
                 return raw.length > 0 && !/^(?:&?\s*(?:ACHIEVEMENTS?|CERTIFICATIONS?|AWARDS?)|awards?\s*(?:&|and)\s*certifications?|certifications?\s*(?:&|and)\s*awards?|certifications?\s*(?:&|and)\s*achievements?|achievements?\s*(?:&|and)\s*certifications?|certifications?|achievements?|awards?|certificates?|licenses?)$/i.test(raw);
               })
               .map((cert, i) => (
-                <View key={i} style={styles.bulletRow}>
+                <View key={i} style={styles.bulletRow} wrap={false}>
                   <Text style={styles.bulletDot}>•</Text>
                   <Text style={styles.bulletText}>
                     {cert.boldPrefix ? (
@@ -458,7 +458,7 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
 
         {/* SECTION 6: EDUCATION */}
         {parsed.education.length > 0 && (
-          <View wrap={false}>
+          <View>
             <View style={styles.sectionHeaderWrapper}>
               <Text style={styles.sectionHeader}>EDUCATION</Text>
             </View>
@@ -482,7 +482,7 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
               cleanInst = cleanInst.replace(/[\s|–—\-,:]+$/, "").trim();
 
               return (
-                <View key={i} style={styles.eduEntry}>
+                <View key={i} style={styles.eduEntry} wrap={false}>
                   {/* Line 1: "Degree" LEFT + "Year" RIGHT */}
                   <View style={styles.twoColRow}>
                     <Text style={styles.leftBold}>{cleanDegree}</Text>
@@ -502,12 +502,12 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
 
         {/* SECTION 7: LANGUAGES */}
         {parsed.languages.length > 0 && (
-          <View wrap={false}>
+          <View>
             <View style={styles.sectionHeaderWrapper}>
               <Text style={styles.sectionHeader}>LANGUAGES</Text>
             </View>
             {parsed.languages.map((lang, i) => (
-              <View key={i} style={styles.bulletRow}>
+              <View key={i} style={styles.bulletRow} wrap={false}>
                 <Text style={styles.bulletDot}>•</Text>
                 <Text style={styles.bulletText}>{lang}</Text>
               </View>

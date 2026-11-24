@@ -418,7 +418,7 @@ export default function Navbar({ refreshKey = 0, hideNav = false }: NavbarProps)
   return (
     <>
       <nav className="border-t-[3px] border-t-[#087F6E] border-b border-[#DCE7E9] bg-white text-[#111827] sticky top-0 z-50 shadow-xs select-none">
-        <div className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1536px] 2xl:max-w-[1680px] px-4 sm:px-8 lg:px-12">
           <div className="flex h-16 items-center justify-between relative">
             {/* Left: Brand logo & Dashboard internal navigation */}
             <div className="flex items-center gap-7">

@@ -434,3 +434,25 @@ input:focus, textarea:focus {
   background-size: 250% 100%;
   animation: claudeShimmer 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
+
+/* Process Showcase Fill Bar Animation */
+@keyframes fillProgress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.fill-bar {
+  position: absolute;
+  inset: 0;
+  background: #087f6e;
+  transform-origin: left;
+  animation: fillProgress 4500ms linear forwards;
+}
+
+.fill-bar-paused {
+  animation-play-state: paused;
+}
