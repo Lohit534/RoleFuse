@@ -247,11 +247,16 @@ export function extractProfileUrls(text: string): ProfileUrls {
     }
   }
 
-  // 4. Full or partial GitHub URL
+  // 4. Full or partial GitHub URL (prefer profile URL github.com/user over repo URL github.com/user/repo)
   if (!result.github) {
-    const ghMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-–_.%]+(?:\/[\w\-–_.%]+)?\/? */i);
-    if (ghMatch) {
-      result.github = normalizeProfileUrl(ghMatch[0], "github");
+    const ghMatches = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-–_.%]+(?:\/[\w\-–_.%]+)?\/?/gi) || [];
+    const profileOnly = ghMatches.find((m) => {
+      const pathPart = m.replace(/^(?:https?:\/\/)?(?:www\.)?github\.com\//i, "").replace(/\/+$/, "");
+      return pathPart.length > 0 && !pathPart.includes("/");
+    });
+    const chosenGh = profileOnly || ghMatches[0];
+    if (chosenGh) {
+      result.github = normalizeProfileUrl(chosenGh, "github");
     }
   }
 
@@ -270,6 +275,9 @@ export function extractProfileUrls(text: string): ProfileUrls {
     if (
       !url.includes("linkedin.com") &&
       !url.includes("github.com") &&
+      !url.includes("raw.githubusercontent") &&
+      !url.includes("/blob/") &&
+      !url.endsWith(".pdf") &&
       !url.includes("mailto:") &&
       !result.portfolio
     ) {

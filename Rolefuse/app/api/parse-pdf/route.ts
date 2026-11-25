@@ -184,25 +184,41 @@ export async function POST(request: NextRequest) {
 
           let pdfjsText = pageTexts.join("\n\n");
 
-          // Inject any missing LinkedIn / GitHub links discovered in PDF annotations
+          // Inject any missing LinkedIn / GitHub links discovered in PDF annotations (never prepend before candidate name on line 1)
           if (extractedLinks.size > 0 && pdfjsText.trim().length > 50) {
-            extractedLinks.forEach((linkUrl) => {
+            const linksArr = Array.from(extractedLinks).map((u) => u.replace(/[,;.\)>\]]+$/, "").trim());
+            const liUrl = linksArr.find((u) => /linkedin\.com\/in\//i.test(u)) || linksArr.find((u) => /linkedin\.com/i.test(u));
+            const ghUrl =
+              linksArr.find((u) => /github\.com\/[^/]+\/?$/i.test(u)) ||
+              linksArr.find((u) => /github\.com/i.test(u));
+
+            for (const linkUrl of [liUrl, ghUrl].filter(Boolean) as string[]) {
               if (!pdfjsText.includes(linkUrl)) {
                 if (/linkedin\.com/i.test(linkUrl)) {
                   if (/\blinkedin\b/i.test(pdfjsText) && !/linkedin\.com/i.test(pdfjsText)) {
                     pdfjsText = pdfjsText.replace(/\blinkedin\b/i, `LinkedIn: ${linkUrl}`);
-                  } else {
-                    pdfjsText = `${linkUrl}\n` + pdfjsText;
+                  } else if (!/linkedin\.com/i.test(pdfjsText)) {
+                    const firstNl = pdfjsText.indexOf("\n");
+                    if (firstNl !== -1) {
+                      pdfjsText = pdfjsText.slice(0, firstNl) + `\nLinkedIn: ${linkUrl}` + pdfjsText.slice(firstNl);
+                    } else {
+                      pdfjsText += `\nLinkedIn: ${linkUrl}`;
+                    }
                   }
                 } else if (/github\.com/i.test(linkUrl)) {
                   if (/\bgithub\b/i.test(pdfjsText) && !/github\.com/i.test(pdfjsText)) {
                     pdfjsText = pdfjsText.replace(/\bgithub\b/i, `GitHub: ${linkUrl}`);
-                  } else {
-                    pdfjsText = `${linkUrl}\n` + pdfjsText;
+                  } else if (!/github\.com/i.test(pdfjsText)) {
+                    const firstNl = pdfjsText.indexOf("\n");
+                    if (firstNl !== -1) {
+                      pdfjsText = pdfjsText.slice(0, firstNl) + `\nGitHub: ${linkUrl}` + pdfjsText.slice(firstNl);
+                    } else {
+                      pdfjsText += `\nGitHub: ${linkUrl}`;
+                    }
                   }
                 }
               }
-            });
+            }
           }
 
           if (pdfjsText.trim().length > 50) {
@@ -305,33 +321,39 @@ export async function POST(request: NextRequest) {
 
     // Inject any discovered LinkedIn / GitHub links into extractedText if missing
     if (fileType === "pdf" && extractedLinks.size > 0 && extractedText.trim().length > 30) {
-      extractedLinks.forEach((linkUrl) => {
+      const linksArr = Array.from(extractedLinks).map((u) => u.replace(/[,;.\)>\]]+$/, "").trim());
+      const liUrl = linksArr.find((u) => /linkedin\.com\/in\//i.test(u)) || linksArr.find((u) => /linkedin\.com/i.test(u));
+      const ghUrl =
+        linksArr.find((u) => /github\.com\/[^/]+\/?$/i.test(u)) ||
+        linksArr.find((u) => /github\.com/i.test(u));
+
+      for (const linkUrl of [liUrl, ghUrl].filter(Boolean) as string[]) {
         if (!extractedText.includes(linkUrl)) {
           if (/linkedin\.com/i.test(linkUrl)) {
             if (/\blinkedin\b/i.test(extractedText) && !/linkedin\.com/i.test(extractedText)) {
               extractedText = extractedText.replace(/\blinkedin\b/i, `LinkedIn: ${linkUrl}`);
-            } else {
+            } else if (!/linkedin\.com/i.test(extractedText)) {
               const firstNl = extractedText.indexOf("\n");
               if (firstNl !== -1) {
                 extractedText = extractedText.slice(0, firstNl) + ` | LinkedIn: ${linkUrl}` + extractedText.slice(firstNl);
               } else {
-                extractedText = `LinkedIn: ${linkUrl}\n` + extractedText;
+                extractedText += `\nLinkedIn: ${linkUrl}`;
               }
             }
           } else if (/github\.com/i.test(linkUrl)) {
             if (/\bgithub\b/i.test(extractedText) && !/github\.com/i.test(extractedText)) {
               extractedText = extractedText.replace(/\bgithub\b/i, `GitHub: ${linkUrl}`);
-            } else {
+            } else if (!/github\.com/i.test(extractedText)) {
               const firstNl = extractedText.indexOf("\n");
               if (firstNl !== -1) {
                 extractedText = extractedText.slice(0, firstNl) + ` | GitHub: ${linkUrl}` + extractedText.slice(firstNl);
               } else {
-                extractedText = `GitHub: ${linkUrl}\n` + extractedText;
+                extractedText += `\nGitHub: ${linkUrl}`;
               }
             }
           }
         }
-      });
+      }
     }
 
     // Clean up control characters and invalid Unicode from AI-generated/Canva PDFs while preserving exact text

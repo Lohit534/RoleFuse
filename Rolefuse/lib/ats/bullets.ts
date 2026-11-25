@@ -451,19 +451,33 @@ export function enrichResumeATSQuality(
         text = text.replace(coreCompMatch[0] + "\n", "").replace(coreCompMatch[0], "");
       }
 
+      // Collect ALL existing skill keys across the ENTIRE Technical Skills section to prevent cross-category duplication
+      const skillsBody = text.slice(afterHeaderPos);
+      const nextSectionMatch = skillsBody.match(/\r?\n(?:PROFESSIONAL EXPERIENCE|INTERNSHIP EXPERIENCE|WORK EXPERIENCE|EXPERIENCE|PROJECTS|EDUCATION|AWARDS|CERTIFICATIONS|LANGUAGES)\b/i);
+      const skillsSectionSlice = nextSectionMatch && nextSectionMatch.index !== undefined
+        ? skillsBody.slice(0, nextSectionMatch.index)
+        : skillsBody;
+      const globalExistingKeys = new Set<string>();
+      for (const sLine of skillsSectionSlice.split(/\r?\n/)) {
+        const colonIdx = sLine.indexOf(":");
+        const itemsPart = colonIdx !== -1 ? sLine.slice(colonIdx + 1) : sLine;
+        for (const item of itemsPart.split(/,\s*/)) {
+          const nk = normSkillKey(canonicalizeSkill(item.trim()));
+          if (nk) globalExistingKeys.add(nk);
+        }
+      }
+
       // Check if an existing skill line can absorb missing keywords without creating redundant categories
       const targetCategoryMatch = text.slice(afterHeaderPos).match(/^(?:Frameworks\s*&\s*Libraries|Developer Tools|Support & Operations|Tools & Technologies|Technical Skills|[A-Z][a-zA-Z\s&]+):\s*([^\r\n]+)/im);
       
       if (targetCategoryMatch && targetCategoryMatch.index !== undefined) {
         const fullMatch = targetCategoryMatch[0];
-        const existingLine = targetCategoryMatch[1];
-        const existingKeys = new Set(existingLine.split(/,\s*/).map(normSkillKey));
         const trulyNew: string[] = [];
         for (const t of techMissing) {
           const canon = canonicalizeSkill(t);
           const key = normSkillKey(canon);
-          if (!existingKeys.has(key)) {
-            existingKeys.add(key);
+          if (key && !globalExistingKeys.has(key)) {
+            globalExistingKeys.add(key);
             trulyNew.push(canon);
           }
         }
@@ -473,14 +487,12 @@ export function enrichResumeATSQuality(
         }
       } else if (!hasFrameworks && coreCompMatch && coreCompMatch.index !== undefined) {
         const fullMatch = coreCompMatch[0];
-        const existingLine = coreCompMatch[1];
-        const existingKeys = new Set(existingLine.split(/,\s*/).map(normSkillKey));
         const trulyNew: string[] = [];
         for (const t of techMissing) {
           const canon = canonicalizeSkill(t);
           const key = normSkillKey(canon);
-          if (!existingKeys.has(key)) {
-            existingKeys.add(key);
+          if (key && !globalExistingKeys.has(key)) {
+            globalExistingKeys.add(key);
             trulyNew.push(canon);
           }
         }
@@ -489,8 +501,18 @@ export function enrichResumeATSQuality(
           text = text.replace(fullMatch, updatedLine);
         }
       } else {
-        const injectLine = `Developer Tools: ${techMissing.join(", ")}\n`;
-        text = text.slice(0, afterHeaderPos) + injectLine + text.slice(afterHeaderPos);
+        const trulyNew = techMissing
+          .map((t) => canonicalizeSkill(t))
+          .filter((canon) => {
+            const key = normSkillKey(canon);
+            if (!key || globalExistingKeys.has(key)) return false;
+            globalExistingKeys.add(key);
+            return true;
+          });
+        if (trulyNew.length > 0) {
+          const injectLine = `Developer Tools: ${trulyNew.join(", ")}\n`;
+          text = text.slice(0, afterHeaderPos) + injectLine + text.slice(afterHeaderPos);
+        }
       }
     } else {
       // No existing skills section — insert a new one before PROJECTS or EXPERIENCE or EDUCATION

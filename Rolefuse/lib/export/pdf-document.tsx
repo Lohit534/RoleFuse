@@ -296,25 +296,48 @@ export const ResumePDFDocument: React.FC<ResumePDFProps> = ({ text, watermarked 
             {parsed.contacts
               .filter((c, idx, arr) => arr.findIndex(x => x.type === c.type) === idx)
               .map((c, i) => {
-                let displayPhone = c.text;
+                let displayText = c.text;
                 if (c.type === "phone") {
                   const cleaned = c.text.trim();
                   if (/^(\+)?91\s*\d{10}$/.test(cleaned)) {
-                    displayPhone = cleaned.replace(/^(\+)?91\s*/, "+91 ");
+                    displayText = cleaned.replace(/^(\+)?91\s*/, "+91 ");
                   } else if (/^91\s*\d+/.test(cleaned)) {
-                    displayPhone = `+${cleaned}`;
+                    displayText = `+${cleaned}`;
                   }
+                } else if (c.type === "linkedin") {
+                  displayText = c.text || "LinkedIn";
+                } else if (c.type === "github") {
+                  displayText = c.text || "GitHub";
+                } else if (c.type === "portfolio") {
+                  displayText = c.text || "Portfolio";
                 }
-                const linkUrl = c.url || (c.type === "email" ? `mailto:${c.text}` : (c.type === "phone" ? `tel:${displayPhone.replace(/[^+\d]/g, "")}` : null));
+
+                let linkUrl = c.url || null;
+                if (!linkUrl) {
+                  if (c.type === "email") {
+                    linkUrl = `mailto:${c.text.trim()}`;
+                  } else if (c.type === "phone") {
+                    linkUrl = `tel:${displayText.replace(/[^+\d]/g, "")}`;
+                  } else if (c.type === "linkedin" && /linkedin\.com/i.test(c.text)) {
+                    linkUrl = c.text.startsWith("http") ? c.text : `https://${c.text}`;
+                  } else if (c.type === "github" && /github\.com/i.test(c.text)) {
+                    linkUrl = c.text.startsWith("http") ? c.text : `https://${c.text}`;
+                  } else if (c.type === "portfolio" && /\.[a-z]{2,}/i.test(c.text)) {
+                    linkUrl = c.text.startsWith("http") ? c.text : `https://${c.text}`;
+                  }
+                } else if ((c.type === "linkedin" || c.type === "github" || c.type === "portfolio") && !/^https?:\/\//i.test(linkUrl)) {
+                  linkUrl = `https://${linkUrl}`;
+                }
+
                 return (
                   <View key={i} style={styles.contactItem}>
                     <ContactIcon type={c.type} />
                     {linkUrl ? (
                       <Link src={linkUrl} style={{ ...styles.contactText, textDecoration: 'none' }}>
-                        {displayPhone}
+                        {displayText}
                       </Link>
                     ) : (
-                      <Text style={styles.contactText}>{displayPhone}</Text>
+                      <Text style={styles.contactText}>{displayText}</Text>
                     )}
                   </View>
                 );

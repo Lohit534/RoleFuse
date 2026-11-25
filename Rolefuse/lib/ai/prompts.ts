@@ -150,16 +150,17 @@ export function buildOptimizationPrompt(
     "  - NEVER use bullet points (•, -, *, etc.) anywhere in the TECHNICAL SKILLS section.\n" +
     "  - Every skill line MUST strictly be in 'Category: val1, val2, val3' format on a single line.\n" +
     "  - NEVER output bullet lines like '• Technologies & Tools: ...' or '• Python, React'.\n" +
-    "  CRITICAL CATEGORY AND SKILL RULES (USER MANDATE):\n" +
+  "  CRITICAL CATEGORY AND SKILL RULES (USER MANDATE):\n" +
     "  - MANDATORY SKILL PRESERVATION: NEVER delete, drop, or remove any of the candidate's existing technical skills from their original resume! All existing skills MUST be kept intact and preserved.\n" +
-    "  - ONLY add true, genuine matching technical skills that the candidate or JD supports. Do NOT invent unrelated skills.\n" +
+    "  - ZERO DUPLICATION IN SKILLS: Before adding any keyword to a skill category, check ALL skill categories in the resume. NEVER list the same skill (or alias like React/React.js, Node/Node.js) twice across all skill categories combined.\n" +
+    "  - SKILLS ONLY FROM JD OR ORIGINAL: Every skill in Technical Skills MUST appear either in the original resume text OR explicitly as a technical term in the job description. NEVER invent or hallucinate unrelated skills.\n" +
     "  - Categorize skills accurately: Do NOT dump Machine Learning / AI libraries (e.g. TensorFlow, scikit-learn, PyTorch) into 'Frameworks & Libraries' unless the candidate's original resume had them there. Keep technical categories accurate.\n" +
     "  - PRESERVE the candidate's existing skill categories from their original resume (e.g. Programming Languages, Frameworks & Libraries, Developer Tools).\n" +
     "  - DO NOT invent or fabricate arbitrary new categories (NEVER add 'Developer Tools & Core Competencies', 'Support & Operations', 'Communication & Professional').\n" +
     "  - If the candidate's original resume had 'Core Technologies', use 'Frameworks & Libraries' instead. NEVER output both 'Core Technologies' and 'Frameworks & Libraries'.\n" +
     "  - Strictly ONLY include genuine technical keywords (programming languages, libraries, frameworks, databases, developer tools, networking protocols, cloud platforms).\n" +
     "  - ABSOLUTE PROHIBITION ON SOFT SKILLS: NEVER include soft skills, generic English phrases, job responsibilities, or non-technical words in Technical Skills (NEVER write 'Problem Solving', 'Documentation', 'Incident Management', 'Monitoring Tools', 'Troubleshoot Network', 'Title Network Product', 'Issues Across...', 'Time Management', 'Team Coordination', 'Stakeholder Communication').\n" +
-    "  - Inject JD-matching technical keywords into the candidate's relevant technical categories.\n\n" +
+    "  - Inject ONLY missing JD technical keywords into the candidate's relevant technical categories.\n\n" +
     `PROFESSIONAL EXPERIENCE & INTERNSHIPS:\n` +
     `  Header: ${expSectionHeading} (ALL CAPS)\n` +
     `  CRITICAL: ONLY include this section if the original resume actually contains work experience, internship, or trainee content. DO NOT fabricate experience entries.\n` +
@@ -181,9 +182,14 @@ export function buildOptimizationPrompt(
     `  Every bullet MUST begin with a powerful past-tense action verb and quantify impact.\n\n` +
     "PROJECTS:\n" +
     "  Header: PROJECTS (ALL CAPS)\n" +
+    "  ABSOLUTE RULE — PRESERVE ALL ORIGINAL PROJECTS EXACTLY:\n" +
+    "  - Output ONLY the exact projects that exist in the original resume.\n" +
+    "  - NEVER add or invent new projects. NEVER remove or omit any original project. NEVER rename projects. NEVER merge two projects into one.\n" +
+    "  - NEVER fabricate or add technologies to a project's tech stack that were not in the original resume.\n" +
+    "  - Only refine the bullet points for clarity, strong action verbs, and genuine JD technical alignment.\n" +
     "  For each project:\n" +
     "    Line 1: Project Name — Tech Stack | Year (e.g. Distributed Task Scheduling Engine — Java, Spring Boot, Redis, MySQL | 2025)\n" +
-    "    Lines 2+: 2-4 impact-oriented bullets describing contributions, architectures, and outcomes.\n\n" +
+    "    Lines 2+: 2-4 impact-oriented bullets describing genuine contributions, architectures, and outcomes.\n\n" +
     "EDUCATION:\n" +
     "  Header: EDUCATION (ALL CAPS)\n" +
     "  CRITICAL EDUCATION SEQUENCE FORMAT:\n" +
@@ -223,38 +229,38 @@ export function buildOptimizationPrompt(
     sep + "\n\n" +
     "Integrate all candidate metrics, technologies, and facts directly into the bullet rewrites.\n" +
     "If the user has provided supplemental metrics or answers in the instructions, you MUST weave them directly into the corresponding bullets.\n" +
-    "For bullets lacking numbers, provide realistic, contextual impact quantification (e.g. 'improving processing speed by 35%', 'serving 15k+ active users', 'reducing latency by 40%').\n" +
-    "Do NOT leave raw [ADD: ...] placeholders in the final resume text; produce complete, natural, recruiter-ready sentences.\n\n" +
+    "For bullets lacking numbers, keep the achievement truthful and specific to what the candidate actually built or did. NEVER invent, guess, or fabricate fake percentages, user counts, latency numbers, or revenue figures not present in the original resume or user instructions.\n" +
+    "Do NOT leave raw [ADD: ...] placeholders in the final resume text; produce complete, natural, accurate, recruiter-ready sentences.\n\n" +
     sep + "\n" +
     "STEP 2 — KEYWORD INJECTION\n" +
     sep + "\n\n" +
-    "IMPORTANT — MAXIMUM ATS ALIGNMENT:\n" +
-    "Even if the candidate's background differs significantly from the target job, maximize ATS alignment by:\n" +
-    "1. Reframing existing bullet points to emphasize transferable skills that match JD requirements\n" +
-    "2. Prioritizing JD keywords in Technical Skills categories (never fabricate technologies not in resume)\n" +
-    "3. Restructuring the Professional Summary to bridge the candidate's background to target role\n" +
-    "4. Highlighting overlapping skills and competencies between the resume and JD\n" +
-    "5. Never fabricate experience — only reframe genuine experience with JD-aligned language\n\n" +
+    "IMPORTANT — MAXIMUM ATS ALIGNMENT WITHOUT HALLUCINATION:\n" +
+    "Maximize ATS alignment truthfully by:\n" +
+    "1. Reframing existing bullet points to emphasize genuine transferable technical skills that match JD requirements\n" +
+    "2. Adding ONLY missing technical keywords from the JD into Technical Skills categories (NEVER duplicate existing skills, NEVER add soft skills, NEVER fabricate unrelated experience)\n" +
+    "3. Restructuring the Professional Summary to accurately bridge the candidate's real background to the target role\n" +
+    "4. Highlighting overlapping technical skills and competencies between the resume and JD\n" +
+    "5. Never fabricate experience, projects, companies, or metrics — only refine genuine candidate content with JD-aligned technical language\n\n" +
     "TASK 1 -- KEYWORD INJECTION (top priority):\n" +
-    "Keywords to inject (ALL of them, at least once each):\n" +
-    (keywordList || "(inject all JD tech terms you can identify)") + "\n\n" +
+    "Technical keywords to inject (ONLY technical terms, no duplicates):\n" +
+    (keywordList || "(inject only genuine technical keywords that explicitly appear in the job description above)") + "\n\n" +
     "Rules:\n" +
-    "- Add every technical keyword to the appropriate Technical Skills category\n" +
-    "- Weave remaining keywords naturally into existing bullet rewrites\n" +
+    "- Add each missing technical keyword ONCE to the single most appropriate Technical Skills category (never repeat across categories)\n" +
+    "- Weave remaining technical keywords naturally into existing bullet rewrites only where truthful\n" +
     "- Match EXACT casing from the JD (e.g., React.js not ReactJS)\n" +
-    "- Rewrite the Professional Summary to include 5+ top JD keywords\n\n" +
+    "- Rewrite the Professional Summary to include 5+ top JD technical keywords\n\n" +
     sep + "\n" +
     "STEP 3 — BULLET REWRITING (Experience / Internship / Projects ONLY)\n" +
     sep + "\n\n" +
-    "Formula: [Strong Verb] + [Specific Task / Technology] + [Quantified Result with Scale or Percentage]\n\n" +
+    "Formula: [Strong Verb] + [Specific Task / Technology] + [Authentic Outcome or Verified Metric]\n\n" +
     "⚠️  SCOPE — STRICTLY ONLY THESE SECTIONS:\n" +
     "  Apply bullet rewrites ONLY to: Professional Experience, Internship Experience, Work Experience, Projects.\n" +
     "  NEVER touch: Education, Certifications, Achievements, Languages, Skills, Summary.\n" +
-    "  Leave those sections exactly as the candidate wrote them (only add missing keywords to Skills).\n\n" +
-    "⚠️  DO NOT FABRICATE OR INFLATE:\n" +
-    "  - Only use metrics the candidate provided (via answers or in the original resume).\n" +
-    "  - For bullets missing numbers, add realistic contextual estimates in brackets (e.g. 'reducing latency by ~35%').\n" +
-    "  - Never invent company sizes, team sizes, or revenue numbers that the candidate did not mention.\n\n" +
+    "  Leave those sections exactly as the candidate wrote them (only add missing technical keywords to Skills).\n\n" +
+    "⚠️  ZERO HALLUCINATION — DO NOT FABRICATE OR INFLATE:\n" +
+    "  - ONLY use numbers and metrics the candidate explicitly provided (via answers or in the original resume).\n" +
+    "  - For bullets missing numbers, describe the concrete technical implementation and real outcome truthfully WITHOUT inventing fake percentages or scale numbers.\n" +
+    "  - NEVER invent company sizes, team sizes, user counts, latency percentages, or revenue numbers that the candidate did not mention.\n\n" +
     "MANDATORY BULLET STANDARDS:\n" +
     "- Every bullet MUST start with a strong past-tense action verb (no gerunds, no adverbs, no I/We)\n" +
     "- Every bullet MUST include a specific quantified outcome (%, count, scale, speed, cost)\n" +
@@ -338,7 +344,9 @@ export function buildOptimizationPrompt(
     "[ ] Zero fabricated or invented dates/years/months for internships, projects, or certifications\n" +
     "[ ] Every internship entry follows Line 1 (Title | Dates) + Line 2 (Company | Tech Stack) format\n" +
     "[ ] Certifications and achievements placed in their own separate AWARDS & CERTIFICATIONS section (never merged into Projects)\n" +
-    "[ ] Metrics/numbers added or [ADD:] placeholders used where missing\n" +
+    "[ ] ZERO hallucinated metrics — no fabricated percentages, counts, or numbers not in the original resume\n" +
+    "[ ] Project count and project names match original resume exactly — no new or merged projects\n" +
+    "[ ] ZERO duplicate skills across all Technical Skills categories, and ONLY technical keywords (no soft skills)\n" +
     "[ ] No LaTeX, no Markdown, no literal backslash-n in resume text\n" +
     "[ ] All original URLs and contact info preserved verbatim\n" +
     "[ ] No sections were dropped from the original resume\n" +

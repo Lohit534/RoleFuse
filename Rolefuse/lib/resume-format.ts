@@ -9,7 +9,7 @@
  *    reaches the live preview, PDF and DOCX exporters.
  */
 import { detectSectionHeader, looksLikeSentenceBullet, BULLET_MARKER_REGEX } from "./ats/bullets";
-import { canonicalizeSkill, normSkillKey } from "./ats/keywords";
+import { canonicalizeSkill, normSkillKey, isTechnicalKeyword } from "./ats/keywords";
 import { extractProfileUrls } from "./resume/normalize";
 
 const MONTHS: Record<string, number> = {
@@ -508,9 +508,10 @@ export function sanitizeOptimizedResume(
       }
     }
 
-    const JUNK_OR_SOFT_SKILL_RE = /troubleshoot\s*network|issues\s*across|title\s*network|monitor\s*network|enterprise\s*monitoring|monitoring\s*tools|problem\s*solving|time\s*management|team\s*coordination|stakeholder\s*communication|process\s*adherence|documentation/i;
+    const JUNK_OR_SOFT_SKILL_RE = /troubleshoot\s*network|issues\s*across|title\s*network|monitor\s*network|enterprise\s*monitoring|monitoring\s*tools|problem\s*solving|time\s*management|team\s*coordination|stakeholder\s*communication|process\s*adherence|documentation|communication\s*skills|leadership|teamwork|hardworking|quick\s*learner/i;
     let fwLineIdx = -1;
     let coreLineIdx = -1;
+    const globalSeenSkills = new Set<string>();
 
     for (let i = skillsHeaderIdx + 1; i < skillsEnd; i++) {
       const line = out[i].trim();
@@ -528,18 +529,21 @@ export function sanitizeOptimizedResume(
         coreLineIdx = i;
       }
 
-      // Filter individual soft skills / junk phrases from each line AND deduplicate items internally with canonical naming
+      // Filter individual soft skills / junk phrases from each line AND deduplicate items ACROSS ALL categories
       if (line.includes(":")) {
         const colon = line.indexOf(":");
         const label = line.slice(0, colon).trim();
         const rawItems = line.slice(colon + 1).split(/,\s*/).map(s => s.trim()).filter(s => s.length > 1 && !JUNK_OR_SOFT_SKILL_RE.test(s));
-        const seen = new Set<string>();
         const dedupedItems: string[] = [];
         for (const item of rawItems) {
+          // Skip pure soft skills if not in original resume, or if explicitly non-technical
+          if (!isTechnicalKeyword(item) && !originalLower.includes(item.toLowerCase())) {
+            continue;
+          }
           const canon = canonicalizeSkill(item);
           const key = normSkillKey(canon);
-          if (!seen.has(key)) {
-            seen.add(key);
+          if (key && !globalSeenSkills.has(key)) {
+            globalSeenSkills.add(key);
             dedupedItems.push(canon);
           }
         }
