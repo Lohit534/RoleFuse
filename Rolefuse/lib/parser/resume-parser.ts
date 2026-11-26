@@ -692,8 +692,8 @@ export function parseResume(rawText: string | ResumeData, originalText?: string)
     }
 
     // Contact line extraction
-    // Split on common delimiters: tabs, 2+ spaces, vertical bars, bullet points, font icon markers
-    const tokens = line.split(/(?:\s{2,}|\s*[|•\u2022]\s*|[ƒ#ï§€])/).map(t => t.trim()).filter(Boolean);
+    // Split on common delimiters: tabs, 2+ spaces, vertical bars, bullet points, em/en-dashes, font icon markers
+    const tokens = line.split(/(?:\s{2,}|\s*[|•\u2022]\s*|\s+[—–]\s+|[ƒ#ï§€])/).map(t => t.trim()).filter(Boolean);
     for (const token of tokens) {
       // Remove any leading icon glyphs or symbols and trailing delimiters
       const cleanTok = token.replace(/^[ƒ#ï§€|•\s\-\*]+/, '').replace(/[\s|–—\-,:]+$/, '').trim();

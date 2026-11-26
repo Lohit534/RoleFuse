@@ -508,35 +508,40 @@ export function sanitizeOptimizedResume(
       }
     }
 
-    const JUNK_OR_SOFT_SKILL_RE = /troubleshoot\s*network|issues\s*across|title\s*network|monitor\s*network|enterprise\s*monitoring|monitoring\s*tools|problem\s*solving|time\s*management|team\s*coordination|stakeholder\s*communication|process\s*adherence|documentation|communication\s*skills|leadership|teamwork|hardworking|quick\s*learner/i;
-    let fwLineIdx = -1;
-    let coreLineIdx = -1;
+    const JUNK_OR_SOFT_SKILL_RE = /troubleshoot\s*network|issues\s*across|title\s*network|monitor\s*network|enterprise\s*monitoring|monitoring\s*tools|problem\s*solving|time\s*management|team\s*coordination|stakeholder\s*communication|process\s*adherence|documentation|communication\s*skills|leadership|teamwork|hardworking|quick\s*learner|software\s*development/i;
     const globalSeenSkills = new Set<string>();
+
+    const canonicalizeSkillCategory = (rawLabel: string): string => {
+      const low = rawLabel.trim().toLowerCase();
+      if (/^(?:programming|programming languages|languages)$/.test(low)) return "Programming Languages";
+      if (/^(?:frameworks\s*&\s*libraries|frameworks|libraries|core technologies|core competencies)$/.test(low)) return "Frameworks & Libraries";
+      if (/^(?:tools|developer tools|developer tools\s*&\s*core competencies|tools\s*&\s*technologies)$/.test(low)) return "Developer Tools";
+      if (/^(?:databases|databases\s*&\s*backend|databases\s*&\s*cloud)$/.test(low)) return "Databases & Cloud";
+      return rawLabel.trim();
+    };
+
+    const mergedCategories = new Map<string, string[]>();
+    const categoryOrder: string[] = [];
 
     for (let i = skillsHeaderIdx + 1; i < skillsEnd; i++) {
       const line = out[i].trim();
       if (!line) continue;
       // Drop whole soft-skill category lines
       if (/^(?:Communication|Soft Skills|Professional Skills|Interpersonal Skills|Communication & Professional)(?:\s*&[^\n:]*)?:\s*/i.test(line)) {
-        out.splice(i, 1);
-        skillsEnd--;
-        i--;
         continue;
       }
-      if (/^(?:Frameworks\s*&\s*Libraries|Frameworks|Libraries)\s*:\s*/i.test(line)) {
-        fwLineIdx = i;
-      } else if (/^(?:Core Technologies|Core Competencies)\s*:\s*/i.test(line)) {
-        coreLineIdx = i;
-      }
 
-      // Filter individual soft skills / junk phrases from each line AND deduplicate items ACROSS ALL categories
       if (line.includes(":")) {
         const colon = line.indexOf(":");
-        const label = line.slice(0, colon).trim();
+        const rawLabel = line.slice(0, colon).trim();
+        const label = canonicalizeSkillCategory(rawLabel);
         const rawItems = line.slice(colon + 1).split(/,\s*/).map(s => s.trim()).filter(s => s.length > 1 && !JUNK_OR_SOFT_SKILL_RE.test(s));
-        const dedupedItems: string[] = [];
+        if (!mergedCategories.has(label)) {
+          mergedCategories.set(label, []);
+          categoryOrder.push(label);
+        }
+        const bucket = mergedCategories.get(label)!;
         for (const item of rawItems) {
-          // Skip pure soft skills if not in original resume, or if explicitly non-technical
           if (!isTechnicalKeyword(item) && !originalLower.includes(item.toLowerCase())) {
             continue;
           }
@@ -544,42 +549,42 @@ export function sanitizeOptimizedResume(
           const key = normSkillKey(canon);
           if (key && !globalSeenSkills.has(key)) {
             globalSeenSkills.add(key);
-            dedupedItems.push(canon);
+            bucket.push(canon);
           }
         }
-        if (dedupedItems.length === 0) {
-          out.splice(i, 1);
-          skillsEnd--;
-          i--;
-        } else {
-          out[i] = `${label}: ${dedupedItems.join(", ")}`;
+      } else {
+        // Standalone skill line without colon
+        const rawItems = line.split(/,\s*/).map(s => s.trim()).filter(s => s.length > 1 && !JUNK_OR_SOFT_SKILL_RE.test(s));
+        const label = "Developer Tools";
+        if (!mergedCategories.has(label)) {
+          mergedCategories.set(label, []);
+          categoryOrder.push(label);
+        }
+        const bucket = mergedCategories.get(label)!;
+        for (const item of rawItems) {
+          if (!isTechnicalKeyword(item) && !originalLower.includes(item.toLowerCase())) continue;
+          const canon = canonicalizeSkill(item);
+          const key = normSkillKey(canon);
+          if (key && !globalSeenSkills.has(key)) {
+            globalSeenSkills.add(key);
+            bucket.push(canon);
+          }
         }
       }
     }
 
-    // If Frameworks & Libraries exists, merge any unique items from Core Technologies into it, then delete Core Technologies
-    if (fwLineIdx !== -1 && coreLineIdx !== -1) {
-      const fwLine = out[fwLineIdx];
-      const coreLine = out[coreLineIdx];
-      const fwItems = fwLine.slice(fwLine.indexOf(":") + 1).split(/,\s*/).map(s => s.trim()).filter(Boolean);
-      const coreItems = coreLine.slice(coreLine.indexOf(":") + 1).split(/,\s*/).map(s => s.trim()).filter(Boolean);
-      const seenFw = new Set<string>();
-      const finalFwItems: string[] = [];
-      for (const it of [...fwItems, ...coreItems]) {
-        if (JUNK_OR_SOFT_SKILL_RE.test(it)) continue;
-        const canon = canonicalizeSkill(it);
-        const key = normSkillKey(canon);
-        if (!seenFw.has(key)) {
-          seenFw.add(key);
-          finalFwItems.push(canon);
-        }
+    const rebuiltSkillLines: string[] = [];
+    for (const label of categoryOrder) {
+      const items = mergedCategories.get(label) || [];
+      if (items.length > 0) {
+        rebuiltSkillLines.push(`${label}: ${items.join(", ")}`);
       }
-      out[fwLineIdx] = `${fwLine.slice(0, fwLine.indexOf(":")).trim()}: ${finalFwItems.join(", ")}`;
-      out.splice(coreLineIdx, 1);
     }
+    out.splice(skillsHeaderIdx + 1, skillsEnd - (skillsHeaderIdx + 1), ...rebuiltSkillLines);
   }
 
-  let finalResume = out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  // Collapse identical year ranges like "2020 – 2020" -> "2020"
+  let finalResume = out.join("\n").replace(/\b((?:19|20)\d{2})\s*[-–—]\s*\1\b/g, "$1").replace(/\n{3,}/g, "\n\n").trim();
   finalResume = preserveCandidateContactDetails(finalResume, original);
   return finalResume;
 }

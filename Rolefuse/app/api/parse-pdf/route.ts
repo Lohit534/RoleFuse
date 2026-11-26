@@ -86,23 +86,38 @@ export async function POST(request: NextRequest) {
     const extractedLinks = new Set<string>();
 
     if (fileType === "pdf") {
-      // Direct raw binary scan for URIs embedded in PDF objects/streams (Canva, Word, Adobe, LaTeX)
+      // Direct raw binary + FlateDecode stream scan for URIs embedded in PDF objects/streams (Canva, Word, Adobe, LaTeX, Overleaf)
       try {
         const bufferStr = buffer.toString("binary");
-        const uriMatches = bufferStr.match(/\/URI\s*\(([^)]+)\)/gi);
-        if (uriMatches) {
-          for (const m of uriMatches) {
-            const rawUri = m.replace(/^\/URI\s*\(/i, "").replace(/\)$/, "").trim();
-            if (/linkedin\.com|github\.com|https?:\/\//i.test(rawUri)) {
-              extractedLinks.add(rawUri);
+        const scanForUris = (src: string) => {
+          const uriMatches = src.match(/\/URI\s*\(([^)]+)\)/gi);
+          if (uriMatches) {
+            for (const m of uriMatches) {
+              const rawUri = m.replace(/^\/URI\s*\(/i, "").replace(/\)$/, "").replace(/\\([()\\])/g, "$1").trim();
+              if (/linkedin\.com|github\.com|https?:\/\//i.test(rawUri)) {
+                extractedLinks.add(rawUri);
+              }
             }
           }
-        }
-        const directLinkMatches = bufferStr.match(/https?:\/\/(?:www\.)?(?:[a-z]{2,3}\.)?(?:linkedin\.com\/in\/[a-zA-Z0-9\-_./%]+|github\.com\/[a-zA-Z0-9\-_./%]+)/gi);
-        if (directLinkMatches) {
-          for (const u of directLinkMatches) {
-            extractedLinks.add(u.trim());
+          const directLinkMatches = src.match(/https?:\/\/(?:www\.)?(?:[a-z]{2,3}\.)?(?:linkedin\.com\/in\/[a-zA-Z0-9\-_./%]+|github\.com\/[a-zA-Z0-9\-_./%]+)/gi);
+          if (directLinkMatches) {
+            for (const u of directLinkMatches) {
+              extractedLinks.add(u.trim());
+            }
           }
+        };
+        scanForUris(bufferStr);
+
+        // Also scan FlateDecode-compressed object/annotation streams for /URI entries
+        const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+        let sm: RegExpExecArray | null;
+        while ((sm = streamRegex.exec(bufferStr)) !== null) {
+          try {
+            const inflated = zlib.inflateSync(Buffer.from(sm[1], "binary")).toString("latin1");
+            if (/\/URI|linkedin\.com|github\.com/i.test(inflated)) {
+              scanForUris(inflated);
+            }
+          } catch (_e) {}
         }
       } catch (_bufErr) {}
 

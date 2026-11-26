@@ -642,42 +642,15 @@ export async function POST(request: NextRequest) {
                 injectedKw.push(...targetMissing);
               }
 
-              // 2. Enhance weak bullets lacking metrics
-              const metricPhrases = [
-                "improving system throughput by 32%",
-                "reducing latency by 40%",
-                "supporting 10,000+ active users",
-                "collaborating in an agile team of 6 engineers",
-                "achieving a 99.8% service reliability SLA",
-              ];
-              let phraseIdx = 0;
-              enhanced = enhanced.split("\n").map((line: string) => {
-                if (/^[•\-\*]\s+[A-Za-z]/.test(line.trim()) && !/\d+%|\d+\+|\b\d+\s*users\b/i.test(line)) {
-                  if (phraseIdx < metricPhrases.length && line.length > 25 && line.length < 160) {
-                    const addedPhrase = metricPhrases[phraseIdx++];
-                    return `${line.trim().replace(/\.$/, "")}, ${addedPhrase}.`;
-                  }
-                }
-                return line;
-              }).join("\n");
-
               aiResult.resume = enhanced;
               aiResult.keywordsAdded = injectedKw;
               aiResult.changesCount = Math.max(6, injectedKw.length);
-              aiResult.summary = `Injected target JD keywords (${injectedKw.slice(0, 3).join(", ")}) and strengthened bullet points with quantified operational metrics.`;
+              aiResult.summary = `Injected target JD keywords (${injectedKw.slice(0, 3).join(", ")}) while preserving authentic candidate experience.`;
             }
 
-            // Clean up any residual [ADD: ...] placeholders so the candidate gets pristine text
+            // Strip any residual [ADD: ...] placeholders cleanly without fabricating numbers
             if (aiResult.resume && typeof aiResult.resume === "string") {
-              aiResult.resume = aiResult.resume.replace(/\[ADD:\s*([^\]]+)\]/gi, (_match, desc) => {
-                if (/percent|%|speed|latency/i.test(desc)) return "by 35%";
-                if (/user|customer|request/i.test(desc)) return "10,000+ users";
-                if (/team/i.test(desc)) return "team of 5 engineers";
-                // Never invent company names or dates — drop the placeholder instead
-                if (/company|employer|organi[sz]ation/i.test(desc)) return "";
-                if (/year|date|month|duration/i.test(desc)) return "";
-                return "exceeding benchmark targets";
-              });
+              aiResult.resume = aiResult.resume.replace(/\s*\[ADD:\s*[^\]]+\]/gi, "");
 
               // Remove hallucinated university names, literal placeholders and leaked internal text
               // Pass userAnswers so verified dates, years, and details are NEVER stripped
@@ -715,6 +688,8 @@ export async function POST(request: NextRequest) {
             if (userAnswers && typeof userAnswers === "object") {
               aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
             }
+            // Final sanitization pass after any enrichment/answer injection so skills & format stay 100% deduplicated
+            aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText, userAnswers);
 
             // Guarantee profile links are preserved in aiResult.resumeData
             if (aiResult.resumeData) {
@@ -770,6 +745,8 @@ export async function POST(request: NextRequest) {
             if (userAnswers && typeof userAnswers === "object") {
               aiResult.resume = ensureUserAnswersInResume(aiResult.resume, userAnswers);
             }
+            // Final sanitization pass after any enrichment/answer injection so skills & format stay 100% deduplicated
+            aiResult.resume = sanitizeOptimizedResume(aiResult.resume, enrichedResumeText, userAnswers);
             const resumeTech = extractTechTerms(resumeText || "");
             const resumeKeywords = Array.from(extractKeywords(resumeText || ""));
             const jdLower = (jobDescription || "").toLowerCase();
